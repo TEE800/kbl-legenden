@@ -18,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 fs.mkdirSync(DATA, { recursive: true });
 for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
   const src = path.join(ROOT, 'public', f);
-  if (!fs.statSync(src).isFile()) continue;
+  if (fs.statSync(src).isDirectory()) { fs.cpSync(src, path.join(SITE, f), { recursive: true }); continue; }
   let buf = fs.readFileSync(src);
   if (/\.(html|js|css)$/.test(f)) {
     let t = buf.toString('utf8').replace(/(["'`(])\/([a-z][a-z0-9_-]*\.(svg|png|css|js))/g, '$1$2');
@@ -60,7 +60,6 @@ try {
   const days = (status?.days || []).filter(d => d.status === 'live' || d.status === 'finished').map(d => d.day);
   const live = (status?.days || []).find(d => d.status === 'live')?.day;
 
-  // Hinweisleiste (vorschau.js) online ausblenden: preview false.
   // Startelfen einfrieren, solange ein Spieltag laeuft (wird nie ueberschrieben).
   if (live) { const r = await call('/api/lineup-snapshots/capture-frozen', { method: 'POST', body: JSON.stringify({ day: live }) }); console.log('Startelfen Spieltag', live, r.status, JSON.stringify(r.body).slice(0, 200)); }
 

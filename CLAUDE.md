@@ -75,3 +75,9 @@ Noch nicht an einem echten Spieltag erprobt: automatisches Einfrieren der Starte
 - Neue GET-Endpunkte, die die Seite braucht, muessen in die URL-Liste von `export-static.mjs` aufgenommen werden.
 - `.github/workflows/seite.yml`: alle 10 Min. live, stuendlich voll; committet `kbl-*.json` und `site/`, veroeffentlicht ueber GitHub Pages. Zugangsdaten nur als Repository-Secrets.
 - Lokal testen: `seite-testen.bat` (Export + Anzeige auf http://localhost:8080).
+- **Veröffentlichen (Änderungen auf die Online-Seite bringen):** Repository `TEE800/kbl-legenden` (Branch `main`). Wenn Kevin „veröffentlichen“ sagt, übernimmt ein Thread mit Zugriff auf diesen Ordner und das Repository: Repository frisch holen (`git pull`), dann aus dem App-Ordner kopieren:
+  - Code: `server.js`, `challenges.js`, `event-types-de.js`, `package.json`, `package-lock.json`, `public/*`, `tools/*`, `CLAUDE.md`, `README.md`, `.github/workflows/seite.yml`, `.gitignore`.
+  - Daten vom PC (hier wird von Hand bzw. im Browser gearbeitet): `kbl-todo-checks.json`, `kbl-bumsungen.json`, `kbl-npc-jokers.json`, `kbl-points-overview.json`, `kbl-event-types.json`. `kbl-challenge-cache.json` lädt auch GitHub selbst nach: nur übernehmen, wenn `updatedAt` auf dem PC neuer ist.
+  - `kbl-lineup-snapshots.json`: nur zusammenführen (fehlende Einträge vom PC ergänzen, vorhandene im Repository nie überschreiben). `kbl-dfl-card-snapshots.json`, `kbl-dfb-suspension-history.json` und `site/` gehören GitHub.
+  - Nie hochladen: `start.bat`, `vorschau.bat`, `server-neustart.bat`, `seite-testen.bat`, `hochladen.bat`, `_sicherungen/`, `_probe/`, `node_modules/`, Zugangsdaten.
+  - Danach committen, pushen und den Workflow `seite.yml` per „Run workflow“ starten; nach wenigen Minuten ist die Seite aktuell.
