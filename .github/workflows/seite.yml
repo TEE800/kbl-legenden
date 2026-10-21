@@ -1,0 +1,43 @@
+name: Seite aktualisieren
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # alle 10 Minuten (Live-Daten)
+    - cron: '7 * * * *'      # jede Stunde alles neu (Korrekturen von Kickbase)
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: seite
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Daten abrufen und Seite bauen
+        env:
+          KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
+          KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
+        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 * * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
+      - name: Gespeicherte Daten sichern
+        run: |
+          git config user.name "kbl-bot"
+          git config user.email "kbl-bot@users.noreply.github.com"
+          git add kbl-*.json site
+          git diff --cached --quiet || (git commit -m "Daten aktualisiert" && git pull --rebase && git push)
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

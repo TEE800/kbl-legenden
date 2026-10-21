@@ -1,0 +1,1627 @@
+{
+  "snapshots": [
+    {
+      "day": 5,
+      "capturedAt": "2026-10-18T17:40:15.509Z",
+      "players": [
+        {
+          "dflId": "DFL-OBJ-00000H",
+          "name": "Mario Götze",
+          "yellow": 2,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-00001D",
+          "name": "Alexander Schwolow",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0000X6",
+          "name": "Loris Karius",
+          "yellow": 1,
+          "club": {
+            "color": "#004b9c",
+            "dflDatalibraryClubId": "DFL-CLU-000009",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000009.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0000ZS",
+          "name": "Matthias Ginter",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-000172",
+          "name": "Kevin Stöger",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0001EA",
+          "name": "Rani Khedira",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0002DW",
+          "name": "Janik Haberer",
+          "yellow": 2,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0002LI",
+          "name": "Nadiem Amiri",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0025AD",
+          "name": "Maximilian Mittelstädt",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0025J3",
+          "name": "Grischa Prömel",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-00264T",
+          "name": "Waldemar Anton",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002659",
+          "name": "Tim Skarke",
+          "yellow": 2,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002670",
+          "name": "Benjamin Henrichs",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-000017",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000017.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0026KO",
+          "name": "Amara Condé",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0026TT",
+          "name": "Felix Uduokhai",
+          "yellow": 3,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0026TU",
+          "name": "Andrej Kramarić",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0026VB",
+          "name": "Phillip Tietz",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002706",
+          "name": "Florian Neuhaus",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-00278Q",
+          "name": "Phillipp Mwene",
+          "yellow": 3,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-00278S",
+          "name": "Serhou Guirassy",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027B9",
+          "name": "Lucas Höler",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027JU",
+          "name": "Jordan Torunarigha",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027KL",
+          "name": "Dayot Upamecano",
+          "yellow": 2,
+          "club": {
+            "color": "#ed0037",
+            "dflDatalibraryClubId": "DFL-CLU-00000G",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000G.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027RM",
+          "name": "Robin Hack",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027T1",
+          "name": "Konrad Laimer",
+          "yellow": 1,
+          "club": {
+            "color": "#ed0037",
+            "dflDatalibraryClubId": "DFL-CLU-00000G",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000G.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027UK",
+          "name": "Stefan Posch",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0027WP",
+          "name": "Philipp Lienhart",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028H6",
+          "name": "Nicolas Kristof",
+          "yellow": 2,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028NR",
+          "name": "Marius Bülter",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028P3",
+          "name": "Philipp Sander",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028PV",
+          "name": "Borna Sosa",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028RJ",
+          "name": "Jaesung Lee",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028RM",
+          "name": "Julian Ryerson",
+          "yellow": 2,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028T0",
+          "name": "Marvin Pieringer",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028T1",
+          "name": "Nico Schlotterbeck",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-0028TI",
+          "name": "Tom Krauß",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002FVI",
+          "name": "Hee Chan Hwang",
+          "yellow": 1,
+          "club": {
+            "color": "#004b9c",
+            "dflDatalibraryClubId": "DFL-CLU-000009",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000009.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002FXB",
+          "name": "Ozan Kabak",
+          "yellow": 2,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002G1Y",
+          "name": "Sheraldo Becker",
+          "yellow": 2,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002G4A",
+          "name": "Ellyes Skhiri",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002G4W",
+          "name": "Philipp Treu",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002G7P",
+          "name": "Maximilian Beier",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002G8B",
+          "name": "Ransford-Yeboah Königsdörffer",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GAR",
+          "name": "Edmond Tapsoba",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GCQ",
+          "name": "Angelo Stiller",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GEY",
+          "name": "Ermedin Demirović",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GKG",
+          "name": "Ansgar Knauff",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GLV",
+          "name": "Ludovit Reis",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GMB",
+          "name": "Maximilian Rohr",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GN3",
+          "name": "Fisnik Asllani",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GNN",
+          "name": "Joe Scally",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-002GPF",
+          "name": "Tjark Scheller",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J017R0",
+          "name": "Michel Aebischer",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J019JX",
+          "name": "Kevin Diks",
+          "yellow": 3,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01A3I",
+          "name": "Albert Sambi Lokonga",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01AE6",
+          "name": "Minjae Kim",
+          "yellow": 1,
+          "club": {
+            "color": "#ed0037",
+            "dflDatalibraryClubId": "DFL-CLU-00000G",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000G.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01BI3",
+          "name": "Nikola Katić",
+          "yellow": 1,
+          "club": {
+            "color": "#004b9c",
+            "dflDatalibraryClubId": "DFL-CLU-000009",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000009.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01BKL",
+          "name": "Han-Noah Massengo",
+          "yellow": 2,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01BSN",
+          "name": "Felix Nmecha",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01C5K",
+          "name": "Anthony Caci",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01CPU",
+          "name": "Miguel Gutiérrez",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01CQO",
+          "name": "Felix Keidel",
+          "yellow": 3,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01CU3",
+          "name": "Gideon Mensah",
+          "yellow": 2,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01CX2",
+          "name": "Younes Ebnoutalib",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01CYU",
+          "name": "Laurin Curda",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01D1W",
+          "name": "Jeff Chabot",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01D5B",
+          "name": "Alessio Castro-Montes",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01D90",
+          "name": "Wouter Burger",
+          "yellow": 3,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01DOV",
+          "name": "Castello Lukeba",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-000017",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000017.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01EC7",
+          "name": "Laurin Ulrich",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01FPZ",
+          "name": "Lilian Brassier",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01G5F",
+          "name": "Warmed Omari",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01G7G",
+          "name": "Youri Regeer",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01G82",
+          "name": "Fabian Rieder",
+          "yellow": 1,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01GNA",
+          "name": "Zeno van den Bosch",
+          "yellow": 2,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01GSF",
+          "name": "Ísak Jóhannesson",
+          "yellow": 2,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01H53",
+          "name": "Facundo Medina",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01H5G",
+          "name": "Nicolás Capaldo",
+          "yellow": 2,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01I76",
+          "name": "Lukas Pinckert",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01IB3",
+          "name": "Yannik Engelhardt",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01K77",
+          "name": "Junior Dina Ebimbe",
+          "yellow": 1,
+          "club": {
+            "color": "#004b9c",
+            "dflDatalibraryClubId": "DFL-CLU-000009",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000009.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01K9L",
+          "name": "Mio Backhaus",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KA5",
+          "name": "Max Moerstedt",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KAH",
+          "name": "Aleksandar Pavlović",
+          "yellow": 1,
+          "club": {
+            "color": "#ed0037",
+            "dflDatalibraryClubId": "DFL-CLU-00000G",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000G.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KAI",
+          "name": "Tom Rothe",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KAL",
+          "name": "Lukas Ullrich",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KEW",
+          "name": "Maurice Krattenmacher",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KK4",
+          "name": "Antonio Nusa",
+          "yellow": 2,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-000017",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000017.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KO9",
+          "name": "Jarell Quansah",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01KXR",
+          "name": "Jano ter Horst",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01L5I",
+          "name": "Chrislain Matsima",
+          "yellow": 2,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01LAQ",
+          "name": "Noah Darvich",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01LAX",
+          "name": "Finn Jeltsch",
+          "yellow": 1,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-00000D",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000D.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01LTJ",
+          "name": "Elias Baum",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01MCY",
+          "name": "Stefano Marino",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01MZ1",
+          "name": "Afonso Moreira",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01N08",
+          "name": "Ethan Nwaneri",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01N1P",
+          "name": "Rodrigo Ribeiro",
+          "yellow": 2,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01NB8",
+          "name": "Francis Onyeka",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01ND9",
+          "name": "Aljoscha Kemlein",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01NGX",
+          "name": "Mattes Hansen",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01OBQ",
+          "name": "Oscar Højlund",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01QPQ",
+          "name": "Ibrahim Maza",
+          "yellow": 2,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01QSK",
+          "name": "Otto Stange",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01QVA",
+          "name": "Shūto Machino",
+          "yellow": 3,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01R2O",
+          "name": "Joey Veerman",
+          "yellow": 2,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01R6O",
+          "name": "Kacper Potulski",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01S1Y",
+          "name": "Hennes Behrens",
+          "yellow": 2,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01SUJ",
+          "name": "Hasan Kuruçay",
+          "yellow": 1,
+          "club": {
+            "color": "#004b9c",
+            "dflDatalibraryClubId": "DFL-CLU-000009",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000009.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01T26",
+          "name": "Alexander Prass",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01TMD",
+          "name": "Marin Ljubičić",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01TOV",
+          "name": "Yuito Suzuki",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01TR0",
+          "name": "Olivier Deman",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01U0P",
+          "name": "Joane Gadou",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01UDG",
+          "name": "Mathieu Nguefack",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01UNL",
+          "name": "Arthur",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01UP1",
+          "name": "Jobe Bellingham",
+          "yellow": 2,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01V5J",
+          "name": "Keisuke Gotō",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01VYC",
+          "name": "Livan Burcu",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-00000V",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000V.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01VYF",
+          "name": "Santiago Castaneda",
+          "yellow": 1,
+          "club": {
+            "color": "#006DB3",
+            "dflDatalibraryClubId": "DFL-CLU-00000L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000L.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01XEB",
+          "name": "Wael Mohya",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01XKB",
+          "name": "Cole Campbell",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01XLS",
+          "name": "Dariusz Stalmach",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01XWH",
+          "name": "Keita Kosugi",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01YBZ",
+          "name": "Noahkai Banks",
+          "yellow": 2,
+          "club": {
+            "color": "#00462d",
+            "dflDatalibraryClubId": "DFL-CLU-000010",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000010.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J01ZCA",
+          "name": "Jahmai Simpson-Pusey",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J020ID",
+          "name": "Luca Reggiani",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J020YN",
+          "name": "Marco Grüll",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J020YZ",
+          "name": "Frederik Schmahl",
+          "yellow": 1,
+          "club": {
+            "color": "#D2BE8C",
+            "dflDatalibraryClubId": "DFL-CLU-000N6L",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000N6L.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J02110",
+          "name": "Albian Hajdari",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J021EE",
+          "name": "Kaishu Sano",
+          "yellow": 1,
+          "club": {
+            "color": "#E30613",
+            "dflDatalibraryClubId": "DFL-CLU-000006",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000006.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J02324",
+          "name": "Daniel Svensson",
+          "yellow": 1,
+          "club": {
+            "color": "#FFD900",
+            "dflDatalibraryClubId": "DFL-CLU-000007",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000007.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J0244O",
+          "name": "Cyriaque Irié",
+          "yellow": 1,
+          "club": {
+            "color": "#E4002B",
+            "dflDatalibraryClubId": "DFL-CLU-00000A",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000A.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J0244Y",
+          "name": "Leon Avdullahu",
+          "yellow": 1,
+          "club": {
+            "color": "#0a4baf",
+            "dflDatalibraryClubId": "DFL-CLU-000002",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000002.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J024JO",
+          "name": "Jeremiaha Maluze",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J024QC",
+          "name": "Raphael Onyedika",
+          "yellow": 4,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J0255S",
+          "name": "Shafiq Nandja",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J02594",
+          "name": "Albert Grønbæk",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J0259A",
+          "name": "Hugo Bolin",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025B1",
+          "name": "Guéla Doué",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-00000B",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000B.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025BM",
+          "name": "Neil El Aynaoui",
+          "yellow": 2,
+          "club": {
+            "color": "#FFFFFF",
+            "dflDatalibraryClubId": "DFL-CLU-000017",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000017.svg",
+            "textColor": "#000000"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025E8",
+          "name": "Zakaria El Ouahdi",
+          "yellow": 1,
+          "club": {
+            "color": "#005AAA",
+            "dflDatalibraryClubId": "DFL-CLU-00000C",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000C.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025GU",
+          "name": "Paul Okon-Engstler",
+          "yellow": 1,
+          "club": {
+            "color": "#FF0000",
+            "dflDatalibraryClubId": "DFL-CLU-000008",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000008.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025UG",
+          "name": "Chuki",
+          "yellow": 1,
+          "club": {
+            "color": "#008149",
+            "dflDatalibraryClubId": "DFL-CLU-00000E",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000E.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J025WB",
+          "name": "Zento Uno",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J0260N",
+          "name": "Jan Leszczyński",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-000004",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-000004.svg",
+            "textColor": "#FFFFFF"
+          }
+        },
+        {
+          "dflId": "DFL-OBJ-J02673",
+          "name": "Otávio",
+          "yellow": 1,
+          "club": {
+            "color": "#000000",
+            "dflDatalibraryClubId": "DFL-CLU-00000F",
+            "logoUrl": "https://assets.bundesliga.com/clublogos/DFL-SEA-0001KA/DFL-CLU-00000F.svg",
+            "textColor": "#FFFFFF"
+          }
+        }
+      ]
+    }
+  ]
+}

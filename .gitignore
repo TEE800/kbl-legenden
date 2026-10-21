@@ -1,0 +1,8 @@
+node_modules/
+start.bat
+vorschau.bat
+server-neustart.bat
+_sicherungen/
+_probe/
+*.tmp
+.env

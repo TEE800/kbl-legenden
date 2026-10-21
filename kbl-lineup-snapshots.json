@@ -1,0 +1,357 @@
+{
+  "5:699062": {
+    "day": 5,
+    "managerId": "699062",
+    "playerIds": [
+      "7226",
+      "4335",
+      "2201",
+      "620",
+      "11955",
+      "6174",
+      "11099",
+      "859",
+      "2762",
+      "9642",
+      "11959"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T14:24:23.509Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:699062": {
+    "day": 6,
+    "managerId": "699062",
+    "playerIds": [
+      "11959",
+      "859",
+      "7226",
+      "2762",
+      "4335",
+      "6174",
+      "2201",
+      "11099",
+      "620",
+      "11955",
+      "9642"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T14:30:05.622Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1386995": {
+    "day": 6,
+    "managerId": "1386995",
+    "playerIds": [
+      "7349",
+      "3019",
+      "1685",
+      "2383",
+      "11570",
+      "11886",
+      "14425",
+      "2928",
+      "13442",
+      "11556",
+      "2302"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:15:55.400Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1165589": {
+    "day": 6,
+    "managerId": "1165589",
+    "playerIds": [
+      "3209",
+      "2967",
+      "6148",
+      "8227",
+      "6080",
+      "17285",
+      "3158",
+      "7963",
+      "14917",
+      "8247",
+      "6168"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:16:52.732Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1403991": {
+    "day": 6,
+    "managerId": "1403991",
+    "playerIds": [
+      "2144",
+      "2687",
+      "1863",
+      "8001",
+      "8307",
+      "3190",
+      "6183",
+      "1856",
+      "3281",
+      "7242",
+      "11675"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:18:05.488Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1631954": {
+    "day": 6,
+    "managerId": "1631954",
+    "playerIds": [
+      "7283",
+      "2125",
+      "8274",
+      "17288",
+      "3026",
+      "10004",
+      "51",
+      "2522",
+      "3072",
+      "3277",
+      "9540"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:18:31.213Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1646647": {
+    "day": 6,
+    "managerId": "1646647",
+    "playerIds": [
+      "1704",
+      "1246",
+      "3470",
+      "2694",
+      "13448",
+      "3559",
+      "12763",
+      "2725",
+      "10789",
+      "9754",
+      "3218"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:19:30.971Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1631136": {
+    "day": 6,
+    "managerId": "1631136",
+    "playerIds": [
+      "2746",
+      "2084",
+      "2195",
+      "2172",
+      "619",
+      "2366",
+      "2714",
+      "7224",
+      "4446",
+      "2939",
+      "8252"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:19:55.353Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:2789934": {
+    "day": 6,
+    "managerId": "2789934",
+    "playerIds": [
+      "3102",
+      "2030",
+      "3350",
+      "4199",
+      "2373",
+      "6085",
+      "12321",
+      "10049",
+      "3120",
+      "9507",
+      "15313"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:20:14.934Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:841764": {
+    "day": 6,
+    "managerId": "841764",
+    "playerIds": [
+      "1920",
+      "1996",
+      "3759",
+      "7676",
+      "1580",
+      "513",
+      "7278",
+      "2988",
+      "2300",
+      "6292",
+      "7156"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:20:54.964Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1929473": {
+    "day": 6,
+    "managerId": "1929473",
+    "playerIds": [
+      "1645",
+      "11161",
+      "4296",
+      "7282",
+      "2941",
+      "2661",
+      "17309",
+      "3284",
+      "3176",
+      "7417",
+      "32"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:22:09.583Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1906625": {
+    "day": 6,
+    "managerId": "1906625",
+    "playerIds": [
+      "8292",
+      "2279",
+      "14251",
+      "11512",
+      "3304",
+      "11255",
+      "608",
+      "6081",
+      "8301",
+      "3204",
+      "15613"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:22:29.838Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1927404": {
+    "day": 6,
+    "managerId": "1927404",
+    "playerIds": [
+      "11631",
+      "2255",
+      "2294",
+      "6197",
+      "14249",
+      "6160",
+      "10115",
+      "15199",
+      "15202",
+      "3543",
+      "15283"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:22:44.299Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1450470": {
+    "day": 6,
+    "managerId": "1450470",
+    "playerIds": [
+      "12284",
+      "7616",
+      "1012",
+      "8329",
+      "8166",
+      "15193",
+      "15211",
+      "17282",
+      "14048",
+      "17203",
+      "7696"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:23:04.733Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:2038365": {
+    "day": 6,
+    "managerId": "2038365",
+    "playerIds": [
+      "10113",
+      "11162",
+      "1671",
+      "2783",
+      "12297",
+      "2977",
+      "10122",
+      "11967",
+      "2065",
+      "9384",
+      "7219"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:23:14.881Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:1981519": {
+    "day": 6,
+    "managerId": "1981519",
+    "playerIds": [
+      "11010",
+      "6209",
+      "16369",
+      "4606",
+      "7721",
+      "14241",
+      "2358",
+      "16378",
+      "173",
+      "493"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:23:43.815Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  },
+  "6:2710049": {
+    "day": 6,
+    "managerId": "2710049",
+    "playerIds": [
+      "2803",
+      "9995",
+      "1639",
+      "11006",
+      "9513",
+      "4333",
+      "3187",
+      "2864",
+      "1961",
+      "7320"
+    ],
+    "source": "manual-confirmation",
+    "verified": false,
+    "capturedAt": "2026-10-18T15:24:04.588Z",
+    "note": "Kaderzugehoerigkeit geprueft, tatsaechliche Aufstellung nicht durch Kickbase bestaetigt."
+  }
+}

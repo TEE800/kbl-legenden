@@ -1,0 +1,3127 @@
+{
+  "fetchedAt": "2026-10-20T17:20:56.306Z",
+  "lcud": "2026-08-10T14:40:33Z",
+  "types": {
+    "45": "Cross",
+    "46": "Forward zone pass",
+    "47": "Accurate Keeper-Sweeper (GK)",
+    "48": "Accurate Throw (GK)",
+    "49": "Accurate long Ball",
+    "50": "Deadly Pass",
+    "52": "Aerial lost",
+    "79": "Aerial won",
+    "80": "Rebound Assist",
+    "81": "Rebound Assist",
+    "82": "Own Goal forced",
+    "83": "Deflected Assist",
+    "84": "Woodwork Assist",
+    "86": "Bonus: long range",
+    "87": "Penalty scored",
+    "88": "Penalty missed",
+    "89": "Penalty missed",
+    "90": "Penalty missed",
+    "91": "Post",
+    "92": "Left Post",
+    "93": "Right Post",
+    "94": "Back Pass Foul (GK)",
+    "96": "Big Chance Created",
+    "98": "Big Chance Created",
+    "99": "Big Chance Created",
+    "100": "Big Chance Created",
+    "101": "Big Chance Created",
+    "102": "Big Chance Created",
+    "103": "Big Chance missed",
+    "104": "Cross blocked",
+    "106": "Challenge lost",
+    "107": "Cleared on the Line",
+    "108": "Cross not claimed (GK)",
+    "109": "Dangerous play",
+    "110": "Dive Catch (GK)",
+    "111": "Dive Save (GK)",
+    "112": "Cross blocked and Possession",
+    "113": "Cleared",
+    "114": "Mistake before Goal",
+    "115": "Mistake before Shot",
+    "116": "Incorrect Throw-In",
+    "117": "Foul",
+    "118": "Fouled last third",
+    "120": "Intentional Assist",
+    "121": "Cross Intercepted (GK)",
+    "122": "One-on-One",
+    "123": "Hand Ball",
+    "124": "Interception",
+    "125": "Ball intercepted",
+    "126": "Interception in Box",
+    "127": "Bonus: Last Man Tackle",
+    "130": "Overrun",
+    "131": "own goal",
+    "132": "Penalty conceded",
+    "133": "Penalty saved (GK)",
+    "134": "Penalty won",
+    "135": "Punched Ball (GK)",
+    "136": "Red Card",
+    "137": "Shot saved (GK)",
+    "138": "Distance Shot saved (GK)",
+    "139": "2nd Yellow",
+    "141": "6 Sec violation (GK)",
+    "142": "Standing saved (GK)",
+    "143": "Pass final Third",
+    "144": "Shot Assist",
+    "147": "Offside",
+    "148": "Offside",
+    "149": "Shot on goal",
+    "152": "Contest won",
+    "153": "Corner won",
+    "154": "Tackle won",
+    "155": "Yellow Card",
+    "156": "Starting 11",
+    "157": "Possession lost",
+    "159": "Team Goal",
+    "160": "Goal conceded",
+    "165": "Game Won",
+    "166": "Game Lost",
+    "167": "Played Minutes Bonus",
+    "168": "Team Goal",
+    "169": "Goal conceded",
+    "170": "Team Goal",
+    "171": "Goal conceded",
+    "173": "Goal (GK)",
+    "174": "Goal (Midfielder)",
+    "175": "Goal (Defender)",
+    "176": "Goal (Striker)",
+    "177": "Assist (GK)",
+    "178": "Assist (Defender)",
+    "179": "Assist (Midfielder)",
+    "180": "Assist (Striker)",
+    "181": "Goal Set up (GK)",
+    "182": "Goal Set up (Defender)",
+    "183": "Goal Set up (Midfielder)",
+    "184": "Goal Set up (Striker)",
+    "185": "Goal (Substitute)",
+    "186": "Assist (Substitute)",
+    "187": "Goal Set up (Substitute)",
+    "188": "Clean Sheet (GK)",
+    "189": "Clean Sheet (Defender)",
+    "190": "Clean Sheet (Midfielder)",
+    "191": "Clean Sheet (Striker)",
+    "194": "Big Chance saved (GK)",
+    "195": "Ball covered unchallenged (GK)",
+    "196": "Ball covered challenged (GK)",
+    "197": "Shot on Target (narrow miss)",
+    "199": "Shot on Goal (far away)",
+    "200": "Shot on Target (blocked)",
+    "203": "Penalty saved (penalty shoot-out)",
+    "204": "Penalty missed (penalty shoot-out)",
+    "205": "Penalty scored (penalty shoot-out)",
+    "206": "Shot blocked",
+    "207": "Shot blocked",
+    "208": "Shot blocked",
+    "209": "Penalty saved",
+    "1742": "Accurate Keeper-Sweeper (GK)",
+    "1743": "Accurate Throw (GK)",
+    "1744": "Accurate long Ball",
+    "1747": "Aerial lost",
+    "1748": "Aerial won",
+    "1749": "Rebound Assist",
+    "1750": "Rebound Assist",
+    "1751": "Own Goal forced",
+    "1752": "Assist",
+    "1753": "Woodwork Assist",
+    "1755": "Penalty scored",
+    "1756": "Penalty missed",
+    "1759": "Post",
+    "1760": "Left Post",
+    "1761": "Right Post",
+    "1762": "Back Pass Foul (GK)",
+    "1772": "Challenge lost",
+    "1773": "Cleared on the Line",
+    "1775": "Dangerous play",
+    "1776": "Dive Catch (GK)",
+    "1777": "Dive Save (GK)",
+    "1779": "Cleared",
+    "1780": "Mistake before Goal",
+    "1781": "Mistake before Shot",
+    "1782": "Incorrect Play-In",
+    "1783": "Foul",
+    "1784": "Fouled last third",
+    "1788": "One-on-One",
+    "1789": "Hand Ball",
+    "1790": "Interception",
+    "1791": "Ball intercepted",
+    "1792": "Interception in Box",
+    "1794": "Shot blocked",
+    "1796": "own goal",
+    "1797": "Penalty conceded",
+    "1798": "Penalty saved (GK)",
+    "1799": "Penalty won",
+    "1800": "Punched Ball (GK)",
+    "1801": "Red Card",
+    "1802": "Shot saved (GK)",
+    "1803": "Shot saved (GK)",
+    "1805": "6 Sec violation (GK)",
+    "1806": "Standing saved (GK)",
+    "1807": "Pass final Third",
+    "1808": "Shot Assist",
+    "1810": "Offside",
+    "1811": "Offside",
+    "1812": "Shot on goal",
+    "1815": "Contest won",
+    "1816": "Corner won",
+    "1817": "Tackle won",
+    "1818": "Time penalty",
+    "1820": "Possession lost",
+    "1822": "Team Goal",
+    "1823": "Goal conceded",
+    "1824": "Assist",
+    "1828": "Game Won",
+    "1829": "Game Lost",
+    "1830": "Played Minutes Bonus",
+    "1831": "Team Goal",
+    "1832": "Goal conceded",
+    "1833": "Team Goal",
+    "1834": "Goal conceded",
+    "1835": "Goal (GK)",
+    "1838": "Goal (Field player)",
+    "1850": "Clean Sheet (GK)",
+    "1851": "Clean Sheet (FP)",
+    "1856": "Ball covered challenged (GK)",
+    "1857": "Shot on Target (narrow miss)",
+    "1858": "Shot on Goal (far away)",
+    "1859": "Shot on Target (blocked)",
+    "1862": "Penalty saved (penalty shoot-out)",
+    "1863": "Penalty missed (penalty shoot-out)",
+    "1864": "Penalty scored (penalty shoot-out)",
+    "1868": "Penalty saved",
+    "2250": "Pass",
+    "2638": "Goal behind \"The Line\" (GK)",
+    "2639": "Goal behind \"The Line\" (field player)",
+    "2640": "Goal \"PlusOne\" (GK)",
+    "2641": "Goal \"PlusOne\" (field player)",
+    "2642": "Own goal \"PlusOne\"",
+    "2643": "Assist \"PlusOne\"",
+    "2644": "Penalty scored \"PlusOne\"",
+    "2645": "Penalty missed \"PlusOne\"",
+    "2646": "Penalty conceded \"PlusOne\"",
+    "2647": "Penalty saved \"PlusOne\"",
+    "2648": "Goal \"3 Play\"",
+    "2650": "Own goal \"3 Play\"",
+    "2651": "Assist \"3 Play\"",
+    "2652": "Penalty scored \"3 Play\"",
+    "2653": "Penalty missed \"3 Play\"",
+    "2654": "Penalty conceded \"3 Play\"",
+    "2655": "Penalty saved \"3 Play\"",
+    "2783": "Red card \"Fairplay\"",
+    "2784": "Goal \"1-ON-1\"",
+    "2785": "Handball \"1-ON-1\"",
+    "2787": "Goal conceded",
+    "2788": "Team goal",
+    "2789": "Shot on target",
+    "2790": "Starting 6",
+    "2791": "Shot blocked",
+    "2792": "Shot Assist",
+    "2793": "Shot on goal",
+    "2794": "Shot on Target (narrow miss)",
+    "2795": "Shot on Goal (far away)",
+    "2796": "Shot on Target (blocked)",
+    "2797": "Cleared on the Line",
+    "2798": "Shot blocked",
+    "2799": "Shot Assist",
+    "2800": "Shot on goal",
+    "2801": "Shot on Target (narrow miss)",
+    "2802": "Shot on Goal (far away)",
+    "2803": "Shot on Target (blocked)",
+    "2804": "Shot blocked \"1-ON-1\"",
+    "2805": "Shot on goal \"1-ON-1\"",
+    "2806": "Shot on Target (narrow miss) \"1-ON-1\"",
+    "2807": "Shot on Goal (far away) \"1-ON-1\"",
+    "2808": "Shot on Target (blocked) \"1-ON-1\"",
+    "2809": "Post \"Plus One\"",
+    "2810": "Left Post \"Plus One\"",
+    "2811": "Right Post \"Plus One\"",
+    "2812": "Post \"3 Play\"",
+    "2813": "Left Post \"3 Play\"",
+    "2814": "Right Post \"3 Play\"",
+    "2815": "Post \"1-ON-1\"",
+    "2816": "Left Post \"1-ON-1\"",
+    "2817": "Right Post \"1-ON-1\"",
+    "2818": "Own Goal forced \"PlusOne\"",
+    "2819": "Woodwork Assist \"PlusOne\"",
+    "2820": "Mistake before Goal \"PlusOne\"",
+    "2821": "Mistake before Shot \"PlusOne\"",
+    "2822": "Own Goal forced \"3 Play\"",
+    "2823": "Woodwork Assist \"3 Play\"",
+    "2824": "Mistake before Goal \"3 Play\"",
+    "2825": "Mistake before Shot \"3 Play\"",
+    "3336": "Cross",
+    "3337": "Forward zone pass",
+    "3338": "Accurate Keeper-Sweeper (GK)",
+    "3339": "Accurate Throw (GK)",
+    "3340": "Accurate long Ball",
+    "3341": "Deadly Pass",
+    "3343": "Aerial lost",
+    "3344": "Aerial won",
+    "3345": "Rebound Assist",
+    "3346": "Rebound Assist",
+    "3347": "Own Goal forced",
+    "3348": "Deflected Assist",
+    "3349": "Woodwork Assist",
+    "3350": "Bonus: long range",
+    "3351": "Penalty scored",
+    "3352": "Penalty missed",
+    "3353": "Penalty missed",
+    "3354": "Penalty missed",
+    "3355": "Post",
+    "3356": "Left Post",
+    "3357": "Right Post",
+    "3358": "Back Pass Foul (GK)",
+    "3360": "Big Chance Created",
+    "3361": "Big Chance Created",
+    "3362": "Big Chance Created",
+    "3363": "Big Chance Created",
+    "3364": "Big Chance Created",
+    "3365": "Big Chance Created",
+    "3366": "Big Chance missed",
+    "3367": "Cross blocked",
+    "3368": "Challenge lost",
+    "3369": "Cleared on the Line",
+    "3370": "Cross not claimed (GK)",
+    "3371": "Dangerous play",
+    "3372": "Dive Catch (GK)",
+    "3373": "Dive Save (GK)",
+    "3374": "Cross blocked and Possession",
+    "3376": "Mistake before Goal",
+    "3377": "Mistake before Shot",
+    "3378": "Incorrect Throw-In",
+    "3379": "Foul",
+    "3380": "Fouled last third",
+    "3382": "Intentional Assist",
+    "3383": "Cross Intercepted (GK)",
+    "3384": "One-on-One",
+    "3385": "Hand Ball",
+    "3386": "Interception (outside the box)",
+    "3387": "Ball intercepted",
+    "3388": "Interception (in the box)",
+    "3389": "Bonus: Last Man Tackle",
+    "3391": "Overrun",
+    "3392": "own goal",
+    "3393": "Penalty conceded",
+    "3394": "Penalty saved (GK)",
+    "3395": "Penalty won",
+    "3396": "Punched Ball (GK)",
+    "3397": "Red Card",
+    "3398": "Shot saved (GK)",
+    "3399": "Distance Shot saved (GK)",
+    "3400": "2nd Yellow",
+    "3401": "6 Sec violation (GK)",
+    "3402": "Standing saved (GK)",
+    "3403": "Pass final Third",
+    "3404": "Shot Assist",
+    "3406": "Offside",
+    "3407": "Offside",
+    "3408": "Shot on goal",
+    "3411": "Contest won",
+    "3412": "Corner won",
+    "3413": "Tackle won",
+    "3414": "Yellow Card",
+    "3415": "Starting 11",
+    "3416": "Possession lost",
+    "3418": "Team Goal",
+    "3419": "Goal conceded",
+    "3424": "Game Won",
+    "3425": "Game Lost",
+    "3426": "Played Minutes Bonus",
+    "3427": "Team Goal",
+    "3428": "Goal conceded",
+    "3429": "Team Goal",
+    "3430": "Goal conceded",
+    "3431": "Goal (GK)",
+    "3432": "Goal (Midfielder)",
+    "3433": "Goal (Defender)",
+    "3434": "Goal (Striker)",
+    "3435": "Assist (GK)",
+    "3436": "Assist (Defender)",
+    "3437": "Assist (Midfielder)",
+    "3438": "Assist (Striker)",
+    "3439": "Secondary Assist (GK)",
+    "3440": "Secondary Assist (Defender)",
+    "3441": "Secondary Assist (Midfielder)",
+    "3442": "Secondary Assist (Striker)",
+    "3443": "Goal (Substitute)",
+    "3444": "Assist (Substitute)",
+    "3445": "Secondary Assist (Substitute)",
+    "3446": "Clean Sheet (GK)",
+    "3447": "Clean Sheet (Defender)",
+    "3448": "Clean Sheet (Midfielder)",
+    "3449": "Clean Sheet (Striker)",
+    "3450": "Big Chance saved (GK)",
+    "3451": "Ball covered unchallenged (GK)",
+    "3452": "Ball covered challenged (GK)",
+    "3453": "Shot on Target (narrow miss)",
+    "3454": "Shot on Goal (far away)",
+    "3455": "Shot on Target (blocked)",
+    "3458": "Penalty saved (penalty shoot-out)",
+    "3459": "Penalty missed (penalty shoot-out)",
+    "3460": "Penalty scored (penalty shoot-out)",
+    "3461": "Shot blocked",
+    "3462": "Shot blocked",
+    "3463": "Shot blocked",
+    "3591": "Cleared (in the box)",
+    "3592": "Cleared (outside the box)",
+    "3593": "subbed on",
+    "3849": "Accurate Keeper-Sweeper (GK)",
+    "3850": "Accurate Throw (GK)",
+    "3851": "Accurate long Ball",
+    "3853": "Aerial lost",
+    "3854": "Aerial won",
+    "3855": "Rebound Assist",
+    "3856": "Rebound Assist",
+    "3857": "Own Goal forced",
+    "3858": "Assist",
+    "3859": "Woodwork Assist",
+    "3860": "Penalty scored",
+    "3861": "Penalty missed",
+    "3862": "Post",
+    "3863": "Left Post",
+    "3864": "Right Post",
+    "3865": "Back Pass Foul (GK)",
+    "3866": "Challenge lost",
+    "3867": "Cleared on the Line",
+    "3868": "Dangerous play",
+    "3869": "Dive Catch (GK)",
+    "3870": "Dive Save (GK)",
+    "3871": "Cleared",
+    "3872": "Mistake before Goal",
+    "3873": "Mistake before Shot",
+    "3874": "Incorrect Play-In",
+    "3875": "Foul",
+    "3876": "Fouled last third",
+    "3878": "One-on-One",
+    "3879": "Hand Ball",
+    "3880": "Interception",
+    "3881": "Ball intercepted",
+    "3882": "Interception in Box",
+    "3883": "Shot blocked",
+    "3884": "own goal",
+    "3885": "Penalty conceded",
+    "3886": "Penalty saved (GK)",
+    "3887": "Penalty won",
+    "3888": "Punched Ball (GK)",
+    "3889": "Red Card",
+    "3890": "Shot saved (GK)",
+    "3891": "Shot saved (GK)",
+    "3892": "6 Sec violation (GK)",
+    "3893": "Standing saved (GK)",
+    "3894": "Pass final Third",
+    "3895": "Shot Assist",
+    "3897": "Offside",
+    "3898": "Offside",
+    "3899": "Shot on goal",
+    "3902": "Contest won",
+    "3903": "Corner won",
+    "3904": "Tackle won",
+    "3905": "Time penalty",
+    "3906": "Possession lost",
+    "3908": "Team Goal",
+    "3909": "Goal conceded",
+    "3910": "Assist",
+    "3913": "Game Won",
+    "3914": "Game Lost",
+    "3915": "Played Minutes Bonus",
+    "3916": "Team Goal",
+    "3917": "Goal conceded",
+    "3918": "Team Goal",
+    "3919": "Goal conceded",
+    "3920": "Goal (GK)",
+    "3921": "Goal (Field player)",
+    "3922": "Clean Sheet (GK)",
+    "3923": "Clean Sheet (FP)",
+    "3924": "Ball covered challenged (GK)",
+    "3925": "Shot on Target (narrow miss)",
+    "3926": "Shot on Goal (far away)",
+    "3927": "Shot on Target (blocked)",
+    "3930": "Penalty saved (penalty shoot-out)",
+    "3931": "Penalty missed (penalty shoot-out)",
+    "3932": "Penalty scored (penalty shoot-out)",
+    "3933": "Penalty saved",
+    "3934": "Pass",
+    "3940": "Goal behind \"The Line\" (GK)",
+    "3941": "Goal behind \"The Line\" (field player)",
+    "3942": "Goal \"PlusOne\" (GK)",
+    "3943": "Goal \"PlusOne\" (field player)",
+    "3944": "Own goal \"PlusOne\"",
+    "3945": "Assist \"PlusOne\"",
+    "3946": "Penalty scored \"PlusOne\"",
+    "3947": "Penalty missed \"PlusOne\"",
+    "3948": "Penalty conceded \"PlusOne\"",
+    "3949": "Penalty saved \"PlusOne\"",
+    "3950": "Goal \"3 Play\"",
+    "3951": "Own goal \"3 Play\"",
+    "3952": "Assist \"3 Play\"",
+    "3953": "Penalty scored \"3 Play\"",
+    "3954": "Penalty missed \"3 Play\"",
+    "3955": "Penalty conceded \"3 Play\"",
+    "3956": "Penalty saved \"3 Play\"",
+    "3957": "Red card \"Fairplay\"",
+    "3958": "Goal \"1-ON-1\"",
+    "3959": "Handball \"1-ON-1\"",
+    "3961": "Goal conceded",
+    "3962": "Team goal",
+    "3963": "Shot on target",
+    "3964": "Starting 6",
+    "3965": "Shot blocked",
+    "3966": "Shot Assist",
+    "3967": "Shot on goal",
+    "3968": "Shot on Target (narrow miss)",
+    "3969": "Shot on Goal (far away)",
+    "3970": "Shot on Target (blocked)",
+    "3971": "Cleared off the Line  \"1-on-1\"",
+    "3972": "Shot blocked",
+    "3973": "Shot Assist",
+    "3974": "Shot on goal",
+    "3975": "Shot on Target (narrow miss)",
+    "3976": "Shot on Goal (far away)",
+    "3977": "Shot on Target (blocked)",
+    "3978": "Shot blocked \"1-ON-1\"",
+    "3979": "Shot on goal \"1-ON-1\"",
+    "3980": "Shot on Target (narrow miss) \"1-ON-1\"",
+    "3981": "Shot on Goal (far away) \"1-ON-1\"",
+    "3982": "Shot on Target (blocked) \"1-ON-1\"",
+    "3983": "Post \"Plus One\"",
+    "3984": "Left Post \"Plus One\"",
+    "3985": "Right Post \"Plus One\"",
+    "3986": "Post \"3 Play\"",
+    "3987": "Left Post \"3 Play\"",
+    "3988": "Right Post \"3 Play\"",
+    "3989": "Post \"1-ON-1\"",
+    "3990": "Left Post \"1-ON-1\"",
+    "3991": "Right Post \"1-ON-1\"",
+    "3992": "Own Goal forced \"PlusOne\"",
+    "3993": "Woodwork Assist \"PlusOne\"",
+    "3994": "Mistake before Goal \"PlusOne\"",
+    "3995": "Mistake before Shot \"PlusOne\"",
+    "3996": "Own Goal forced \"3 Play\"",
+    "3997": "Woodwork Assist \"3 Play\"",
+    "3998": "Mistake before Goal \"3 Play\"",
+    "3999": "Mistake before Shot \"3 Play\"",
+    "4000": "Cross",
+    "4003": "Forward zone pass",
+    "4006": "Accurate Keeper-Sweeper (GK)",
+    "4009": "Accurate Throw (GK)",
+    "4012": "Accurate long Ball",
+    "4015": "Deadly Pass",
+    "4021": "Aerial lost",
+    "4024": "Aerial won",
+    "4027": "Rebound Assist",
+    "4030": "Rebound Assist",
+    "4033": "Own Goal forced",
+    "4036": "Deflected Assist",
+    "4039": "Woodwork Assist",
+    "4042": "Bonus: long range",
+    "4045": "Penalty scored",
+    "4048": "Penalty missed",
+    "4051": "Penalty missed",
+    "4054": "Penalty missed",
+    "4057": "Post",
+    "4060": "Left Post",
+    "4063": "Right Post",
+    "4066": "Back Pass Foul (GK)",
+    "4072": "Big Chance Created",
+    "4075": "Big Chance Created",
+    "4078": "Big Chance Created",
+    "4081": "Big Chance Created",
+    "4084": "Big Chance Created",
+    "4087": "Big Chance Created",
+    "4090": "Big Chance missed",
+    "4093": "Cross blocked",
+    "4096": "Challenge lost",
+    "4099": "Cleared on the Line",
+    "4102": "Cross not claimed (GK)",
+    "4105": "Dangerous play",
+    "4108": "Dive Catch (GK)",
+    "4111": "Dive Save (GK)",
+    "4114": "Cross blocked and Possession",
+    "4120": "Mistake before Goal",
+    "4123": "Mistake before Shot",
+    "4126": "Incorrect Throw-In",
+    "4129": "Foul",
+    "4132": "Fouled last third",
+    "4138": "Intentional Assist",
+    "4141": "Cross Intercepted (GK)",
+    "4144": "One-on-One",
+    "4147": "Hand Ball",
+    "4150": "Interception (outside the box)",
+    "4153": "Ball intercepted",
+    "4156": "Interception (in the box)",
+    "4159": "Bonus: Last Man Tackle",
+    "4165": "Overrun",
+    "4168": "own goal",
+    "4171": "Penalty conceded",
+    "4174": "Penalty saved (GK)",
+    "4177": "Penalty won",
+    "4180": "Punched Ball (GK)",
+    "4183": "Red Card",
+    "4186": "Shot saved (GK)",
+    "4189": "Distance Shot saved (GK)",
+    "4192": "2nd Yellow",
+    "4195": "6 Sec violation (GK)",
+    "4198": "Standing saved (GK)",
+    "4201": "Pass final Third",
+    "4204": "Shot Assist",
+    "4210": "Offside",
+    "4213": "Offside",
+    "4216": "Shot on goal",
+    "4225": "Contest won",
+    "4228": "Corner won",
+    "4231": "Tackle won",
+    "4234": "Yellow Card",
+    "4237": "Starting 11",
+    "4240": "Possession lost",
+    "4246": "Team Goal",
+    "4249": "Goal conceded",
+    "4264": "Game Won",
+    "4267": "Game Lost",
+    "4270": "Played Minutes Bonus",
+    "4273": "Team Goal",
+    "4276": "Goal conceded",
+    "4279": "Team Goal",
+    "4282": "Goal conceded",
+    "4285": "Goal (GK)",
+    "4288": "Goal (Midfielder)",
+    "4291": "Goal (Defender)",
+    "4294": "Goal (Striker)",
+    "4297": "Assist (GK)",
+    "4300": "Assist (Defender)",
+    "4303": "Assist (Midfielder)",
+    "4306": "Assist (Striker)",
+    "4309": "Secondary Assist (GK)",
+    "4312": "Secondary Assist (Defender)",
+    "4315": "Secondary Assist (Midfielder)",
+    "4318": "Secondary Assist (Striker)",
+    "4330": "Clean Sheet (GK)",
+    "4333": "Clean Sheet (Defender)",
+    "4336": "Clean Sheet (Midfielder)",
+    "4339": "Clean Sheet (Striker)",
+    "4342": "Big Chance saved (GK)",
+    "4345": "Ball covered unchallenged (GK)",
+    "4348": "Ball covered challenged (GK)",
+    "4351": "Shot on Target (narrow miss)",
+    "4354": "Shot on Goal (far away)",
+    "4357": "Shot on Target (blocked)",
+    "4366": "Penalty saved (penalty shoot-out)",
+    "4369": "Penalty missed (penalty shoot-out)",
+    "4372": "Penalty scored (penalty shoot-out)",
+    "4375": "Shot blocked",
+    "4378": "Shot blocked",
+    "4381": "Shot blocked",
+    "4387": "Cleared (in the box)",
+    "4390": "Cleared (outside the box)",
+    "4393": "subbed on",
+    "4765": "Fouled in the opponent's half",
+    "-1": "Eingewechselt",
+    "-2": "Ausgewechselt",
+    "-8": "Von Anfang an gespielt",
+    "-7": "Auf Bank",
+    "-10": "Erste Halbzeit des Spiels beendet",
+    "-17": "Zweite Halbzeit des Spiels beendet"
+  },
+  "raw": {
+    "lcud": "2026-08-10T14:40:33Z",
+    "it": [
+      {
+        "i": 45,
+        "ti": "Cross"
+      },
+      {
+        "i": 46,
+        "ti": "Forward zone pass"
+      },
+      {
+        "i": 47,
+        "ti": "Accurate Keeper-Sweeper (GK)"
+      },
+      {
+        "i": 48,
+        "ti": "Accurate Throw (GK)"
+      },
+      {
+        "i": 49,
+        "ti": "Accurate long Ball"
+      },
+      {
+        "i": 50,
+        "ti": "Deadly Pass"
+      },
+      {
+        "i": 52,
+        "ti": "Aerial lost"
+      },
+      {
+        "i": 79,
+        "ti": "Aerial won"
+      },
+      {
+        "i": 80,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 81,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 82,
+        "ti": "Own Goal forced"
+      },
+      {
+        "i": 83,
+        "ti": "Deflected Assist"
+      },
+      {
+        "i": 84,
+        "ti": "Woodwork Assist"
+      },
+      {
+        "i": 86,
+        "ti": "Bonus: long range"
+      },
+      {
+        "i": 87,
+        "ti": "Penalty scored"
+      },
+      {
+        "i": 88,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 89,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 90,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 91,
+        "ti": "Post"
+      },
+      {
+        "i": 92,
+        "ti": "Left Post"
+      },
+      {
+        "i": 93,
+        "ti": "Right Post"
+      },
+      {
+        "i": 94,
+        "ti": "Back Pass Foul (GK)"
+      },
+      {
+        "i": 96,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 98,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 99,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 100,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 101,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 102,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 103,
+        "ti": "Big Chance missed"
+      },
+      {
+        "i": 104,
+        "ti": "Cross blocked"
+      },
+      {
+        "i": 106,
+        "ti": "Challenge lost"
+      },
+      {
+        "i": 107,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 108,
+        "ti": "Cross not claimed (GK)"
+      },
+      {
+        "i": 109,
+        "ti": "Dangerous play"
+      },
+      {
+        "i": 110,
+        "ti": "Dive Catch (GK)"
+      },
+      {
+        "i": 111,
+        "ti": "Dive Save (GK)"
+      },
+      {
+        "i": 112,
+        "ti": "Cross blocked and Possession"
+      },
+      {
+        "i": 113,
+        "ti": "Cleared"
+      },
+      {
+        "i": 114,
+        "ti": "Mistake before Goal"
+      },
+      {
+        "i": 115,
+        "ti": "Mistake before Shot"
+      },
+      {
+        "i": 116,
+        "ti": "Incorrect Throw-In"
+      },
+      {
+        "i": 117,
+        "ti": "Foul"
+      },
+      {
+        "i": 118,
+        "ti": "Fouled last third"
+      },
+      {
+        "i": 120,
+        "ti": "Intentional Assist"
+      },
+      {
+        "i": 121,
+        "ti": "Cross Intercepted (GK)"
+      },
+      {
+        "i": 122,
+        "ti": "One-on-One"
+      },
+      {
+        "i": 123,
+        "ti": "Hand Ball"
+      },
+      {
+        "i": 124,
+        "ti": "Interception"
+      },
+      {
+        "i": 125,
+        "ti": "Ball intercepted"
+      },
+      {
+        "i": 126,
+        "ti": "Interception in Box"
+      },
+      {
+        "i": 127,
+        "ti": "Bonus: Last Man Tackle"
+      },
+      {
+        "i": 130,
+        "ti": "Overrun"
+      },
+      {
+        "i": 131,
+        "ti": "own goal"
+      },
+      {
+        "i": 132,
+        "ti": "Penalty conceded"
+      },
+      {
+        "i": 133,
+        "ti": "Penalty saved (GK)"
+      },
+      {
+        "i": 134,
+        "ti": "Penalty won"
+      },
+      {
+        "i": 135,
+        "ti": "Punched Ball (GK)"
+      },
+      {
+        "i": 136,
+        "ti": "Red Card"
+      },
+      {
+        "i": 137,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 138,
+        "ti": "Distance Shot saved (GK)"
+      },
+      {
+        "i": 139,
+        "ti": "2nd Yellow"
+      },
+      {
+        "i": 141,
+        "ti": "6 Sec violation (GK)"
+      },
+      {
+        "i": 142,
+        "ti": "Standing saved (GK)"
+      },
+      {
+        "i": 143,
+        "ti": "Pass final Third"
+      },
+      {
+        "i": 144,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 147,
+        "ti": "Offside"
+      },
+      {
+        "i": 148,
+        "ti": "Offside"
+      },
+      {
+        "i": 149,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 152,
+        "ti": "Contest won"
+      },
+      {
+        "i": 153,
+        "ti": "Corner won"
+      },
+      {
+        "i": 154,
+        "ti": "Tackle won"
+      },
+      {
+        "i": 155,
+        "ti": "Yellow Card"
+      },
+      {
+        "i": 156,
+        "ti": "Starting 11"
+      },
+      {
+        "i": 157,
+        "ti": "Possession lost"
+      },
+      {
+        "i": 159,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 160,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 165,
+        "ti": "Game Won"
+      },
+      {
+        "i": 166,
+        "ti": "Game Lost"
+      },
+      {
+        "i": 167,
+        "ti": "Played Minutes Bonus"
+      },
+      {
+        "i": 168,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 169,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 170,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 171,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 173,
+        "ti": "Goal (GK)"
+      },
+      {
+        "i": 174,
+        "ti": "Goal (Midfielder)"
+      },
+      {
+        "i": 175,
+        "ti": "Goal (Defender)"
+      },
+      {
+        "i": 176,
+        "ti": "Goal (Striker)"
+      },
+      {
+        "i": 177,
+        "ti": "Assist (GK)"
+      },
+      {
+        "i": 178,
+        "ti": "Assist (Defender)"
+      },
+      {
+        "i": 179,
+        "ti": "Assist (Midfielder)"
+      },
+      {
+        "i": 180,
+        "ti": "Assist (Striker)"
+      },
+      {
+        "i": 181,
+        "ti": "Goal Set up (GK)"
+      },
+      {
+        "i": 182,
+        "ti": "Goal Set up (Defender)"
+      },
+      {
+        "i": 183,
+        "ti": "Goal Set up (Midfielder)"
+      },
+      {
+        "i": 184,
+        "ti": "Goal Set up (Striker)"
+      },
+      {
+        "i": 185,
+        "ti": "Goal (Substitute)"
+      },
+      {
+        "i": 186,
+        "ti": "Assist (Substitute)"
+      },
+      {
+        "i": 187,
+        "ti": "Goal Set up (Substitute)"
+      },
+      {
+        "i": 188,
+        "ti": "Clean Sheet (GK)"
+      },
+      {
+        "i": 189,
+        "ti": "Clean Sheet (Defender)"
+      },
+      {
+        "i": 190,
+        "ti": "Clean Sheet (Midfielder)"
+      },
+      {
+        "i": 191,
+        "ti": "Clean Sheet (Striker)"
+      },
+      {
+        "i": 194,
+        "ti": "Big Chance saved (GK)"
+      },
+      {
+        "i": 195,
+        "ti": "Ball covered unchallenged (GK)"
+      },
+      {
+        "i": 196,
+        "ti": "Ball covered challenged (GK)"
+      },
+      {
+        "i": 197,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 199,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 200,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 203,
+        "ti": "Penalty saved (penalty shoot-out)"
+      },
+      {
+        "i": 204,
+        "ti": "Penalty missed (penalty shoot-out)"
+      },
+      {
+        "i": 205,
+        "ti": "Penalty scored (penalty shoot-out)"
+      },
+      {
+        "i": 206,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 207,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 208,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 209,
+        "ti": "Penalty saved"
+      },
+      {
+        "i": 1755,
+        "ti": "Penalty scored"
+      },
+      {
+        "i": 1756,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 1798,
+        "ti": "Penalty saved (GK)"
+      },
+      {
+        "i": 1810,
+        "ti": "Offside"
+      },
+      {
+        "i": 1811,
+        "ti": "Offside"
+      },
+      {
+        "i": 1822,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 1823,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 1828,
+        "ti": "Game Won"
+      },
+      {
+        "i": 1829,
+        "ti": "Game Lost"
+      },
+      {
+        "i": 1830,
+        "ti": "Played Minutes Bonus"
+      },
+      {
+        "i": 1831,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 1832,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 1833,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 1834,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 1835,
+        "ti": "Goal (GK)"
+      },
+      {
+        "i": 1838,
+        "ti": "Goal (Field player)"
+      },
+      {
+        "i": 1850,
+        "ti": "Clean Sheet (GK)"
+      },
+      {
+        "i": 1851,
+        "ti": "Clean Sheet (FP)"
+      },
+      {
+        "i": 1856,
+        "ti": "Ball covered challenged (GK)"
+      },
+      {
+        "i": 1862,
+        "ti": "Penalty saved (penalty shoot-out)"
+      },
+      {
+        "i": 1863,
+        "ti": "Penalty missed (penalty shoot-out)"
+      },
+      {
+        "i": 1864,
+        "ti": "Penalty scored (penalty shoot-out)"
+      },
+      {
+        "i": 1868,
+        "ti": "Penalty saved"
+      },
+      {
+        "i": 2640,
+        "ti": "Goal \"PlusOne\" (GK)"
+      },
+      {
+        "i": 2641,
+        "ti": "Goal \"PlusOne\" (field player)"
+      },
+      {
+        "i": 2642,
+        "ti": "Own goal \"PlusOne\""
+      },
+      {
+        "i": 2643,
+        "ti": "Assist \"PlusOne\""
+      },
+      {
+        "i": 2644,
+        "ti": "Penalty scored \"PlusOne\""
+      },
+      {
+        "i": 2645,
+        "ti": "Penalty missed \"PlusOne\""
+      },
+      {
+        "i": 2646,
+        "ti": "Penalty conceded \"PlusOne\""
+      },
+      {
+        "i": 2647,
+        "ti": "Penalty saved \"PlusOne\""
+      },
+      {
+        "i": 2648,
+        "ti": "Goal \"3 Play\""
+      },
+      {
+        "i": 2650,
+        "ti": "Own goal \"3 Play\""
+      },
+      {
+        "i": 2651,
+        "ti": "Assist \"3 Play\""
+      },
+      {
+        "i": 2652,
+        "ti": "Penalty scored \"3 Play\""
+      },
+      {
+        "i": 2653,
+        "ti": "Penalty missed \"3 Play\""
+      },
+      {
+        "i": 2654,
+        "ti": "Penalty conceded \"3 Play\""
+      },
+      {
+        "i": 2655,
+        "ti": "Penalty saved \"3 Play\""
+      },
+      {
+        "i": 2783,
+        "ti": "Red card \"Fairplay\""
+      },
+      {
+        "i": 2784,
+        "ti": "Goal \"1-ON-1\""
+      },
+      {
+        "i": 2785,
+        "ti": "Handball \"1-ON-1\""
+      },
+      {
+        "i": 2790,
+        "ti": "Starting 6"
+      },
+      {
+        "i": 3336,
+        "ti": "Cross"
+      },
+      {
+        "i": 3337,
+        "ti": "Forward zone pass"
+      },
+      {
+        "i": 3338,
+        "ti": "Accurate Keeper-Sweeper (GK)"
+      },
+      {
+        "i": 3339,
+        "ti": "Accurate Throw (GK)"
+      },
+      {
+        "i": 3340,
+        "ti": "Accurate long Ball"
+      },
+      {
+        "i": 3341,
+        "ti": "Deadly Pass"
+      },
+      {
+        "i": 3343,
+        "ti": "Aerial lost"
+      },
+      {
+        "i": 3344,
+        "ti": "Aerial won"
+      },
+      {
+        "i": 3345,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 3346,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 3347,
+        "ti": "Own Goal forced"
+      },
+      {
+        "i": 3348,
+        "ti": "Deflected Assist"
+      },
+      {
+        "i": 3349,
+        "ti": "Woodwork Assist"
+      },
+      {
+        "i": 3350,
+        "ti": "Bonus: long range"
+      },
+      {
+        "i": 3351,
+        "ti": "Penalty scored"
+      },
+      {
+        "i": 3352,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 3353,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 3354,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 3355,
+        "ti": "Post"
+      },
+      {
+        "i": 3356,
+        "ti": "Left Post"
+      },
+      {
+        "i": 3357,
+        "ti": "Right Post"
+      },
+      {
+        "i": 3358,
+        "ti": "Back Pass Foul (GK)"
+      },
+      {
+        "i": 3360,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3361,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3362,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3363,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3364,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3365,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 3366,
+        "ti": "Big Chance missed"
+      },
+      {
+        "i": 3367,
+        "ti": "Cross blocked"
+      },
+      {
+        "i": 3368,
+        "ti": "Challenge lost"
+      },
+      {
+        "i": 3369,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 3370,
+        "ti": "Cross not claimed (GK)"
+      },
+      {
+        "i": 3371,
+        "ti": "Dangerous play"
+      },
+      {
+        "i": 3372,
+        "ti": "Dive Catch (GK)"
+      },
+      {
+        "i": 3373,
+        "ti": "Dive Save (GK)"
+      },
+      {
+        "i": 3374,
+        "ti": "Cross blocked and Possession"
+      },
+      {
+        "i": 3376,
+        "ti": "Mistake before Goal"
+      },
+      {
+        "i": 3377,
+        "ti": "Mistake before Shot"
+      },
+      {
+        "i": 3378,
+        "ti": "Incorrect Throw-In"
+      },
+      {
+        "i": 3379,
+        "ti": "Foul"
+      },
+      {
+        "i": 3380,
+        "ti": "Fouled last third"
+      },
+      {
+        "i": 3382,
+        "ti": "Intentional Assist"
+      },
+      {
+        "i": 3383,
+        "ti": "Cross Intercepted (GK)"
+      },
+      {
+        "i": 3384,
+        "ti": "One-on-One"
+      },
+      {
+        "i": 3385,
+        "ti": "Hand Ball"
+      },
+      {
+        "i": 3386,
+        "ti": "Interception (outside the box)"
+      },
+      {
+        "i": 3387,
+        "ti": "Ball intercepted"
+      },
+      {
+        "i": 3388,
+        "ti": "Interception (in the box)"
+      },
+      {
+        "i": 3389,
+        "ti": "Bonus: Last Man Tackle"
+      },
+      {
+        "i": 3391,
+        "ti": "Overrun"
+      },
+      {
+        "i": 3392,
+        "ti": "own goal"
+      },
+      {
+        "i": 3393,
+        "ti": "Penalty conceded"
+      },
+      {
+        "i": 3394,
+        "ti": "Penalty saved (GK)"
+      },
+      {
+        "i": 3395,
+        "ti": "Penalty won"
+      },
+      {
+        "i": 3396,
+        "ti": "Punched Ball (GK)"
+      },
+      {
+        "i": 3397,
+        "ti": "Red Card"
+      },
+      {
+        "i": 3398,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 3399,
+        "ti": "Distance Shot saved (GK)"
+      },
+      {
+        "i": 3400,
+        "ti": "2nd Yellow"
+      },
+      {
+        "i": 3401,
+        "ti": "6 Sec violation (GK)"
+      },
+      {
+        "i": 3402,
+        "ti": "Standing saved (GK)"
+      },
+      {
+        "i": 3403,
+        "ti": "Pass final Third"
+      },
+      {
+        "i": 3404,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 3406,
+        "ti": "Offside"
+      },
+      {
+        "i": 3407,
+        "ti": "Offside"
+      },
+      {
+        "i": 3408,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 3411,
+        "ti": "Contest won"
+      },
+      {
+        "i": 3412,
+        "ti": "Corner won"
+      },
+      {
+        "i": 3413,
+        "ti": "Tackle won"
+      },
+      {
+        "i": 3414,
+        "ti": "Yellow Card"
+      },
+      {
+        "i": 3415,
+        "ti": "Starting 11"
+      },
+      {
+        "i": 3416,
+        "ti": "Possession lost"
+      },
+      {
+        "i": 3418,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3419,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3424,
+        "ti": "Game Won"
+      },
+      {
+        "i": 3425,
+        "ti": "Game Lost"
+      },
+      {
+        "i": 3426,
+        "ti": "Played Minutes Bonus"
+      },
+      {
+        "i": 3427,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3428,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3429,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3430,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3431,
+        "ti": "Goal (GK)"
+      },
+      {
+        "i": 3432,
+        "ti": "Goal (Midfielder)"
+      },
+      {
+        "i": 3433,
+        "ti": "Goal (Defender)"
+      },
+      {
+        "i": 3434,
+        "ti": "Goal (Striker)"
+      },
+      {
+        "i": 3435,
+        "ti": "Assist (GK)"
+      },
+      {
+        "i": 3436,
+        "ti": "Assist (Defender)"
+      },
+      {
+        "i": 3437,
+        "ti": "Assist (Midfielder)"
+      },
+      {
+        "i": 3438,
+        "ti": "Assist (Striker)"
+      },
+      {
+        "i": 3439,
+        "ti": "Secondary Assist (GK)"
+      },
+      {
+        "i": 3440,
+        "ti": "Secondary Assist (Defender)"
+      },
+      {
+        "i": 3441,
+        "ti": "Secondary Assist (Midfielder)"
+      },
+      {
+        "i": 3442,
+        "ti": "Secondary Assist (Striker)"
+      },
+      {
+        "i": 3443,
+        "ti": "Goal (Substitute)"
+      },
+      {
+        "i": 3444,
+        "ti": "Assist (Substitute)"
+      },
+      {
+        "i": 3445,
+        "ti": "Secondary Assist (Substitute)"
+      },
+      {
+        "i": 3446,
+        "ti": "Clean Sheet (GK)"
+      },
+      {
+        "i": 3447,
+        "ti": "Clean Sheet (Defender)"
+      },
+      {
+        "i": 3448,
+        "ti": "Clean Sheet (Midfielder)"
+      },
+      {
+        "i": 3449,
+        "ti": "Clean Sheet (Striker)"
+      },
+      {
+        "i": 3450,
+        "ti": "Big Chance saved (GK)"
+      },
+      {
+        "i": 3451,
+        "ti": "Ball covered unchallenged (GK)"
+      },
+      {
+        "i": 3452,
+        "ti": "Ball covered challenged (GK)"
+      },
+      {
+        "i": 3453,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 3454,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 3455,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 3458,
+        "ti": "Penalty saved (penalty shoot-out)"
+      },
+      {
+        "i": 3459,
+        "ti": "Penalty missed (penalty shoot-out)"
+      },
+      {
+        "i": 3460,
+        "ti": "Penalty scored (penalty shoot-out)"
+      },
+      {
+        "i": 3461,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3462,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3463,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3591,
+        "ti": "Cleared (in the box)"
+      },
+      {
+        "i": 3592,
+        "ti": "Cleared (outside the box)"
+      },
+      {
+        "i": 3593,
+        "ti": "subbed on"
+      },
+      {
+        "i": 3860,
+        "ti": "Penalty scored"
+      },
+      {
+        "i": 3861,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 3886,
+        "ti": "Penalty saved (GK)"
+      },
+      {
+        "i": 3897,
+        "ti": "Offside"
+      },
+      {
+        "i": 3898,
+        "ti": "Offside"
+      },
+      {
+        "i": 3908,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3909,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3913,
+        "ti": "Game Won"
+      },
+      {
+        "i": 3914,
+        "ti": "Game Lost"
+      },
+      {
+        "i": 3915,
+        "ti": "Played Minutes Bonus"
+      },
+      {
+        "i": 3916,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3917,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3918,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 3919,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3920,
+        "ti": "Goal (GK)"
+      },
+      {
+        "i": 3921,
+        "ti": "Goal (Field player)"
+      },
+      {
+        "i": 3922,
+        "ti": "Clean Sheet (GK)"
+      },
+      {
+        "i": 3923,
+        "ti": "Clean Sheet (FP)"
+      },
+      {
+        "i": 3924,
+        "ti": "Ball covered challenged (GK)"
+      },
+      {
+        "i": 3930,
+        "ti": "Penalty saved (penalty shoot-out)"
+      },
+      {
+        "i": 3931,
+        "ti": "Penalty missed (penalty shoot-out)"
+      },
+      {
+        "i": 3932,
+        "ti": "Penalty scored (penalty shoot-out)"
+      },
+      {
+        "i": 3933,
+        "ti": "Penalty saved"
+      },
+      {
+        "i": 3942,
+        "ti": "Goal \"PlusOne\" (GK)"
+      },
+      {
+        "i": 3943,
+        "ti": "Goal \"PlusOne\" (field player)"
+      },
+      {
+        "i": 3944,
+        "ti": "Own goal \"PlusOne\""
+      },
+      {
+        "i": 3945,
+        "ti": "Assist \"PlusOne\""
+      },
+      {
+        "i": 3946,
+        "ti": "Penalty scored \"PlusOne\""
+      },
+      {
+        "i": 3947,
+        "ti": "Penalty missed \"PlusOne\""
+      },
+      {
+        "i": 3948,
+        "ti": "Penalty conceded \"PlusOne\""
+      },
+      {
+        "i": 3949,
+        "ti": "Penalty saved \"PlusOne\""
+      },
+      {
+        "i": 3950,
+        "ti": "Goal \"3 Play\""
+      },
+      {
+        "i": 3951,
+        "ti": "Own goal \"3 Play\""
+      },
+      {
+        "i": 3952,
+        "ti": "Assist \"3 Play\""
+      },
+      {
+        "i": 3953,
+        "ti": "Penalty scored \"3 Play\""
+      },
+      {
+        "i": 3954,
+        "ti": "Penalty missed \"3 Play\""
+      },
+      {
+        "i": 3955,
+        "ti": "Penalty conceded \"3 Play\""
+      },
+      {
+        "i": 3956,
+        "ti": "Penalty saved \"3 Play\""
+      },
+      {
+        "i": 3957,
+        "ti": "Red card \"Fairplay\""
+      },
+      {
+        "i": 3958,
+        "ti": "Goal \"1-ON-1\""
+      },
+      {
+        "i": 3959,
+        "ti": "Handball \"1-ON-1\""
+      },
+      {
+        "i": 3964,
+        "ti": "Starting 6"
+      },
+      {
+        "i": 4000,
+        "ti": "Cross"
+      },
+      {
+        "i": 4003,
+        "ti": "Forward zone pass"
+      },
+      {
+        "i": 4006,
+        "ti": "Accurate Keeper-Sweeper (GK)"
+      },
+      {
+        "i": 4009,
+        "ti": "Accurate Throw (GK)"
+      },
+      {
+        "i": 4012,
+        "ti": "Accurate long Ball"
+      },
+      {
+        "i": 4015,
+        "ti": "Deadly Pass"
+      },
+      {
+        "i": 4021,
+        "ti": "Aerial lost"
+      },
+      {
+        "i": 4024,
+        "ti": "Aerial won"
+      },
+      {
+        "i": 4027,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 4030,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 4033,
+        "ti": "Own Goal forced"
+      },
+      {
+        "i": 4036,
+        "ti": "Deflected Assist"
+      },
+      {
+        "i": 4039,
+        "ti": "Woodwork Assist"
+      },
+      {
+        "i": 4042,
+        "ti": "Bonus: long range"
+      },
+      {
+        "i": 4045,
+        "ti": "Penalty scored"
+      },
+      {
+        "i": 4048,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 4051,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 4054,
+        "ti": "Penalty missed"
+      },
+      {
+        "i": 4057,
+        "ti": "Post"
+      },
+      {
+        "i": 4060,
+        "ti": "Left Post"
+      },
+      {
+        "i": 4063,
+        "ti": "Right Post"
+      },
+      {
+        "i": 4066,
+        "ti": "Back Pass Foul (GK)"
+      },
+      {
+        "i": 4072,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4075,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4078,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4081,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4084,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4087,
+        "ti": "Big Chance Created"
+      },
+      {
+        "i": 4090,
+        "ti": "Big Chance missed"
+      },
+      {
+        "i": 4093,
+        "ti": "Cross blocked"
+      },
+      {
+        "i": 4096,
+        "ti": "Challenge lost"
+      },
+      {
+        "i": 4099,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 4102,
+        "ti": "Cross not claimed (GK)"
+      },
+      {
+        "i": 4105,
+        "ti": "Dangerous play"
+      },
+      {
+        "i": 4108,
+        "ti": "Dive Catch (GK)"
+      },
+      {
+        "i": 4111,
+        "ti": "Dive Save (GK)"
+      },
+      {
+        "i": 4114,
+        "ti": "Cross blocked and Possession"
+      },
+      {
+        "i": 4120,
+        "ti": "Mistake before Goal"
+      },
+      {
+        "i": 4123,
+        "ti": "Mistake before Shot"
+      },
+      {
+        "i": 4126,
+        "ti": "Incorrect Throw-In"
+      },
+      {
+        "i": 4129,
+        "ti": "Foul"
+      },
+      {
+        "i": 4132,
+        "ti": "Fouled last third"
+      },
+      {
+        "i": 4138,
+        "ti": "Intentional Assist"
+      },
+      {
+        "i": 4141,
+        "ti": "Cross Intercepted (GK)"
+      },
+      {
+        "i": 4144,
+        "ti": "One-on-One"
+      },
+      {
+        "i": 4147,
+        "ti": "Hand Ball"
+      },
+      {
+        "i": 4150,
+        "ti": "Interception (outside the box)"
+      },
+      {
+        "i": 4153,
+        "ti": "Ball intercepted"
+      },
+      {
+        "i": 4156,
+        "ti": "Interception (in the box)"
+      },
+      {
+        "i": 4159,
+        "ti": "Bonus: Last Man Tackle"
+      },
+      {
+        "i": 4165,
+        "ti": "Overrun"
+      },
+      {
+        "i": 4168,
+        "ti": "own goal"
+      },
+      {
+        "i": 4171,
+        "ti": "Penalty conceded"
+      },
+      {
+        "i": 4174,
+        "ti": "Penalty saved (GK)"
+      },
+      {
+        "i": 4177,
+        "ti": "Penalty won"
+      },
+      {
+        "i": 4180,
+        "ti": "Punched Ball (GK)"
+      },
+      {
+        "i": 4183,
+        "ti": "Red Card"
+      },
+      {
+        "i": 4186,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 4189,
+        "ti": "Distance Shot saved (GK)"
+      },
+      {
+        "i": 4192,
+        "ti": "2nd Yellow"
+      },
+      {
+        "i": 4195,
+        "ti": "6 Sec violation (GK)"
+      },
+      {
+        "i": 4198,
+        "ti": "Standing saved (GK)"
+      },
+      {
+        "i": 4201,
+        "ti": "Pass final Third"
+      },
+      {
+        "i": 4204,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 4210,
+        "ti": "Offside"
+      },
+      {
+        "i": 4213,
+        "ti": "Offside"
+      },
+      {
+        "i": 4216,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 4225,
+        "ti": "Contest won"
+      },
+      {
+        "i": 4228,
+        "ti": "Corner won"
+      },
+      {
+        "i": 4231,
+        "ti": "Tackle won"
+      },
+      {
+        "i": 4234,
+        "ti": "Yellow Card"
+      },
+      {
+        "i": 4237,
+        "ti": "Starting 11"
+      },
+      {
+        "i": 4240,
+        "ti": "Possession lost"
+      },
+      {
+        "i": 4246,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 4249,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 4264,
+        "ti": "Game Won"
+      },
+      {
+        "i": 4267,
+        "ti": "Game Lost"
+      },
+      {
+        "i": 4270,
+        "ti": "Played Minutes Bonus"
+      },
+      {
+        "i": 4273,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 4276,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 4279,
+        "ti": "Team Goal"
+      },
+      {
+        "i": 4282,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 4285,
+        "ti": "Goal (GK)"
+      },
+      {
+        "i": 4288,
+        "ti": "Goal (Midfielder)"
+      },
+      {
+        "i": 4291,
+        "ti": "Goal (Defender)"
+      },
+      {
+        "i": 4294,
+        "ti": "Goal (Striker)"
+      },
+      {
+        "i": 4297,
+        "ti": "Assist (GK)"
+      },
+      {
+        "i": 4300,
+        "ti": "Assist (Defender)"
+      },
+      {
+        "i": 4303,
+        "ti": "Assist (Midfielder)"
+      },
+      {
+        "i": 4306,
+        "ti": "Assist (Striker)"
+      },
+      {
+        "i": 4309,
+        "ti": "Secondary Assist (GK)"
+      },
+      {
+        "i": 4312,
+        "ti": "Secondary Assist (Defender)"
+      },
+      {
+        "i": 4315,
+        "ti": "Secondary Assist (Midfielder)"
+      },
+      {
+        "i": 4318,
+        "ti": "Secondary Assist (Striker)"
+      },
+      {
+        "i": 4330,
+        "ti": "Clean Sheet (GK)"
+      },
+      {
+        "i": 4333,
+        "ti": "Clean Sheet (Defender)"
+      },
+      {
+        "i": 4336,
+        "ti": "Clean Sheet (Midfielder)"
+      },
+      {
+        "i": 4339,
+        "ti": "Clean Sheet (Striker)"
+      },
+      {
+        "i": 4342,
+        "ti": "Big Chance saved (GK)"
+      },
+      {
+        "i": 4345,
+        "ti": "Ball covered unchallenged (GK)"
+      },
+      {
+        "i": 4348,
+        "ti": "Ball covered challenged (GK)"
+      },
+      {
+        "i": 4351,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 4354,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 4357,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 4366,
+        "ti": "Penalty saved (penalty shoot-out)"
+      },
+      {
+        "i": 4369,
+        "ti": "Penalty missed (penalty shoot-out)"
+      },
+      {
+        "i": 4372,
+        "ti": "Penalty scored (penalty shoot-out)"
+      },
+      {
+        "i": 4375,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 4378,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 4381,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 4387,
+        "ti": "Cleared (in the box)"
+      },
+      {
+        "i": 4390,
+        "ti": "Cleared (outside the box)"
+      },
+      {
+        "i": 4393,
+        "ti": "subbed on"
+      },
+      {
+        "i": 4765,
+        "ti": "Fouled in the opponent's half"
+      },
+      {
+        "i": 2789,
+        "ti": "Shot on target"
+      },
+      {
+        "i": 3963,
+        "ti": "Shot on target"
+      },
+      {
+        "i": 2638,
+        "ti": "Goal behind \"The Line\" (GK)"
+      },
+      {
+        "i": 3940,
+        "ti": "Goal behind \"The Line\" (GK)"
+      },
+      {
+        "i": 2639,
+        "ti": "Goal behind \"The Line\" (field player)"
+      },
+      {
+        "i": 3941,
+        "ti": "Goal behind \"The Line\" (field player)"
+      },
+      {
+        "i": 2787,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 3961,
+        "ti": "Goal conceded"
+      },
+      {
+        "i": 2788,
+        "ti": "Team goal"
+      },
+      {
+        "i": 3962,
+        "ti": "Team goal"
+      },
+      {
+        "i": 1742,
+        "ti": "Accurate Keeper-Sweeper (GK)"
+      },
+      {
+        "i": 1743,
+        "ti": "Accurate Throw (GK)"
+      },
+      {
+        "i": 1744,
+        "ti": "Accurate long Ball"
+      },
+      {
+        "i": 1747,
+        "ti": "Aerial lost"
+      },
+      {
+        "i": 1748,
+        "ti": "Aerial won"
+      },
+      {
+        "i": 1749,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 1750,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 1751,
+        "ti": "Own Goal forced"
+      },
+      {
+        "i": 1752,
+        "ti": "Assist"
+      },
+      {
+        "i": 1753,
+        "ti": "Woodwork Assist"
+      },
+      {
+        "i": 1759,
+        "ti": "Post"
+      },
+      {
+        "i": 1760,
+        "ti": "Left Post"
+      },
+      {
+        "i": 1761,
+        "ti": "Right Post"
+      },
+      {
+        "i": 1762,
+        "ti": "Back Pass Foul (GK)"
+      },
+      {
+        "i": 1772,
+        "ti": "Challenge lost"
+      },
+      {
+        "i": 1773,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 1775,
+        "ti": "Dangerous play"
+      },
+      {
+        "i": 1776,
+        "ti": "Dive Catch (GK)"
+      },
+      {
+        "i": 1777,
+        "ti": "Dive Save (GK)"
+      },
+      {
+        "i": 1779,
+        "ti": "Cleared"
+      },
+      {
+        "i": 1780,
+        "ti": "Mistake before Goal"
+      },
+      {
+        "i": 1781,
+        "ti": "Mistake before Shot"
+      },
+      {
+        "i": 1782,
+        "ti": "Incorrect Play-In"
+      },
+      {
+        "i": 1783,
+        "ti": "Foul"
+      },
+      {
+        "i": 1784,
+        "ti": "Fouled last third"
+      },
+      {
+        "i": 1788,
+        "ti": "One-on-One"
+      },
+      {
+        "i": 1789,
+        "ti": "Hand Ball"
+      },
+      {
+        "i": 1790,
+        "ti": "Interception"
+      },
+      {
+        "i": 1791,
+        "ti": "Ball intercepted"
+      },
+      {
+        "i": 1792,
+        "ti": "Interception in Box"
+      },
+      {
+        "i": 1794,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 1796,
+        "ti": "own goal"
+      },
+      {
+        "i": 1797,
+        "ti": "Penalty conceded"
+      },
+      {
+        "i": 1799,
+        "ti": "Penalty won"
+      },
+      {
+        "i": 1800,
+        "ti": "Punched Ball (GK)"
+      },
+      {
+        "i": 1801,
+        "ti": "Red Card"
+      },
+      {
+        "i": 1802,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 1803,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 1805,
+        "ti": "6 Sec violation (GK)"
+      },
+      {
+        "i": 1806,
+        "ti": "Standing saved (GK)"
+      },
+      {
+        "i": 1807,
+        "ti": "Pass final Third"
+      },
+      {
+        "i": 1808,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 1812,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 1815,
+        "ti": "Contest won"
+      },
+      {
+        "i": 1816,
+        "ti": "Corner won"
+      },
+      {
+        "i": 1817,
+        "ti": "Tackle won"
+      },
+      {
+        "i": 1818,
+        "ti": "Time penalty"
+      },
+      {
+        "i": 1820,
+        "ti": "Possession lost"
+      },
+      {
+        "i": 1824,
+        "ti": "Assist"
+      },
+      {
+        "i": 1857,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 1858,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 1859,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 2250,
+        "ti": "Pass"
+      },
+      {
+        "i": 2791,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 2792,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 2793,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 2794,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 2795,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 2796,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 2797,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 2798,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 2799,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 2800,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 2801,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 2802,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 2803,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 2804,
+        "ti": "Shot blocked \"1-ON-1\""
+      },
+      {
+        "i": 2805,
+        "ti": "Shot on goal \"1-ON-1\""
+      },
+      {
+        "i": 2806,
+        "ti": "Shot on Target (narrow miss) \"1-ON-1\""
+      },
+      {
+        "i": 2807,
+        "ti": "Shot on Goal (far away) \"1-ON-1\""
+      },
+      {
+        "i": 2808,
+        "ti": "Shot on Target (blocked) \"1-ON-1\""
+      },
+      {
+        "i": 2809,
+        "ti": "Post \"Plus One\""
+      },
+      {
+        "i": 2810,
+        "ti": "Left Post \"Plus One\""
+      },
+      {
+        "i": 2811,
+        "ti": "Right Post \"Plus One\""
+      },
+      {
+        "i": 2812,
+        "ti": "Post \"3 Play\""
+      },
+      {
+        "i": 2813,
+        "ti": "Left Post \"3 Play\""
+      },
+      {
+        "i": 2814,
+        "ti": "Right Post \"3 Play\""
+      },
+      {
+        "i": 2815,
+        "ti": "Post \"1-ON-1\""
+      },
+      {
+        "i": 2816,
+        "ti": "Left Post \"1-ON-1\""
+      },
+      {
+        "i": 2817,
+        "ti": "Right Post \"1-ON-1\""
+      },
+      {
+        "i": 2818,
+        "ti": "Own Goal forced \"PlusOne\""
+      },
+      {
+        "i": 2819,
+        "ti": "Woodwork Assist \"PlusOne\""
+      },
+      {
+        "i": 2820,
+        "ti": "Mistake before Goal \"PlusOne\""
+      },
+      {
+        "i": 2821,
+        "ti": "Mistake before Shot \"PlusOne\""
+      },
+      {
+        "i": 2822,
+        "ti": "Own Goal forced \"3 Play\""
+      },
+      {
+        "i": 2823,
+        "ti": "Woodwork Assist \"3 Play\""
+      },
+      {
+        "i": 2824,
+        "ti": "Mistake before Goal \"3 Play\""
+      },
+      {
+        "i": 2825,
+        "ti": "Mistake before Shot \"3 Play\""
+      },
+      {
+        "i": 3849,
+        "ti": "Accurate Keeper-Sweeper (GK)"
+      },
+      {
+        "i": 3850,
+        "ti": "Accurate Throw (GK)"
+      },
+      {
+        "i": 3851,
+        "ti": "Accurate long Ball"
+      },
+      {
+        "i": 3853,
+        "ti": "Aerial lost"
+      },
+      {
+        "i": 3854,
+        "ti": "Aerial won"
+      },
+      {
+        "i": 3855,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 3856,
+        "ti": "Rebound Assist"
+      },
+      {
+        "i": 3857,
+        "ti": "Own Goal forced"
+      },
+      {
+        "i": 3858,
+        "ti": "Assist"
+      },
+      {
+        "i": 3859,
+        "ti": "Woodwork Assist"
+      },
+      {
+        "i": 3862,
+        "ti": "Post"
+      },
+      {
+        "i": 3863,
+        "ti": "Left Post"
+      },
+      {
+        "i": 3864,
+        "ti": "Right Post"
+      },
+      {
+        "i": 3865,
+        "ti": "Back Pass Foul (GK)"
+      },
+      {
+        "i": 3866,
+        "ti": "Challenge lost"
+      },
+      {
+        "i": 3867,
+        "ti": "Cleared on the Line"
+      },
+      {
+        "i": 3868,
+        "ti": "Dangerous play"
+      },
+      {
+        "i": 3869,
+        "ti": "Dive Catch (GK)"
+      },
+      {
+        "i": 3870,
+        "ti": "Dive Save (GK)"
+      },
+      {
+        "i": 3871,
+        "ti": "Cleared"
+      },
+      {
+        "i": 3872,
+        "ti": "Mistake before Goal"
+      },
+      {
+        "i": 3873,
+        "ti": "Mistake before Shot"
+      },
+      {
+        "i": 3874,
+        "ti": "Incorrect Play-In"
+      },
+      {
+        "i": 3875,
+        "ti": "Foul"
+      },
+      {
+        "i": 3876,
+        "ti": "Fouled last third"
+      },
+      {
+        "i": 3878,
+        "ti": "One-on-One"
+      },
+      {
+        "i": 3879,
+        "ti": "Hand Ball"
+      },
+      {
+        "i": 3880,
+        "ti": "Interception"
+      },
+      {
+        "i": 3881,
+        "ti": "Ball intercepted"
+      },
+      {
+        "i": 3882,
+        "ti": "Interception in Box"
+      },
+      {
+        "i": 3883,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3884,
+        "ti": "own goal"
+      },
+      {
+        "i": 3885,
+        "ti": "Penalty conceded"
+      },
+      {
+        "i": 3887,
+        "ti": "Penalty won"
+      },
+      {
+        "i": 3888,
+        "ti": "Punched Ball (GK)"
+      },
+      {
+        "i": 3889,
+        "ti": "Red Card"
+      },
+      {
+        "i": 3890,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 3891,
+        "ti": "Shot saved (GK)"
+      },
+      {
+        "i": 3892,
+        "ti": "6 Sec violation (GK)"
+      },
+      {
+        "i": 3893,
+        "ti": "Standing saved (GK)"
+      },
+      {
+        "i": 3894,
+        "ti": "Pass final Third"
+      },
+      {
+        "i": 3895,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 3899,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 3902,
+        "ti": "Contest won"
+      },
+      {
+        "i": 3903,
+        "ti": "Corner won"
+      },
+      {
+        "i": 3904,
+        "ti": "Tackle won"
+      },
+      {
+        "i": 3905,
+        "ti": "Time penalty"
+      },
+      {
+        "i": 3906,
+        "ti": "Possession lost"
+      },
+      {
+        "i": 3910,
+        "ti": "Assist"
+      },
+      {
+        "i": 3925,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 3926,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 3927,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 3934,
+        "ti": "Pass"
+      },
+      {
+        "i": 3965,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3966,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 3967,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 3968,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 3969,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 3970,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 3971,
+        "ti": "Cleared off the Line  \"1-on-1\""
+      },
+      {
+        "i": 3972,
+        "ti": "Shot blocked"
+      },
+      {
+        "i": 3973,
+        "ti": "Shot Assist"
+      },
+      {
+        "i": 3974,
+        "ti": "Shot on goal"
+      },
+      {
+        "i": 3975,
+        "ti": "Shot on Target (narrow miss)"
+      },
+      {
+        "i": 3976,
+        "ti": "Shot on Goal (far away)"
+      },
+      {
+        "i": 3977,
+        "ti": "Shot on Target (blocked)"
+      },
+      {
+        "i": 3978,
+        "ti": "Shot blocked \"1-ON-1\""
+      },
+      {
+        "i": 3979,
+        "ti": "Shot on goal \"1-ON-1\""
+      },
+      {
+        "i": 3980,
+        "ti": "Shot on Target (narrow miss) \"1-ON-1\""
+      },
+      {
+        "i": 3981,
+        "ti": "Shot on Goal (far away) \"1-ON-1\""
+      },
+      {
+        "i": 3982,
+        "ti": "Shot on Target (blocked) \"1-ON-1\""
+      },
+      {
+        "i": 3983,
+        "ti": "Post \"Plus One\""
+      },
+      {
+        "i": 3984,
+        "ti": "Left Post \"Plus One\""
+      },
+      {
+        "i": 3985,
+        "ti": "Right Post \"Plus One\""
+      },
+      {
+        "i": 3986,
+        "ti": "Post \"3 Play\""
+      },
+      {
+        "i": 3987,
+        "ti": "Left Post \"3 Play\""
+      },
+      {
+        "i": 3988,
+        "ti": "Right Post \"3 Play\""
+      },
+      {
+        "i": 3989,
+        "ti": "Post \"1-ON-1\""
+      },
+      {
+        "i": 3990,
+        "ti": "Left Post \"1-ON-1\""
+      },
+      {
+        "i": 3991,
+        "ti": "Right Post \"1-ON-1\""
+      },
+      {
+        "i": 3992,
+        "ti": "Own Goal forced \"PlusOne\""
+      },
+      {
+        "i": 3993,
+        "ti": "Woodwork Assist \"PlusOne\""
+      },
+      {
+        "i": 3994,
+        "ti": "Mistake before Goal \"PlusOne\""
+      },
+      {
+        "i": 3995,
+        "ti": "Mistake before Shot \"PlusOne\""
+      },
+      {
+        "i": 3996,
+        "ti": "Own Goal forced \"3 Play\""
+      },
+      {
+        "i": 3997,
+        "ti": "Woodwork Assist \"3 Play\""
+      },
+      {
+        "i": 3998,
+        "ti": "Mistake before Goal \"3 Play\""
+      },
+      {
+        "i": 3999,
+        "ti": "Mistake before Shot \"3 Play\""
+      },
+      {
+        "i": -1,
+        "ti": "Eingewechselt"
+      },
+      {
+        "i": -2,
+        "ti": "Ausgewechselt"
+      },
+      {
+        "i": -8,
+        "ti": "Von Anfang an gespielt"
+      },
+      {
+        "i": -7,
+        "ti": "Auf Bank"
+      },
+      {
+        "i": -10,
+        "ti": "Erste Halbzeit des Spiels beendet"
+      },
+      {
+        "i": -17,
+        "ti": "Zweite Halbzeit des Spiels beendet"
+      }
+    ],
+    "dds": {
+      "1": "Assist by {assistBy}",
+      "2": "Forced by {forcedBy}",
+      "3": "Goal by {goalBy}",
+      "4": "-",
+      "5": "Suspended for next match day",
+      "6": "Suspended for next match day",
+      "7": "Missed by {missedBy}",
+      "20": "Missed by {missedBy}",
+      "100": "-"
+    }
+  }
+}

@@ -1,0 +1,1660 @@
+{
+  "1": {
+    "savedAt": "2026-10-21T01:35:18.058Z",
+    "managers": {
+      "1165589": {
+        "name": "Stammler9",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 1,
+        "rules": {
+          "UM": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "UM",
+            "d": "o",
+            "t": "unklar, bitte prüfen: Elfmeter per Foul verursacht (54. Min.), gefoult wurde Conté. Wem er am Spieltag gehoerte, ist nicht gespeichert; heute ist er bei xDanii. Bitte pruefen"
+          }
+        ]
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 1,
+        "rules": {
+          "MM": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "MM",
+            "d": "o",
+            "t": "verteilt MM · Empfänger noch in der BumsParade auswählen"
+          }
+        ]
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 3,
+        "rules": {
+          "BD": 1,
+          "DD": 1,
+          "AH": 1
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Mohya (11 Pkt.) an den Markt"
+          },
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt einen seiner drei besten Spieler an Hansaaufdie1"
+          },
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "verkauft Suzuki an diminator"
+          }
+        ]
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Sambi Lokonga (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 4,
+        "rules": {
+          "BD": 2,
+          "AH": 1,
+          "TL": 1
+        },
+        "out": 3,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Ulrich (44 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Undav (-11 Pkt.) an den Markt"
+          },
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Suzuki von Daniel_Niederlande"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Matanović (gleicher Verein), weil Suzuki über AH kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 1,
+        "rules": {
+          "DD": 1
+        },
+        "out": 0,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt einen Spieler von Daniel_Niederlande"
+          }
+        ]
+      }
+    }
+  },
+  "2": {
+    "savedAt": "2026-10-21T01:22:26.512Z",
+    "managers": {
+      "699062": {
+        "name": "T800",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "841764": {
+        "name": "Hasan",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "count": 1,
+        "rules": {
+          "DD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt einen seiner drei besten Spieler an Adam"
+          }
+        ]
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 1,
+        "rules": {
+          "DD": 1
+        },
+        "out": 0,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt einen Spieler von Stammler9"
+          }
+        ]
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1631136": {
+        "name": "Fabio",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 3,
+        "rules": {
+          "BD": 2,
+          "MM": 1
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Hack (-22 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Krauß (44 Pkt.) an den Markt"
+          },
+          {
+            "r": "MM",
+            "d": "o",
+            "t": "verteilt MM · Empfänger noch in der BumsParade auswählen"
+          }
+        ]
+      },
+      "1929473": {
+        "name": "Mic193",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Behrens (99 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Kemlein (11 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 1,
+        "rules": {
+          "AH": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "bietet den MVP Tietz zum Verkauf an"
+          }
+        ]
+      }
+    }
+  },
+  "3": {
+    "savedAt": "2026-10-21T01:14:50.689Z",
+    "managers": {
+      "699062": {
+        "name": "T800",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Scheller (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "841764": {
+        "name": "Hasan",
+        "count": 2,
+        "rules": {
+          "BN": 1,
+          "UM": 1
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Amiri an einen Mitmanager ab"
+          },
+          {
+            "r": "UM",
+            "d": "o",
+            "t": "gibt Onyedika an Daniel_Niederlande"
+          }
+        ]
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "count": 3,
+        "rules": {
+          "DD": 1,
+          "MM": 1,
+          "RK": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 1,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt Pavlović von Fabio"
+          },
+          {
+            "r": "MM",
+            "d": "x",
+            "t": "bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt"
+          },
+          {
+            "r": "RK",
+            "d": "o",
+            "t": "gibt Kleindienst an einen Mitmanager ab"
+          }
+        ]
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 1,
+        "rules": {
+          "BN": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Dallinga an einen Mitmanager ab"
+          }
+        ]
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 3,
+        "rules": {
+          "BD": 3
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Nandja (-33 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Sano (99 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Latte Lath (11 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1631136": {
+        "name": "Fabio",
+        "count": 1,
+        "rules": {
+          "DD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt Pavlović an Stammler9"
+          }
+        ]
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Hansen (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Petkov (33 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Höler (33 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Fellhauer (44 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Ebnoutalib (11 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 1,
+        "rules": {
+          "AH": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "bietet den MVP Engelhardt zum Verkauf an"
+          }
+        ]
+      },
+      "1929473": {
+        "name": "Mic193",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Lochoshvili (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 2,
+        "rules": {
+          "BD": 1,
+          "UM": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Gadou (111 Pkt.) an den Markt"
+          },
+          {
+            "r": "UM",
+            "d": "i",
+            "t": "bekommt Onyedika von Hasan"
+          }
+        ]
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Schwäbe (88 Pkt.) an den Markt"
+          }
+        ]
+      }
+    }
+  },
+  "4": {
+    "savedAt": "2026-10-21T01:15:00.758Z",
+    "managers": {
+      "699062": {
+        "name": "T800",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Potulski (88 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "841764": {
+        "name": "Hasan",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Moore (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 2,
+        "rules": {
+          "DD": 1,
+          "TL": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt Kimmich von Daniel_Niederlande"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Laimer (gleicher Verein), weil Kimmich über DD kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 4,
+        "rules": {
+          "BD": 1,
+          "MM": 1,
+          "BN": 1,
+          "UM": 1
+        },
+        "out": 3,
+        "in": 0,
+        "other": 1,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Musiala (333 Pkt.) an den Markt"
+          },
+          {
+            "r": "MM",
+            "d": "x",
+            "t": "bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt"
+          },
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Diks an Daniel_Niederlande"
+          },
+          {
+            "r": "UM",
+            "d": "o",
+            "t": "gibt Rothe an Hansaaufdie1"
+          }
+        ]
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 1,
+        "rules": {
+          "AH": 1
+        },
+        "out": 0,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Olise von Hansaaufdie1"
+          }
+        ]
+      },
+      "1631136": {
+        "name": "Fabio",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Nusa (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1929473": {
+        "name": "Mic193",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Karius (88 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Banzuzi (44 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 2,
+        "rules": {
+          "DD": 1,
+          "BN": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt Kimmich an Adam"
+          },
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Diks von Cello"
+          }
+        ]
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Becker (77 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Vagnoman (66 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 4,
+        "rules": {
+          "BD": 1,
+          "AH": 1,
+          "UM": 1,
+          "TL": 1
+        },
+        "out": 3,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Matsima (77 Pkt.) an den Markt"
+          },
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "verkauft Olise an Meister"
+          },
+          {
+            "r": "UM",
+            "d": "i",
+            "t": "bekommt Rothe von Cello"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Ilic (gleicher Verein), weil Rothe über UM kam (Teamlimit 1)"
+          }
+        ]
+      }
+    }
+  },
+  "5": {
+    "savedAt": "2026-10-21T01:15:11.083Z",
+    "managers": {
+      "699062": {
+        "name": "T800",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Neuhaus (22 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Fernández (22 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "841764": {
+        "name": "Hasan",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "count": 2,
+        "rules": {
+          "BD": 2
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Potulski (66 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Nmecha (111 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Posch (22 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 5,
+        "rules": {
+          "BD": 3,
+          "AH": 1,
+          "TL": 1
+        },
+        "out": 4,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Baumann (33 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Maza (55 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Aebischer (66 Pkt.) an den Markt"
+          },
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Nkunku von xDanii"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Banzuzi (gleicher Verein), weil Nkunku über AH kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 4,
+        "rules": {
+          "DD": 1,
+          "MM": 1,
+          "RK": 1,
+          "TL": 1
+        },
+        "out": 2,
+        "in": 1,
+        "other": 1,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt Gadou von xDanii"
+          },
+          {
+            "r": "MM",
+            "d": "x",
+            "t": "bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt"
+          },
+          {
+            "r": "RK",
+            "d": "o",
+            "t": "gibt Suzuki an diminator"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Kobel (gleicher Verein), weil Gadou über DD kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1631136": {
+        "name": "Fabio",
+        "count": 3,
+        "rules": {
+          "BD": 2,
+          "BN": 1
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Dōan (22 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Karaman (11 Pkt.) an den Markt"
+          },
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Bornauw an Baumann"
+          }
+        ]
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 3,
+        "rules": {
+          "BD": 3
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Neuer (55 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Vagnoman (99 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Obermair (66 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 2,
+        "rules": {
+          "BN": 1,
+          "TL": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Bornauw von Fabio"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Heuer Fernandes (gleicher Verein), weil Bornauw über BN kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 2,
+        "rules": {
+          "DD": 1,
+          "AH": 1
+        },
+        "out": 2,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt Gadou an Meister"
+          },
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "verkauft Nkunku an Cello"
+          }
+        ]
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1929473": {
+        "name": "Mic193",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Becker (55 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 2,
+        "rules": {
+          "RK": 1,
+          "TL": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "RK",
+            "d": "i",
+            "t": "bekommt Suzuki von Meister"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Matanović (gleicher Verein), weil Suzuki über RK kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Fábio Silva (55 Pkt.) an den Markt"
+          }
+        ]
+      }
+    }
+  },
+  "6": {
+    "savedAt": "2026-10-21T12:11:48.494Z",
+    "managers": {
+      "699062": {
+        "name": "T800",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Matsima (-11 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "841764": {
+        "name": "Hasan",
+        "count": 2,
+        "rules": {
+          "BN": 1,
+          "TL": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Petkov von Adam"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Poreba (gleicher Verein), weil Petkov über BN kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "count": 3,
+        "rules": {
+          "BD": 1,
+          "MM": 1,
+          "UM": 1
+        },
+        "out": 2,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Engelhardt (22 Pkt.) an den Markt"
+          },
+          {
+            "r": "MM",
+            "d": "i",
+            "t": "bekommt MM von Cello: einen Spieler weniger aufstellen"
+          },
+          {
+            "r": "UM",
+            "d": "o",
+            "t": "gibt Pinckert an Hansaaufdie1"
+          }
+        ]
+      },
+      "1386995": {
+        "name": "Adam",
+        "count": 3,
+        "rules": {
+          "BD": 1,
+          "DD": 1,
+          "BN": 1
+        },
+        "out": 3,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Jeong (66 Pkt.) an den Markt"
+          },
+          {
+            "r": "DD",
+            "d": "o",
+            "t": "gibt Schlotterbeck an diminator"
+          },
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Petkov an Hasan"
+          }
+        ]
+      },
+      "1403991": {
+        "name": "Cello",
+        "count": 5,
+        "rules": {
+          "MM": 1,
+          "AH": 1,
+          "BN": 1,
+          "UM": 1,
+          "TL": 1
+        },
+        "out": 4,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "MM",
+            "d": "o",
+            "t": "verteilt MM an Stammler9"
+          },
+          {
+            "r": "AH",
+            "d": "o",
+            "t": "verkauft Díaz an xDanii"
+          },
+          {
+            "r": "BN",
+            "d": "o",
+            "t": "gibt Futkeu an LQ_R3lax0"
+          },
+          {
+            "r": "UM",
+            "d": "i",
+            "t": "bekommt Brackelmann von YW7"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Kade (gleicher Verein), weil Brackelmann über UM kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1450470": {
+        "name": "Meister",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1631136": {
+        "name": "Fabio",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Lienhart (111 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "1631954": {
+        "name": "YW7",
+        "count": 1,
+        "rules": {
+          "UM": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "UM",
+            "d": "o",
+            "t": "gibt Brackelmann an Cello"
+          }
+        ]
+      },
+      "1646647": {
+        "name": "Baumann",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1906625": {
+        "name": "xDanii",
+        "count": 2,
+        "rules": {
+          "AH": 1,
+          "TL": 1
+        },
+        "out": 1,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Díaz von Cello"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Saibari (gleicher Verein), weil Díaz über AH kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "count": 3,
+        "rules": {
+          "BD": 1,
+          "BN": 1,
+          "TL": 1
+        },
+        "out": 2,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Svensson (66 Pkt.) an den Markt"
+          },
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Futkeu von Cello"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Kristof (gleicher Verein), weil Futkeu über BN kam (Teamlimit 1)"
+          }
+        ]
+      },
+      "1929473": {
+        "name": "Mic193",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "count": 1,
+        "rules": {
+          "BD": 1
+        },
+        "out": 1,
+        "in": 0,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Karetsas (11 Pkt.) an den Markt"
+          }
+        ]
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "count": 0,
+        "rules": {},
+        "out": 0,
+        "in": 0,
+        "other": 0,
+        "moves": []
+      },
+      "2710049": {
+        "name": "diminator",
+        "count": 3,
+        "rules": {
+          "BD": 2,
+          "DD": 1
+        },
+        "out": 2,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Amiri (77 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Gnabry (33 Pkt.) an den Markt"
+          },
+          {
+            "r": "DD",
+            "d": "i",
+            "t": "bekommt Schlotterbeck von Adam"
+          }
+        ]
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "count": 4,
+        "rules": {
+          "BD": 2,
+          "UM": 1,
+          "TL": 1
+        },
+        "out": 3,
+        "in": 1,
+        "other": 0,
+        "moves": [
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Bischof (66 Pkt.) an den Markt"
+          },
+          {
+            "r": "BD",
+            "d": "o",
+            "t": "verkauft Nusa (-11 Pkt.) an den Markt"
+          },
+          {
+            "r": "UM",
+            "d": "i",
+            "t": "bekommt Pinckert von Stammler9"
+          },
+          {
+            "r": "TL",
+            "d": "o",
+            "t": "verkauft Keidel (gleicher Verein), weil Pinckert über UM kam (Teamlimit 1)"
+          }
+        ]
+      }
+    }
+  }
+}

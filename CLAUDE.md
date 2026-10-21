@@ -1,0 +1,77 @@
+# KBL Legenden App
+
+Liga-App für die Kickbase-Liga „KBL Legenden“ (Liga-ID 6422780). Sie lädt Daten aus der inoffiziellen Kickbase-v4-API und rechnet nach jedem Spieltag die Sonderregeln der Liga aus. Die App ist **nur lesend**: Sie führt keine Transfers, Gebote oder Verkäufe in Kickbase aus, sie zeigt nur an, was zu tun ist.
+
+Der Nutzer spricht Deutsch (Hamburg). Antworten kurz, einfach und auf Deutsch. Keine ungefragten Erinnerungen an Uhrzeiten. Der Nutzer ist kein Entwickler: Schritte so erklären, dass man sie ohne Vorwissen nachvollziehen kann (Windows, Doppelklick auf `start.bat`).
+
+## Aufbau
+- `server.js`: Node/Express-Backend (ES-Module). Kickbase-Aufrufe, Regelberechnung, Speicherung in JSON-Dateien im Arbeitsverzeichnis.
+- `public/index.html`, `public/app.js`, `public/styles.css`: statisches Frontend ohne Build-Schritt. Navigation über `data-kbl-nav`, Ansichten `.kbl-view`.
+- `vorschau.bat`: Start fuer die Community-Vorschau: setzt `KBL_VORSCHAU=1` und oeffnet einen kostenlosen Cloudflare-Tunnel (https-Link). Im Vorschaumodus duerfen Gaeste nur ansehen; Schreibzugriffe und Werkzeug-Scans nur der Admin (Manager-ID `KBL_ADMIN_ID`, Standard 699062, oder Login mit der E-Mail aus `KBL_AUTO_EMAIL`). Login max. 10 Versuche je 15 Min. Hinweisleiste: `public/vorschau.js`.
+- `start.bat`: Windows-Startdatei. Installiert beim ersten Start Pakete, öffnet den Browser, startet den Server.
+- Zustand (nicht ins Repository): `kbl-lineup-snapshots.json` (eingefrorene Aufstellungen), `kbl-npc-jokers.json`, `kbl-todo-checks.json` (von Hand abgehakte Aufgaben der Übersicht je Spieltag), `kbl-bumsungen.json` (BumsTabelle: Bumsungen je Spieltag und Manager, vom Browser gemeldet, sobald ein Spieltag in der BumsParade vollständig geprüft ist; Spieltage ohne Aufstellungen trägt der Admin in der BumsTabelle von Hand nach, diese haben `manual:true` und werden von der Automatik nicht überschrieben).
+- **Feste Regel (Liga-Vorgabe):** Beim Öffnen eines Reiters sind alle einklappbaren Bereiche zu (`window.kblCollapseView` in `app.js`, aufgerufen von `showView`). Neue Bereiche ebenfalls eingeklappt starten lassen, keinen offenen Zustand merken. Ausnahme: die Punkteübersicht regelt das selbst.
+- Eine `package.json` mit `express` ist nötig (liegt beim Nutzer, nicht in diesem Ordner gespeichert).
+
+Start: `start.bat` doppelklicken oder `node server.js` (Port 3000, lauscht auf allen Netzwerken, Adressen für das Handy werden beim Start angezeigt).
+
+Optionaler Dienst-Login für die automatische Aufstellungs-Speicherung ohne eingeloggten Nutzer: Umgebungsvariablen `KBL_AUTO_EMAIL` und `KBL_AUTO_PASSWORD` (nie in Code oder Dateien im Repository schreiben; in `start.bat` stehen sie nur lokal beim Nutzer).
+
+## Liga-Besonderheiten
+- Eigener Manager des Nutzers: T800 (ID 699062). **T1000 (ID 3783040) ist von allen Wertungen ausgeschlossen.**
+- Kickbase-Punkte: Jeder nicht aufgestellte Platz in der Elf kostet **100 Punkte** (auch unter 0).
+- Die Startelf wird bei Kickbase mit dem Anpfiff des ersten Spiels eingefroren. Sie wird über das Kaderfeld `lo` (Platz 0–10) gelesen, **nur während der Spieltag läuft**, und nie überschrieben.
+- Kickbase-Punkte können nach Spielende noch korrigiert werden (strittige Szenen). Zweitquelle `playercenter` wird genutzt, wenn die Leistungsdaten (`performance`) keinen Eintrag haben.
+- Abrechnung: nach Abschluss des gesamten Spieltags, in der Regel Montag 19 Uhr, vor der Marktwertanpassung um 22 Uhr. Marktwerte werden bisher **nicht** berücksichtigt (BN, RK).
+- Alle Regeln zählen nur für **aufgestellte** Spieler.
+
+## Regeln (Sonderregeln)
+- **BD – Besoffener Davies:** Spieler mit einer Schnapszahl als Spieltagspunkten (11, 22, … , auch negativ) müssen an den Markt verkauft werden.
+- **DD – Dämonische Drehtür:** Der Spieltagssieger muss einen seiner drei besten Spieler (nach Spieltagspunkten, nur Startelf) an den Letzten des Spieltags abgeben. Bei Gleichstand zählen alle mit gleicher Punktzahl. Der Letzte sucht selbst aus. Ist ein Spieler von einer anderen Regel betroffen (BD, RK, BN, UM, AH), fällt er aus dem Ranking und der Nächstbeste rückt nach. Ein AH-Spieler darf nicht über die DD angeboten werden.
+- **MM – Magic Miyoshi:** Der Manager mit den meisten **Minuspunkten** (Summe aller negativen Einzelpunkte, nicht Gesamtpunkte) bestimmt einen Manager, der am nächsten Spieltag einen Spieler weniger aufstellen muss. Gleichstand: gilt für alle. Unbesetzte Positionen zählen nicht.
+- **AH – Angeschossener Höler:** Wer den MVP des Spieltags aufgestellt hat, muss ihn zum Verkauf anbieten (Höchstbietender, sonst Kickbase). MVP = Spieler mit den meisten Spieltagspunkten (bestätigt), bei Gleichstand alle. Der Spieler muss von einem Manager aufgestellt gewesen sein.
+- **RK – Räudiger Kohr:** Wer eine Sperre bekommt (Rot, Gelb-Rot, jede 5. Gelbe der Saison: 5, 10, 15, …), muss an einen beliebigen Mitmanager zum Marktwert des Abrechnungstages abgegeben werden.
+- **BN – Blinder Niklas:** Eigentor oder verschossener Elfmeter → Abgabe an einen beliebigen Manager zum Marktwert des Abrechnungstages.
+- **UM – Upamaguire:** Verursacht ein Spieler einen Elfmeter **ohne Handspiel** (Foul), geht er an den Manager, der den gefoulten Spieler hat. Hat ihn keiner, Verkauf an den Markt. Ist der Besitzer derselbe, bleibt ein „Sonderfall“ (ungeklärt, wird angezeigt).
+- **Teamlimit 1:** Jeder Manager darf nur einen Spieler pro Verein haben. Bekommt er in der BumsParade (Abrechnung) einen Spieler, muss er seinen bisherigen Spieler desselben Vereins verkaufen (Markt oder Manager). Gilt für alle Regeln; das Limit wird nur zur Umsetzung der Strafen kurz angehoben.
+- **Rangfolge bei Mehrfachtreffern (Liga-Vorgabe):** DD zuletzt (nur Spieler ohne andere Regel). BD tritt hinter allen anderen Regeln zurück. RK, BN, UM und AH sind gleichrangig: trifft es einen Spieler mehrfach, wird das als Einzelfallentscheidung angezeigt (UM als gleichrangig angenommen).
+- Reiter „Regeln“ (`data-view="rules"`, statisch in `index.html`, je Regel `details#regel-XX`): Erklärtexte der Regeln für die Liga. Bei Regeländerungen hier mitpflegen. Klick auf ein Kürzel in der BumsTabelle (`[data-rule]`) springt per `kblOpenRule` dorthin und klappt die Regel auf.
+- **NPC – Goes MVP:** wechselnde Tippregel, Gewinner und Joker werden **von Hand** eingetragen.
+
+## Kickbase-Daten (v4)
+- `/v4/leagues/6422780/ranking[?dayNumber=N]`: Ranking. Einträge werden im Frontend über den Managernamen zugeordnet (nicht immer ID). Tagespunkte = Differenz aus kumulierten Rankings (`dayNumber=N` minus `N-1`).
+- `/v4/leagues/6422780/managers/{id}/squad`: Kader. `pi` Spieler-ID, `pn` Name, `lo` Aufstellungsplatz 0–10.
+- `/v4/competitions/1/players/{pi}/performance`: Saisons `it[]` mit `ph[]` je Spieltag (`day`, `p`, `mp`, `st`, `k`, `mdst`, `cur`).
+- `/v4/competitions/1/playercenter/{pi}?dayNumber=N`: Spieltagsdetails: `p`, `k` und `events[]` (mit `eti`).
+- `/v4/competitions/1/table`, `/teams/{tid}/teamprofile`: Vereine und Spieler.
+- Ereigniscodes `k`: 1 Tor, 2 Eigentor, 3 Vorlage, 4 Gelb, 5 Gelb-Rot, 6 Rot, 7 Elfmeter gehalten, 8 Einwechslung, 9 Auswechslung, 25 Weiße Weste.
+- Alle `eti`-Bedeutungen stehen in der Kickbase-Stammliste `/v4/live/eventtypes` (`it[].i` Nummer, `it[].ti` Titel englisch). Die App speichert sie in `kbl-event-types.json` (über `/api/event-types`, `?neu=1` lädt neu), deutsche Namen in `event-types-de.js`. Angezeigt im Reiter „Punkteübersicht“ (`data-view="points"`, Einzelereignisse je Spieltag als aufklappbare, sortierbare Liste). Jedes Sammeln wird je Spieltag in `kbl-points-overview.json` gespeichert (`/api/points-overview[/:day]`), mit Top-10-Spielern je Ereignis (`topPlayers`) für die Spieltags-Statistik (meiste Fouls, Pässe …, Zuordnung über den Kickbase-Titel). Ab Eti 4000 zusätzlich alle Spieler kompakt (`allPlayers` [id, Anzahl, Punkte], Namen in `players`). Saison-Bestenliste im selben Reiter: `/api/points-season` zählt alle gespeicherten Spieltage je Kickbase-Titel zusammen (Rangliste Top 10 oder kumulierter Verlauf Top 5, Kategorien = `STAT_CATS` in `app.js`); Spieltage ohne `allPlayers` zählen nur ihre Top 10 und werden als ungenau markiert.
+- `events[].eti`: 4048, 4051 und 4054 Elfmeter verschossen (4048 laut Stammliste, noch an keinem echten Fall gesehen) (beide −60, 4054 z. B. bei Petkov ST 6 mit verwandeltem Nachschuss), 4171 Elfmeter verursacht (−45, Foul **oder** Handspiel), 4177 Elfmeter herausgeholt (+30, **nur Foul**). Pro (eti, Minute) mit Summe 0 = zurückgenommen (VAR). Handspiel erkennt man daran, dass beim Gegner kein 4177 (±1 Minute) steht.
+- UM-Empfänger = Besitzer des gefoulten Spielers **am Spieltag**: aus dem beim Einfrieren gespeicherten Gesamtkader (`squadIds`), sonst aus den gespeicherten Startelfen. Der heutige Kader wird dafür nie genommen (Spieler können per BN/RK weitergereicht sein); ohne Spieltagsdaten wird UM als „bitte prüfen“ angezeigt.
+- Challenges (`challenges.js`, Ansicht „Challenges“, `public/challenges-view.js`): `/v4/challenges/archive` (eigene, mit `ch`, `lie` Ende, `p`, `pl`) und `/v4/challenges/lobby/archive` (Name `chn`, Typ `cht`: 2 = ein Spieltag, 3 = mehrtägig, 5 = Perfect Matchday; Wettbewerb `cpi`). Andere Manager: `/v4/challenges/{ch}/table/{userId}` (404 = nicht mitgespielt), `lp[]` mit `p` und Kapitän `ictp`. ACHTUNG: `p` in `table/{userId}` sind die Punkte des aktuellen Spieltags, nicht des Challenge-Spieltags (an 1147 geprüft, `?dayNumber` wirkt nicht; Favoriten-Liste hat keine Punkte). Darum Punkte je Spieler aus `/v4/competitions/{cpi}/players/{pi}/performance` am Challenge-Spieltag (`day` im Lobby-Archiv), Kapitän doppelt; Gegenprobe mit T800-`p` aus dem Lobby-Archiv. Gewertet: nur Rush-Challenges mit `cht` 2 seit 1. August, liga-eigene wie Halbserie oder Poeti´s nicht. Nicht von T800 gespielte werden durch Durchprobieren der Nummern gefunden (`/v4/challenges/{ch}/ranking` liefert `chn`, `t`); deren Datum ist geschätzt. Leere `lp` = nicht gespielt. Laden läuft im Hintergrund, Stand über GET, gespeichert in `kbl-challenge-cache.json`; Nachladen nur per POST (Admin).
+- Rush (Teil der Ansicht „Challenges“): `/v4/challenges/{ch}/favorites` liefert je Favorit (alle Legenden) Gesamtplatz `pl`, Punkte `p`, `top` (Top-Prozent) und `dvim` (Bild der aktuellen Rush-Division), aber nur für die jüngsten Challenges (ältere: kein `p`). Division über `dvim` → `/v4/challenges/lobby/divisionLadder` (`dvn`, `bod` = Untergrenze). Rush-Punkte je Challenge = Skala `top` → `skp` aus T800s Lobby-Archiv (T800 selbst echt, Gegenprobe). Gesamt-Rushpunkte `skp` und Division aller gefolgten Manager: `/v4/challenges/socialhub?start=0&max=200` (`shme` = eigener Account, `shfl[]` = gefolgte; Verlauf in `rushTotals`). Rush-Verlauf im Diagramm = heutiger Stand rückwärts minus spätere Challenge-Punkte. Darum lädt der Server die Challenges alle 3 Stunden automatisch (Dienst-Login oder angemeldeter Admin) und sichert Favoriten (`fav`, `rush`) und Divisionswechsel (`rushHistory`) im Cache.
+- Spieltagsstatus (Anpfiff, beendet) kommt von OpenLigaDB (`/getmatchdata/bl1/2026`).
+
+## Grundsätze
+- Sicherungen vor Änderungen immer unter `_sicherungen/sicherung-vor-<thema>/` ablegen, nie als eigene Ordner im App-Ordner.
+- Nie raten: Bei unklaren oder fehlenden Daten wird nichts berechnet, sondern mit Grund angezeigt („Das fehlt: …“).
+- Gespeicherte Aufstellungen niemals überschreiben.
+- Die Kontrolltabelle („stimmen die Spielerpunkte?“) vergleicht die Summe der Spielerpunkte (minus 100 je leerem Platz) mit den Rankingpunkten und ist das Sicherheitsnetz.
+- Kein Schreibzugriff auf Kickbase.
+
+## Stand
+Funktioniert und geprüft: BD, DD, MM, AH (MVP-Annahme bestätigt), RK/BN/UM-Erkennung (UM an einem Spiel mit vier Fällen belegt), Kontrolltabelle (Spieltag 6 stimmt), Dienst-Login, Handy-Ansicht.
+
+Noch nicht an einem echten Spieltag erprobt: automatisches Einfrieren der Startelfen am Freitag, vollständige Abrechnung mit echten gespeicherten Aufstellungen (erster echter Test: Spieltag 7, Abrechnung am Montag danach). Vergangene Startelfen liefert Kickbase im historischen Ranking `/v4/leagues/6422780/ranking?dayNumber=X` (Feld `us[].lp`, Spieler-IDs, `null` = leere Position); an ST 6 bei allen 16 Managern gegen die gespeicherten Startelfen geprüft: identisch. Die Abrechnung nimmt sie nur im Speicher, wenn keine Startelf gespeichert ist (oder eine unbestätigte abweicht). Transfer-Verlauf je Manager: `/v4/leagues/6422780/managers/{id}/transfer` (`it[]`: `pi`, `pn`, `tid` Verein, `tty` 1 Kauf / 2 Verkauf, `othnm` Gegenüber, `trp` Preis, `dt`); daraus erkennt die Abrechnung Teamlimit-Verkäufe nachträglich (gleicher Verein, 1 h vor bis 72 h nach Erhalt). Liga-Feed: `/v4/leagues/6422780/activitiesFeed?max=N` (t 15 = Transfer). Testabfrage: `/api/history-probe` (`?compare=1` vergleicht lp mit gespeicherten Startelfen).
+
+## Offene Aufgaben
+- Strafen-Tracker (offen/erledigt zum Abhaken) und Spieltags-Archiv.
+- Marktwerte für BN und RK anzeigen.
+- Für den Betrieb mit allen Managern: Rollen (nur der Admin rechnet ab), Datenbank statt JSON-Dateien, HTTPS und sichere Cookies, Sitzungsbereinigung, Konfiguration (Liga-ID, ausgeschlossener Manager) statt fest im Code, Zugangsdaten nur über geschützte Hoster-Einstellungen.
+- Bei Änderungen am Frontend: Handy-Breite (390 px) mitprüfen, Navigation unten ist `.mobilenav`.
+
+## Online-Ansicht (GitHub)
+- `tools/export-static.mjs` startet server.js, meldet sich mit dem Dienst-Login an, speichert alle Anzeige-Daten als JSON in `site/data/` und kopiert `public/` nach `site/` (absolute Pfade werden relativ). `public/static-mode.js` leitet im Export alle `/api/...`-Aufrufe auf diese Dateien um; Schreibzugriffe werden abgelehnt.
+- Neue GET-Endpunkte, die die Seite braucht, muessen in die URL-Liste von `export-static.mjs` aufgenommen werden.
+- `.github/workflows/seite.yml`: alle 10 Min. live, stuendlich voll; committet `kbl-*.json` und `site/`, veroeffentlicht ueber GitHub Pages. Zugangsdaten nur als Repository-Secrets.
+- Lokal testen: `seite-testen.bat` (Export + Anzeige auf http://localhost:8080).

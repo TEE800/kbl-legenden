@@ -1,0 +1,20 @@
+{
+  "snapshots": [
+    {
+      "observedAt": "2026-10-19T19:46:51.867Z",
+      "selectedDay": 6,
+      "checkedSquads": 16,
+      "totalSquads": 16,
+      "candidates": [
+        {
+          "name": "Mario Vuskovic",
+          "club": "Hamburger SV",
+          "decision": "bis 15. November 2026 gesperrt",
+          "reason": "CAS-Urteil",
+          "status": "unowned",
+          "matchCount": 0
+        }
+      ]
+    }
+  ]
+}
