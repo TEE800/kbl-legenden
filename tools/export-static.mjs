@@ -60,10 +60,11 @@ try {
   const days = (status?.days || []).filter(d => d.status === 'live' || d.status === 'finished').map(d => d.day);
   const live = (status?.days || []).find(d => d.status === 'live')?.day;
 
+  // Hinweisleiste (vorschau.js) online ausblenden: preview false.
   // Startelfen einfrieren, solange ein Spieltag laeuft (wird nie ueberschrieben).
   if (live) { const r = await call('/api/lineup-snapshots/capture-frozen', { method: 'POST', body: JSON.stringify({ day: live }) }); console.log('Startelfen Spieltag', live, r.status, JSON.stringify(r.body).slice(0, 200)); }
 
-  fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: true, admin: false, loggedIn: true }));
+  fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: false, admin: false, loggedIn: true }));
   for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen', '/api/challenges']) await save(u);
   const ranking = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8'));
   for (const m of ranking.us || []) await save(`/api/manager-squad-v4/${LEAGUE}/${m.i}`);
