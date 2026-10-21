@@ -30,7 +30,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
 
 // 2. Server starten
-const server = spawn(process.execPath, ['server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '' }, stdio: ['ignore', 'inherit', 'inherit'] });
+const server = spawn(process.execPath, ['--import', './tools/fetch-zaehler.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '' }, stdio: ['ignore', 'inherit', 'inherit'] });
 let cookie = '';
 async function call(url, opts = {}) {
   const r = await fetch(BASE + url, { ...opts, headers: { ...(opts.headers || {}), cookie, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10 * 60 * 1000) });
@@ -81,4 +81,4 @@ try {
 } catch (e) {
   console.error('Export abgebrochen:', e.message);
   process.exitCode = 1;
-} finally { server.kill(); }
+} finally { server.kill('SIGTERM'); await new Promise(r => server.once('exit', r)); }
