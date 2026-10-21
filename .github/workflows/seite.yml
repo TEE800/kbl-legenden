@@ -30,14 +30,18 @@ jobs:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
         run: node tools/export-static.mjs ${{ (github.event.schedule == '7 * * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
-      - name: Gespeicherte Daten sichern
-        run: |
-          git config user.name "kbl-bot"
-          git config user.email "kbl-bot@users.noreply.github.com"
-          git add kbl-*.json site
-          git diff --cached --quiet || (git commit -m "Daten aktualisiert" && git pull --rebase && git push)
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
       - id: deploy
         uses: actions/deploy-pages@v4
+      - name: Gespeicherte Daten sichern
+        run: |
+          git config user.name "kbl-bot"
+          git config user.email "kbl-bot@users.noreply.github.com"
+          git add kbl-*.json site
+          git diff --cached --quiet && exit 0
+          git commit -m "Daten aktualisiert"
+          # Bei gleichzeitigen Aenderungen gewinnen die eben erzeugten Daten.
+          for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done
+          exit 1
