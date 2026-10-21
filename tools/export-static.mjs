@@ -81,4 +81,4 @@ try {
 } catch (e) {
   console.error('Export abgebrochen:', e.message);
   process.exitCode = 1;
-} finally { server.kill('SIGTERM'); await new Promise(r => server.once('exit', r)); }
+} finally { if (server.exitCode === null) { const done = new Promise(r => server.once('exit', r)); server.kill('SIGTERM'); await Promise.race([done, sleep(10000)]); } }
