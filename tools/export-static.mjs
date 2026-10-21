@@ -30,7 +30,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
 
 // 2. Server starten
-const server = spawn(process.execPath, ['--import', './tools/fetch-zaehler.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '' }, stdio: ['ignore', 'inherit', 'inherit'] });
+const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '' }, stdio: ['ignore', 'inherit', 'inherit'] });
 let cookie = '';
 async function call(url, opts = {}) {
   const r = await fetch(BASE + url, { ...opts, headers: { ...(opts.headers || {}), cookie, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10 * 60 * 1000) });
@@ -68,12 +68,16 @@ try {
   const ranking = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8'));
   for (const m of ranking.us || []) await save(`/api/manager-squad-v4/${LEAGUE}/${m.i}`);
 
-  // Spieltage: im Live-Modus nur der laufende, der letzte und fehlende; im Voll-Modus alle (Kickbase korrigiert nachtraeglich).
-  const recent = new Set([live, Math.max(...days.filter(d => d !== live), 0)].filter(Boolean));
+  // Spieltage: im Live-Modus nur der laufende und was fehlt oder noch nicht fertig abgerechnet ist;
+  // im Voll-Modus (taeglich) alle, weil Kickbase Punkte nachtraeglich korrigiert.
+  const unfinished = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).ready === false; } catch { return true; } };
   for (const d of days) {
     const urls = [`/api/ranking/${LEAGUE}?dayNumber=${d}`, `/api/rule-accounting/${d}`, `/api/points-overview/${d}`, `/api/todo-checks/${d}`,
       `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`];
-    for (const u of urls) if (MODE === 'full' || recent.has(d) || !have(u)) await save(u);
+    for (const u of urls) {
+      const needed = MODE === 'full' || d === live || !have(u) || (u.includes('/rule-accounting/') && unfinished(u));
+      if (needed) await save(u);
+    }
   }
   fs.writeFileSync(path.join(DATA, '_meta.json'), JSON.stringify({ exportedAt: new Date().toISOString(), mode: MODE, liveDay: live || null }));
   console.log(`Fertig (${MODE}): ${saved.length} gespeichert, ${failed.length} mit Fehler.`);
