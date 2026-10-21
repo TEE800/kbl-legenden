@@ -1,8 +1,8 @@
 name: Seite aktualisieren
 on:
   schedule:
-    - cron: '*/10 * * * *'   # alle 10 Minuten (Live-Daten)
-    - cron: '7 * * * *'      # jede Stunde alles neu (Korrekturen von Kickbase)
+    - cron: '*/10 * * * *'   # alle 10 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
+    - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
 permissions:
   contents: write
@@ -20,22 +20,32 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - id: gate
+        name: Laeuft gerade ein Spieltag?
+        run: |
+          if [ "${{ github.event.schedule }}" = "*/10 * * * *" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v4
+        if: steps.gate.outputs.aktiv == 'true'
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+        if: steps.gate.outputs.aktiv == 'true'
       - name: Daten abrufen und Seite bauen
+        if: steps.gate.outputs.aktiv == 'true'
         env:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
-        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 * * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
+        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
       - uses: actions/upload-pages-artifact@v3
+        if: steps.gate.outputs.aktiv == 'true'
         with:
           path: site
       - id: deploy
+        if: steps.gate.outputs.aktiv == 'true'
         uses: actions/deploy-pages@v4
       - name: Gespeicherte Daten sichern
+        if: steps.gate.outputs.aktiv == 'true'
         run: |
           git config user.name "kbl-bot"
           git config user.email "kbl-bot@users.noreply.github.com"

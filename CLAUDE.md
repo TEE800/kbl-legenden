@@ -73,7 +73,7 @@ Noch nicht an einem echten Spieltag erprobt: automatisches Einfrieren der Starte
 ## Online-Ansicht (GitHub)
 - `tools/export-static.mjs` startet server.js, meldet sich mit dem Dienst-Login an, speichert alle Anzeige-Daten als JSON in `site/data/` und kopiert `public/` nach `site/` (absolute Pfade werden relativ). `public/static-mode.js` leitet im Export alle `/api/...`-Aufrufe auf diese Dateien um; Schreibzugriffe werden abgelehnt.
 - Neue GET-Endpunkte, die die Seite braucht, muessen in die URL-Liste von `export-static.mjs` aufgenommen werden.
-- `.github/workflows/seite.yml`: alle 10 Min. live, stuendlich voll; committet `kbl-*.json` und `site/`, veroeffentlicht ueber GitHub Pages. Zugangsdaten nur als Repository-Secrets.
+- `.github/workflows/seite.yml`: alle 10 Min., aber nur waehrend Bundesliga-Spielen (`tools/spieltag-aktiv.mjs`: Anpfiff vor max. 3 h bis in 10 Min., laut OpenLigaDB), sonst uebersprungen; taeglich 6:07 Uhr voll; committet `kbl-*.json` und `site/`, veroeffentlicht ueber GitHub Pages. Zugangsdaten nur als Repository-Secrets.
 - Lokal testen: `seite-testen.bat` (Export + Anzeige auf http://localhost:8080).
 - **Veröffentlichen (Änderungen auf die Online-Seite bringen):** Repository `TEE800/kbl-legenden` (Branch `main`). Wenn Kevin „veröffentlichen“ sagt, übernimmt ein Thread mit Zugriff auf diesen Ordner und das Repository: Repository frisch holen (`git pull`), dann aus dem App-Ordner kopieren:
   - Code: `server.js`, `challenges.js`, `event-types-de.js`, `package.json`, `package-lock.json`, `public/*`, `tools/*`, `CLAUDE.md`, `README.md`, `.github/workflows/seite.yml`, `.gitignore`.
