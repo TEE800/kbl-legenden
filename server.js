@@ -1198,9 +1198,11 @@ async function tippPlayerPoints(token,playerId,day){
 // Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
- if(!TIPP_RULES.some(r=>r.id===rule.id))return {status:'manual',message:'Eigene Tippregel: Gewinner bitte von Hand bestimmen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
  const mvp=await loadMatchdayMvp(token,day);
+ // Eigene Tippregel der Liga: nur den MVP zeigen, Gewinner bestimmt die Liga selbst.
+ if(!TIPP_RULES.some(r=>r.id===rule.id))return {status:'manual',message:'Den Gewinner bestimmt ihr nach eurer Tippregel selbst.',rows:[],winners:[],
+  ...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:mvp.players[0].points}}:{})};
  if(!mvp.players.length)return {status:'missing',message:'Das fehlt: Der MVP des Spieltags ist noch nicht bekannt.',rows:[],winners:[]};
  const ids=new Set(mvp.players.map(p=>String(p.id))),top=mvp.players[0].points;
  const out=[];let missing=0;
@@ -1298,8 +1300,11 @@ app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{
  if(!base&&!(id==='eigene'&&text&&text.length<=500))return res.status(400).json({error:'Bitte eine Tippregel wählen oder eine eigene eintragen.'});
  try{const st=tippState(await tippMatchdays(),day);
   if(st.locked)return res.status(409).json({error:'Der Spieltag ist angepfiffen, die Tippregel steht fest.'});
+  // Wer die Regel an diesem Spieltag bestimmt hat (wechselt jeden Spieltag), optional.
+  const by=req.body?.byId?(await tippManagers(getToken(req))).find(m=>m.id===String(req.body.byId)):null;
+  if(req.body?.byId&&!by)return res.status(400).json({error:'Unbekannter Manager.'});
   const all=readTipps(),rec=all[day]||(all[day]={tips:{}});
-  rec.rule=base?{...base}:{id:'eigene',title:'Eigene Regel',text};
+  rec.rule={...(base?{...base}:{id:'eigene',title:'Eigene Regel',text}),...(by?{by:{id:by.id,name:by.name}}:{})};
   rec.ruleUpdatedAt=new Date().toISOString();saveTipps(all);
   res.set('Cache-Control','no-store').json({ok:true,rule:rec.rule});
  }catch(e){res.status(502).json({error:e.message});}
