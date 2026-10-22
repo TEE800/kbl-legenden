@@ -82,3 +82,5 @@ Noch nicht an einem echten Spieltag erprobt: automatisches Einfrieren der Starte
   - `kbl-lineup-snapshots.json`: nur zusammenführen (fehlende Einträge vom PC ergänzen, vorhandene im Repository nie überschreiben). `kbl-dfl-card-snapshots.json`, `kbl-dfb-suspension-history.json` und `site/` gehören GitHub.
   - Nie hochladen: `start.bat`, `vorschau.bat`, `server-neustart.bat`, `seite-testen.bat`, `hochladen.bat`, `_sicherungen/`, `_probe/`, `node_modules/`, Zugangsdaten.
   - Danach committen, pushen und den Workflow `seite.yml` per „Run workflow“ starten; nach wenigen Minuten ist die Seite aktuell.
+
+- BumsParade, Empfänger bei AH/RK/BN/DD: zuerst aus dem Transfer-Verlauf des Abgebenden (erster Verkauf nach dem letzten Anstoß des Spieltags, Zeiten von OpenLigaDB), sonst heutiger Kader. In der BumsParade lässt sich jeder Empfänger von Hand korrigieren (kbl-todo-checks.json, `target`, „Markt“ = an den Markt); die Korrektur geht in die BumsTabelle.

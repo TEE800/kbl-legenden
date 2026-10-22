@@ -228,6 +228,20 @@ async function loadMatchdays() {
   for (const d of days) { if (d.day !== lastFinishedDay + 1 || d.status !== 'finished') break; lastFinishedDay = d.day; }
   return { season: '2026/27', source: 'OpenLigaDB', days, lastFinishedDay };
 }
+// Zeitfenster eines Spieltags fuer den Transfer-Verlauf: letzter Anstoss des Spieltags bis erster Anstoss des naechsten.
+let dayTimesCache=null;
+async function dayWindow(day){
+  if(!dayTimesCache||Date.now()-dayTimesCache.at>30*60e3){
+    const r=await fetch('https://api.openligadb.de/getmatchdata/bl1/2026',{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
+    if(!r.ok)throw new Error(`OpenLigaDB HTTP ${r.status}`);
+    const by=new Map();
+    for(const g of (await r.json())){const d=Number(g.group?.groupOrderID),t=Date.parse(g.matchDateTimeUTC||g.matchDateTime);if(!Number.isInteger(d)||!Number.isFinite(t))continue;const e=by.get(d)||{first:Infinity,last:-Infinity};e.first=Math.min(e.first,t);e.last=Math.max(e.last,t);by.set(d,e);}
+    dayTimesCache={at:Date.now(),by};
+  }
+  const cur=dayTimesCache.by.get(day),next=dayTimesCache.by.get(day+1);
+  if(!cur)return null;
+  return {end:cur.last,next:next?next.first:cur.last+7*864e5};
+}
 app.get('/api/matchday-status', async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store').json(await loadMatchdays());
@@ -1587,21 +1601,51 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
     // Vereinskollegen aus dem Kader am Spieltag (falls gespeichert) und dem heutigen Kader.
     const clubName=id=>clubOf.get(String(id))?.team||null;
     const sameClub=(a,b)=>{const x=clubOf.get(String(a))?.teamId,y=clubOf.get(String(b))?.teamId;return x!=null&&y!=null&&String(x)===String(y);};
+    // Empfaenger aus dem Transfer-Verlauf des Abgebenden (/managers/{id}/transfer: tty 2 Verkauf, othnm Kaeufer, dt Zeitpunkt).
+    // Wichtig fuer alte Spieltage: Der heutige Kader zeigt nur, wo der Spieler jetzt ist, nicht wohin er damals ging.
+    // Gesucht wird der erste Verkauf nach dem letzten Anstoss des Spieltags, bevorzugt vor dem naechsten Spieltag.
+    if(!probe&&complete){
+      let win=null;try{win=await dayWindow(day);}catch{win=null;}
+      if(win){
+        const hCache=new Map();
+        const salesOf=async gid=>{if(!hCache.has(gid)){try{hCache.set(gid,(await kbFetch(`/v4/leagues/6422780/managers/${gid}/transfer`,{token})).it||[]);}catch{hCache.set(gid,null);}}return hCache.get(gid);};
+        const firstSale=async(gid,pid)=>{const list=await salesOf(String(gid));if(!list)return null;
+          const c=list.filter(t=>String(t.pi)===String(pid)&&Number(t.tty)===2&&Date.parse(t.dt)>=win.end).sort((a,b)=>Date.parse(a.dt)-Date.parse(b.dt));
+          return c.find(t=>Date.parse(t.dt)<=win.next)||c.find(t=>Date.parse(t.dt)<=win.end+14*864e5)||null;};
+        const byName=n=>managers.find(m=>String(m.n)===String(n));
+        for(const t of todos){
+          if(!['AH','RK','BN'].includes(t.rule))continue;
+          const pid=String(t.key).split(':')[2];if(!pid)continue;
+          const sale=await firstSale(t.managerId,pid);if(!sale)continue;
+          const buyer=sale.othnm?byName(sale.othnm):null;
+          if(buyer&&String(buyer.i)!==String(t.managerId)){t.to=[{managerId:String(buyer.i),manager:String(buyer.n),playerName:pname({playerId:pid})}];t.check={state:'done',note:`laut Transfer-Verlauf an ${buyer.n}`};}
+          else if(!sale.othnm){delete t.to;t.check={state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};}
+        }
+        if(!tie)for(const w of dd){
+          const t=todos.find(x=>x.key===`DD:${w.managerId}`);if(!t)continue;
+          const lastNames=last.map(m=>String(m.manager||m.name));
+          let hit=null;for(const c of (w.candidates||[])){const sale=await firstSale(w.managerId,c.playerId);if(sale&&lastNames.includes(String(sale.othnm))){hit={c,to:sale.othnm};break;}}
+          if(!hit)continue;
+          for(const o of (t.options||[]))o.moved=String(o.playerId)===String(hit.c.playerId);
+          t.to=(t.to||[]).map(r=>({...r,playerName:pname(hit.c)}));
+          t.check={state:'done',note:`laut Transfer-Verlauf ${pname(hit.c)} an ${hit.to}`};
+        }
+      }
+    }
     const incoming=[];
     const addIncoming=(recipientId,playerId,rule)=>{if(recipientId)incoming.push({recipientId:String(recipientId),playerId:String(playerId),rule});};
-    for(const a of (autoEvents?.actions||[])){
-      if(conflictIds.has(String(a.playerId)))continue;
-      if(a.rule==='UM'&&a.recipientKind==='manager')addIncoming(a.recipientId,a.playerId,'UM');
-      else if(a.rule==='RK'||a.rule==='BN'){const o=ownerMap.get(String(a.playerId));if(o&&String(o.managerId)!==String(a.managerId))addIncoming(o.managerId,a.playerId,a.rule);}
+    // Wer in der BumsParade einen Spieler bekommt: aus den Aufgaben (Empfaenger aus dem Transfer-Verlauf oder dem heutigen Kader).
+    for(const t of todos){
+      if(!['UM','RK','BN','AH','DD'].includes(t.rule)||!t.to)continue;
+      const pid=t.rule==='DD'?(t.options||[]).find(o=>o.moved)?.playerId:String(t.key).split(':')[2];if(!pid)continue;
+      for(const r of t.to)if(r.managerId&&String(r.managerId)!==String(t.managerId))addIncoming(r.managerId,pid,t.rule);
     }
-    for(const p of (ahFinal.affected||[])){const o=ownerMap.get(String(p.playerId));if(o&&String(o.managerId)!==String(p.managerId))addIncoming(o.managerId,p.playerId,'AH');}
     const lastIdsTl=last.map(m=>String(m.managerId));
     const squadAtDay=rid=>{const s=snapshots[`${day}:${rid}`];return Array.isArray(s?.squadIds)?s.squadIds.map(String):[];};
     const squadNow=rid=>marketInfo.has(String(rid))?[...marketInfo.get(String(rid)).keys()]:[];
     const matesOf=(rid,pid)=>[...new Set([...squadAtDay(rid),...squadNow(rid)])].filter(id=>id!==String(pid)&&sameClub(id,pid));
     if(complete&&!tie)for(const w of dd){
       const got=(w.candidates||[]).find(c=>lastIdsTl.includes(String(ownerMap.get(String(c.playerId))?.managerId)));
-      if(got)addIncoming(ownerMap.get(String(got.playerId)).managerId,got.playerId,'DD');
       // Vor dem Transfer: bei jedem Kandidaten anzeigen, wen der Letzte dann abgeben muesste.
       const opt=todos.find(t=>t.key===`DD:${w.managerId}`);
       if(opt?.options&&!got)for(const o of opt.options){const mates=lastIdsTl.flatMap(rid=>matesOf(rid,o.playerId));if(mates.length)o.clash=mates.map(id=>playerNames.get(id)||`Spieler-ID ${id}`).join(', ');}

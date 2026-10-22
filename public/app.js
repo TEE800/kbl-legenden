@@ -314,7 +314,7 @@ function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
  const diff=other&&m.score!=null&&other.score!=null?m.score-other.score:null;
- $('#profileDetails').innerHTML=`<div class="profiletitle"><img class="clown" src="/clown.svg" alt="🤡"> ${escapeHtml(m.name)}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile"><small>BUMSUNGEN</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · laut BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${escapeHtml(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
+ $('#profileDetails').innerHTML=`<div class="profiletitle"><img class="clown" src="/clown.svg" alt="🤡"> ${escapeHtml(m.name)}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${escapeHtml(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
 }
 $('#profileSelect').addEventListener('change',showProfile);
 $('#compareSelect').addEventListener('change',()=>{if($('#compareSelect').value!=='')profOpen.add(DUEL_SEC);showProfile();});
@@ -1113,25 +1113,40 @@ function centerTodoHtml(){
  const lastDay=historyData.filter(h=>h.status==='finished').at(-1);
  const mmNames=(lastDay?.list||[]).map(m=>m.name).filter(isEligibleManager).sort((x,y)=>x.localeCompare(y,'de'));
  const mmPick=t=>{const target=checks[t.key]?.target||'';return `<select class="center-pick" data-todo-target="${safe(t.key)}" aria-label="Wen hat ${safe(t.manager)} bestimmt?"${a.probe?' disabled':''}><option value="">Wen hat er bestimmt?</option>${mmNames.map(n=>`<option value="${safe(n)}" ${n===target?'selected':''}>${safe(n)}</option>`).join('')}</select>`;};
+ // DD: welcher Spieler; RK, BN, AH, TL: an wen. Die Auswahl zählt bis in die BumsTabelle.
+ const anyPick=t=>{const k=todoPick(t);if(k==='mm')return mmPick(t);if(!k)return '';const target=checks[t.key]?.target||'',need=todoNeedsPick(t);
+  const autoNow=k==='dd'?(t.to||[])[0]?.playerName:(t.to||[]).length?t.to.map(r=>r.manager).join(', '):t.check?.state==='done'&&/Markt/.test(t.check?.note||'')?'an den Markt':'';
+  const opts=k==='dd'?t.options.map(o=>o.name):[...(['AH','TL','UM'].includes(t.rule)?['Markt']:[]),...mmNames.filter(n=>n!==t.manager)];
+  const q=k==='dd'?'Welchen Spieler hat der Letzte gewählt?':t.rule==='AH'?'Wer hat ihn gekauft?':'An wen ging er?';
+  const first=need?q:`automatisch: ${autoNow||'nicht erkannt'} (ändern …)`;
+  return `<select class="center-pick${need?'':' center-fix'}" data-todo-target="${safe(t.key)}"${need?' data-need="1"':''} aria-label="${safe(q)}"${a.probe?' disabled':''}><option value="">${safe(first)}</option>${opts.map(n=>`<option value="${safe(n)}" ${n===target?'selected':''}>${n==='Markt'?(t.rule==='AH'?'Kickbase / Markt':'an den Markt'):safe(n)}</option>`).join('')}</select>`;};
+ const pickLabel=t=>{const g=checks[t.key]?.target;if(!g)return '';const k=todoPick(t);return k==='mm'?`hat ${g} bestimmt`:k==='dd'?`${g} an ${(t.to||[]).map(r=>r.manager).join(', ')||'den Letzten'}`:g==='Markt'?'an den Markt':`an ${g}`;};
  const rows=todos.map(t=>{
   const manual=!!checks[t.key]?.done,auto=t.check?.state==='done',finished=manual||auto;
   const [cls,label]=STATE[t.check?.state]||STATE.manual;
-  const status=auto?`<span class="center-state ok">✓ erledigt</span> <span class="muted tiny">${safe(t.check.note)}</span>`
-   :t.rule==='MM'&&manual&&checks[t.key]?.target?`<span class="center-state ok">✓ hat ${safe(checks[t.key].target)} bestimmt</span>`
+  const status=checks[t.key]?.target&&todoPick(t)?`<span class="center-state ok">✓ ${safe(pickLabel(t))}</span>${auto&&t.rule!=='MM'?' <span class="muted tiny">von Hand korrigiert</span>':''}`
+   :auto?`<span class="center-state ok">✓ erledigt</span> <span class="muted tiny">${safe(t.check.note)}</span>`
    :manual?`<span class="center-state ok">✓ von Hand abgehakt</span>${t.check?.state&&t.check.state!=='manual'?` <span class="muted tiny">App sieht: ${safe(t.check.note)}</span>`:''}`
    :`<span class="center-state ${cls}">${label}</span> <span class="muted tiny">${safe(t.check?.note||'')}</span>`;
   const opts=t.options?.length?`<span class="center-options">${t.options.map(o=>`<span class="center-option${o.moved?' moved':''}"${o.uncertain?` title="Noch nicht sicher: ${safe(o.uncertain)}"`:''}>${o.moved?'✓ ':''}${o.uncertain?'? ':''}${safe(o.name)} <small>${fmt(o.points)} Pkt.${o.uncertain?' · unsicher':''}${o.clash?` · Letzter müsste ${safe(o.clash)} abgeben`:''}</small></span>`).join('')}</span>`:'';
-  return {key:t.key,mid:t.managerId,manager:t.manager,todo:true,finished,html:`<li class="${finished?'center-done':''}"><label class="center-check" title="${auto?'Von der App als erledigt erkannt':'Abhaken, wenn erledigt'}"><input type="checkbox" data-todo-key="${safe(t.key)}" ${finished?'checked':''} ${auto||a.probe?'disabled':''}></label><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${safe(t.text)}</span><span class="center-status">${status}</span>${t.rule==='MM'?mmPick(t):''}${opts}${detail(t)}</span></li>`};
+  return {key:t.key,mid:t.managerId,manager:t.manager,todo:true,finished,html:`<li class="${finished?'center-done':''}"><label class="center-check" title="${auto?'Von der App als erledigt erkannt':'Abhaken, wenn erledigt'}"><input type="checkbox" data-todo-key="${safe(t.key)}" ${finished?'checked':''} ${auto||a.probe?'disabled':''}></label><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${safe(t.text)}</span><span class="center-status">${status}</span>${anyPick(t)}${opts}${detail(t)}</span></li>`};
  });
  // Wer bei UM, DD, RK, BN oder AH einen Spieler bekommt, ist ebenfalls betroffen (zählt als Bumsung).
- for(const t of todos)for(const r of (t.to||[])){const giver=rows.find(x=>x.key===t.key);
-  rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>bekommt ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}
+ const midOf=n=>[...(d.plausibility||[])].find(p=>p.manager===n)?.managerId||null;
+ for(const t of todos){const g=checks[t.key]?.target,k=todoPick(t);let to=(t.to||[]).map(r=>({...r,playerName:k==='dd'&&g?g:r.playerName}));
+  if(k==='to'&&g)to=g==='Markt'?[]:[{managerId:midOf(g),manager:g,playerName:todoPlayer(t)}];
+  for(const r of to){const giver=rows.find(x=>x.key===t.key);
+  rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>bekommt ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}}
  // Magic Miyoshi: Der bestimmte Manager ist ebenfalls betroffen.
  for(const t of todos.filter(t=>t.rule==='MM'&&checks[t.key]?.target)){const name=checks[t.key].target;
   const mid=[...(d.plausibility||[])].find(p=>p.manager===name)?.managerId||null;
   rows.push({mid,manager:name,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule" title="${safe(RULE.MM)}">MM</span><span class="center-text"><span>stellt am nächsten Spieltag einen Spieler weniger auf</span><span class="center-status muted tiny">bestimmt von ${safe(t.manager)}</span></span></li>`});}
  // Nicht eindeutige Fälle und entfallene Schnapszahlen stehen direkt beim Manager.
- for(const u of (ae?.unclear||[]))rows.push({mid:u.managerId,manager:u.manager,todo:false,unclear:true,html:`<li class="center-info"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${pl(u)}: bitte von Hand prüfen</span><span class="center-status"><span class="center-state warn">? bitte prüfen</span> <span class="muted tiny">${safe(u.reason)}</span></span></span></li>`});
+ for(const u of (ae?.unclear||[])){const k=unclearKey(u),g=checks[k]?.target,ok=/^[A-Z]{2,3}:\d{1,15}:\d{1,12}$/.test(k);
+  const sel=ok?`<select class="center-pick" data-todo-target="${safe(k)}" aria-label="Wie wurde entschieden?"${a.probe?' disabled':''}><option value="">Wie wurde entschieden?</option>${['Entfällt','Markt',...mmNames.filter(n=>n!==u.manager)].map(n=>`<option value="${safe(n)}" ${n===g?'selected':''}>${n==='Entfällt'?'Regel entfällt':n==='Markt'?'an den Markt':'an '+safe(n)}</option>`).join('')}</select>`:'';
+  const st=g?`<span class="center-state ok">✓ ${g==='Entfällt'?'Regel entfällt':g==='Markt'?'an den Markt':'an '+safe(g)}</span>`:`<span class="center-state warn">? bitte prüfen</span>`;
+  rows.push({mid:u.managerId,manager:u.manager,todo:false,unclear:!g,html:`<li class="center-info${g?' center-done':''}"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${pl(u)}: bitte von Hand prüfen</span><span class="center-status">${st} <span class="muted tiny">${safe(u.reason)}</span></span>${sel}</span></li>`});
+  if(g&&g!=='Entfällt'&&g!=='Markt')rows.push({mid:midOf(g),manager:g,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>bekommt ${pl(u)} von ${safe(u.manager)}</span><span class="center-status"><span class="center-state ok">✓ von Hand nachgetragen</span></span></span></li>`});}
  for(const x of (d.bdDropped||[]))rows.push({mid:x.managerId,manager:x.manager,todo:false,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">BD</span><span class="center-text"><span>${pl(x)} (${fmt(x.points)} Pkt.): Schnapszahl entfällt</span><span class="center-status muted tiny">weil auch ${x.because.map(safe).join(' und ')} gilt, BD tritt zurück</span></span></li>`});
  // Reihenfolge wie bei der Abrechnung: chronologisch vom Spieltagssieger abwärts.
  const dayList=historyData.find(h=>Number(h.day)===Number(a.day))?.list||[];
@@ -1247,8 +1262,8 @@ document.addEventListener('change',async e=>{
   renderAccTodo();return;
  }
  const box=e.target.closest('input[data-todo-key]');if(!box||!centerAccounting.day||centerAccounting.probe)return;
- // Bei Magic Miyoshi wird über die Auswahl abgehakt.
- if(box.closest('li')?.querySelector('select[data-todo-target]')&&box.checked){box.checked=false;box.closest('li').querySelector('select').focus();return;}
+ // Bei Regeln mit Auswahl (MM, DD, RK, BN, AH, TL) wird über die Auswahl abgehakt.
+ if(box.closest('li')?.querySelector('select[data-todo-target][data-need]')&&box.checked){box.checked=false;box.closest('li').querySelector('select[data-need]').focus();return;}
  box.disabled=true;
  try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:box.dataset.todoKey,done:box.checked})});centerAccounting.checks=d.checks||{};}
  catch(err){box.checked=!box.checked;alert('Haken nicht gespeichert: '+err.message);}
@@ -1256,6 +1271,13 @@ document.addEventListener('change',async e=>{
 });
 document.addEventListener('click',e=>{if(e.target.closest('#centerRecheck')&&centerAccounting.day){if(centerAccounting.probe)$('#accountingProbe')?.click();else centerLoadAccounting(centerAccounting.day,true);}});
 
+// Von Hand nachzutragen: bei DD welcher Spieler, bei RK, BN, AH und TL an wen (Manager oder Markt), bei MM wen er bestimmt hat.
+const PICK_TO_RULES=['RK','BN','AH','TL','UM'];
+const unclearKey=u=>`${u.rule}:${u.managerId}:${u.playerId}`;
+function todoPlayer(t){const x=t.text||'',m=/bietet den MVP (.+) zum Verkauf an/.exec(x)||/gibt (.+) an einen Mitmanager ab/.exec(x)||/verkauft (.+?) \(/.exec(x)||/^verkauft (.+?) an den Markt/.exec(x)||/^gibt (.+?) an /.exec(x);return m?m[1]:(t.to||[])[0]?.playerName||null;}
+function todoPick(t){if(t.rule==='MM')return 'mm';if(t.rule==='DD')return t.options?.length?'dd':null;if(PICK_TO_RULES.includes(t.rule))return 'to';return null;}
+// Muss ausgewählt werden (nichts automatisch erkannt)? Sonst ist die Auswahl nur eine Korrektur.
+function todoNeedsPick(t){const k=todoPick(t);return k==='mm'||k==='dd'&&!(t.to||[])[0]?.playerName||k==='to'&&!(t.to||[]).length&&t.check?.state!=='done';}
 // KBL 4.16: BumsTabelle. Zählt je Spieltag die Bumsungen aus der BumsParade (Bumsung = von einer Regel betroffen,
 // auch als Empfänger oder von MM Bestimmter) und summiert sie über die Halbserie.
 function bumsCounts(d,checks){
@@ -1266,12 +1288,18 @@ function bumsCounts(d,checks){
  const add=(mid,name,rule,dir,text)=>{mid=mid!=null&&mid!==''?String(mid):idOf.get(name);if(!mid||!/^\d+$/.test(mid)||!name||!isEligibleManager(name))return;
   const e=out[mid]||(out[mid]=blank(name));e.count++;e.rules[rule]=(e.rules[rule]||0)+1;e[dir==='o'?'out':dir==='i'?'in':'other']++;e.moves.push({r:rule,d:dir,t:String(text||'').slice(0,200)});};
  for(const t of (d.todos||[])){
-  const to0=(t.to||[])[0],moved=to0?.playerName&&['DD','AH','RK','BN'].includes(t.rule)?`${t.rule==='AH'?'verkauft':'gibt'} ${to0.playerName} an ${t.to.map(r=>r.manager).join(', ')}`:null;
-  const mmTo=t.rule==='MM'?checks?.[t.key]?.target:null;
+  const tgt=checks?.[t.key]?.target||null,pk=todoPick(t),pl=todoPlayer(t);
+  let to=(t.to||[]).map(r=>({...r,playerName:pk==='dd'&&tgt?tgt:r.playerName}));
+  if(pk==='to'&&tgt)to=tgt==='Markt'?[]:[{managerId:null,manager:tgt,playerName:pl}];
+  const to0=to[0],moved=to0?.playerName&&['DD','AH','RK','BN','TL','UM'].includes(t.rule)?`${t.rule==='AH'||t.rule==='TL'?'verkauft':'gibt'} ${to0.playerName} an ${to.map(r=>r.manager).join(', ')}`:pk==='to'&&tgt==='Markt'?`verkauft ${pl||'den Spieler'} an den Markt`:null;
+  const mmTo=t.rule==='MM'?tgt:null;
   add(t.managerId,t.manager,t.rule,'o',t.rule==='MM'?(mmTo?`verteilt MM an ${mmTo}`:'verteilt MM · Empfänger noch in der BumsParade auswählen'):(moved||t.text));
-  for(const r of (t.to||[]))add(r.managerId,r.manager,t.rule,'i',`bekommt ${r.playerName||'einen Spieler'} von ${t.manager}`);
+  for(const r of to)add(r.managerId,r.manager,t.rule,'i',`bekommt ${r.playerName||'einen Spieler'} von ${t.manager}`);
   if(mmTo)add(null,mmTo,'MM','i',`bekommt MM von ${t.manager}: einen Spieler weniger aufstellen`);}
- for(const u of (d.autoEvents?.error?[]:(d.autoEvents?.unclear||[])))add(u.managerId,u.manager,u.rule,'o',`unklar, bitte prüfen: ${u.reason||''}`);
+ for(const u of (d.autoEvents?.error?[]:(d.autoEvents?.unclear||[]))){const g=checks?.[unclearKey(u)]?.target,pn=u.playerName||'den Spieler';
+  if(g==='Entfällt')continue;
+  if(!g){add(u.managerId,u.manager,u.rule,'o',`unklar, bitte prüfen: ${u.reason||''}`);continue;}
+  add(u.managerId,u.manager,u.rule,'o',g==='Markt'?`verkauft ${pn} an den Markt`:`gibt ${pn} an ${g}`);if(g!=='Markt')add(null,g,u.rule,'i',`bekommt ${pn} von ${u.manager}`);}
  return out;
 }
 let bumsLastSaved='',bumsDays={};
@@ -1281,8 +1309,8 @@ function bumsSave(){
  api(`/api/bumsungen/${a.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers})}).then(()=>renderBumsTabelle()).catch(()=>{});
 }
 // Weitere Kacheln der BumsTabelle (einklappbar, Stil wie Ruhm & Schande). Gleichstände werden gemeinsam genannt.
-let bumsStatsOpen=false,bumsTabOpen=false,bumsPairOpen=false,bumsPairWho='';
-document.addEventListener('toggle',e=>{if(e.target.id==='bumsStats')bumsStatsOpen=e.target.open;if(e.target.id==='bumsTab')bumsTabOpen=e.target.open;if(e.target.id==='bumsPairs')bumsPairOpen=e.target.open;},true);
+let bumsDaysOpen=false,bumsStatsOpen=false,bumsTabOpen=false,bumsPairOpen=false,bumsPairWho='';
+document.addEventListener('toggle',e=>{if(e.target.id==='bumsStats')bumsStatsOpen=e.target.open;if(e.target.id==='bumsTab')bumsTabOpen=e.target.open;if(e.target.id==='bumsPairs')bumsPairOpen=e.target.open;if(e.target.id==='bumsDays')bumsDaysOpen=e.target.open;},true);
 function bumsStatsHtml(rows,hit,inHalf,days,RN){
  if(!hit.length)return '';
  const names=l=>l.map(x=>escapeHtml(x)).join(', ');
@@ -1306,27 +1334,46 @@ function bumsStatsHtml(rows,hit,inHalf,days,RN){
 }
 // Wer bumst wen: aus den Empfänger-Einträgen („bekommt … von X“). Liga-Vorgabe: Wer abgibt (Spieler oder MM), bumst den Aufnehmenden.
 function bumsPairsHtml(rows){
- const pairs=new Map();
+ // Kreuztabelle: Zeile bumst Spalte. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt.
+ const cnt=new Map(),rules=new Map(),key=(a,b)=>a+'\u0000'+b;
  for(const r of rows)for(const x of (r.moves||[])){
   if(x.d!=='i')continue;const m=/ von (.+?)(?::|$)/.exec(x.t||'');if(!m)continue;
-  const other=m[1].trim();if(!other||other===r.name)continue;
-  const [by,on]=[other,r.name];
-  const key=[by,on].sort((a,b)=>a.localeCompare(b,'de')).join('\u0000');
-  const e=pairs.get(key)||{a:[by,on].sort((a,b)=>a.localeCompare(b,'de'))[0],b:[by,on].sort((a,b)=>a.localeCompare(b,'de'))[1],ab:0,ba:0,rules:{}};
-  if(by===e.a)e.ab++;else e.ba++;e.rules[x.r]=(e.rules[x.r]||0)+1;pairs.set(key,e);}
+  const by=m[1].trim(),on=r.name;if(!by||by===on)continue;
+  const k=key(by,on);cnt.set(k,(cnt.get(k)||0)+1);const rr=rules.get(k)||{};rr[x.r]=(rr[x.r]||0)+1;rules.set(k,rr);}
  const open=bumsPairOpen?' open':'';
- if(!pairs.size)return `<details class="hall-section prof-sec bums-statsbox" id="bumsPairs"${open}><summary><h4>⚔️ WER BUMST WEN</h4></summary><p class="muted">Noch keine Fälle mit Empfänger erfasst.</p></details>`;
- const all=[...pairs.values()].sort((x,y)=>(y.ab+y.ba)-(x.ab+x.ba)||Math.max(y.ab,y.ba)-Math.max(x.ab,x.ba));
- const names=[...new Set(all.flatMap(p=>[p.a,p.b]))].sort((a,b)=>a.localeCompare(b,'de'));
- const who=names.includes(bumsPairWho)?bumsPairWho:'';
- const list=all.filter(p=>!who||p.a===who||p.b===who).map(p=>{let [l,r,nl,nr]=[p.a,p.b,p.ab,p.ba];if(who&&r===who)[l,r,nl,nr]=[r,l,nr,nl];
-  return `<div class="bums-pair"><span class="bp-name right${nl>nr?' win':''}">${escapeHtml(l)}</span><span class="bp-score"><b class="${nl>nr?'win':''}">${nl}</b> : <b class="${nr>nl?'win':''}">${nr}</b></span><span class="bp-name${nr>nl?' win':''}">${escapeHtml(r)}</span><span class="bp-rules">${Object.entries(p.rules).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('')}</span></div>`;}).join('');
- return `<details class="hall-section prof-sec bums-statsbox" id="bumsPairs"${open}><summary><h4>⚔️ WER BUMST WEN</h4></summary>
- <p class="muted tiny">Die Zahl zählt, wie oft der Manager auf seiner Seite den anderen gebumst hat. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt.</p>
- <label class="acc-label">Manager <select id="bumsPairWho"><option value="">Alle Duelle</option>${names.map(n=>`<option${n===who?' selected':''}>${escapeHtml(n)}</option>`).join('')}</select></label>
- <div class="bums-pairs">${list}</div></details>`;
+ const head=`<details class="hall-section prof-sec bums-statsbox" id="bumsPairs"${open}><summary><h4>⚔️ WER BUMST WEN</h4></summary>`;
+ if(!cnt.size)return head+'<p class="muted">Noch keine Fälle mit Empfänger erfasst.</p></details>';
+ const names=[...new Set([...rows.map(r=>r.name),...[...cnt.keys()].flatMap(k=>k.split('\u0000'))])].filter(n=>typeof isEligibleManager!=='function'||isEligibleManager(n)).sort((a,b)=>a.localeCompare(b,'de'));
+ const max=Math.max(...cnt.values()),esc=escapeHtml;
+ const given=n=>names.reduce((t,o)=>t+(cnt.get(key(n,o))||0),0),taken=n=>names.reduce((t,o)=>t+(cnt.get(key(o,n))||0),0);
+ const th=names.map((n,c)=>`<th class="bx-col" data-c="${c}" title="${esc(n)}"><span>${esc(n)}</span></th>`).join('');
+ const body=names.map((a,r)=>`<tr><th class="bx-row" data-r="${r}">${esc(a)}</th>${names.map((b,c)=>{if(a===b)return `<td class="bx-self" data-r="${r}" data-c="${c}"></td>`;const v=cnt.get(key(a,b))||0;
+   return `<td class="bx-cell${v?' hit':''}" data-r="${r}" data-c="${c}"${v?` data-a="${esc(a)}" data-b="${esc(b)}" data-n="${v}" data-rules="${esc(Object.entries(rules.get(key(a,b))).map(([k,n])=>n>1?`${k} ×${n}`:k).join(', '))}" style="--bx:${(.25+.75*v/max).toFixed(2)}" title="${esc(a)} hat ${esc(b)} ${v}× gebumst"`:''}>${v||''}</td>`;}).join('')}<td class="bx-sum">${given(a)||''}</td></tr>`).join('');
+ const foot=`<tr><th class="bx-row" title="So oft wurde dieser Manager gebumst">Σ abbekommen</th>${names.map(n=>`<td class="bx-sum">${taken(n)||''}</td>`).join('')}<td class="bx-sum"></td></tr>`;
+ return head+`<p class="muted tiny">Zeile bumst Spalte: Die Zahl sagt, wie oft der Manager links den Manager oben gebumst hat. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt. Auf eine Zahl tippen zeigt die Regeln.</p>
+ <div class="bx-wrap"><table class="bx"><thead><tr><th class="bx-corner">bumst ↓ / gebumst →</th>${th}<th class="bx-col bx-sumh"><span>Σ gebumst</span></th></tr></thead><tbody>${body}${foot}</tbody></table></div>
+ <p class="muted bx-info" role="status">Auf eine Zahl tippen, um die Regeln zu sehen.</p></details>`;
 }
+document.addEventListener('click',e=>{const td=e.target.closest('.bx td');const box=e.target.closest('#bumsPairs');if(!box)return;const t=box.querySelector('.bx');if(!t)return;
+ t.querySelectorAll('.on,.cross').forEach(el=>el.classList.remove('on','cross'));const info=box.querySelector('.bx-info');
+ if(!td||!td.dataset.n){if(info)info.textContent='Auf eine Zahl tippen, um die Regeln zu sehen.';return;}
+ const r=td.dataset.r,c=td.dataset.c;td.classList.add('on');t.querySelectorAll(`[data-r="${r}"],[data-c="${c}"]`).forEach(el=>el!==td&&el.classList.add('cross'));
+ info.innerHTML=`<b>${escapeHtml(td.dataset.a)}</b> hat <b>${escapeHtml(td.dataset.b)}</b> ${td.dataset.n}× gebumst: `+td.dataset.rules.split(', ').map(x=>{const k=x.split(' ')[0];return `<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(x)}</span>`;}).join(' ');});
 document.addEventListener('change',e=>{if(e.target.id==='bumsPairWho'){bumsPairWho=e.target.value;renderBumsTabelle();}});
+// Jeder Spieltag einzeln: wer war betroffen, nach welcher Regel, wer gab an wen ab, automatisch oder von Hand.
+function bumsDaysHtml(days,inHalf,RN){
+ const esc=escapeHtml,DIRL={o:'↑',i:'↓',x:'↑'};
+ const chip=k=>`<span class="bums-rule bums-r-${esc(k)}" data-rule="${esc(k)}" role="link" tabindex="0" title="${esc(RN[k]||k)}: zur Regel">${esc(k)}</span>`;
+ const items=inHalf.slice().reverse().map(d=>{const D=days[d]||{},ms=Object.values(D.managers||{}).filter(v=>v.count>0).sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'de'));
+  const sum=ms.reduce((t,v)=>t+v.count,0),rules={};ms.forEach(v=>Object.entries(v.rules||{}).forEach(([k,n])=>rules[k]=(rules[k]||0)+n));
+  const when=D.savedAt?new Date(D.savedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  const src=D.manual?'von Hand nachgetragen':'automatisch aus der BumsParade';
+  const body=ms.length?ms.map(v=>{const mv=(v.moves||[]);
+    return `<div class="bd-man"><div class="bd-head"><b>${esc(v.name)}</b> <span class="bums-num-s">${v.count}×</span> ${Object.entries(v.rules||{}).map(([k,n])=>chip(k)+(n>1?`<b class="muted"> ×${n}</b>`:'')).join(' ')}</div>${mv.length?`<ul>${mv.map(x=>`<li class="bums-mv-${x.d==='i'?'i':'o'}"><b>${DIRL[x.d]||'•'}</b> ${chip(x.r)} ${esc(x.t||'')}</li>`).join('')}</ul>`:`<p class="muted tiny">${D.manual?'Von Hand eingetragen, ohne Angabe wer an wen.':'Keine Einzelheiten gespeichert.'}</p>`}</div>`;}).join(''):'<p class="muted">An diesem Spieltag gab es keine Bumsung.</p>';
+  return `<details class="bd-day"><summary><b>ST ${d}</b><span>${sum} Bumsung${sum===1?'':'en'}</span><span class="bd-rules">${Object.keys(rules).map(k=>`<span class="bums-rule bums-r-${esc(k)}">${esc(k)}</span>`).join('')}</span><span class="muted tiny">${src}${when?' · '+esc(when):''}</span></summary><div class="bd-body">${body}${D.manual?'':`<p><button type="button" class="ghost bd-open" data-bums-day="${d}">In der BumsParade öffnen</button></p>`}</div></details>`;}).join('');
+ return `<details class="hall-section prof-sec bums-statsbox" id="bumsDays"${bumsDaysOpen?' open':''}><summary><h4>🗓️ SPIELTAGE</h4></summary><p class="muted tiny">Jeder Spieltag einzeln zum Nachvollziehen: wer betroffen war, nach welcher Regel und wer an wen abgegeben hat. ↑ = abgegeben (bumst), ↓ = bekommen (gebumst).</p>${items||'<p class="muted">Noch keine Spieltage erfasst.</p>'}</details>`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b)return;const d=b.dataset.bumsDay;location.hash='#accounting';setTimeout(()=>{const s=$('#accountingDay');if(s&&[...s.options].some(o=>o.value===d)){s.value=d;s.dispatchEvent(new Event('change',{bubbles:true}));}},150);});
 async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
@@ -1357,12 +1404,12 @@ async function renderBumsTabelle(){
   if(!r.moves.length)return `<div class="bums-dir">${parts}</div>`;
   return `<details class="bums-dir"><summary>${parts}</summary><ul>${r.moves.map(x=>`<li class="bums-mv-${x.d}"><b>${DIRL[x.d]}</b> <span class="bums-rule bums-r-${escapeHtml(x.r)}" data-rule="${escapeHtml(x.r)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(x.r)}</span> ${inHalf.length>1?`<span class="muted">ST ${x.day}:</span> `:''}${escapeHtml(x.t)}</li>`).join('')}</ul></details>`;};
  const perDay=r=>inHalf.length>1?`<div class="bums-perday">${inHalf.map(d=>`<span${r.per[d]?'':' class="zero"'}>ST ${d}: ${r.per[d]??0}</span>`).join('')}</div>`:'';
- const list=hit.map(r=>`<div class="bums-row${rankOf(r)===1?' first':''}"><span class="bums-rank">${rankOf(r)}</span><div class="bums-who"><b>${escapeHtml(r.name).replaceAll('_','_<wbr>')}</b><div class="bums-rules">${chips(r.rules)}</div>${perDay(r)}</div><div class="bums-bar"><i style="width:${top?Math.round(r.count/top*100):0}%"></i></div><span class="bums-num">${r.count}</span>${dirLine(r)}</div>`).join('');
+ const list=hit.map(r=>`<div class="bums-row${rankOf(r)===1?' first':''}" data-bums-name="${escapeHtml(r.name)}"><span class="bums-rank">${rankOf(r)}</span><div class="bums-who"><b>${escapeHtml(r.name).replaceAll('_','_<wbr>')}</b><div class="bums-rules">${chips(r.rules)}</div>${perDay(r)}</div><div class="bums-bar"><i style="width:${top?Math.round(r.count/top*100):0}%"></i></div><span class="bums-num">${r.count}</span>${dirLine(r)}</div>`).join('');
  const legend=Object.keys(ruleTot).sort((a,b)=>ruleTot[b]-ruleTot[a]).map(k=>`<span><span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(k)}</span> ${escapeHtml(RN[k]||k)} <span class="muted">${ruleTot[k]}×</span></span>`).join('');
  el.innerHTML=(hit.length?`<div class="bums-stats"><div><small>Bumsungen gesamt</small><strong>${total}</strong></div><div><small>Häufigste Regel</small><strong>${topRule?escapeHtml(RN[topRule[0]]||topRule[0]):'–'}</strong><span class="muted tiny">${topRule?topRule[1]+'×':''}</span></div><div><small>Weiße Weste</small><strong>${clean.length}</strong><span class="muted tiny">Manager ohne Bumsung</span></div></div>`+
-  `${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}<details class="hall-section prof-sec bums-statsbox" id="bumsTab"${bumsTabOpen?' open':''}><summary><h4>📋 TABELLE</h4></summary><div class="bums-podium">${podium}</div><div class="bums-list">${list}</div>`+
+  `<details class="hall-section prof-sec bums-statsbox" id="bumsTab"${bumsTabOpen?' open':''}><summary><h4>📋 TABELLE</h4></summary><div class="bums-podium">${podium}</div><div class="bums-list">${list}</div>`+
   (clean.length?`<p class="bums-clean"><b>😇 Weiße Weste:</b> ${clean.map(r=>escapeHtml(r.name)).join(', ')}</p>`:'')+
-  `<div class="bums-legend">${legend}</div></details>`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
+  `<div class="bums-legend">${legend}</div></details>${bumsDaysHtml(days,inHalf,RN)}${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
   `<p class="muted tiny">${inHalf.some(d=>days[d].manual)?`Von Hand nachgetragen: ST ${inHalf.filter(d=>days[d].manual).join(', ')}. `:''}${from===1?'Hinrunde':'Rückrunde'} · ${inHalf.length} von ${finished.filter(d=>d>=from&&d<=to).length} abgeschlossenen Spieltagen erfasst. Übernommen wird automatisch, sobald ein Spieltag in der BumsParade vollständig geprüft ist. Vorläufig: Ändert sich dort etwas, zieht die Tabelle nach.</p>`+
   (missing.length?`<p><button type="button" class="ghost" id="bumsFill">Fehlende Spieltage nachholen (ST ${missing.join(', ')})</button> <span class="muted tiny" id="bumsFillMsg"></span></p>`:'');
 }
@@ -1455,5 +1502,14 @@ window.kblCollapseView=view=>{
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
  if(view==='accounting')accTodoOpen=false;
  if(view==='profiles')profOpen.clear();
- if(view==='penalties'){bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
+ if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
 };
+
+// Managerprofil: Kachel „Bumsungen“ führt zur BumsTabelle und zeigt die Zeile des Managers.
+function kblBumsFocus(name){const tab=$('#bumsTab');if(!tab)return false;tab.open=true;bumsTabOpen=true;
+ const row=[...document.querySelectorAll('#bumsTable .bums-row')].find(r=>r.dataset.bumsName===name);
+ if(row){row.querySelector('details.bums-dir')?.setAttribute('open','');row.classList.add('bums-focus');row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.classList.remove('bums-focus'),3000);}
+ else tab.scrollIntoView({behavior:'smooth',block:'start'});return true;}
+function kblBumsGoto(el){const n=el.dataset.bumsGoto;location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-bums-goto]');if(t)kblBumsGoto(t);});
+document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-goto]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblBumsGoto(t);}});

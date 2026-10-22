@@ -268,3 +268,38 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bp-score{text-align:center;font-size:17px;color:var(--muted)}.bp-score b{color:var(--text-2)}.bp-score b.win{color:var(--bad)}
 .bp-rules{display:flex;flex-wrap:wrap;gap:4px}
 @media(max-width:600px){.bums-pair{grid-template-columns:minmax(0,1fr) 56px minmax(0,1fr)}.bp-rules{grid-column:1/-1;justify-content:center}}
+
+/* Wer bumst wen: Kreuztabelle */
+.bx-wrap{overflow-x:auto;margin-top:12px;border-radius:8px;-webkit-overflow-scrolling:touch}
+.bx{border-collapse:separate;border-spacing:2px;font-size:13px;width:auto}
+.bx th,.bx td{padding:0;text-align:center;border:0}
+.bx-corner{position:sticky;left:0;z-index:2;background:var(--surface-1,#12212b);font-size:10px;font-weight:400;color:#9fb3c0;text-align:left!important;vertical-align:bottom;padding:4px!important;min-width:96px}
+.bx-col{vertical-align:bottom;height:110px;min-width:30px;font-weight:600;color:#d7dde2}
+.bx-col span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;display:inline-block;max-height:106px;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+.bx-sumh span{color:#f1c75c}
+.bx-row{position:sticky;left:0;z-index:1;background:var(--surface-1,#12212b);text-align:left!important;padding:0 8px 0 4px!important;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:#d7dde2;font-size:12px}
+.bx-cell,.bx-self,.bx-sum{width:30px;height:30px;border-radius:5px}
+.bx-cell{background:rgba(255,255,255,.04);color:#0b161d;font-weight:700}
+.bx-cell.hit{background:rgba(230,115,127,var(--bx));cursor:pointer}
+.bx-self{background:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 3px,transparent 3px 6px)}
+.bx-sum{color:#f1c75c;font-weight:700}
+.bx .cross{outline:1px solid rgba(241,199,92,.45)}
+.bx td.on{outline:2px solid #f1c75c}
+.bx-info{min-height:1.4em;margin-top:8px}
+@media(max-width:600px){.bx-row{max-width:84px;font-size:11px}.bx-corner{min-width:72px}}
+
+/* BumsTabelle: Spieltage einzeln */
+.bd-day{margin-top:6px;background:var(--surface-0);border-radius:8px}
+.bd-day>summary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:10px 12px;cursor:pointer}
+.bd-rules{display:flex;flex-wrap:wrap;gap:4px}
+.bd-body{padding:0 12px 10px}
+.bd-man{padding:8px 0;border-top:1px solid rgba(255,255,255,.06)}
+.bd-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.bums-num-s{color:#f1c75c;font-weight:700}
+.bd-man ul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px;font-size:13px;color:var(--text-2)}
+.bd-man li b{display:inline-block;width:14px}
+
+.bums-goto{cursor:pointer}.bums-goto:hover{border-color:#f1c75c}
+.bums-row.bums-focus{outline:2px solid #f1c75c;outline-offset:2px;transition:outline-color .3s}
+
+.center-pick.center-fix{opacity:.75;font-size:.9em}
