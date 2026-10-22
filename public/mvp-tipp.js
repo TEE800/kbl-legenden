@@ -5,6 +5,11 @@
  const fmt=n=>n==null||!Number.isFinite(Number(n))?'–':new Intl.NumberFormat('de-DE').format(n);
  const when=s=>s?new Date(s).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–';
  const STATIC=!!window.KBL_STATIC;
+ // Online-Seite mit Tippdienst (tools/tipp-dienst): offene und laufende Spieltage kommen live vom Dienst, beendete (mit Auswertung) aus dem Export.
+ const API=STATIC?String(window.KBL_TIPP_API||'').replace(/\/+$/,''):'';
+ const LIVE=!STATIC||!!API;
+ const tippUrl=path=>API?API+path.replace(/^\/api\/mvp-tipps/,'/tipps').replace('/tipps/codes/','/codes/'):path;
+ const adminCode=()=>$('#mvpAdminCode')?.value||'';
  let overview=null,data=null,players=null,playerByLabel=new Map(),loading=false;
 
  async function get(url,opts){
@@ -38,7 +43,7 @@
  let codeTip=null;
  function form(d){
   if(!d.open)return '';
-  if(STATIC)return `<p class="muted">In der Online-Ansicht kann man nur ansehen. Getippt wird in der Live-App.</p>`;
+  if(!LIVE)return `<p class="muted">In der Online-Ansicht kann man noch nicht tippen.</p>`;
   const byCode=!d.me,who=byCode?d.managers.find(m=>m.id===store.get()):null;
   const mine=byCode?(codeTip&&codeTip.day===d.day&&codeTip.id===who?.id?codeTip.tip:null):d.managers.find(m=>m.id===d.me)?.tip;
   const codeFields=byCode?`<label class="acc-label">Dein Name<select id="mvpWho" required><option value="">Bitte wählen …</option>${d.managers.map(m=>`<option value="${esc(m.id)}"${m.id===who?.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
@@ -88,7 +93,7 @@
   root.className='';
   root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+table(d);
   $('#mvpRules').innerHTML=(d.rules||[]).map((r,i)=>`<p><b>${esc(r.title)}</b>${r.id===d.rule?.id?' <span class="muted">(gilt an Spieltag '+d.day+')</span>':''}<br>${esc(r.text)}</p>`).join('')+'<p class="muted tiny">Vorlagen für die Tippregel. Der Admin legt jeden Spieltag eine fest oder schreibt eine eigene. Bei Gleichstand gewinnen alle. MVP ist der Bundesliga-Spieler mit den meisten Spieltagspunkten.</p>';
-  const admin=$('#mvpAdminBox');admin.hidden=!(d.admin&&!STATIC&&d.status==='upcoming'&&!d.locked);
+  const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
   if(!admin.hidden){
    const sel=$('#mvpRuleSelect'),cur=d.rule?.id||'';
    sel.innerHTML='<option value="" disabled>Bitte wählen …</option>'+d.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.title)}</option>`).join('')+'<option value="eigene">Eigene Regel …</option>';
@@ -96,12 +101,13 @@
    $('#mvpCodes').innerHTML=withCode.length?'<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code vergessen hat.</p>'+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
    sel.value=cur;$('#mvpRuleText').hidden=cur!=='eigene';$('#mvpRuleText').value=d.rule?.id==='eigene'?d.rule.text:'';
   }
-  if(d.open&&!STATIC)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
+  if(d.open&&LIVE)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
  async function loadDay(day){
   const root=$('#mvpContent');
   if(!data||data.day!==day){root.className='muted';root.textContent=`Lade Spieltag ${day} …`;}
-  try{data=await get(`/api/mvp-tipps/${day}`);render();}
+  try{const st=overview?.days?.find(x=>x.day===day)?.status;
+   data=await get(API&&st!=='finished'?tippUrl(`/api/mvp-tipps/${day}`):`/api/mvp-tipps/${day}`);render();}
   catch(e){root.className='error';root.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
  }
  async function load(){
@@ -126,7 +132,7 @@
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
   if($('#mvpWho')&&!who){msg.textContent='Bitte deinen Namen wählen.';btn.disabled=false;return;}
-  try{const r=await get(`/api/mvp-tipps/${data.day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({playerId:p.id,points:pts,...(who?{managerId:who,code}:{})})});
+  try{const r=await get(tippUrl(`/api/mvp-tipps/${data.day}`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({playerId:p.id,points:pts,...(who?{managerId:who,code}:{})})});
    if(who)codeTip={day:data.day,id:who,tip:r.tip};await loadDay(data.day);
    if(r.codeCreated){const m=$('#mvpMsg');if(m)m.insertAdjacentHTML('beforeend','<br><b>Dein Tipp-Code ist gespeichert.</b> Merk ihn dir gut.');}}
   catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
@@ -139,17 +145,17 @@
  document.addEventListener('click',async e=>{
   if(e.target.id==='mvpRuleSave'){
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
-   try{await get(`/api/mvp-tipps/${data.day}/rule`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:$('#mvpRuleSelect').value,text:$('#mvpRuleText').value})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
+   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:$('#mvpRuleSelect').value,text:$('#mvpRuleText').value,adminCode:adminCode()})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
    catch(err){m.textContent='Fehler: '+err.message;}
   }
   if(e.target.id==='mvpShowMine'){
    const m=$('#mvpMsg'),who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
-   try{const r=await get(`/api/mvp-tipps/${data.day}/mine`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managerId:who,code})});codeTip={day:data.day,id:who,tip:r.tip};render();}
+   try{const r=await get(tippUrl(`/api/mvp-tipps/${data.day}/mine`),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managerId:who,code})});codeTip={day:data.day,id:who,tip:r.tip};render();}
    catch(err){m.textContent=err.message;}
   }
   const rc=e.target.closest?.('[data-mvp-reset]');
   if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
-   try{await get(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}`,{method:'DELETE'});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
+   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');

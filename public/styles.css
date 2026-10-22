@@ -335,3 +335,4 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 #mvp .tablewrap{overflow-x:auto}#mvp .mvp-table{display:table}
 .mvp-me td{background:rgba(235,199,104,.07)}.mvp-win{color:var(--gold)}.mvp-mvp{margin:14px 0 6px}
 @media(max-width:600px){.mvp-form label:first-child{flex:1 1 100%}.mvp-form #mvpPlayer{width:100%}.mvp-table th,.mvp-table td{padding:8px 5px;font-size:13px}}
+#mvp [hidden]{display:none!important}

@@ -1231,7 +1231,9 @@ app.get('/api/mvp-tipps',async(req,res)=>{
  try{const md=await tippMatchdays(),all=readTipps();
   const next=md.days.find(x=>x.status==='upcoming')?.day||null;
   const days=md.days.filter(d=>d.status!=='upcoming'||d.day===next).map(d=>({day:d.day,status:d.status,tips:Object.keys(all[d.day]?.tips||{}).length}));
-  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES});
+  // Managerliste: braucht auch der Online-Tippdienst (tools/tipp-dienst), er liest sie aus der exportierten Datei.
+  const token=await tippToken(req),managers=token?await tippManagers(token).catch(()=>null):null;
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,...(managers?{managers}:{})});
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{

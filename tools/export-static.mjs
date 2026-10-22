@@ -11,6 +11,8 @@ const ROOT = process.cwd(), SITE = path.join(ROOT, 'site'), DATA = path.join(SIT
 const email = process.env.KBL_AUTO_EMAIL, password = process.env.KBL_AUTO_PASSWORD;
 if (!email || !password) { console.error('KBL_AUTO_EMAIL und KBL_AUTO_PASSWORD fehlen.'); process.exit(1); }
 
+// Online-Tippdienst (Cloudflare Worker, tools/tipp-dienst): Adresse aus der Repository-Variablen KBL_TIPP_DIENST.
+const TIPP_DIENST = String(process.env.KBL_TIPP_DIENST || '').trim().replace(/\/+$/, '');
 const key = u => u.replace(/^\/api\//, '').replace(/[^A-Za-z0-9._-]+/g, '_') + '.json';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -22,7 +24,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
   let buf = fs.readFileSync(src);
   if (/\.(html|js|css)$/.test(f)) {
     let t = buf.toString('utf8').replace(/(["'`(])\/([a-z][a-z0-9_-]*\.(svg|png|css|js))/g, '$1$2');
-    if (f === 'index.html') t = t.replace('<script src="app.js"', '<script>window.KBL_STATIC=true</script><script src="static-mode.js"></script><script src="app.js"');
+    if (f === 'index.html') t = t.replace('<script src="app.js"', `<script>window.KBL_STATIC=true${TIPP_DIENST ? `;window.KBL_TIPP_API=${JSON.stringify(TIPP_DIENST)}` : ''}</script><script src="static-mode.js"></script><script src="app.js"`);
     buf = Buffer.from(t);
   }
   fs.writeFileSync(path.join(SITE, f), buf);
@@ -79,6 +81,25 @@ try {
       if (needed) await save(u);
     }
   }
+  // MVP-Tipp: Regeln und aufgedeckte Tipps (nur angepfiffene Spieltage) vom Online-Tippdienst in kbl-mvp-tipps.json uebernehmen,
+  // damit die App sie anzeigt und nach dem Spieltag auswertet. Verdeckte Tipps kommen hier nie an.
+  if (TIPP_DIENST) {
+    try {
+      const r = await fetch(TIPP_DIENST + '/export', { signal: AbortSignal.timeout(30000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const remote = (await r.json()).days || {};
+      const file = path.join(ROOT, 'kbl-mvp-tipps.json');
+      let local = {}; try { local = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
+      for (const [d, v] of Object.entries(remote)) {
+        const rec = local[d] || (local[d] = {});
+        if (v.rule) rec.rule = v.rule;
+        if (v.tips) rec.tips = { ...(rec.tips || {}), ...v.tips };
+      }
+      fs.writeFileSync(file, JSON.stringify(local, null, 2));
+      console.log('Tippdienst:', Object.keys(remote).length, 'Spieltage uebernommen');
+    } catch (e) { failed.push(`Tippdienst /export (${e.message})`); }
+  }
+  if (MODE === 'full' || !have('/api/mvp-tipps/players')) await save('/api/mvp-tipps/players');
   // MVP-Tipp: Uebersicht, naechster Spieltag (nur wer getippt hat) und alle angepfiffenen Spieltage.
   const tipps = await save('/api/mvp-tipps');
   for (const d of (tipps?.days || []).map(x => x.day)) {
