@@ -1,1 +1,9 @@
-{}
+{
+  "7": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Punktbester Spieler von den 3 Aufsteigern Schalke, Elversberg und Paderborn \n#die_niederlande"
+    }
+  }
+}
