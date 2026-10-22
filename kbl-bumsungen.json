@@ -1,15 +1,23 @@
 {
   "1": {
-    "savedAt": "2026-10-21T14:26:10.242Z",
+    "savedAt": "2026-10-22T15:02:58.902Z",
     "managers": {
       "1165589": {
         "name": "Stammler9",
-        "count": 0,
-        "rules": {},
+        "count": 1,
+        "rules": {
+          "MM": 1
+        },
         "out": 0,
-        "in": 0,
+        "in": 1,
         "other": 0,
-        "moves": []
+        "moves": [
+          {
+            "r": "MM",
+            "d": "i",
+            "t": "bekommt MM von Meister: einen Spieler weniger aufstellen"
+          }
+        ]
       },
       "1386995": {
         "name": "Adam",
@@ -33,7 +41,7 @@
           {
             "r": "UM",
             "d": "o",
-            "t": "unklar, bitte prüfen: Elfmeter per Foul verursacht (54. Min.), gefoult wurde Conté. Wem er am Spieltag gehoerte, ist nicht gespeichert; heute ist er bei xDanii. Bitte pruefen"
+            "t": "verkauft Simpson-Pusey an den Markt"
           }
         ]
       },
@@ -50,7 +58,7 @@
           {
             "r": "MM",
             "d": "o",
-            "t": "verteilt MM · Empfänger noch in der BumsParade auswählen"
+            "t": "verteilt MM an Stammler9"
           }
         ]
       },
@@ -190,16 +198,24 @@
     }
   },
   "2": {
-    "savedAt": "2026-10-21T01:22:26.512Z",
+    "savedAt": "2026-10-22T15:06:15.808Z",
     "managers": {
       "699062": {
         "name": "T800",
-        "count": 0,
-        "rules": {},
+        "count": 1,
+        "rules": {
+          "AH": 1
+        },
         "out": 0,
-        "in": 0,
+        "in": 1,
         "other": 0,
-        "moves": []
+        "moves": [
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Tietz von Hansaaufdie1"
+          }
+        ]
       },
       "841764": {
         "name": "Hasan",
@@ -212,18 +228,24 @@
       },
       "1165589": {
         "name": "Stammler9",
-        "count": 1,
+        "count": 2,
         "rules": {
-          "DD": 1
+          "DD": 1,
+          "MM": 1
         },
         "out": 1,
-        "in": 0,
+        "in": 1,
         "other": 0,
         "moves": [
           {
             "r": "DD",
             "d": "o",
-            "t": "gibt einen seiner drei besten Spieler an Adam"
+            "t": "gibt Schick an Adam"
+          },
+          {
+            "r": "MM",
+            "d": "i",
+            "t": "bekommt MM von LQ_R3lax0: einen Spieler weniger aufstellen"
           }
         ]
       },
@@ -240,7 +262,7 @@
           {
             "r": "DD",
             "d": "i",
-            "t": "bekommt einen Spieler von Stammler9"
+            "t": "bekommt Schick von Stammler9"
           }
         ]
       },
@@ -322,7 +344,7 @@
           {
             "r": "MM",
             "d": "o",
-            "t": "verteilt MM · Empfänger noch in der BumsParade auswählen"
+            "t": "verteilt MM an Stammler9"
           }
         ]
       },
@@ -388,14 +410,14 @@
           {
             "r": "AH",
             "d": "o",
-            "t": "bietet den MVP Tietz zum Verkauf an"
+            "t": "verkauft Tietz an T800"
           }
         ]
       }
     }
   },
   "3": {
-    "savedAt": "2026-10-21T01:14:50.689Z",
+    "savedAt": "2026-10-22T15:09:30.323Z",
     "managers": {
       "699062": {
         "name": "T800",
@@ -428,7 +450,7 @@
           {
             "r": "BN",
             "d": "o",
-            "t": "gibt Amiri an einen Mitmanager ab"
+            "t": "gibt Amiri an diminator"
           },
           {
             "r": "UM",
@@ -445,9 +467,9 @@
           "MM": 1,
           "RK": 1
         },
-        "out": 1,
+        "out": 2,
         "in": 1,
-        "other": 1,
+        "other": 0,
         "moves": [
           {
             "r": "DD",
@@ -456,13 +478,13 @@
           },
           {
             "r": "MM",
-            "d": "x",
-            "t": "bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt"
+            "d": "o",
+            "t": "verteilt MM an LQ_R3lax0"
           },
           {
             "r": "RK",
             "d": "o",
-            "t": "gibt Kleindienst an einen Mitmanager ab"
+            "t": "gibt Kleindienst an YW7"
           }
         ]
       },
@@ -479,18 +501,26 @@
           {
             "r": "BN",
             "d": "o",
-            "t": "gibt Dallinga an einen Mitmanager ab"
+            "t": "gibt Dallinga an Daniel_Niederlande"
           }
         ]
       },
       "1403991": {
         "name": "Cello",
-        "count": 0,
-        "rules": {},
+        "count": 1,
+        "rules": {
+          "AH": 1
+        },
         "out": 0,
-        "in": 0,
+        "in": 1,
         "other": 0,
-        "moves": []
+        "moves": [
+          {
+            "r": "AH",
+            "d": "i",
+            "t": "bekommt Engelhardt von LQ_R3lax0"
+          }
+        ]
       },
       "1450470": {
         "name": "Meister",
@@ -538,18 +568,24 @@
       },
       "1631954": {
         "name": "YW7",
-        "count": 1,
+        "count": 2,
         "rules": {
-          "BD": 1
+          "BD": 1,
+          "RK": 1
         },
         "out": 1,
-        "in": 0,
+        "in": 1,
         "other": 0,
         "moves": [
           {
             "r": "BD",
             "d": "o",
             "t": "verkauft Hansen (44 Pkt.) an den Markt"
+          },
+          {
+            "r": "RK",
+            "d": "i",
+            "t": "bekommt Kleindienst von Stammler9"
           }
         ]
       },
@@ -599,18 +635,24 @@
       },
       "1927404": {
         "name": "LQ_R3lax0",
-        "count": 1,
+        "count": 2,
         "rules": {
+          "MM": 1,
           "AH": 1
         },
         "out": 1,
-        "in": 0,
+        "in": 1,
         "other": 0,
         "moves": [
           {
+            "r": "MM",
+            "d": "i",
+            "t": "bekommt MM von Stammler9: einen Spieler weniger aufstellen"
+          },
+          {
             "r": "AH",
             "d": "o",
-            "t": "bietet den MVP Engelhardt zum Verkauf an"
+            "t": "verkauft Engelhardt an Cello"
           }
         ]
       },
@@ -633,19 +675,25 @@
       },
       "1981519": {
         "name": "Daniel_Niederlande",
-        "count": 2,
+        "count": 3,
         "rules": {
           "BD": 1,
+          "BN": 1,
           "UM": 1
         },
         "out": 1,
-        "in": 1,
+        "in": 2,
         "other": 0,
         "moves": [
           {
             "r": "BD",
             "d": "o",
             "t": "verkauft Gadou (111 Pkt.) an den Markt"
+          },
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Dallinga von Adam"
           },
           {
             "r": "UM",
@@ -665,12 +713,20 @@
       },
       "2710049": {
         "name": "diminator",
-        "count": 0,
-        "rules": {},
+        "count": 1,
+        "rules": {
+          "BN": 1
+        },
         "out": 0,
-        "in": 0,
+        "in": 1,
         "other": 0,
-        "moves": []
+        "moves": [
+          {
+            "r": "BN",
+            "d": "i",
+            "t": "bekommt Amiri von Hasan"
+          }
+        ]
       },
       "2789934": {
         "name": "Hansaaufdie1",
@@ -692,7 +748,7 @@
     }
   },
   "4": {
-    "savedAt": "2026-10-21T01:15:00.758Z",
+    "savedAt": "2026-10-22T15:09:56.189Z",
     "managers": {
       "699062": {
         "name": "T800",
@@ -739,12 +795,11 @@
       },
       "1386995": {
         "name": "Adam",
-        "count": 2,
+        "count": 1,
         "rules": {
-          "DD": 1,
-          "TL": 1
+          "DD": 1
         },
-        "out": 1,
+        "out": 0,
         "in": 1,
         "other": 0,
         "moves": [
@@ -752,11 +807,6 @@
             "r": "DD",
             "d": "i",
             "t": "bekommt Kimmich von Daniel_Niederlande"
-          },
-          {
-            "r": "TL",
-            "d": "o",
-            "t": "verkauft Laimer (gleicher Verein), weil Kimmich über DD kam (Teamlimit 1)"
           }
         ]
       },
@@ -769,9 +819,9 @@
           "BN": 1,
           "UM": 1
         },
-        "out": 3,
+        "out": 4,
         "in": 0,
-        "other": 1,
+        "other": 0,
         "moves": [
           {
             "r": "BD",
@@ -780,8 +830,8 @@
           },
           {
             "r": "MM",
-            "d": "x",
-            "t": "bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt"
+            "d": "o",
+            "t": "verteilt MM · Empfänger noch in der BumsParade auswählen"
           },
           {
             "r": "BN",
@@ -1313,7 +1363,12 @@
     }
   },
   "6": {
-    "savedAt": "2026-10-21T14:24:29.372Z",
+    "savedAt": "2026-10-22T15:14:03.622Z",
+    "progress": {
+      "done": 22,
+      "total": 22,
+      "unclear": 0
+    },
     "managers": {
       "699062": {
         "name": "T800",

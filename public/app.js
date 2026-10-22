@@ -1303,10 +1303,22 @@ function bumsCounts(d,checks){
  return out;
 }
 let bumsLastSaved='',bumsDays={};
+// Hinweis im Spieltag-Auswahlfeld der BumsParade: welcher Spieltag schon vollständig abgerechnet ist.
+function kblAccDayLabels(days){
+ const sel=$('#accountingDay');if(!sel)return;const fin=new Set(historyData.filter(h=>h.status==='finished').map(h=>h.day));
+ for(const o of sel.options){const n=Number(o.value),D=days?.[n],p=D?.progress;let tag='';
+  if(D?.manual)tag=' · von Hand nachgetragen';
+  else if(p)tag=p.done>=p.total&&!p.unclear?' · ✓ abgerechnet':` · ${p.total-p.done+p.unclear} offen`;
+  else if(D)tag=' · bitte einmal öffnen';
+  else if(fin.has(n))tag=' · noch nicht abgerechnet';
+  o.textContent=`Spieltag ${n}${tag}`;}
+}
 function bumsSave(){
  const a=centerAccounting;if(a.probe||a.state!=='done'||!a.data?.ready||!a.data?.complete||bumsDays[a.day]?.manual)return;
- const managers=bumsCounts(a.data,a.checks),sig=a.day+JSON.stringify(managers);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
- api(`/api/bumsungen/${a.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers})}).then(()=>renderBumsTabelle()).catch(()=>{});
+ const managers=bumsCounts(a.data,a.checks),todos=a.data.todos||[];
+ const progress={done:todos.filter(t=>t.check?.state==='done'||a.checks?.[t.key]?.done).length,total:todos.length,unclear:(a.data.autoEvents?.error?[]:(a.data.autoEvents?.unclear||[])).filter(u=>!a.checks?.[unclearKey(u)]?.target).length};
+ const sig=a.day+JSON.stringify(managers)+JSON.stringify(progress);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
+ api(`/api/bumsungen/${a.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers,progress})}).then(()=>renderBumsTabelle()).catch(()=>{});
 }
 // Weitere Kacheln der BumsTabelle (einklappbar, Stil wie Ruhm & Schande). Gleichstände werden gemeinsam genannt.
 let bumsDaysOpen=false,bumsStatsOpen=false,bumsTabOpen=false,bumsPairOpen=false,bumsPairWho='';
@@ -1377,6 +1389,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b
 async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
+ try{kblAccDayLabels(days);}catch{}
  try{showProfile();}catch{}try{renderPreview();}catch{}
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day);
  const ref=Math.max(0,...finished,...Object.keys(days).map(Number));
@@ -1479,6 +1492,7 @@ function kblOpenRule(code){
 document.addEventListener('click',e=>{const c=e.target.closest('[data-rule]');if(c)kblOpenRule(c.dataset.rule);});
 document.addEventListener('keydown',e=>{const c=e.target.closest?.('[data-rule]');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblOpenRule(c.dataset.rule);}});
 onConnected.push(renderBumsTabelle);
+['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.

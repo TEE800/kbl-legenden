@@ -1276,7 +1276,10 @@ app.post('/api/bumsungen/:day',(req,res)=>{
     clean[id]={name:v.name.trim(),count:v.count,rules,...dir,...(moves?{moves}:{})};
   }
   try{
-    const all=readBums();all[day]={savedAt:new Date().toISOString(),...(req.body.manual===true?{manual:true}:{}),managers:clean};
+    // Abrechnungsstand aus der BumsParade (fuer den Hinweis im Spieltag-Auswahlfeld).
+    const pg=req.body?.progress,okN=n=>Number.isInteger(n)&&n>=0&&n<=500;
+    const progress=pg&&okN(pg.done)&&okN(pg.total)&&okN(pg.unclear)&&pg.done<=pg.total?{done:pg.done,total:pg.total,unclear:pg.unclear}:null;
+    const all=readBums();all[day]={savedAt:new Date().toISOString(),...(req.body.manual===true?{manual:true}:{}),...(progress?{progress}:{}),managers:clean};
     const tmp=BUMS_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all,null,2),{mode:0o600});fs.renameSync(tmp,BUMS_FILE);
     res.set('Cache-Control','no-store').json({day,saved:true});
   }catch(e){res.status(500).json({error:'BumsTabelle nicht gespeichert.'});}
