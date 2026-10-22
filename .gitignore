@@ -6,3 +6,4 @@ _sicherungen/
 _probe/
 *.tmp
 .env
+mvp-tipp-codes.json

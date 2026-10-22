@@ -38,6 +38,9 @@ app.use('/api', (req, res, next) => {
     return next();
   }
   if (req.path === '/logout') return next();
+  // MVP-Tipp: jeder angemeldete Manager darf seinen eigenen Tipp abgeben (Pruefung im Handler).
+  if (req.method === 'PUT' && /^\/mvp-tipps\/\d{1,2}$/.test(req.path)) return next();
+  if (req.method === 'POST' && /^\/mvp-tipps\/\d{1,2}\/mine$/.test(req.path)) return next();
   const write = req.method !== 'GET' && req.method !== 'HEAD';
   if ((write || ADMIN_ONLY_GET.test(req.originalUrl)) && !isAdmin(req)) {
     return res.status(403).json({ error: 'Vorschau: Hier kannst du nur ansehen. Ändern kann nur der Liga-Admin.' });
@@ -103,7 +106,7 @@ app.post('/api/login', async (req, res) => {
     const sid = crypto.randomUUID();
     const userId = String(login.u?.id ?? login.u?.i ?? '');
     const admin = userId === ADMIN_ID || (!!process.env.KBL_AUTO_EMAIL && String(email).trim().toLowerCase() === process.env.KBL_AUTO_EMAIL.trim().toLowerCase());
-    sessions.set(sid, { token: login.tkn, createdAt: Date.now(), admin });
+    sessions.set(sid, { token: login.tkn, createdAt: Date.now(), admin, userId });
     if (PREVIEW) console.log(`Vorschau: Anmeldung als ${admin ? 'Admin (darf ändern)' : 'Gast (nur ansehen)'}`);
     const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
     res.setHeader('Set-Cookie', `kblsid=${encodeURIComponent(sid)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE_MS / 1000}${secure}`);
@@ -1099,12 +1102,14 @@ const NPC_FILE=path.join(process.cwd(),'kbl-npc-jokers.json');
 function readNpc(){try{return JSON.parse(fs.readFileSync(NPC_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
 function saveNpc(data){const tmp=NPC_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2),{mode:0o600});fs.renameSync(tmp,NPC_FILE);}
 function npcRecord(rule,winners){return {rule:String(rule||'').trim(),winners:[...new Set(winners.map(String))],evaluation:'manual',joker:true};}
+// Leere NPC-Regel: Tippregel aus dem MVP-Tipp vorschlagen.
+function npcWithTippRule(rec,day){const r=rec||{rule:'',winners:[],evaluation:'manual'};if(r.rule)return r;const t=readTipps()[day]?.rule;return t?{...r,rule:`${t.title}: ${t.text}`}:r;}
 app.get('/api/npc-jokers/:day',async(req,res)=>{
  const token=getToken(req),day=validDay(req.params.day);
  if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
  try{const ranking=await kbFetch('/v4/leagues/6422780/ranking',{token});const managers=(ranking.us||[]).filter(m=>validManager(m.i)&&String(m.n||'').toLowerCase()!=='t1000').map(m=>({id:String(m.i),name:String(m.n||m.i)}));
- res.set('Cache-Control','no-store').json({day,managers,record:readNpc()[day]||{rule:'',winners:[],evaluation:'manual'}});
+ res.set('Cache-Control','no-store').json({day,managers,record:npcWithTippRule(readNpc()[day],day)});
  }catch(e){res.status(502).json({error:e.message});}
 });
 app.put('/api/npc-jokers/:day',async(req,res)=>{
@@ -1118,6 +1123,185 @@ app.put('/api/npc-jokers/:day',async(req,res)=>{
  if(winners.some(id=>!valid.has(String(id))))return res.status(400).json({error:'Unbekannter Manager.'});
  const all=readNpc();all[day]={...npcRecord(rule,winners),updatedAt:new Date().toISOString()};saveNpc(all);
  res.set('Cache-Control','no-store').json({ok:true,record:all[day]});
+ }catch(e){res.status(502).json({error:e.message});}
+});
+// MVP-Tipp (Teil von NPC Goes MVP): Jeder Manager tippt verdeckt einen Spieler und dessen Punktzahl.
+// Bis zum ersten Anstoss des Spieltags beliebig oft aenderbar. Vorher sieht niemand fremde Tipps (auch der Admin nicht), danach alle.
+// Die Tippregel legt der Admin je Spieltag bis zum Anstoss fest (Vorlage aus TIPP_RULES oder eigener Text); ohne Eintrag steht sie noch nicht fest.
+// Die Auswertung ist nur ein Vorschlag; Joker-Gewinner traegt weiter der Admin ein (NPC, kbl-npc-jokers.json).
+const TIPP_FILE=path.join(process.cwd(),'kbl-mvp-tipps.json');
+const TIPP_RULES=[
+ {id:'volltreffer',title:'Volltreffer',text:'Richtiger MVP. Haben mehrere den richtigen Spieler, gewinnt, wer der Punktzahl am nächsten ist.'},
+ {id:'zahl',title:'Nur die Zahl',text:'Der Spieler ist egal. Wer der Punktzahl des MVP am nächsten kommt, gewinnt.'},
+ {id:'name',title:'Name reicht',text:'Alle, die den MVP richtig tippen, gewinnen. Die Punktzahl zählt nicht.'},
+ {id:'drunter',title:'Nicht drüber',text:'Richtiger MVP und die Punktzahl am nächsten dran, aber nicht darüber. Wer zu hoch tippt, ist raus.'},
+ {id:'korridor',title:'Im Korridor',text:'Richtiger MVP und höchstens 25 Punkte daneben. Alle, die das schaffen, gewinnen.'},
+ {id:'prognose',title:'Punkte-Prognose',text:'Der Spieler muss nicht MVP werden. Wer die Punkte seines getippten Spielers am genauesten vorhersagt, gewinnt.'}
+];
+const TIPP_KORRIDOR=25;
+// Export fuer die Online-Seite: nie den eigenen Tipp des Dienst-Kontos vor dem Anstoss mitschreiben, keine Admin-Knoepfe.
+const TIPP_EXPORT=process.env.KBL_EXPORT==='1';
+function readTipps(){try{return JSON.parse(fs.readFileSync(TIPP_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
+function saveTipps(data){const tmp=TIPP_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_FILE);}
+const tippRule=rec=>rec?.rule||null;
+// Tipp-Code: Wer nicht angemeldet ist, waehlt seinen Namen und tippt mit einem eigenen Code (4-8 Ziffern), den er beim ersten Tipp selbst festlegt.
+// Gespeichert nur als Salt+scrypt in mvp-tipp-codes.json (bewusst kein kbl-*-Name: wird nie committet/veroeffentlicht, siehe .gitignore).
+// Hoechstens 5 Fehlversuche je Manager in 15 Minuten. Der Admin kann einen Code zuruecksetzen.
+const TIPP_CODE_FILE=path.join(process.cwd(),'mvp-tipp-codes.json');
+function readTippCodes(){try{return JSON.parse(fs.readFileSync(TIPP_CODE_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
+function saveTippCodes(d){const tmp=TIPP_CODE_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(d,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_CODE_FILE);}
+const tippHash=(code,salt)=>crypto.scryptSync(String(code),salt,32).toString('hex');
+const tippCodeFails=new Map();
+// Prueft den Code; ohne gespeicherten Code wird er (nur wenn set=true) neu festgelegt.
+function checkTippCode(managerId,code,set){
+ if(!/^\d{4,8}$/.test(String(code||'')))return {error:'Bitte einen Code aus 4 bis 8 Ziffern eingeben.',status:400};
+ const now=Date.now(),f=(tippCodeFails.get(managerId)||[]).filter(t=>now-t<15*60e3);
+ if(f.length>=5)return {error:'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.',status:429};
+ const all=readTippCodes(),rec=all[managerId];
+ if(!rec){if(!set)return {error:'Für diesen Namen gibt es noch keinen Code. Er wird beim ersten Tipp festgelegt.',status:404};
+  const salt=crypto.randomBytes(16).toString('hex');all[managerId]={salt,hash:tippHash(code,salt),createdAt:new Date().toISOString()};saveTippCodes(all);return {ok:true,created:true};}
+ const a=Buffer.from(rec.hash,'hex'),b=Buffer.from(tippHash(code,rec.salt),'hex');
+ if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){f.push(now);tippCodeFails.set(managerId,f);return {error:'Falscher Code.',status:403};}
+ tippCodeFails.delete(managerId);return {ok:true};
+}
+// Ansehen geht auch ohne Anmeldung: dann mit Dienst-Login (oder dem neuesten Admin-Login) bei Kickbase lesen.
+async function tippToken(req){
+ const own=getToken(req);if(own)return own;
+ try{const t=await getServiceToken();if(t)return t;}catch{}
+ return newestToken();
+}
+let tippDaysCache=null;
+async function tippMatchdays(){
+ if(!tippDaysCache||Date.now()-tippDaysCache.at>2*60e3)tippDaysCache={at:Date.now(),value:await loadMatchdays()};
+ return tippDaysCache.value;
+}
+let tippManagersCache=null;
+async function tippManagers(token){
+ if(!tippManagersCache||Date.now()-tippManagersCache.at>10*60e3){
+  const ranking=await kbFetch('/v4/leagues/6422780/ranking',{token});
+  tippManagersCache={at:Date.now(),value:(ranking.us||[]).filter(m=>validManager(m.i)&&String(m.n||'').toLowerCase()!=='t1000').map(m=>({id:String(m.i),name:String(m.n||m.i)}))};
+ }
+ return tippManagersCache.value;
+}
+// Tippbar ist nur der naechste Spieltag, der noch nicht angepfiffen ist.
+function tippState(md,day){
+ const d=md.days.find(x=>x.day===day);
+ const next=md.days.find(x=>x.status==='upcoming')?.day||null;
+ const kickoff=d?.firstKickoffUTC?Date.parse(d.firstKickoffUTC):NaN;
+ const locked=!d||d.status!=='upcoming'||!Number.isFinite(kickoff)||Date.now()>=kickoff;
+ return {status:d?.status||'unknown',deadline:d?.firstKickoffUTC||null,firstMatch:d?.firstMatch||null,locked,open:!locked&&day===next,next};
+}
+async function tippPlayerPoints(token,playerId,day){
+ try{const rec=findDayRecord(await kbFetch(`/v4/competitions/1/players/${playerId}/performance`,{token}),day);
+  return rec&&rec.p!==undefined&&rec.p!==null&&rec.p!==''&&Number.isFinite(Number(rec.p))?Number(rec.p):null;}catch{return null;}
+}
+// Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
+async function tippResult(token,day,rule,rows){
+ if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
+ if(!TIPP_RULES.some(r=>r.id===rule.id))return {status:'manual',message:'Eigene Tippregel: Gewinner bitte von Hand bestimmen.',rows:[],winners:[]};
+ if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
+ const mvp=await loadMatchdayMvp(token,day);
+ if(!mvp.players.length)return {status:'missing',message:'Das fehlt: Der MVP des Spieltags ist noch nicht bekannt.',rows:[],winners:[]};
+ const ids=new Set(mvp.players.map(p=>String(p.id))),top=mvp.players[0].points;
+ const out=[];let missing=0;
+ for(const r of rows){
+  const hit=ids.has(String(r.playerId));let actual=top,diff=null,ok=true;
+  if(rule.id==='prognose'){actual=await tippPlayerPoints(token,r.playerId,day);if(actual===null){missing++;ok=false;}}
+  if(actual!==null)diff=Math.abs(r.points-actual);
+  if(['volltreffer','name','drunter','korridor'].includes(rule.id)&&!hit){ok=false;diff=null;}
+  if(rule.id==='drunter'&&r.points>top)ok=false;
+  if(rule.id==='korridor'&&ok&&diff>TIPP_KORRIDOR)ok=false;
+  out.push({managerId:r.managerId,hit,actual,diff,eligible:ok});
+ }
+ const el=out.filter(r=>r.eligible);
+ let winners=[];
+ if(rule.id==='name'||rule.id==='korridor')winners=el.map(r=>r.managerId);
+ else if(el.length){const best=Math.min(...el.map(r=>r.diff));winners=el.filter(r=>r.diff===best).map(r=>r.managerId);}
+ const unsure=!mvp.reliable||missing>0;
+ return {status:unsure?'unsure':'ok',mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top},rows:out,winners,
+  message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
+}
+app.get('/api/mvp-tipps/players',async(req,res)=>{
+ const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
+ try{const all=await loadAllPlayers(token);
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>({id:String(id),name:p.name,team:p.team})).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+ }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
+});
+app.get('/api/mvp-tipps',async(req,res)=>{
+ try{const md=await tippMatchdays(),all=readTipps();
+  const next=md.days.find(x=>x.status==='upcoming')?.day||null;
+  const days=md.days.filter(d=>d.status!=='upcoming'||d.day===next).map(d=>({day:d.day,status:d.status,tips:Object.keys(all[d.day]?.tips||{}).length}));
+  // Managerliste: braucht auch der Online-Tippdienst (tools/tipp-dienst), er liest sie aus der exportierten Datei.
+  const token=await tippToken(req),managers=token?await tippManagers(token).catch(()=>null):null;
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,...(managers?{managers}:{})});
+ }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
+});
+app.get('/api/mvp-tipps/:day',async(req,res)=>{
+ const token=await tippToken(req),day=validDay(req.params.day);
+ if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
+ if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token),codes=readTippCodes();
+  const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec);
+  const reveal=st.locked&&st.status!=='upcoming';
+  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!codes[m.id],...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt}}:{})};});
+  let result=null;
+  if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
+   try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
+  res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,korridor:TIPP_KORRIDOR,managers:list,
+   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result});
+ }catch(e){res.status(502).json({error:e.message});}
+});
+app.put('/api/mvp-tipps/:day',async(req,res)=>{
+ const s=currentSession(req),day=validDay(req.params.day);
+ if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ const playerId=String(req.body?.playerId||''),points=Number(req.body?.points);
+ if(!/^\d{1,10}$/.test(playerId)||!Number.isInteger(points)||points<-1000||points>2000)return res.status(400).json({error:'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.'});
+ try{const md=await tippMatchdays(),st=tippState(md,day);
+  if(!st.open)return res.status(409).json({error:st.locked?'Der Spieltag ist angepfiffen, Tipps sind gesperrt.':'Getippt wird nur auf den nächsten Spieltag.'});
+  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
+  const managers=await tippManagers(token);
+  // Angemeldet als Manager: kein Code noetig. Sonst Name + eigener Tipp-Code.
+  let me=s?.userId?managers.find(m=>m.id===String(s.userId)):null,created=false;
+  if(!me){
+   me=managers.find(m=>m.id===String(req.body?.managerId||''));
+   if(!me)return res.status(400).json({error:'Bitte deinen Namen aus der Liste wählen.'});
+   const c=checkTippCode(me.id,req.body?.code,true);if(!c.ok)return res.status(c.status).json({error:c.error});created=!!c.created;
+  }
+  const player=(await loadAllPlayers(token)).players.get(playerId);
+  if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
+  const all=readTipps(),rec=all[day]||(all[day]={tips:{}});rec.tips=rec.tips||{};
+  rec.tips[me.id]={name:me.name,playerId,player:player.name,team:player.team,points,updatedAt:new Date().toISOString()};
+  saveTipps(all);
+  res.set('Cache-Control','no-store').json({ok:true,codeCreated:created,tip:rec.tips[me.id]});
+ }catch(e){res.status(502).json({error:e.message});}
+});
+// Eigenen Tipp mit Code ansehen (vor dem Anpfiff sonst verdeckt).
+app.post('/api/mvp-tipps/:day/mine',async(req,res)=>{
+ const day=validDay(req.params.day),id=String(req.body?.managerId||'');
+ if(!day||!validManager(id))return res.status(400).json({error:'Ungültige Angaben.'});
+ const c=checkTippCode(id,req.body?.code,false);if(!c.ok)return res.status(c.status).json({error:c.error});
+ res.set('Cache-Control','no-store').json({ok:true,tip:readTipps()[day]?.tips?.[id]||null});
+});
+app.delete('/api/mvp-tipps/codes/:id',(req,res)=>{
+ if(!isAdmin(req)||!getToken(req))return res.status(403).json({error:'Nur der Liga-Admin kann Codes zurücksetzen.'});
+ const id=String(req.params.id);if(!validManager(id))return res.status(400).json({error:'Ungültiger Manager.'});
+ const all=readTippCodes();delete all[id];saveTippCodes(all);tippCodeFails.delete(id);
+ res.set('Cache-Control','no-store').json({ok:true});
+});
+app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{
+ const day=validDay(req.params.day);
+ if(!getToken(req))return res.status(401).json({error:'Nicht angemeldet.'});
+ if(!isAdmin(req))return res.status(403).json({error:'Nur der Liga-Admin kann die Tippregel ändern.'});
+ if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ const id=String(req.body?.ruleId||''),text=String(req.body?.text||'').trim();
+ const base=TIPP_RULES.find(r=>r.id===id);
+ if(!base&&!(id==='eigene'&&text&&text.length<=500))return res.status(400).json({error:'Bitte eine Tippregel wählen oder eine eigene eintragen.'});
+ try{const st=tippState(await tippMatchdays(),day);
+  if(st.locked)return res.status(409).json({error:'Der Spieltag ist angepfiffen, die Tippregel steht fest.'});
+  const all=readTipps(),rec=all[day]||(all[day]={tips:{}});
+  rec.rule=base?{...base}:{id:'eigene',title:'Eigene Regel',text};
+  rec.ruleUpdatedAt=new Date().toISOString();saveTipps(all);
+  res.set('Cache-Control','no-store').json({ok:true,rule:rec.rule});
  }catch(e){res.status(502).json({error:e.message});}
 });
 async function finishedMatchday(day) {
