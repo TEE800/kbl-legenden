@@ -347,7 +347,7 @@ async function loadHistory(){
   const dayStatuses=Array.isArray(matchdays.days)?matchdays.days:[];
   const liveDay=dayStatuses.find(d=>d.status==='live'&&d.day===completed+1);
   const lastDay=liveDay?liveDay.day:completed;
-  if(lastDay<1){historyData=[];$('#historySummary').textContent='';$('#historyTable').textContent='';statusEl.textContent='Noch kein Spieltag begonnen.';showProfile();renderHall();renderLeagueAnalysis();renderProgressChart();renderRankHistory();renderCenter();return;}
+  if(lastDay<1){historyData=[];$('#historySummary').textContent='';$('#historyTable').textContent='';statusEl.textContent='Noch kein Spieltag begonnen.';showProfile();renderHall();renderLeagueAnalysis();renderProgressChart();renderRankHistory();renderCenter();renderPreview();return;}
   const nextHistory=[];
   const wins=new Map();
   let previous=new Map();
@@ -385,10 +385,10 @@ async function loadHistory(){
   renderRankingTable();
   renderHall();
   renderLeagueAnalysis();
-  renderProgressChart();renderRankHistory();renderCenter();
+  renderProgressChart();renderRankHistory();renderCenter();renderPreview();
  }catch(err){
   statusEl.textContent=`Abruf fehlgeschlagen: ${String(err.message).replace(/\.+$/,'')}. Keine ungeprüften Spieltagssiege hinzugefügt.`;
-  if(historyData.length){renderHistory();renderHall();renderLeagueAnalysis();renderProgressChart();renderRankHistory();renderCenter();}
+  if(historyData.length){renderHistory();renderHall();renderLeagueAnalysis();renderProgressChart();renderRankHistory();renderCenter();renderPreview();}
   else {const hall=$('#hallContent');if(hall)hall.innerHTML='<p class="muted">Rekordbuch konnte nicht geladen werden. Bitte unter „Tabelle“ auf „Aktualisieren“ tippen.</p>';const analysis=$('#analysisContent');if(analysis)analysis.innerHTML='<p class="muted">Analyse konnte nicht geladen werden. Bitte unter „Tabelle“ auf „Aktualisieren“ tippen.</p>';}
  }finally{btn.disabled=false;}
 }
@@ -1377,7 +1377,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b
 async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
- try{showProfile();}catch{}
+ try{showProfile();}catch{}try{renderPreview();}catch{}
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day);
  const ref=Math.max(0,...finished,...Object.keys(days).map(Number));
  if(!ref){el.innerHTML='<p class="muted">Noch kein Spieltag abgeschlossen.</p>';return;}
@@ -1483,7 +1483,7 @@ document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventLis
 
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
- for(const id of ['overview','stats','table','rankHistory','progressPanel']){
+ for(const id of ['preview','overview','stats','table','rankHistory','progressPanel']){
   const sec=document.getElementById(id),head=sec?.querySelector(':scope>.sectionhead');if(!head)continue;
   const fold=v=>{sec.classList.toggle('kbl-folded',v);head.setAttribute('aria-expanded',String(!v));};
   fold(true);
@@ -1513,3 +1513,93 @@ function kblBumsFocus(name){const tab=$('#bumsTab');if(!tab)return false;tab.ope
 function kblBumsGoto(el){const n=el.dataset.bumsGoto;location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-bums-goto]');if(t)kblBumsGoto(t);});
 document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-goto]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblBumsGoto(t);}});
+
+// Spieltagsvorschau (Übersicht, erste Kategorie): Countdown bis zum ersten Anstoß des nächsten Spieltags
+// und Fragen-Kacheln aus den geladenen Daten (nur abgeschlossene Spieltage und BumsTabelle, keine weiteren Kickbase-Abfragen).
+let pvStatus=null,pvTarget=null;
+async function pvLoadStatus(){try{pvStatus=await api('/api/matchday-status');}catch{pvStatus=pvStatus||{error:true};}renderPreview();}
+onConnected.push(pvLoadStatus);setInterval(()=>{if(currentLeague&&!document.hidden)pvLoadStatus();},900000);
+function pvKickoff(d){
+ if(d?.firstKickoffUTC)return {t:Date.parse(d.firstKickoffUTC),match:d.firstMatch||''};
+ const u=(d?.unfinished||[]).map(g=>({t:Date.parse(g.kickoffUTC),match:g.match})).filter(g=>Number.isFinite(g.t)).sort((a,b)=>a.t-b.t)[0];
+ return u||null;
+}
+const pvDate=t=>new Intl.DateTimeFormat('de-DE',{timeZone:'Europe/Berlin',weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(t))+' Uhr';
+function pvTick(){
+ const box=$('#pvCountdown'),pill=$('#previewPill');if(!pvTarget)return;
+ const left=pvTarget.t-Date.now();
+ if(left<=0){if(box)box.innerHTML=`<div class="pv-kickoff">⚽ Anpfiff! Spieltag ${pvTarget.day} läuft.</div>`;if(pill)pill.textContent=`Spieltag ${pvTarget.day} läuft`;pvTarget=null;return;}
+ const s=Math.floor(left/1000),parts=[[Math.floor(s/86400),'Tage'],[Math.floor(s/3600)%24,'Std'],[Math.floor(s/60)%60,'Min'],[s%60,'Sek']];
+ if(box)parts.forEach(([v],i)=>{const el=box.querySelector(`[data-pv="${i}"]`);if(el)el.textContent=String(v).padStart(2,'0');});
+ if(pill)pill.textContent=`Spieltag ${pvTarget.day} · Anstoß in ${parts[0][0]?parts[0][0]+' T ':''}${parts[1][0]} Std ${parts[2][0]} Min`;
+}
+setInterval(()=>{if(!document.hidden)pvTick();},1000);
+function pvCountdownHtml(){
+ pvTarget=null;
+ if(!pvStatus)return '<p class="muted">Spielplan wird geladen …</p>';
+ if(pvStatus.error)return '<p class="muted">Das fehlt: Spielplan von OpenLigaDB ist gerade nicht erreichbar, darum kein Countdown.</p>';
+ const days=pvStatus.days||[],live=days.find(d=>d.status==='live');
+ if(live)return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.</div>`;
+ const next=days.find(d=>d.status==='upcoming'),k=pvKickoff(next);
+ if(!next)return '<p class="muted">Kein weiterer Spieltag im Spielplan.</p>';
+ if(!k)return `<p class="muted">Das fehlt: Anstoßzeit für Spieltag ${next.day} steht noch nicht fest.</p>`;
+ pvTarget={t:k.t,day:next.day};
+ const unit=(i,l)=>`<div class="pv-unit"><b data-pv="${i}">–</b><small>${l}</small></div>`;
+ return `<div class="pv-countdown"><div class="pv-label">Anstoß Spieltag ${next.day} in</div><div class="pv-units" id="pvCountdown">${unit(0,'Tage')}${unit(1,'Std')}${unit(2,'Min')}${unit(3,'Sek')}</div>
+  <div class="pv-meta">${escapeHtml(pvDate(k.t))}${k.match?` · ${escapeHtml(k.match)}`:''}</div><div class="pv-meta muted tiny">Mit dem ersten Anpfiff friert Kickbase die Startelf ein. Wer bis dahin nicht aufgestellt hat, zahlt 100 Punkte pro leerem Platz.</div></div>`;
+}
+function pvQuestions(){
+ const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
+ if(!days.length)return [];
+ const b=n=>`<b>${escapeHtml(n)}</b>`,f=v=>fmt(Math.round(v));
+ const series=new Map();
+ for(const h of days)for(const m of h.list)if(m.dayPoints!==null&&isEligibleManager(m.name)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push(m.dayPoints);}
+ const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+ const out=[],q=(tag,text,sub)=>out.push({tag,text,sub});
+ const last=days.at(-1),prev=days.at(-2);
+ // Tabelle nach dem letzten Spieltag
+ const table=last.list.filter(m=>isEligibleManager(m.name)&&m.score!==null).slice().sort((x,y)=>y.score-x.score);
+ if(table.length>1){const [a,c]=table,gap=a.score-c.score;
+  q('👑 THRON',`Wackelt der Thron von ${b(a.name)}?`,gap===0?`Punktgleich mit ${escapeHtml(c.name)}. Wer zuckt zuerst?`:gap<250?`Nur ${f(gap)} Punkte vor ${escapeHtml(c.name)}. Ein schwacher Spieltag reicht.`:`${f(gap)} Punkte vor ${escapeHtml(c.name)}. Kommt da überhaupt noch wer ran?`);}
+ // Formkurve: letzte 3 Spieltage gegen den eigenen Schnitt
+ const form=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const l=p.slice(-3);return {n,last:avg(l),all:avg(p),d:avg(l)-avg(p)};});
+ const hot=form.slice().sort((x,y)=>y.d-x.d)[0],cold=form.slice().sort((x,y)=>x.d-y.d)[0];
+ if(hot&&hot.d>0)q('🔥 FORMKURVE',`Hält die Formkurve von ${b(hot.n)}?`,`Ø letzte 3 Spieltage: ${f(hot.last)} · Saisonschnitt ${f(hot.all)} (+${f(hot.d)})`);
+ // BumsTabelle (laufende Halbserie)
+ const bnames=[...new Set(Object.values(bumsDays||{}).flatMap(d=>Object.values(d.managers||{}).map(v=>v.name)))].filter(isEligibleManager);
+ const bums=bnames.map(n=>({n,c:bumsOf(n)})).filter(x=>x.c!=null).sort((x,y)=>y.c-x.c);
+ if(bums.length&&bums[0].c>0){const top=bums.filter(x=>x.c===bums[0].c);
+  q('🍆 BUMSTABELLE',top.length===1?`Wird ${b(top[0].n)} wieder am häufigsten gebumst?`:`Wer von ${top.map(x=>b(x.n)).join(' und ')} wird diesmal öfter gebumst?`,`${bums[0].c} Bumsungen in der Halbserie, Platz 1 der BumsTabelle`);}
+ if(cold&&cold.d<0)q('📉 ABSTURZ',`Ist ${b(cold.n)} im freien Fall oder war das nur ein Ausrutscher?`,`Ø letzte 3 Spieltage: ${f(cold.last)} · Saisonschnitt ${f(cold.all)} (${f(cold.d)})`);
+ // Engstes Duell in der Tabelle (ohne Platz 1 gegen 2, das steht schon beim Thron)
+ let duel=null;for(let i=2;i<table.length;i++){const g=table[i-1].score-table[i].score;if(!duel||g<duel.g)duel={a:table[i-1],c:table[i],g,pl:i};}
+ if(duel)q('⚔️ DUELL',`Zieht ${b(duel.c.name)} an ${b(duel.a.name)} vorbei?`,duel.g===0?`Platz ${duel.pl} und ${duel.pl+1}, punktgleich`:`Platz ${duel.pl} gegen ${duel.pl+1}, nur ${f(duel.g)} Punkte Abstand`);
+ // Letzter Spieltag: Sieger und Letzter (Dämonische Drehtür)
+ const sc=last.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)).slice().sort((x,y)=>y.dayPoints-x.dayPoints);
+ if(sc.length>1){
+  const best=sc[0].dayPoints,winners=sc.filter(m=>m.dayPoints===best),worst=sc.at(-1).dayPoints,losers=sc.filter(m=>m.dayPoints===worst);
+  const pw=prev?prev.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)):null,prevBest=pw?.length?Math.max(...pw.map(m=>m.dayPoints)):null;
+  if(winners.length===1){const w=winners[0],twice=prevBest!=null&&pw.find(m=>m.name===w.name)?.dayPoints===prevBest;
+   q('🏆 SIEGER',twice?`Hattrick für ${b(w.name)}? Zwei Spieltagssiege hat es schon.`:`Schafft ${b(w.name)} zwei Spieltagssiege am Stück?`,`Spieltag ${last.day}: ${f(best)} Punkte. Nach der Drehtür fehlt jetzt einer der drei besten Spieler.`);}
+  if(losers.length===1)q('🥄 LETZTER',`Holt sich ${b(losers[0].name)} wieder den Holzlöffel ab?`,`Spieltag ${last.day}: ${f(worst)} Punkte. Immerhin gab es per Drehtür ein Geschenk vom Sieger.`);
+ }
+ const lan=table.at(-1),above=table.at(-2);
+ if(lan&&above&&lan!==table[0])q('🏮 ROTE LATERNE',`Gibt ${b(lan.name)} die rote Laterne endlich ab?`,`${f(above.score-lan.score)} Punkte hinter ${escapeHtml(above.name)}`);
+ // Bester Schnitt ohne Spieltagssieg
+ const wins=new Map();for(const h of days){const s=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));if(!s.length)continue;const mx=Math.max(...s.map(m=>m.dayPoints));s.filter(m=>m.dayPoints===mx).forEach(m=>wins.set(m.name,1));}
+ const winless=[...series].filter(([n,p])=>!wins.has(n)&&p.length>=3).map(([n,p])=>({n,a:avg(p),g:p.length})).sort((x,y)=>y.a-x.a)[0];
+ if(winless)q('⏳ SIEGLOS',`Wann gewinnt ${b(winless.n)} endlich mal einen Spieltag?`,`Ø ${f(winless.a)} Punkte, aber kein Spieltagssieg in ${winless.g} Spieltagen`);
+ // Noch ungebumst
+ const clean=bums.filter(x=>x.c===0);
+ if(clean.length&&bums.length)q('😇 UNGEBUMST',clean.length<=2?`Bleibt ${clean.map(x=>b(x.n)).join(' und ')} weiter ungebumst?`:`${clean.length} Manager sind noch ungebumst. Wen erwischt es zuerst?`,clean.length<=2?'Bisher keine einzige Bumsung in der Halbserie':clean.map(x=>escapeHtml(x.n)).join(', '));
+ // Größte Schwankung
+ const wild=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const a=avg(p);return {n,sd:Math.sqrt(avg(p.map(x=>(x-a)**2))),lo:Math.min(...p),hi:Math.max(...p)};}).sort((x,y)=>y.sd-x.sd)[0];
+ if(wild)q('🎲 WUNDERTÜTE',`Top oder Flop: Welcher ${b(wild.n)} kommt diesmal?`,`Bisher zwischen ${f(wild.lo)} und ${f(wild.hi)} Punkten alles dabei`);
+ return out;
+}
+function renderPreview(){
+ const el=$('#previewContent');if(!el)return;
+ const qs=pvQuestions();
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div><p class="muted tiny">Aus den abgeschlossenen Spieltagen und der BumsTabelle. Alles ohne Gewähr, Trash-Talk ausdrücklich erwünscht.</p>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ pvTick();
+}
