@@ -30,8 +30,8 @@
  }
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p></div>`;
-  const src=d.rule.id==='eigene'?'eigene Regel':'Vorlage';
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><strong>${esc(d.rule.title)}</strong><p>${esc(d.rule.text)}</p><small class="muted">${src}</small></div>`;
+  // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${esc(d.rule.by.name)}</b></small>`:''}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -78,7 +78,7 @@
   const r=d.result;if(!r)return d.status==='live'?'<p class="muted">Ausgewertet wird, sobald der Spieltag beendet ist.</p>':'';
   let h='';
   if(r.mvp)h+=`<p class="mvp-mvp">MVP des Spieltags: ${r.mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(r.mvp.points)}</b> Punkten.</p>`;
-  if(r.message)h+=`<p class="${r.status==='ok'||r.status==='empty'?'muted':'error'}">${esc(r.message)}</p>`;
+  if(r.message)h+=`<p class="${['ok','empty','manual'].includes(r.status)?'muted':'error'}">${esc(r.message)}</p>`;
   if(r.rows?.length){
    const names=d.managers.filter(m=>r.winners.includes(m.id)).map(m=>m.name);
    h+=`<p>Vorschlag für den Joker: <b>${names.length?esc(names.join(', ')):'niemand'}</b>${r.status==='ok'?'':' (bitte prüfen)'}. Entschieden wird in der BumsParade.</p>`;
@@ -92,14 +92,13 @@
   $('#mvpMeta').textContent=d.open?`Spieltag ${d.day} · Tipps offen`:d.status==='finished'?`Spieltag ${d.day} · beendet`:`Spieltag ${d.day} · ${d.status==='live'?'läuft':'gesperrt'}`;
   root.className='';
   root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+table(d);
-  $('#mvpRules').innerHTML=(d.rules||[]).map((r,i)=>`<p><b>${esc(r.title)}</b>${r.id===d.rule?.id?' <span class="muted">(gilt an Spieltag '+d.day+')</span>':''}<br>${esc(r.text)}</p>`).join('')+'<p class="muted tiny">Vorlagen für die Tippregel. Der Admin legt jeden Spieltag eine fest oder schreibt eine eigene. Bei Gleichstand gewinnen alle. MVP ist der Bundesliga-Spieler mit den meisten Spieltagspunkten.</p>';
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
   if(!admin.hidden){
-   const sel=$('#mvpRuleSelect'),cur=d.rule?.id||'';
-   sel.innerHTML='<option value="" disabled>Bitte wählen …</option>'+d.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.title)}</option>`).join('')+'<option value="eigene">Eigene Regel …</option>';
    const withCode=d.managers.filter(m=>m.hasCode);
    $('#mvpCodes').innerHTML=withCode.length?'<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code vergessen hat.</p>'+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
-   sel.value=cur;$('#mvpRuleText').hidden=cur!=='eigene';$('#mvpRuleText').value=d.rule?.id==='eigene'?d.rule.text:'';
+   $('#mvpRuleText').value=d.rule?.text||'';
+   $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+   $('#mvpRuleBy').value=d.rule?.by?.id||'';
   }
   if(d.open&&LIVE)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
@@ -140,12 +139,11 @@
  document.addEventListener('change',e=>{
   if(e.target.id==='mvpDay')loadDay(Number(e.target.value));
   if(e.target.id==='mvpWho'){store.set(e.target.value);codeTip=null;const pl=$('#mvpPlayer')?.value,pt=$('#mvpPoints')?.value;render();if($('#mvpPlayer'))$('#mvpPlayer').value=pl||'';if($('#mvpPoints'))$('#mvpPoints').value=pt||'';}
-  if(e.target.id==='mvpRuleSelect')$('#mvpRuleText').hidden=e.target.value!=='eigene';
  });
  document.addEventListener('click',async e=>{
   if(e.target.id==='mvpRuleSave'){
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
-   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:$('#mvpRuleSelect').value,text:$('#mvpRuleText').value,adminCode:adminCode()})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
+   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,adminCode:adminCode()})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
    catch(err){m.textContent='Fehler: '+err.message;}
   }
   if(e.target.id==='mvpShowMine'){

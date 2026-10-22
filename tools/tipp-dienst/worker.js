@@ -139,7 +139,10 @@ async function handle(req, env, cors) {
     if (st.locked) return json({ error: 'Der Spieltag ist angepfiffen, die Tippregel steht fest.' }, 409, cors);
     const id = String(body.ruleId || ''), text = String(body.text || '').trim(), base = (info.rules || []).find(r => r.id === id);
     if (!base && !(id === 'eigene' && text && text.length <= 500)) return json({ error: 'Bitte eine Tippregel wählen oder eine eigene eintragen.' }, 400, cors);
-    const rule = base ? { id: base.id, title: base.title, text: base.text } : { id: 'eigene', title: 'Eigene Regel', text };
+    // Wer die Regel an diesem Spieltag bestimmt hat (wechselt jeden Spieltag), optional.
+    const by = managers.find(m => String(m.id) === String(body.byId || ''));
+    if (body.byId && !by) return json({ error: 'Unbekannter Manager.' }, 400, cors);
+    const rule = { ...(base ? { id: base.id, title: base.title, text: base.text } : { id: 'eigene', title: 'Eigene Regel', text }), ...(by ? { by: { id: String(by.id), name: by.name } } : {}) };
     await env.TIPPS.put(`rule:${day}`, JSON.stringify(rule));
     return json({ ok: true, rule }, 200, cors);
   }

@@ -7,3 +7,4 @@ _probe/
 *.tmp
 .env
 mvp-tipp-codes.json
+.kbl-aktualisieren.json
