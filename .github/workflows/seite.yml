@@ -4,6 +4,9 @@ on:
     - cron: '*/10 * * * *'   # alle 10 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
     - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
+  push:                      # nach Programm-Aenderungen gleich neu bauen (Daten-Commits des Bots loesen nichts aus)
+    branches: [main]
+    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/kickbase-bremse.mjs']
 permissions:
   contents: write
   pages: write
