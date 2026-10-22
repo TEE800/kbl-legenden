@@ -30,7 +30,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
 
 // 2. Server starten
-const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '', KBL_CHALLENGES_SOFORT: MODE === 'full' ? '1' : '' }, stdio: ['ignore', 'inherit', 'inherit'] });
+const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '', KBL_EXPORT: '1', KBL_CHALLENGES_SOFORT: MODE === 'full' ? '1' : '' }, stdio: ['ignore', 'inherit', 'inherit'] });
 let cookie = '';
 async function call(url, opts = {}) {
   const r = await fetch(BASE + url, { ...opts, headers: { ...(opts.headers || {}), cookie, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10 * 60 * 1000) });
@@ -78,6 +78,12 @@ try {
       const needed = MODE === 'full' || d === live || !have(u) || (u.includes('/rule-accounting/') && unfinished(u));
       if (needed) await save(u);
     }
+  }
+  // MVP-Tipp: Uebersicht, naechster Spieltag (nur wer getippt hat) und alle angepfiffenen Spieltage.
+  const tipps = await save('/api/mvp-tipps');
+  for (const d of (tipps?.days || []).map(x => x.day)) {
+    const u = `/api/mvp-tipps/${d}`;
+    if (MODE === 'full' || d === live || d === tipps.next || !have(u)) await save(u);
   }
   // Challenges: im Voll-Lauf laedt der Server sie gleich beim Start nach (Konto aus KBL_CHALLENGE_*, siehe server.js); darauf warten.
   for (let i = 0; MODE === 'full' && i < 120; i++) { const c = await call('/api/challenges'); if (c.status !== 200 || !c.body.running) break; await sleep(5000); }

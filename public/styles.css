@@ -320,3 +320,18 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .pv-tile p b{color:var(--gold)}
 .pv-tile span{color:var(--muted);font-size:13px}
 @media(max-width:560px){.pv-units{gap:6px}.pv-unit{min-width:0;flex:1}.pv-unit b{font-size:26px}.pv-tiles{grid-template-columns:1fr}}
+
+/* ---- MVP-Tipp ---- */
+.mvp-rule{background:var(--surface-2);border:1px solid var(--fame-line);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.mvp-rule strong{display:block;font-size:20px;color:var(--gold);margin:6px 0 4px}
+.mvp-rule p{margin:0 0 6px;color:var(--text-2)}
+.mvp-deadline{margin:10px 0 14px}.mvp-deadline [data-mvp-left]{color:var(--gold)}
+.mvp-form{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:6px 0 8px}
+.mvp-form label{display:grid;gap:6px;color:var(--muted);font-size:12px}
+.mvp-form input{background:var(--field);color:#f2f2f2;border:1px solid var(--line-strong);padding:11px;border-radius:6px;font-size:15px}
+.mvp-form #mvpPlayer{width:min(320px,100%)}.mvp-form #mvpPoints{width:110px}
+.mvp-table{width:100%;border-collapse:collapse}.mvp-table th,.mvp-table td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left}
+.mvp-table .num{text-align:right;white-space:nowrap}.mvp-table th{color:var(--muted);font-size:12px;font-weight:600}
+#mvp .tablewrap{overflow-x:auto}#mvp .mvp-table{display:table}
+.mvp-me td{background:rgba(235,199,104,.07)}.mvp-win{color:var(--gold)}.mvp-mvp{margin:14px 0 6px}
+@media(max-width:600px){.mvp-form label:first-child{flex:1 1 100%}.mvp-form #mvpPlayer{width:100%}.mvp-table th,.mvp-table td{padding:8px 5px;font-size:13px}}
