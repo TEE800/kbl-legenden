@@ -367,6 +367,18 @@ async function getServiceToken(force = false) {
   serviceToken = login.tkn; serviceTokenAt = Date.now();
   return serviceToken;
 }
+// Optional eigenes Konto nur fuer die Challenges (KBL_CHALLENGE_EMAIL/KBL_CHALLENGE_PASSWORD), weil die Challenge-Wertung
+// die selbst gespielten Challenges des Kontos braucht. Ohne diese Angaben wird der Dienst-Login genommen.
+let challengeToken = null, challengeTokenAt = 0;
+async function getChallengeToken() {
+  const email = process.env.KBL_CHALLENGE_EMAIL, pass = process.env.KBL_CHALLENGE_PASSWORD;
+  if (!email || !pass) return getServiceToken();
+  if (challengeToken && Date.now() - challengeTokenAt < 3 * 3600 * 1000) return challengeToken;
+  const login = await kbFetch('/v4/user/login', { method: 'POST', body: { em: email, loy: false, pass, rep: {} } });
+  if (!login.tkn) throw new Error('Challenge-Login ohne Token');
+  challengeToken = login.tkn; challengeTokenAt = Date.now();
+  return challengeToken;
+}
 function newestToken() {
   let best = null;
   for (const s of sessions.values()) if (sessionValid(s) && s.token && (!PREVIEW || s.admin) && (!best || s.createdAt > best.createdAt)) best = s;
@@ -761,7 +773,7 @@ app.get('/api/player-probe', async (req, res) => {
 
 
 // Challenge-Wertung der Legenden (Ansicht "Challenges"), siehe challenges.js.
-registerChallenges(app, { kbFetch, getToken, validManager, autoToken: async () => (await getServiceToken().catch(() => null)) || newestToken() });
+registerChallenges(app, { kbFetch, getToken, validManager, autoToken: async () => (await getChallengeToken().catch(() => null)) || newestToken() });
 
 // Testabfrage Challenges (nur lesend, nur GET): zeigt die Rohform der Kickbase-Challenge-Daten.
 // Ohne id: Uebersicht, aktuelle Auswahl, Archiv, Lobby. Mit ?id=...: Profil, Tabelle, Ranking, Top 10, Aufstellung.

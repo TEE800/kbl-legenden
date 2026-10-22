@@ -36,6 +36,8 @@ jobs:
         env:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
+          KBL_CHALLENGE_EMAIL: ${{ secrets.KBL_CHALLENGE_EMAIL }}
+          KBL_CHALLENGE_PASSWORD: ${{ secrets.KBL_CHALLENGE_PASSWORD }}
         run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
       - uses: actions/upload-pages-artifact@v3
         if: steps.gate.outputs.aktiv == 'true'

@@ -30,7 +30,7 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
 
 // 2. Server starten
-const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '' }, stdio: ['ignore', 'inherit', 'inherit'] });
+const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '', KBL_CHALLENGES_SOFORT: MODE === 'full' ? '1' : '' }, stdio: ['ignore', 'inherit', 'inherit'] });
 let cookie = '';
 async function call(url, opts = {}) {
   const r = await fetch(BASE + url, { ...opts, headers: { ...(opts.headers || {}), cookie, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10 * 60 * 1000) });
@@ -64,7 +64,7 @@ try {
   if (live) { const r = await call('/api/lineup-snapshots/capture-frozen', { method: 'POST', body: JSON.stringify({ day: live }) }); console.log('Startelfen Spieltag', live, r.status, JSON.stringify(r.body).slice(0, 200)); }
 
   fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: false, admin: false, loggedIn: true }));
-  for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen', '/api/challenges']) await save(u);
+  for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen']) await save(u);
   const ranking = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8'));
   for (const m of ranking.us || []) await save(`/api/manager-squad-v4/${LEAGUE}/${m.i}`);
 
@@ -79,6 +79,9 @@ try {
       if (needed) await save(u);
     }
   }
+  // Challenges: im Voll-Lauf laedt der Server sie gleich beim Start nach (Konto aus KBL_CHALLENGE_*, siehe server.js); darauf warten.
+  for (let i = 0; MODE === 'full' && i < 120; i++) { const c = await call('/api/challenges'); if (c.status !== 200 || !c.body.running) break; await sleep(5000); }
+  await save('/api/challenges');
   fs.writeFileSync(path.join(DATA, '_meta.json'), JSON.stringify({ exportedAt: new Date().toISOString(), mode: MODE, liveDay: live || null }));
   console.log(`Fertig (${MODE}): ${saved.length} gespeichert, ${failed.length} mit Fehler.`);
   if (failed.length) console.log('Fehler:\n  ' + failed.join('\n  '));

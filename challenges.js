@@ -95,7 +95,7 @@ export function registerChallenges(app, { kbFetch, getToken, validManager, autoT
   if (autoToken) {
     const tick = async () => { try { const t = await autoToken(); if (t) start(t); } catch (e) { console.log('Challenges automatisch laden fehlgeschlagen:', e.message); } };
     setInterval(tick, 3 * 3600 * 1000).unref();
-    setTimeout(tick, 5 * 60 * 1000).unref();
+    setTimeout(tick, process.env.KBL_CHALLENGES_SOFORT ? 2000 : 5 * 60 * 1000).unref();
   }
 
   async function run(token) {
