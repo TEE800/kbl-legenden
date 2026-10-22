@@ -218,9 +218,12 @@ async function loadMatchdays() {
       markedFinished: g.matchIsFinished === true,
       resultAvailable: Array.isArray(g.matchResults) && g.matchResults.length > 0
     }));
+    // Erstes Spiel des Spieltags (Anstoss) fuer den Countdown der Spieltagsvorschau.
+    const first = games.map(g => ({ g, t: Date.parse(g.matchDateTimeUTC || g.matchDateTime) })).filter(x => Number.isFinite(x.t)).sort((a, b) => a.t - b.t)[0];
     return {
       day, status: complete ? 'finished' : started ? 'live' : 'upcoming',
       matches: games.length, finishedMatches: games.length - unfinished.length,
+      ...(first ? { firstKickoffUTC: new Date(first.t).toISOString(), firstMatch: `${first.g.team1?.teamName || 'Team 1'} – ${first.g.team2?.teamName || 'Team 2'}` } : {}),
       ...(day <= 8 && !complete ? { unfinished } : {})
     };
   });

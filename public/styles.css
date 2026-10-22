@@ -303,3 +303,20 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bums-row.bums-focus{outline:2px solid #f1c75c;outline-offset:2px;transition:outline-color .3s}
 
 .center-pick.center-fix{opacity:.75;font-size:.9em}
+/* Spieltagsvorschau (Übersicht): Countdown und Fragen-Kacheln */
+.pv-countdown{text-align:center;padding:18px 12px;border:1px solid #b18b39;border-radius:10px;background:radial-gradient(ellipse at top,#2a2716,#111b23 70%)}
+.pv-label{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
+.pv-units{display:flex;justify-content:center;gap:10px;margin:12px 0}
+.pv-unit{min-width:68px;padding:10px 6px;background:var(--surface-0);border:1px solid var(--line-strong);border-radius:8px}
+.pv-unit b{display:block;font:900 34px/1.1 Georgia,serif;color:var(--gold-strong);font-variant-numeric:tabular-nums}
+.pv-unit small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.pv-meta{margin-top:6px;color:var(--text-2);font-size:13px}
+.pv-kickoff{padding:14px;border:1px solid #b18b39;border-radius:10px;background:#1b1a12;color:var(--gold);font-weight:700;text-align:center}
+.pv-head{margin:22px 0 12px;font-size:16px}
+.pv-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:12px}
+.pv-tile{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--gold-dark);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pv-tile small{color:var(--muted);font-size:11px;letter-spacing:1px}
+.pv-tile p{margin:0;font-size:16px;line-height:1.35;overflow-wrap:anywhere}
+.pv-tile p b{color:var(--gold)}
+.pv-tile span{color:var(--muted);font-size:13px}
+@media(max-width:560px){.pv-units{gap:6px}.pv-unit{min-width:0;flex:1}.pv-unit b{font-size:26px}.pv-tiles{grid-template-columns:1fr}}
