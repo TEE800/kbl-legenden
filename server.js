@@ -39,7 +39,8 @@ app.use('/api', (req, res, next) => {
   }
   if (req.path === '/logout') return next();
   // MVP-Tipp: jeder angemeldete Manager darf seinen eigenen Tipp abgeben (Pruefung im Handler).
-  if (req.method === 'PUT' && /^\/mvp-tipps\/\d{1,2}$/.test(req.path) && currentSession(req)) return next();
+  if (req.method === 'PUT' && /^\/mvp-tipps\/\d{1,2}$/.test(req.path)) return next();
+  if (req.method === 'POST' && /^\/mvp-tipps\/\d{1,2}\/mine$/.test(req.path)) return next();
   const write = req.method !== 'GET' && req.method !== 'HEAD';
   if ((write || ADMIN_ONLY_GET.test(req.originalUrl)) && !isAdmin(req)) {
     return res.status(403).json({ error: 'Vorschau: Hier kannst du nur ansehen. Ändern kann nur der Liga-Admin.' });
@@ -1143,6 +1144,32 @@ const TIPP_EXPORT=process.env.KBL_EXPORT==='1';
 function readTipps(){try{return JSON.parse(fs.readFileSync(TIPP_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
 function saveTipps(data){const tmp=TIPP_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_FILE);}
 const tippRule=rec=>rec?.rule||null;
+// Tipp-Code: Wer nicht angemeldet ist, waehlt seinen Namen und tippt mit einem eigenen Code (4-8 Ziffern), den er beim ersten Tipp selbst festlegt.
+// Gespeichert nur als Salt+scrypt in mvp-tipp-codes.json (bewusst kein kbl-*-Name: wird nie committet/veroeffentlicht, siehe .gitignore).
+// Hoechstens 5 Fehlversuche je Manager in 15 Minuten. Der Admin kann einen Code zuruecksetzen.
+const TIPP_CODE_FILE=path.join(process.cwd(),'mvp-tipp-codes.json');
+function readTippCodes(){try{return JSON.parse(fs.readFileSync(TIPP_CODE_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
+function saveTippCodes(d){const tmp=TIPP_CODE_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(d,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_CODE_FILE);}
+const tippHash=(code,salt)=>crypto.scryptSync(String(code),salt,32).toString('hex');
+const tippCodeFails=new Map();
+// Prueft den Code; ohne gespeicherten Code wird er (nur wenn set=true) neu festgelegt.
+function checkTippCode(managerId,code,set){
+ if(!/^\d{4,8}$/.test(String(code||'')))return {error:'Bitte einen Code aus 4 bis 8 Ziffern eingeben.',status:400};
+ const now=Date.now(),f=(tippCodeFails.get(managerId)||[]).filter(t=>now-t<15*60e3);
+ if(f.length>=5)return {error:'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.',status:429};
+ const all=readTippCodes(),rec=all[managerId];
+ if(!rec){if(!set)return {error:'Für diesen Namen gibt es noch keinen Code. Er wird beim ersten Tipp festgelegt.',status:404};
+  const salt=crypto.randomBytes(16).toString('hex');all[managerId]={salt,hash:tippHash(code,salt),createdAt:new Date().toISOString()};saveTippCodes(all);return {ok:true,created:true};}
+ const a=Buffer.from(rec.hash,'hex'),b=Buffer.from(tippHash(code,rec.salt),'hex');
+ if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){f.push(now);tippCodeFails.set(managerId,f);return {error:'Falscher Code.',status:403};}
+ tippCodeFails.delete(managerId);return {ok:true};
+}
+// Ansehen geht auch ohne Anmeldung: dann mit Dienst-Login (oder dem neuesten Admin-Login) bei Kickbase lesen.
+async function tippToken(req){
+ const own=getToken(req);if(own)return own;
+ try{const t=await getServiceToken();if(t)return t;}catch{}
+ return newestToken();
+}
 let tippDaysCache=null;
 async function tippMatchdays(){
  if(!tippDaysCache||Date.now()-tippDaysCache.at>2*60e3)tippDaysCache={at:Date.now(),value:await loadMatchdays()};
@@ -1195,13 +1222,12 @@ async function tippResult(token,day,rule,rows){
   message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
 }
 app.get('/api/mvp-tipps/players',async(req,res)=>{
- const token=getToken(req);if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
+ const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  try{const all=await loadAllPlayers(token);
   res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>({id:String(id),name:p.name,team:p.team})).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{
- const token=getToken(req);if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
  try{const md=await tippMatchdays(),all=readTipps();
   const next=md.days.find(x=>x.status==='upcoming')?.day||null;
   const days=md.days.filter(d=>d.status!=='upcoming'||d.day===next).map(d=>({day:d.day,status:d.status,tips:Object.keys(all[d.day]?.tips||{}).length}));
@@ -1209,13 +1235,13 @@ app.get('/api/mvp-tipps',async(req,res)=>{
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{
- const token=getToken(req),day=validDay(req.params.day);
- if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
+ const token=await tippToken(req),day=validDay(req.params.day);
+ if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
- try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token);
+ try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token),codes=readTippCodes();
   const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec);
   const reveal=st.locked&&st.status!=='upcoming';
-  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt}}:{})};});
+  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!codes[m.id],...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt}}:{})};});
   let result=null;
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
@@ -1225,21 +1251,40 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
 });
 app.put('/api/mvp-tipps/:day',async(req,res)=>{
  const s=currentSession(req),day=validDay(req.params.day);
- if(!s?.token)return res.status(401).json({error:'Nicht angemeldet.'});
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
  const playerId=String(req.body?.playerId||''),points=Number(req.body?.points);
  if(!/^\d{1,10}$/.test(playerId)||!Number.isInteger(points)||points<-1000||points>2000)return res.status(400).json({error:'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.'});
  try{const md=await tippMatchdays(),st=tippState(md,day);
   if(!st.open)return res.status(409).json({error:st.locked?'Der Spieltag ist angepfiffen, Tipps sind gesperrt.':'Getippt wird nur auf den nächsten Spieltag.'});
-  const managers=await tippManagers(s.token),me=managers.find(m=>m.id===String(s.userId||''));
-  if(!me)return res.status(403).json({error:'Tippen dürfen nur Manager der KBL Legenden.'});
-  const player=(await loadAllPlayers(s.token)).players.get(playerId);
+  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
+  const managers=await tippManagers(token);
+  // Angemeldet als Manager: kein Code noetig. Sonst Name + eigener Tipp-Code.
+  let me=s?.userId?managers.find(m=>m.id===String(s.userId)):null,created=false;
+  if(!me){
+   me=managers.find(m=>m.id===String(req.body?.managerId||''));
+   if(!me)return res.status(400).json({error:'Bitte deinen Namen aus der Liste wählen.'});
+   const c=checkTippCode(me.id,req.body?.code,true);if(!c.ok)return res.status(c.status).json({error:c.error});created=!!c.created;
+  }
+  const player=(await loadAllPlayers(token)).players.get(playerId);
   if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
   const all=readTipps(),rec=all[day]||(all[day]={tips:{}});rec.tips=rec.tips||{};
   rec.tips[me.id]={name:me.name,playerId,player:player.name,team:player.team,points,updatedAt:new Date().toISOString()};
   saveTipps(all);
-  res.set('Cache-Control','no-store').json({ok:true,tip:rec.tips[me.id]});
+  res.set('Cache-Control','no-store').json({ok:true,codeCreated:created,tip:rec.tips[me.id]});
  }catch(e){res.status(502).json({error:e.message});}
+});
+// Eigenen Tipp mit Code ansehen (vor dem Anpfiff sonst verdeckt).
+app.post('/api/mvp-tipps/:day/mine',async(req,res)=>{
+ const day=validDay(req.params.day),id=String(req.body?.managerId||'');
+ if(!day||!validManager(id))return res.status(400).json({error:'Ungültige Angaben.'});
+ const c=checkTippCode(id,req.body?.code,false);if(!c.ok)return res.status(c.status).json({error:c.error});
+ res.set('Cache-Control','no-store').json({ok:true,tip:readTipps()[day]?.tips?.[id]||null});
+});
+app.delete('/api/mvp-tipps/codes/:id',(req,res)=>{
+ if(!isAdmin(req)||!getToken(req))return res.status(403).json({error:'Nur der Liga-Admin kann Codes zurücksetzen.'});
+ const id=String(req.params.id);if(!validManager(id))return res.status(400).json({error:'Ungültiger Manager.'});
+ const all=readTippCodes();delete all[id];saveTippCodes(all);tippCodeFails.delete(id);
+ res.set('Cache-Control','no-store').json({ok:true});
 });
 app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{
  const day=validDay(req.params.day);

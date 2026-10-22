@@ -33,17 +33,24 @@
   if(d.status==='upcoming')return `<p class="muted">Auf diesen Spieltag wird erst getippt, wenn er als nächster dran ist.</p>`;
   return `<p class="muted">Angepfiffen am ${esc(when(d.deadline))}. Die Tipps sind gesperrt und für alle sichtbar.</p>`;
  }
+ // Ohne Anmeldung: Name wählen und mit eigenem Tipp-Code tippen (beim ersten Tipp selbst festgelegt).
+ const store={get(){try{return localStorage.getItem('kblMvpManager')||'';}catch{return '';}},set(v){try{localStorage.setItem('kblMvpManager',v);}catch{}}};
+ let codeTip=null;
  function form(d){
   if(!d.open)return '';
   if(STATIC)return `<p class="muted">In der Online-Ansicht kann man nur ansehen. Getippt wird in der Live-App.</p>`;
-  if(!d.me)return `<p class="muted">Tippen können nur Manager der KBL Legenden. Melde dich dafür mit deinem eigenen Kickbase-Konto an.</p>`;
-  const mine=d.managers.find(m=>m.id===d.me)?.tip;
-  return `<form class="mvp-form" id="mvpForm" autocomplete="off">
+  const byCode=!d.me,who=byCode?d.managers.find(m=>m.id===store.get()):null;
+  const mine=byCode?(codeTip&&codeTip.day===d.day&&codeTip.id===who?.id?codeTip.tip:null):d.managers.find(m=>m.id===d.me)?.tip;
+  const codeFields=byCode?`<label class="acc-label">Dein Name<select id="mvpWho" required><option value="">Bitte wählen …</option>${d.managers.map(m=>`<option value="${esc(m.id)}"${m.id===who?.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
+   <label class="acc-label">Tipp-Code<input id="mvpCode" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required placeholder="4–8 Ziffern"></label>`:'';
+  const hint=byCode?(who?(who.hasCode?'Gib deinen Tipp-Code ein.':'Du tippst zum ersten Mal: Den Code legst du jetzt selbst fest (4 bis 8 Ziffern). Merk ihn dir gut, du brauchst ihn für jede Änderung.'):'Wähle deinen Namen.'):'';
+  return `<form class="mvp-form" id="mvpForm" autocomplete="off">${codeFields}
    <label class="acc-label">Spieler<input id="mvpPlayer" list="mvpPlayers" placeholder="Name eintippen …" required value="${esc(mine?`${mine.player} (${mine.team})`:'')}"></label>
    <label class="acc-label">Punkte<input id="mvpPoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required value="${mine?esc(mine.points):''}"></label>
-   <button class="gold" type="submit">${mine?'Tipp ändern':'Tipp abgeben'}</button></form>
+   <button class="gold" type="submit">${mine||who?.tipped?'Tipp ändern':'Tipp abgeben'}</button>${byCode&&who?.tipped?' <button type="button" class="ghost" id="mvpShowMine">Meinen Tipp anzeigen</button>':''}</form>
    <datalist id="mvpPlayers"></datalist>
-   <p class="muted" id="mvpMsg" role="status">${mine?`Dein Tipp: <b>${esc(mine.player)}</b> (${esc(mine.team)}), ${fmt(mine.points)} Punkte · gespeichert ${esc(when(mine.updatedAt))}. Nur du siehst ihn bis zum Anpfiff.`:'Du hast noch nicht getippt.'}</p>`;
+   ${hint?`<p class="muted tiny" id="mvpHint">${esc(hint)}</p>`:''}
+   <p class="muted" id="mvpMsg" role="status">${mine?`Dein Tipp: <b>${esc(mine.player)}</b> (${esc(mine.team)}), ${fmt(mine.points)} Punkte · gespeichert ${esc(when(mine.updatedAt))}. Nur du siehst ihn bis zum Anpfiff.`:byCode?(who?.tipped?'Du hast schon getippt. Mit deinem Code kannst du ihn ansehen oder ändern.':''):'Du hast noch nicht getippt.'}</p>`;
  }
  function table(d){
   const res=d.result,byId=new Map((res?.rows||[]).map(r=>[r.managerId,r])),win=new Set(res?.winners||[]);
@@ -85,9 +92,11 @@
   if(!admin.hidden){
    const sel=$('#mvpRuleSelect'),cur=d.rule?.id||'';
    sel.innerHTML='<option value="" disabled>Bitte wählen …</option>'+d.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.title)}</option>`).join('')+'<option value="eigene">Eigene Regel …</option>';
+   const withCode=d.managers.filter(m=>m.hasCode);
+   $('#mvpCodes').innerHTML=withCode.length?'<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code vergessen hat.</p>'+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
    sel.value=cur;$('#mvpRuleText').hidden=cur!=='eigene';$('#mvpRuleText').value=d.rule?.id==='eigene'?d.rule.text:'';
   }
-  if(d.open&&d.me&&!STATIC)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
+  if(d.open&&!STATIC)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
  async function loadDay(day){
   const root=$('#mvpContent');
@@ -115,11 +124,16 @@
   if(!p){msg.textContent='Bitte einen Spieler aus der Vorschlagsliste wählen.';return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
-  try{await get(`/api/mvp-tipps/${data.day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({playerId:p.id,points:pts})});await loadDay(data.day);}
+  const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
+  if($('#mvpWho')&&!who){msg.textContent='Bitte deinen Namen wählen.';btn.disabled=false;return;}
+  try{const r=await get(`/api/mvp-tipps/${data.day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({playerId:p.id,points:pts,...(who?{managerId:who,code}:{})})});
+   if(who)codeTip={day:data.day,id:who,tip:r.tip};await loadDay(data.day);
+   if(r.codeCreated){const m=$('#mvpMsg');if(m)m.insertAdjacentHTML('beforeend','<br><b>Dein Tipp-Code ist gespeichert.</b> Merk ihn dir gut.');}}
   catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
  });
  document.addEventListener('change',e=>{
   if(e.target.id==='mvpDay')loadDay(Number(e.target.value));
+  if(e.target.id==='mvpWho'){store.set(e.target.value);codeTip=null;const pl=$('#mvpPlayer')?.value,pt=$('#mvpPoints')?.value;render();if($('#mvpPlayer'))$('#mvpPlayer').value=pl||'';if($('#mvpPoints'))$('#mvpPoints').value=pt||'';}
   if(e.target.id==='mvpRuleSelect')$('#mvpRuleText').hidden=e.target.value!=='eigene';
  });
  document.addEventListener('click',async e=>{
@@ -127,6 +141,15 @@
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
    try{await get(`/api/mvp-tipps/${data.day}/rule`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:$('#mvpRuleSelect').value,text:$('#mvpRuleText').value})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
    catch(err){m.textContent='Fehler: '+err.message;}
+  }
+  if(e.target.id==='mvpShowMine'){
+   const m=$('#mvpMsg'),who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
+   try{const r=await get(`/api/mvp-tipps/${data.day}/mine`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managerId:who,code})});codeTip={day:data.day,id:who,tip:r.tip};render();}
+   catch(err){m.textContent=err.message;}
+  }
+  const rc=e.target.closest?.('[data-mvp-reset]');
+  if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
+   try{await get(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}`,{method:'DELETE'});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');
