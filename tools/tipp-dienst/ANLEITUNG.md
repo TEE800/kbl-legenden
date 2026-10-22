@@ -58,3 +58,14 @@ Nach ein paar Minuten können alle Manager im Reiter „MVP-Tipp“ tippen.
 - Die Tippregel trägst du im Bereich „Tippregel festlegen (nur Admin)“ mit deinem Admin-Code ein.
 - Nach dem Anpfiff holt GitHub die Tipps ab (beim nächsten Lauf während der Spiele). Nach dem Spieltag zeigt die Seite den Gewinner-Vorschlag.
 - Kosten: keine. Der kostenlose Tarif reicht für die Liga bei Weitem.
+
+## Später: Änderungen am Tippdienst automatisch einspielen (einmalig, ca. 5 Minuten)
+Ohne diesen Schritt muss `worker.js` nach einer Änderung von Hand neu in den Cloudflare-Editor kopiert werden.
+1. Im Cloudflare-Dashboard oben rechts auf das Personen-Symbol → **Profile** → **API Tokens** → **Create Token**.
+2. Bei **Edit Cloudflare Workers** auf **Use template** klicken.
+3. Unten **Continue to summary** → **Create Token**. Den angezeigten Schlüssel kopieren (er wird nur einmal gezeigt).
+4. Deine **Account ID**: im Dashboard links auf **Workers & Pages**, rechts steht „Account ID“ → kopieren.
+5. Öffne https://github.com/TEE800/kbl-legenden/settings/secrets/actions → **New repository secret**:
+   - Name `CLOUDFLARE_API_TOKEN`, Wert: der Schlüssel aus Schritt 3
+   - Nochmal: Name `CLOUDFLARE_ACCOUNT_ID`, Wert: die Account ID aus Schritt 4
+Ab dann spielt GitHub jede Änderung am Tippdienst selbst ein.

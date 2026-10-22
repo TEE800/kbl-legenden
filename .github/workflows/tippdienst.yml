@@ -1,0 +1,31 @@
+name: Tippdienst einspielen
+# Spielt tools/tipp-dienst/worker.js automatisch bei Cloudflare ein, sobald er sich auf main aendert.
+# Braucht die Repository-Secrets CLOUDFLARE_API_TOKEN und CLOUDFLARE_ACCOUNT_ID (Anleitung: tools/tipp-dienst/ANLEITUNG.md); ohne sie wird nichts getan.
+on:
+  push:
+    branches: [main]
+    paths: ['tools/tipp-dienst/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - uses: actions/setup-node@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          node-version: 22
+      - name: Einspielen
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        working-directory: tools/tipp-dienst
+        run: npx --yes wrangler@4 deploy
+      - name: Kein Schluessel hinterlegt
+        if: env.CLOUDFLARE_API_TOKEN == ''
+        run: echo "CLOUDFLARE_API_TOKEN fehlt, worker.js bitte von Hand im Cloudflare-Editor einfuegen."
