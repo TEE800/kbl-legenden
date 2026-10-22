@@ -24,7 +24,8 @@
   const dl=$('#mvpPlayers');if(dl)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');
  }
  function ruleBox(d){
-  const src=d.rule.id==='eigene'?'eigene Regel vom Admin':d.rule.auto?'reihum dran':'vom Admin festgelegt';
+  if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p></div>`;
+  const src=d.rule.id==='eigene'?'eigene Regel':'Vorlage';
   return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><strong>${esc(d.rule.title)}</strong><p>${esc(d.rule.text)}</p><small class="muted">${src}</small></div>`;
  }
  function deadline(d){
@@ -46,7 +47,7 @@
  }
  function table(d){
   const res=d.result,byId=new Map((res?.rows||[]).map(r=>[r.managerId,r])),win=new Set(res?.winners||[]);
-  const progn=d.rule.id==='prognose',showRes=!!res?.rows?.length;
+  const progn=d.rule?.id==='prognose',showRes=!!res?.rows?.length;
   const rows=[...d.managers].sort((a,b)=>{
    if(showRes){const A=byId.get(a.id),B=byId.get(b.id);const wa=win.has(a.id)?0:1,wb=win.has(b.id)?0:1;if(wa!==wb)return wa-wb;const da=A?.diff??1e9,db=B?.diff??1e9;if(da!==db)return da-db;}
    return (b.tipped-a.tipped)||a.name.localeCompare(b.name,'de');
@@ -79,12 +80,12 @@
   $('#mvpMeta').textContent=d.open?`Spieltag ${d.day} · Tipps offen`:d.status==='finished'?`Spieltag ${d.day} · beendet`:`Spieltag ${d.day} · ${d.status==='live'?'läuft':'gesperrt'}`;
   root.className='';
   root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+table(d);
-  $('#mvpRules').innerHTML=(d.rules||[]).map((r,i)=>`<p><b>${esc(r.title)}</b>${r.id===d.rule.id?' <span class="muted">(gilt an Spieltag '+d.day+')</span>':''}<br>${esc(r.text)}</p>`).join('')+'<p class="muted tiny">Reihum: Spieltag 1 Regel 1, Spieltag 2 Regel 2 und so weiter. Bei Gleichstand gewinnen alle. MVP ist der Bundesliga-Spieler mit den meisten Spieltagspunkten.</p>';
+  $('#mvpRules').innerHTML=(d.rules||[]).map((r,i)=>`<p><b>${esc(r.title)}</b>${r.id===d.rule?.id?' <span class="muted">(gilt an Spieltag '+d.day+')</span>':''}<br>${esc(r.text)}</p>`).join('')+'<p class="muted tiny">Vorlagen für die Tippregel. Der Admin legt jeden Spieltag eine fest oder schreibt eine eigene. Bei Gleichstand gewinnen alle. MVP ist der Bundesliga-Spieler mit den meisten Spieltagspunkten.</p>';
   const admin=$('#mvpAdminBox');admin.hidden=!(d.admin&&!STATIC&&d.status==='upcoming'&&!d.locked);
   if(!admin.hidden){
-   const sel=$('#mvpRuleSelect'),cur=d.rule.auto?'reihum':d.rule.id;
-   sel.innerHTML=`<option value="reihum">Reihum (${esc(d.rules[(d.day-1)%d.rules.length].title)})</option>`+d.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.title)}</option>`).join('')+'<option value="eigene">Eigene Regel …</option>';
-   sel.value=cur;$('#mvpRuleText').hidden=cur!=='eigene';$('#mvpRuleText').value=d.rule.id==='eigene'?d.rule.text:'';
+   const sel=$('#mvpRuleSelect'),cur=d.rule?.id||'';
+   sel.innerHTML='<option value="" disabled>Bitte wählen …</option>'+d.rules.map(r=>`<option value="${esc(r.id)}">${esc(r.title)}</option>`).join('')+'<option value="eigene">Eigene Regel …</option>';
+   sel.value=cur;$('#mvpRuleText').hidden=cur!=='eigene';$('#mvpRuleText').value=d.rule?.id==='eigene'?d.rule.text:'';
   }
   if(d.open&&d.me&&!STATIC)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
@@ -129,6 +130,7 @@
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');
+   if(!data.rule)return;
    if(!confirm(`Joker-Gewinner für Spieltag ${data.day} in der BumsParade durch den Vorschlag ersetzen?`))return;
    try{await get(`/api/npc-jokers/${data.day}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rule:`${data.rule.title}: ${data.rule.text}`,winners:data.result.winners})});m.textContent='In der BumsParade eingetragen.';}
    catch(err){m.textContent='Fehler: '+err.message;}

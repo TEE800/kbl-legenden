@@ -1126,7 +1126,7 @@ app.put('/api/npc-jokers/:day',async(req,res)=>{
 });
 // MVP-Tipp (Teil von NPC Goes MVP): Jeder Manager tippt verdeckt einen Spieler und dessen Punktzahl.
 // Bis zum ersten Anstoss des Spieltags beliebig oft aenderbar. Vorher sieht niemand fremde Tipps (auch der Admin nicht), danach alle.
-// Die Tippregel wechselt je Spieltag (Reihum aus TIPP_RULES, der Admin kann bis zum Anstoss eine andere oder eigene setzen).
+// Die Tippregel legt der Admin je Spieltag bis zum Anstoss fest (Vorlage aus TIPP_RULES oder eigener Text); ohne Eintrag steht sie noch nicht fest.
 // Die Auswertung ist nur ein Vorschlag; Joker-Gewinner traegt weiter der Admin ein (NPC, kbl-npc-jokers.json).
 const TIPP_FILE=path.join(process.cwd(),'kbl-mvp-tipps.json');
 const TIPP_RULES=[
@@ -1142,8 +1142,7 @@ const TIPP_KORRIDOR=25;
 const TIPP_EXPORT=process.env.KBL_EXPORT==='1';
 function readTipps(){try{return JSON.parse(fs.readFileSync(TIPP_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
 function saveTipps(data){const tmp=TIPP_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_FILE);}
-const defaultTippRule=day=>({...TIPP_RULES[(day-1)%TIPP_RULES.length],auto:true});
-const tippRule=(rec,day)=>rec?.rule||defaultTippRule(day);
+const tippRule=rec=>rec?.rule||null;
 let tippDaysCache=null;
 async function tippMatchdays(){
  if(!tippDaysCache||Date.now()-tippDaysCache.at>2*60e3)tippDaysCache={at:Date.now(),value:await loadMatchdays()};
@@ -1171,7 +1170,8 @@ async function tippPlayerPoints(token,playerId,day){
 }
 // Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
 async function tippResult(token,day,rule,rows){
- if(!rule||!TIPP_RULES.some(r=>r.id===rule.id))return {status:'manual',message:'Eigene Tippregel: Gewinner bitte von Hand bestimmen.',rows:[],winners:[]};
+ if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
+ if(!TIPP_RULES.some(r=>r.id===rule.id))return {status:'manual',message:'Eigene Tippregel: Gewinner bitte von Hand bestimmen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
  const mvp=await loadMatchdayMvp(token,day);
  if(!mvp.players.length)return {status:'missing',message:'Das fehlt: Der MVP des Spieltags ist noch nicht bekannt.',rows:[],winners:[]};
@@ -1213,7 +1213,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
  if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
  try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token);
-  const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec,day);
+  const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec);
   const reveal=st.locked&&st.status!=='upcoming';
   const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt}}:{})};});
   let result=null;
@@ -1236,7 +1236,6 @@ app.put('/api/mvp-tipps/:day',async(req,res)=>{
   const player=(await loadAllPlayers(s.token)).players.get(playerId);
   if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
   const all=readTipps(),rec=all[day]||(all[day]={tips:{}});rec.tips=rec.tips||{};
-  if(!rec.rule)rec.rule=defaultTippRule(day);
   rec.tips[me.id]={name:me.name,playerId,player:player.name,team:player.team,points,updatedAt:new Date().toISOString()};
   saveTipps(all);
   res.set('Cache-Control','no-store').json({ok:true,tip:rec.tips[me.id]});
@@ -1249,11 +1248,11 @@ app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
  const id=String(req.body?.ruleId||''),text=String(req.body?.text||'').trim();
  const base=TIPP_RULES.find(r=>r.id===id);
- if(!base&&!(id==='eigene'&&text&&text.length<=500)&&id!=='reihum')return res.status(400).json({error:'Bitte eine Tippregel wählen oder eine eigene eintragen.'});
+ if(!base&&!(id==='eigene'&&text&&text.length<=500))return res.status(400).json({error:'Bitte eine Tippregel wählen oder eine eigene eintragen.'});
  try{const st=tippState(await tippMatchdays(),day);
   if(st.locked)return res.status(409).json({error:'Der Spieltag ist angepfiffen, die Tippregel steht fest.'});
   const all=readTipps(),rec=all[day]||(all[day]={tips:{}});
-  rec.rule=id==='reihum'?defaultTippRule(day):base?{...base}:{id:'eigene',title:'Eigene Regel',text};
+  rec.rule=base?{...base}:{id:'eigene',title:'Eigene Regel',text};
   rec.ruleUpdatedAt=new Date().toISOString();saveTipps(all);
   res.set('Cache-Control','no-store').json({ok:true,rule:rec.rule});
  }catch(e){res.status(502).json({error:e.message});}
