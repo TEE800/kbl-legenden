@@ -1600,6 +1600,6 @@ function pvQuestions(){
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
  const qs=pvQuestions();
- el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div><p class="muted tiny">Aus den abgeschlossenen Spieltagen und der BumsTabelle. Alles ohne Gewähr, Trash-Talk ausdrücklich erwünscht.</p>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
  pvTick();
 }
