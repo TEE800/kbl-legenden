@@ -445,3 +445,4 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-runner.has-face .toon-bubble{bottom:102px}.toon-runner.has-face .toon-crown{top:-60px;left:-10px}
 .toon-track{height:132px}
 .toon-runner.has-face .toon-crown{top:-46px;left:10px;transform:rotate(-12deg)}.toon-runner.has-face .toon-bubble{bottom:114px}.toon-track{height:142px}
+.toon-lane.ghost{border-style:dashed;background:transparent}.toon-lane.ghost .toon-track{opacity:.5}.toon-lane.ghost .toon-name{opacity:.85}
