@@ -147,12 +147,12 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-23T18:44:32.448Z",
+      "at": "2026-10-23T19:16:15.459Z",
       "points": null,
       "players": [],
       "checked": 468,
       "failed": 0,
-      "reliable": false,
+      "reliable": true,
       "pool": [
         "Elversberg",
         "Paderborn",
