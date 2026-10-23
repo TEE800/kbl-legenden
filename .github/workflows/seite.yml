@@ -1,7 +1,7 @@
 name: Seite aktualisieren
 on:
   schedule:
-    - cron: '*/10 * * * *'   # alle 10 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
+    - cron: '*/5 * * * *'    # alle 5 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
     - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
   push:                      # nach Programm-Aenderungen gleich neu bauen (Daten-Commits des Bots loesen nichts aus)
@@ -26,7 +26,7 @@ jobs:
       - id: gate
         name: Laeuft gerade ein Spieltag?
         run: |
-          if [ "${{ github.event.schedule }}" = "*/10 * * * *" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
+          if [ "${{ github.event.schedule }}" = "*/5 * * * *" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.aktiv == 'true'
         with:
