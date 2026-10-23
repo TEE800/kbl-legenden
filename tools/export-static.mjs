@@ -75,11 +75,13 @@ try {
   // Spieltage: im Live-Modus nur der laufende und was fehlt oder noch nicht fertig abgerechnet ist;
   // im Voll-Modus (taeglich) alle, weil Kickbase Punkte nachtraeglich korrigiert.
   const unfinished = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).ready === false; } catch { return true; } };
+  // Bankpunkte aus dem Live-Lauf einmal nach Spieltagsende endgueltig nachladen.
+  const benchLive = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).status !== 'finished'; } catch { return true; } };
   for (const d of days) {
     const urls = [`/api/ranking/${LEAGUE}?dayNumber=${d}`, `/api/rule-accounting/${d}`, `/api/points-overview/${d}`, `/api/todo-checks/${d}`,
-      `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`];
+      `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`, `/api/bench-points/${d}`];
     for (const u of urls) {
-      const needed = MODE === 'full' || d === live || !have(u) || (u.includes('/rule-accounting/') && unfinished(u));
+      const needed = MODE === 'full' || d === live || !have(u) || (u.includes('/rule-accounting/') && unfinished(u)) || (u.includes('/bench-points/') && benchLive(u));
       if (needed) await save(u);
     }
   }

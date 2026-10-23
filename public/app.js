@@ -1225,6 +1225,28 @@ function liveRanking(day){
  if(typeof pvLive==='undefined'||!pvLive||pvLive.day!==day||pvLive.error)return null;
  return (pvLive.managers||[]).filter(m=>isEligibleManager(m.name)&&m.points!=null).map(m=>({name:m.name,dayPoints:m.points})).sort((a,b)=>b.dayPoints-a.dayPoints);
 }
+// Vollpfosten des Spieltags (Kevin-Vorgabe): meiste Punkte auf der Bank (/api/bench-points/:day). benchData[day] = Antwort oder {error}.
+const benchData={},benchBusy=new Set();
+async function benchLoad(day,force=false){
+ if(!day||benchBusy.has(day)||(benchData[day]&&!force))return;
+ benchBusy.add(day);
+ try{benchData[day]=await api(`/api/bench-points/${day}`);}catch(e){benchData[day]={error:e.message};}
+ benchBusy.delete(day);try{renderCenter();}catch{}
+}
+function benchTop(day){
+ const d=benchData[day];if(!d)return {wait:true};
+ if(d.error)return {msg:`Das fehlt: Bankpunkte nicht abrufbar (${d.error}).`};
+ const ms=(d.managers||[]).filter(m=>isEligibleManager(m.name));
+ if(!ms.length)return {msg:d.message||'Keine Bankpunkte.'};
+ const top=ms[0].points;return {top,list:ms.filter(m=>m.points===top),open:ms.reduce((s,m)=>s+m.open,0)};
+}
+function benchCard(day,card){
+ const b=benchTop(day);
+ if(b.wait)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','…','Bankpunkte werden geladen');
+ if(b.msg)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','–',escapeHtml(b.msg));
+ const best=b.list[0].bench.filter(p=>p.points!=null).slice(0,3).map(p=>`${escapeHtml(p.name||'Spieler '+p.id)} ${fmt(p.points)}`).join(', ');
+ return card('🤡 VOLLPFOSTEN DES SPIELTAGS',b.list.map(m=>escapeHtml(m.name)).join(', '),`${fmt(b.top)} Punkte auf der Bank gelassen${best&&b.list.length===1?` · ${best}`:''}`);
+}
 function historyLiveInner(day){
  const leader=liveRanking(day)?.[0];
  return `<strong>● LIVE · Spieltag ${day}</strong><div>${leader?`Aktuell führend: <b>${escapeHtml(leader.name)}</b> (${fmt(leader.dayPoints)} Punkte)`:'Live-Punkte werden geladen …'} · Vorläufig, zählt nicht als Spieltagssieg.</div>`;
@@ -1240,7 +1262,7 @@ function renderCenter(){
  if(live){
   // Kickbase-Ranking zeigt während des Spieltags 0: darum die Live-Punkte aus /api/live-points (wie Spieltag und Liga-Tabelle).
   const lv=liveRanking(live.day),scored=lv||[];
-  html+=`<div class="center-live"><strong>● LIVE · Spieltag ${live.day}</strong>${scored.length?`<ol>${scored.slice(0,3).map(m=>`<li>${escapeHtml(m.name)} <b>${fmt(m.dayPoints)}</b></li>`).join('')}</ol><span class="muted tiny">Letzter im Moment: ${escapeHtml(scored.at(-1).name)} (${fmt(scored.at(-1).dayPoints)}). Vorläufig, zählt erst nach Spielende.</span>`:`<p class="muted">${lv?'Noch keine Punkte.':'Live-Punkte werden geladen …'}</p>`}</div>`;
+  html+=`<div class="center-live"><strong>● LIVE · Spieltag ${live.day}</strong>${scored.length?`<ol>${scored.slice(0,3).map(m=>`<li>${escapeHtml(m.name)} <b>${fmt(m.dayPoints)}</b></li>`).join('')}</ol><span class="muted tiny">Letzter im Moment: ${escapeHtml(scored.at(-1).name)} (${fmt(scored.at(-1).dayPoints)}). Vorläufig, zählt erst nach Spielende.</span>${(()=>{benchLoad(live.day);const b=benchTop(live.day);return b.list?`<span class="muted tiny" style="display:block">🤡 Vollpfosten bisher: ${b.list.map(m=>escapeHtml(m.name)).join(', ')} (${fmt(b.top)} Punkte auf der Bank)</span>`:'';})()}`:`<p class="muted">${lv?'Noch keine Punkte.':'Live-Punkte werden geladen …'}</p>`}</div>`;
  }
  const last=finished.at(-1);
  const pill=$('#centerPill');if(pill)pill.textContent=last?`Letzter abgeschlossener Spieltag: ${last.day}`:'Noch kein Spieltag abgeschlossen';
@@ -1267,10 +1289,11 @@ function renderCenter(){
    card('SPIELTAGSSIEGER',winners.length?names(winners):'–',best===null?'':`${fmt(best)} Punkte`)}${
    card('LETZTER',losers.length?names(losers):'–',worst===null?'':`${fmt(worst)} Punkte${avg!==null?` · Schnitt ${fmt(Math.round(avg))}`:''}`)}${
    card('TABELLENFÜHRER',leaders.length?escapeHtml(leaders.join(', ')):'–',leaderScore==null?'':`${fmt(leaderScore)} Punkte${second?` · ${fmt(leaderScore-second.score)} vor ${escapeHtml(second.name)}`:''}`)}${
-   moveCard}${centerExtraCards(finished,card)}</div>`;
+   moveCard}${benchCard(last.day,card)}${centerExtraCards(finished,card)}</div>`;
 
  }
  el.innerHTML=html;
+ if(last)benchLoad(last.day);
  renderAccTodo();
  if(last&&centerAccounting.day==null)centerLoadAccounting(last.day);
 }
@@ -1592,7 +1615,7 @@ async function pvLoadLive(day){
  if(pvLiveBusy||(pvLive?.day===day&&Date.now()-pvLiveAt<120e3))return;
  pvLiveBusy=true;
  try{pvLive=await api(`/api/live-points/${day}`);}catch(e){pvLive={day,error:e.message};}
- pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();try{renderRankingTable();}catch{}try{renderCenter();}catch{}try{const h=$('#historyLive');if(h)h.innerHTML=historyLiveInner(day);}catch{}
+ pvLiveAt=Date.now();pvLiveBusy=false;benchLoad(day,true);renderPreview();try{renderRankingTable();}catch{}try{renderCenter();}catch{}try{const h=$('#historyLive');if(h)h.innerHTML=historyLiveInner(day);}catch{}
 }
 setInterval(()=>{if(!document.hidden&&pvStatus?.days?.some(d=>d.status==='live'))renderPreview();},120e3);
 function pvLiveHtml(day){
