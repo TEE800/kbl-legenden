@@ -148,8 +148,20 @@
   if(!e.target.closest('[data-profile]'))return;
   history.replaceState(null,'','#profiles');showView('profiles',false);
  });
- // Beim Öffnen und Neuladen immer auf der Übersicht starten.
- if(location.hash&&location.hash!=='#overview')history.replaceState(null,'','#overview');
- showView('overview',false);
+ // Beim Neuladen im aktuellen Reiter bleiben (Kevin-Wunsch, Reiter steht in der Adresse als #…).
+ // Einklappbare Bereiche starten trotzdem zu (showView). Ohne/unbekannte Angabe: Übersicht.
+ const start=location.hash.slice(1);
+ if(start&&start!=='overview'&&(allowed.has(start)||start==='hall'||start==='history')){
+  showView(start,false);
+  // Nach allen Skripten den Reiter wie per Klick öffnen, damit er seine Daten lädt (Punkteübersicht, MVP-Tipp, BumsTabelle).
+  document.addEventListener('DOMContentLoaded',()=>{
+   const v=start==='history'?'profiles':start;
+   const link=links.find(l=>l.dataset.kblNav===v);
+   if(link)link.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  });
+ }else{
+  if(location.hash&&location.hash!=='#overview')history.replaceState(null,'','#overview');
+  showView('overview',false);
+ }
 })();
 </script><script src="challenges-view.js"></script><script src="mvp-tipp.js"></script><script src="vorschau.js"></script></body></html>
