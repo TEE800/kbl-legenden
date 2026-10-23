@@ -178,15 +178,33 @@
   else if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH DER WERTUNG':'FÜHREND'}</div>${lead.map(r=>`<div><b>${esc(r.m.name)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: getippt ${fmt(r.t.points)}${r.pts===null?'':`, Spieler hat ${fmt(r.pts)}`}${off(r,needMvp,' (',')',pool.length)}</div>`).join('')}${mvpLine}</div>
    <p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.${fin?' Den Joker vergebt ihr in der BumsParade.':' Vorläufig, bis der Spieltag beendet ist.'}</p>`;
   else h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'ERGEBNIS':'FÜHREND'}</div><div>Gerade liegt niemand nach der Wertung vorne.</div>${mvpLine}</div><p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.</p>`;
-  const picks=new Map();for(const r of rows){const k=r.t.playerId,c=picks.get(k)||{t:r.t,n:0};c.n++;picks.set(k,c);}
-  const multi=[...picks.values()].filter(c=>c.n>1).sort((a,b)=>b.n-a.n);
-  if(multi.length)h+=`<p class="mvp-picks">Mehrfach getippt: ${multi.map(c=>`<span class="pill">${esc(c.t.player)} ×${c.n}</span>`).join(' ')}</p>`;
-  h+='<div class="mvp-cards">'+rows.map(r=>`<div class="mvp-card${r.rank===1?' lead':''}${r.m.id===d.me?' me':''}">
-   <div class="mvp-card-top"><span class="mvp-rank">${r.rank??'–'}</span>${needMvp&&r.hit?'<small class="mvp-late">MVP</small>':''}<b>${esc(r.m.name)}</b>${r.t.late?' <small class="mvp-late">nachgetragen</small>':''}</div>
-   <div class="mvp-card-player">${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></div>
-   <div class="mvp-bar" title="Balken = aktuelle Punkte, Strich = getippte Punktzahl"><span style="width:${r.pts===null?0:pct(r.pts)}%"></span><i style="left:${pct(r.t.points)}%"></i></div>
-   <div class="mvp-card-nums"><span><b>${r.pts===null?'–':fmt(r.pts)}</b> Pkt. <small class="muted">${esc(STATE[r.state]||'')}</small></span><span class="muted">Tipp ${fmt(r.t.points)}${off(r,needMvp,' · ','',pool.length)}</span></div>${r.why?`<div class="mvp-why">${esc(r.why)}</div>`:''}
-  </div>`).join('')+'</div>';
+  // Rennen: ein Balken je getipptem Spieler (aktuelle Punkte), darunter alle Manager, die ihn getippt haben, mit ihrer Zahl.
+  const leadIds=new Set(lead.map(r=>r.m.id)),bestIds=new Set((mvp?.players||[]).map(p=>String(p.id)));
+  const groups=[...rows.reduce((g,r)=>{const k=String(r.t.playerId);if(!g.has(k))g.set(k,{t:r.t,pts:r.pts,state:r.state,rs:[]});g.get(k).rs.push(r);return g;},new Map()).values()];
+  groups.sort((a,b)=>(a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||b.rs.length-a.rs.length||a.t.player.localeCompare(b.t.player,'de'));
+  let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
+  const played=groups.filter(g=>g.pts!==null).length;
+  h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span><span><b>${played}</b> davon schon mit Punkten</span>${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
+  h+=`<h4 style="margin:18px 0 8px">Rennen der getippten Spieler</h4><div class="mvp-race">`+groups.map(g=>{
+   const crown=bestIds.has(String(g.t.playerId));
+   return `<div class="mvp-lane${crown?' best':''}${g.rs.some(r=>leadIds.has(r.m.id))?' lead':''}">
+    <div class="mvp-lane-head"><span class="mvp-rank">${g.place??'–'}</span><b>${crown?'👑 ':''}${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="mvp-lane-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
+    <div class="mvp-lane-bar" title="Balken = aktuelle Punkte, Striche = getippte Zahlen"><span style="width:${g.pts===null?0:pct(g.pts)}%"></span>${g.rs.map(r=>`<i style="left:${pct(r.t.points)}%" title="${esc(r.m.name)}: ${fmt(r.t.points)}"></i>`).join('')}</div>
+    <div class="mvp-lane-tips"><small class="muted">${esc(STATE[g.state]||'')} · getippt von</small> ${g.rs.slice().sort((a,b)=>a.t.points-b.t.points).map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===d.me?' me':''}" title="${r.t.late?'nachgetragen':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div>
+   </div>`;}).join('')+'</div>';
+  if(rows.some(r=>r.t.late))h+='<p class="muted tiny">* nachgetragen</p>';
+  // Zahlenstrahl: wo liegen die getippten Zahlen im Vergleich zur Punktzahl des Besten?
+  if(needMvp&&mvpPts!==null){
+   const vals=[...rows.map(r=>r.t.points),mvpPts],lo=Math.min(...vals),hi=Math.max(...vals),span=Math.max(1,hi-lo),pos=v=>(5+90*(v-lo)/span).toFixed(1);
+   const byPts=[...rows.reduce((m,r)=>{const k=r.t.points;(m.get(k)||m.set(k,[]).get(k)).push(r);return m;},new Map())].sort((a,b)=>a[0]-b[0]);
+   const rowsY=[];const dots=byPts.map(([v,rs])=>{const x=Number(pos(v));let y=0;while((rowsY[y]??-99)>x-7)y++;rowsY[y]=x;return {v,rs,x,y};});
+   h+=`<h4 style="margin:18px 0 8px">Wer liegt mit der Zahl am nächsten?</h4><div class="mvp-line" style="height:${54+Math.max(1,rowsY.length)*26}px"><div class="mvp-line-axis"></div>
+    <div class="mvp-line-target" style="left:${pos(mvpPts)}%"><span>${fmt(mvpPts)}</span></div>
+    ${dots.map(o=>`<div class="mvp-dot${o.rs.some(r=>leadIds.has(r.m.id))?' lead':''}" style="left:${o.x}%;top:${44+o.y*26}px" title="${esc(o.rs.map(r=>`${r.m.name} (${r.t.player})`).join(', '))}">${fmt(o.v)}${o.rs.length>1?`<sup>×${o.rs.length}</sup>`:''}</div>`).join('')}</div>
+    <p class="muted tiny">Goldener Strich = Punktzahl ${pool.length?'des Besten der genannten Vereine':'des MVP'}${fin?'':' gerade'}. Wer welche Zahl getippt hat, steht oben im Rennen.</p>`;
+  }
+  // Rangliste je Manager (eingeklappt, Liga-Vorgabe).
+  h+=`<details class="acc-group" style="margin-top:14px"><summary>Rangliste aller Manager</summary><div class="acc-sub"><div class="tablewrap"><table class="mvp-table"><tr><th>Pl.</th><th>Manager</th><th>Spieler</th><th class="num">Tipp</th><th class="num">Punkte</th><th>Stand</th></tr>${rows.map(r=>`<tr${r.m.id===d.me?' class="mvp-me"':''}><td>${r.rank??'–'}</td><td>${esc(r.m.name)}${r.t.late?'<sup>*</sup>':''}</td><td>${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></td><td class="num">${fmt(r.t.points)}</td><td class="num">${r.pts===null?'–':fmt(r.pts)}</td><td><small class="muted">${r.why?esc(r.why):off(r,needMvp,'','',pool.length)||esc(STATE[r.state]||'')}</small></td></tr>`).join('')}</table></div></div></details>`;
   const none=d.managers.filter(m=>!m.tipped);
   if(none.length)h+=`<p class="muted tiny">Ohne Tipp: ${none.map(m=>esc(m.name)).join(', ')}</p>`;
   return h;
