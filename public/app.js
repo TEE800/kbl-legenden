@@ -1451,7 +1451,7 @@ async function renderBumsTabelle(){
  const chips=r=>Object.entries(r).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="${escapeHtml(RN[k]||k)}: zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('');
  const top=rows.length?rows[0].count:0,rankOf=r=>1+rows.filter(x=>x.count>r.count).length;
  const hit=rows.filter(r=>r.count>0),clean=rows.filter(r=>r.count===0);
- bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count})),clean:clean.map(r=>r.name),half:from===1?'Hinrunde':'Rückrunde'};
+ bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count,rules:r.rules,out:r.out,in:r.in})),clean:clean.map(r=>r.name),half:from===1?'Hinrunde':'Rückrunde',RN};
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
@@ -1541,8 +1541,8 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
-// BumsTabelle: Beim Öffnen des Reiters fliegen einmal alle Gebumsten mit ihrer Anzahl durchs Bild (Kevin-Wunsch).
-// Wenigste zuerst, der Bumskönig zum Schluss groß in der Mitte. Antippen, Esc oder Scrollen überspringt.
+// BumsTabelle: Beim Öffnen des Reiters fliegen einzelne Statistiken durchs Bild (Kevin-Wunsch: meiste BD usw.),
+// der Bumskönig zum Schluss groß in der Mitte. Antippen, Esc oder Scrollen überspringt.
 let bumsIntroData=null,bumsIntroPending=false,bumsIntroSkipOnce=false;
 function kblBumsIntroTry(){
  if(!bumsIntroPending||!bumsIntroData)return;
@@ -1551,44 +1551,50 @@ function kblBumsIntroTry(){
  if(!bumsIntroData.hit.length||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
  kblBumsIntro(bumsIntroData);
 }
-function kblBumsIntro({hit,clean,half}){
+function kblBumsIntro({hit,clean,half,RN}){
  document.querySelector('.bums-intro')?.remove();
- const top=hit[0].count,kings=hit.filter(r=>r.count===top),rest=hit.filter(r=>r.count<top).reverse();
+ // Einzelne Statistiken: je Regel der Spitzenreiter (häufigste Regeln zuerst, max. 4), meiste abgegeben/bekommen, zum Schluss der Bumskönig.
+ const best=f=>{const m=Math.max(0,...hit.map(f));return m?{n:m,who:hit.filter(r=>f(r)===m).map(r=>r.name)}:null;};
+ const ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules||{}))ruleTot[k]=(ruleTot[k]||0)+n;
+ const cards=[];
+ for(const k of Object.keys(ruleTot).filter(k=>k!=='EZ').sort((a,b)=>ruleTot[b]-ruleTot[a]).slice(0,4)){const x=best(r=>r.rules?.[k]||0);if(x)cards.push({emo:'🎯',title:`Meiste ${k}`,sub:RN[k]||k,...x,unit:'×'});}
+ const o=best(r=>r.out||0);if(o)cards.push({emo:'📤',title:'Meiste abgegeben',...o,unit:'×'});
+ const i=best(r=>r.in||0);if(i)cards.push({emo:'📥',title:'Meiste bekommen',...i,unit:'×'});
+ const king={...best(r=>r.count)};
  const ov=document.createElement('div');ov.className='bums-intro';ov.setAttribute('aria-hidden','true');
- ov.innerHTML=`<div class="bums-intro-title">💥 Wer wurde gebumst?<small>${escapeHtml(half)}</small></div><div class="bums-intro-skip">Antippen zum Überspringen</div>`;
+ ov.innerHTML=`<div class="bums-intro-title">💥 BumsTabelle<small>${escapeHtml(half)}</small></div><div class="bums-intro-skip">Antippen zum Überspringen</div>`;
  document.body.appendChild(ov);
- let done=false;const anims=[],timers=[];
+ let done=false;const timers=[];
  const end=()=>{if(done)return;done=true;timers.forEach(clearTimeout);removeEventListener('keydown',key);removeEventListener('wheel',end);
   ov.animate([{opacity:1},{opacity:0}],{duration:350,fill:'forwards'}).onfinish=()=>ov.remove();};
  const key=e=>{if(e.key==='Escape')end();};
  ov.addEventListener('click',end);addEventListener('keydown',key);addEventListener('wheel',end,{passive:true});
  ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
  ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
- const step=Math.max(170,Math.min(380,3200/Math.max(1,rest.length))),fly=2300,lanes=[24,40,56,72,32,64,48,80];
- rest.forEach((r,i)=>{
-  const el=document.createElement('div');el.className='bums-intro-fly';
-  el.innerHTML=`<b>${escapeHtml(r.name)}</b><span>${r.count}×</span>`;
-  el.style.top=lanes[i%lanes.length]+'%';el.style.fontSize=(16+Math.round(r.count/top*16))+'px';
+ const names=w=>w.map(n=>escapeHtml(n).replaceAll('_','_<wbr>')).join('<br>');
+ const step=1300;
+ cards.forEach((c,idx)=>timers.push(setTimeout(()=>{if(done)return;
+  const el=document.createElement('div');el.className='bums-intro-card';
+  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${names(c.who)}</b><span>${c.n}${c.unit}</span>`;
   ov.appendChild(el);
-  const ltr=i%2===0,rot=(i%3-1)*4,to=ltr?'100vw':'-100%';
-  el.style.left='0';
-  anims.push(el.animate([
-   {transform:`translateX(${ltr?'-100%':'100vw'}) rotate(${-rot}deg)`},
-   {transform:`translateX(calc(50vw - 60%)) rotate(${rot}deg)`,offset:.4},
-   {transform:`translateX(calc(50vw - 40%)) rotate(${rot}deg)`,offset:.6},
-   {transform:`translateX(${to}) rotate(${-rot}deg)`}],
-   {duration:fly,delay:500+i*step,easing:'cubic-bezier(.3,.7,.7,.3)',fill:'both'}));
- });
- const kingAt=500+(rest.length?(rest.length-1)*step+fly*.75:300);
+  const ltr=idx%2===0,rot=ltr?-6:6,offL=ltr?'-100vw':'100vw',offR=ltr?'100vw':'-100vw';
+  el.animate([
+   {transform:`translate(calc(-50% + ${offL}),-50%) rotate(${rot*2}deg)`},
+   {transform:`translate(-50%,-50%) rotate(${-rot/3}deg) scale(1.06)`,offset:.22},
+   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.3},
+   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.78},
+   {transform:`translate(calc(-50% + ${offR}),-50%) rotate(${-rot*2}deg)`}],
+   {duration:step+500,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>el.remove();
+ },500+idx*step)));
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
-  k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${kings.map(r=>escapeHtml(r.name).replaceAll('_','_<wbr>')).join('<br>')}</div><div class="bums-intro-kcount">${top}× gebumst</div><small>${kings.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
+  k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
    (clean.length?`<div class="bums-intro-clean">😇 Weiße Weste: ${clean.map(n=>escapeHtml(n)).join(', ')}</div>`:'');
   ov.appendChild(k);
   k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
   k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
   timers.push(setTimeout(end,2600));
- },kingAt));
+ },500+cards.length*step+200));
 }
 
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
