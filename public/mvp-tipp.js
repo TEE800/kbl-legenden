@@ -265,7 +265,7 @@
   try{const st=overview?.days?.find(x=>x.day===day)?.status;
    let d;
    if(API&&st!=='finished'){
-    // Tipps live vom Tippdienst, Punkte der getippten Spieler aus dem Export (alle 10 Minuten während der Spiele).
+    // Tipps live vom Tippdienst, Punkte der getippten Spieler aus dem Export (alle 5 Minuten während der Spiele).
     d=await get(tippUrl(`/api/mvp-tipps/${day}`));
     if(d.reveal){const x=await get(`/api/mvp-tipps/${day}`).catch(()=>null);d.tracking=x?.tracking||null;}
    }else{
@@ -316,7 +316,7 @@
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/nachtrag`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({managerId:who,playerId:p.id,points:pts,adminCode:lateCode})});
    const name=data.managers.find(m=>m.id===who)?.name||'';
-   lateMsg=`Tipp für ${name} nachgetragen.${API?' Die Punkte des Spielers erscheinen mit dem nächsten Abgleich (während der Spiele alle 10 Minuten).':''}`;
+   lateMsg=`Tipp für ${name} nachgetragen.${API?' Die Punkte des Spielers erscheinen mit dem nächsten Abgleich (während der Spiele alle 5 Minuten).':''}`;
    await loadDay(data.day);}
   catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
  });
