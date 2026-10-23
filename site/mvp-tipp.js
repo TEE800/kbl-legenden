@@ -188,7 +188,34 @@
  }
  // Kickbase liefert Bildpfade wie "content/file/….png" (Spielerfoto pim, Wappen), Bilder liegen im Kickbase-CDN.
  const kbImg=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
- const toonPhoto=(src,cls,alt)=>src?`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('${cls==='toon-face'?'has-face':'has-crest'}');this.remove()">`:'';
+ const toonPhoto=(src,cls,alt)=>!src?'':cls==='toon-face'?`<span class="toon-face" data-src="${esc(src)}"><img alt="${esc(alt)}" referrerpolicy="no-referrer"></span>`:`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`;
+ // Kopf aus dem freigestellten Kickbase-Brustbild ausschneiden: oberste deckende Zeile bis dort, wo die Schultern
+ // deutlich breiter werden als der Kopf. Ohne Transparenz oder ohne Canvas-Zugriff (CORS) null = CSS-Ausschnitt.
+ const headCache=new Map();
+ function headCut(img){
+  const W=img.naturalWidth,H=img.naturalHeight;if(!W||!H)return null;
+  const k=Math.min(1,256/Math.max(W,H)),w=Math.round(W*k),h=Math.round(H*k);
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(img,0,0,w,h);
+  const a=x.getImageData(0,0,w,h).data,L=[],R=[];
+  for(let y=0;y<h;y++){let l=-1,r=-1;for(let i=0;i<w;i++)if(a[(y*w+i)*4+3]>40){if(l<0)l=i;r=i;}L[y]=l;R[y]=r;}
+  const top=L.findIndex(v=>v>=0);if(top<0||R[top]-L[top]>w*.9)return null;
+  let maxW=0,bottom=Math.min(h-1,top+Math.round(h*.6));
+  for(let y=top;y<=bottom;y++){const wd=L[y]<0?0:R[y]-L[y];if(y-top>h*.12&&maxW&&wd>maxW*1.2){bottom=y;break;}maxW=Math.max(maxW,wd);}
+  let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0){l=Math.min(l,L[y]);r=Math.max(r,R[y]);}
+  const bw=r-l+1,bh=bottom-top;if(bw<8||bh<8)return null;
+  const o=document.createElement('canvas');o.width=bw;o.height=bh;o.getContext('2d').drawImage(c,l,top,bw,bh,0,0,bw,bh);return o.toDataURL();
+ }
+ function fitHeads(root){
+  const apply=(el,src,cut)=>{const im=el.querySelector('img');if(!im)return;
+   im.onerror=()=>{el.closest('.toon-runner')?.classList.remove('has-face');el.remove();};
+   im.src=cut||src;el.classList.add(cut?'cut':'guess');el.closest('.toon-runner')?.classList.add('has-face');};
+  root.querySelectorAll('.toon-face[data-src]:not(.cut):not(.guess)').forEach(el=>{
+   const src=el.dataset.src;
+   if(headCache.has(src)){const v=headCache.get(src);if(v instanceof Promise)v.then(u=>apply(el,src,u));else apply(el,src,v);return;}
+   const p=new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{let u=null;try{u=headCut(im);}catch{}res(u);};im.onerror=()=>res(null);im.src=src;});
+   headCache.set(src,p);p.then(u=>{headCache.set(src,u);apply(el,src,u);});
+  });
+ }
  function toonRace(groups,leadIds,bestIds,me,best,pool){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
@@ -200,7 +227,7 @@
    const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('');
    const info=byId.get(String(g.t.playerId)),face=kbImg(info?.img),crest=kbImg(info?.teamImg);
    return `<div class="toon-lane${crown?' best':''}">
-    <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
+    <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
      ${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
     </div><div class="toon-finish">🏁</div></div>
     <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
@@ -209,7 +236,7 @@
   // Halbtransparent oben: wer gerade nach der Tippregel vorne liegt (auch wenn ihn keiner getippt hat), Kevin-Wunsch.
   const ghost=best?`<div class="toon-lane ghost">
     <div class="toon-track">${best.players.map((p,i)=>{const info=byId.get(String(p.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(p.team);
-     return `<div class="toon-runner${pos(best.points)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:calc(${pos(best.points)}% + ${i*18}px)"><div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${toonPhoto(face,'toon-face',p.name)}${toonPhoto(crest,'toon-crest',p.team)}</div></div>`;}).join('')}<div class="toon-finish">🏁</div></div>
+     return `<div class="toon-runner${pos(best.points)>50?' flip':''}${crest?' has-crest':''}" style="left:calc(${pos(best.points)}% + ${i*18}px)"><div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${toonPhoto(face,'toon-face',p.name)}${toonPhoto(crest,'toon-crest',p.team)}</div></div>`;}).join('')}<div class="toon-finish">🏁</div></div>
     <div class="toon-name"><span class="muted">${pool.length?'Gerade Bester der genannten Vereine':'Gerade MVP'}:</span> <b>${best.players.map(p=>esc(p.name)).join(', ')}</b> <small class="muted">${esc([...new Set(best.players.map(p=>p.team))].join(', '))}</small><span class="toon-pts">${fmt(best.points)}<small> Pkt.</small></span></div>
    </div>`:'';
   return `<details class="acc-group" style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub"><div class="toon-race">${ghost}${lanes}</div><p class="muted tiny">Je mehr Punkte, desto weiter rechts. Wer gerade spielt, rennt mit Ball. Minuspunkte: Der Spieler liegt auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p></div></details>`;
@@ -286,7 +313,7 @@
   root.className='';
   // Beim automatischen Neuladen (alle 2 Min.) bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]>summary')].map(x=>x.textContent));
-  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';
+  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';fitHeads(root);
   root.querySelectorAll('details.acc-group>summary').forEach(x=>{if(wasOpen.has(x.textContent))x.parentElement.open=true;});
   if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
