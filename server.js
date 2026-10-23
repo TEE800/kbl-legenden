@@ -68,7 +68,9 @@ function getToken(req) {
 setInterval(() => { for (const [sid, s] of sessions) if (!sessionValid(s)) sessions.delete(sid); }, 30 * 60 * 1000).unref();
 
 async function kbFetch(path, { method = 'GET', token, body } = {}) {
-  const headers = { Accept: 'application/json' };
+  // Immer Deutsch/Deutschland mitschicken. Ohne diese Angabe (und mit Logins von GitHub-Servern in den USA)
+  // kann Kickbase das Konto auf Englisch bzw. eine andere Region umstellen (Push-Sprache, Ligen-Auswahl).
+  const headers = { Accept: 'application/json', 'Accept-Language': 'de-DE,de;q=0.9' };
   if (body) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
 
