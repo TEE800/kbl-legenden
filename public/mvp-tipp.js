@@ -284,7 +284,9 @@
    const sel=$('#mvpDay'),keep=Number(sel.value)||null;
    const days=[...overview.days].sort((a,b)=>b.day-a.day);
    sel.innerHTML=days.map(d=>`<option value="${d.day}">Spieltag ${d.day}${d.day===overview.next?' · offen':d.status==='live'?' · läuft':''}${d.tips?` (${d.tips} Tipps)`:''}</option>`).join('');
-   const pick=keep&&days.some(d=>d.day===keep)?keep:overview.next||days[0]?.day;
+   // Beim Öffnen des Reiters zuerst der laufende Spieltag (Kevin-Vorgabe), sonst die letzte Auswahl, sonst der offene.
+   const liveDay=days.find(d=>d.status==='live')?.day;
+   const pick=liveDay||(keep&&days.some(d=>d.day===keep)?keep:overview.next||days[0]?.day);
    if(pick){sel.value=String(pick);await loadDay(pick);}
    else $('#mvpContent').textContent='Kein Spieltag zum Tippen gefunden.';
   }catch(e){$('#mvpContent').className='error';$('#mvpContent').textContent='MVP-Tipps nicht abrufbar: '+e.message;}
