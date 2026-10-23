@@ -432,3 +432,16 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-track{height:118px}
 @keyframes toonWobble{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
 .toon-runner.has-face .toon-crown{top:-26px;left:-10px;transform:rotate(-25deg)}
+
+/* Spielerfoto: Kickbase-Bilder sind freigestellte Brustbilder (Kopf + Schultern im echten Trikot).
+   Darum ersetzt das Foto Kopf, Oberkörper und Arme; die gezeichneten Beine und die Hose bleiben. */
+.toon-runner.has-face .toon-head,.toon-runner.has-face .toon-shirt,.toon-runner.has-face .toon-num,.toon-runner.has-face .toon-arms{display:none}
+.toon-runner.has-face .toon-crest{display:none}
+.toon-face{top:auto;bottom:21px;left:50%;width:50px;height:auto;max-height:58px;margin-left:-25px;border:0;border-radius:0;background:none;box-shadow:none;object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45));transform-origin:50% 100%}
+.toon-runner.has-face .toon-bubble{bottom:86px}.toon-runner.has-face .toon-crown{top:-42px;left:-6px}
+.toon-track{height:116px}
+/* Wackelkopf (Kevin-Wunsch): Foto bewusst zu groß, damit man die Spieler erkennt. */
+.toon-face{width:70px;max-height:76px;margin-left:-35px;bottom:19px}
+.toon-runner.has-face .toon-bubble{bottom:102px}.toon-runner.has-face .toon-crown{top:-60px;left:-10px}
+.toon-track{height:132px}
+.toon-runner.has-face .toon-crown{top:-46px;left:10px;transform:rotate(-12deg)}.toon-runner.has-face .toon-bubble{bottom:114px}.toon-track{height:142px}
