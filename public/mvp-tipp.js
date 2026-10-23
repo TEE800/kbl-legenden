@@ -166,6 +166,46 @@
  }
  // Abstand: bei MVP-Wertungen zur MVP-Punktzahl, sonst zu den Punkten des getippten Spielers.
  const off=(r,toMvp,pre,post,pool)=>r.diff===null?'':pre+(r.diff?`${fmt(r.diff)} ${toMvp?(pool?'neben den Punkten des Besten':'neben den MVP-Punkten'):'daneben'}`:toMvp?(pool?'genau die Punkte des Besten':'genau die MVP-Punktzahl'):'genau getroffen')+post;
+
+ // Cartoon-Rennen: je getipptem Spieler ein gezeichnetes Männchen im Vereinstrikot, das nach seinen Punkten über den Platz läuft.
+ const CLUB_COLORS=[['bayern','#dc052d','#fff'],['dortmund','#fde100','#111'],['leverkusen','#e32221','#111'],['leipzig','#fff','#dd0741'],['frankfurt','#111','#e1000f'],['stuttgart','#fff','#e32219'],['freiburg','#e2001a','#111'],['gladbach','#fff','#00a651'],['wolfsburg','#65b32e','#fff'],['werder','#1d9053','#fff'],['bremen','#1d9053','#fff'],['union','#d4011d','#fff'],['hoffenheim','#1961b5','#fff'],['mainz','#c3141e','#fff'],['augsburg','#ba3733','#46714d'],['köln','#fff','#ed1c24'],['koeln','#fff','#ed1c24'],['heidenheim','#e2001a','#003b79'],['hamburg','#fff','#0a3f86'],['hsv','#fff','#0a3f86'],['pauli','#5c3a21','#fff'],['schalke','#004d9d','#fff'],['elversberg','#111','#fff'],['paderborn','#005ca9','#111'],['bochum','#005ca9','#fff'],['kiel','#0a3f86','#fff'],['darmstadt','#004e9f','#fff'],['berlin','#005ca9','#fff']];
+ function clubColor(team){const t=String(team||'').toLowerCase(),c=CLUB_COLORS.find(([k])=>t.includes(k));if(c)return [c[1],c[2]];let n=0;for(const ch of t)n=(n*31+ch.charCodeAt(0))>>>0;return [`hsl(${n%360} 65% 45%)`,'#fff'];}
+ const TOON_SAY={done:['Feierabend!','Ab unter die Dusche.','Das war\'s für mich.'],live:['Ich renne!','Gib mir den Ball!','Noch nicht müde!','Hopp hopp hopp!'],open:['Ich wärme mich noch auf …','Wann geht\'s los?','Schnürsenkel binden …'],wait:['Moment …'],error:['Wo bin ich?']};
+ function toon(g,shirt,trim,mood,num){
+  const mouth=mood==='sad'?'M15 17 Q20 13 25 17':mood==='wow'?'M18 15 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0':'M15 14 Q20 19 25 14';
+  return `<svg class="toon-fig" viewBox="0 0 40 60" aria-hidden="true">
+   <g class="toon-legs"><path class="toon-leg l" d="M17 42 L13 55" /><path class="toon-leg r" d="M23 42 L27 55" /></g>
+   <rect x="13" y="37" width="14" height="7" rx="2" fill="${trim}" stroke="#111" stroke-width="1"/>
+   <path d="M11 24 Q20 20 29 24 L28 39 L12 39 Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/>
+   <text x="20" y="35" text-anchor="middle" font-size="8" font-weight="800" fill="${trim}" stroke="#111" stroke-width=".3">${num}</text>
+   <g class="toon-arms"><path class="toon-arm l" d="M12 26 L6 33" /><path class="toon-arm r" d="M28 26 L34 31" /></g>
+   <circle cx="20" cy="12" r="10" fill="#f5c9a0" stroke="#111" stroke-width="1.2"/>
+   <path d="M10 10 Q12 1 20 2 Q29 1 30 10 Q25 6 20 7 Q14 6 10 10Z" fill="#3b2a1a"/>
+   <circle cx="16" cy="11" r="2.6" fill="#fff" stroke="#111" stroke-width=".6"/><circle cx="24" cy="11" r="2.6" fill="#fff" stroke="#111" stroke-width=".6"/>
+   <circle cx="16.8" cy="11.4" r="1.2" fill="#111"/><circle cx="24.8" cy="11.4" r="1.2" fill="#111"/>
+   <path d="${mouth}" fill="${mood==='wow'?'#7a2a2a':'none'}" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
+   ${mood==='sad'?'<path d="M28 9 q1 3 0 4" stroke="#6ec3ff" stroke-width="1.5" fill="none"/>':''}
+  </svg>`;
+ }
+ function toonRace(groups,leadIds,bestIds,me){
+  if(!groups.length)return '';
+  const vals=groups.map(g=>g.pts??0),lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
+  const pos=v=>(4+76*((v??0)-lo)/span).toFixed(1);
+  const lanes=groups.map((g,i)=>{
+   const [shirt,trim]=clubColor(g.t.team),crown=bestIds.has(String(g.t.playerId)),first=g.place===1&&g.pts!==null;
+   const mood=g.pts!==null&&g.pts<0?'sad':first?'wow':'happy',run=g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':g.pts!==null&&g.pts<0?' fall':'';
+   const lines=g.pts!==null&&g.pts<0?['Autsch!','Ich will nach Hause.','Wer hat mich aufgestellt?']:first&&g.pts!==null?['Fangt mich doch!','Ich bin der Größte!','Wer will noch mal?']:TOON_SAY[g.state]||TOON_SAY.wait;
+   const say=lines[(String(g.t.playerId).length+i)%lines.length];
+   const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span>`).join('');
+   return `<div class="toon-lane${crown?' best':''}">
+    <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}" style="left:${pos(g.pts)}%">
+     <div class="toon-bubble">${esc(say)}</div>${crown?'<div class="toon-crown">👑</div>':''}${toon(g,shirt,trim,mood,g.place??'?')}${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
+    </div><div class="toon-finish">🏁</div></div>
+    <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
+    <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${fans}</div>
+   </div>`;}).join('');
+  return `<details class="acc-group" style="margin-top:14px"><summary>Cartoon-Rennen der getippten Spieler</summary><div class="acc-sub"><div class="toon-race">${lanes}</div><p class="muted tiny">Je mehr Punkte, desto weiter rechts. Wer gerade spielt, rennt mit Ball. Minuspunkte: Der Spieler liegt auf der Nase.</p></div></details>`;
+ }
  function allTips(d){
   if(!d.reveal)return '';
   const {rows,lead,kind,auto,ready,needMvp,mvp,mvpPts,pool}=standings(d);if(!rows.length)return '';
@@ -192,6 +232,7 @@
     <div class="mvp-lane-bar" title="Balken = aktuelle Punkte, Striche = getippte Zahlen"><span style="width:${g.pts===null?0:pct(g.pts)}%"></span>${g.rs.map(r=>`<i style="left:${pct(r.t.points)}%" title="${esc(r.m.name)}: ${fmt(r.t.points)}"></i>`).join('')}</div>
     <div class="mvp-lane-tips"><small class="muted">${esc(STATE[g.state]||'')} · getippt von</small> ${g.rs.slice().sort((a,b)=>a.t.points-b.t.points).map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===d.me?' me':''}" title="${r.t.late?'nachgetragen':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div>
    </div>`;}).join('')+'</div>'+(rows.some(r=>r.t.late)?'<p class="muted tiny">* nachgetragen</p>':'')+'</div></details>';
+  h+=toonRace(groups,leadIds,bestIds,d.me);
   // Zahlenstrahl: wo liegen die getippten Zahlen im Vergleich zur Punktzahl des Besten?
   if(needMvp&&mvpPts!==null){
    const vals=[...rows.map(r=>r.t.points),mvpPts],lo=Math.min(...vals),hi=Math.max(...vals),span=Math.max(1,hi-lo),pos=v=>(5+90*(v-lo)/span).toFixed(1);

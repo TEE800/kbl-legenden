@@ -390,3 +390,30 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .live-badge{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:5px;background:#c0392b;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;vertical-align:middle;animation:livePulse 1.6s ease-in-out infinite}
 @keyframes livePulse{50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.live-badge{animation:none}}
+
+/* Cartoon-Rennen im MVP-Tipp */
+.toon-race{display:grid;gap:10px}
+.toon-lane{border:1px solid var(--line);border-radius:10px;padding:8px 10px 10px;background:var(--surface-2);display:grid;gap:6px}
+.toon-lane.best{border-color:var(--gold);box-shadow:0 0 16px rgba(235,199,104,.15)}
+.toon-track{position:relative;height:96px;border-radius:8px;overflow:hidden;background:repeating-linear-gradient(90deg,#2f7d3a 0 28px,#348a40 28px 56px);border:2px solid rgba(255,255,255,.25)}
+.toon-track::after{content:"";position:absolute;left:0;right:0;bottom:12px;border-top:2px dashed rgba(255,255,255,.35)}
+.toon-finish{position:absolute;right:4px;bottom:14px;font-size:20px}
+.toon-runner{position:absolute;bottom:4px;width:44px;margin-left:-4px;transition:left 1.2s cubic-bezier(.3,1.4,.6,1);z-index:1}
+.toon-fig{width:40px;height:60px;display:block;overflow:visible}
+.toon-leg,.toon-arm{stroke:#111;stroke-width:3.2;stroke-linecap:round;fill:none}
+.toon-leg{stroke:#f5c9a0;filter:drop-shadow(0 0 .6px #111)}.toon-arm{stroke:#f5c9a0;filter:drop-shadow(0 0 .6px #111)}
+.toon-runner.run .toon-leg.l,.toon-runner.run .toon-arm.r{transform-origin:20px 42px;animation:toonSwing .38s ease-in-out infinite alternate}
+.toon-runner.run .toon-leg.r,.toon-runner.run .toon-arm.l{transform-origin:20px 42px;animation:toonSwing .38s ease-in-out infinite alternate-reverse}
+.toon-runner.run .toon-fig{animation:toonBob .19s ease-in-out infinite alternate}
+.toon-runner.idle .toon-fig{animation:toonHop 1.4s ease-in-out infinite}
+.toon-runner.fall .toon-fig{transform:rotate(-80deg) translate(-14px,6px)}
+.toon-ball{position:absolute;right:-12px;bottom:0;font-size:13px;animation:toonRoll .5s linear infinite}
+.toon-crown{position:absolute;left:12px;top:-14px;font-size:16px;z-index:2}
+.toon-bubble{position:absolute;bottom:64px;left:50%;transform:translateX(-30%);background:#fff;color:#111;font-size:11px;font-weight:700;border-radius:10px;padding:3px 8px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.toon-bubble::after{content:"";position:absolute;left:24%;bottom:-5px;border:5px solid transparent;border-top-color:#fff;border-bottom:0}
+.toon-name{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.toon-pts{margin-left:auto;font-size:20px;font-weight:800;color:var(--gold)}.toon-pts small{font-size:12px;color:var(--muted);font-weight:600}
+@keyframes toonSwing{from{transform:rotate(-28deg)}to{transform:rotate(28deg)}}
+@keyframes toonBob{from{transform:translateY(0)}to{transform:translateY(-3px)}}
+@keyframes toonHop{0%,70%,100%{transform:translateY(0)}80%{transform:translateY(-6px)}}
+@keyframes toonRoll{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.toon-runner.flip .toon-bubble{transform:translateX(-80%)}.toon-runner.flip .toon-bubble::after{left:76%}
