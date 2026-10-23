@@ -179,15 +179,19 @@
    <path d="M11 24 Q20 20 29 24 L28 39 L12 39 Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/>
    <text x="20" y="35" text-anchor="middle" font-size="8" font-weight="800" fill="${trim}" stroke="#111" stroke-width=".3">${num}</text>
    <g class="toon-arms"><path class="toon-arm l" d="M12 26 L6 33" /><path class="toon-arm r" d="M28 26 L34 31" /></g>
-   <circle cx="20" cy="12" r="10" fill="#f5c9a0" stroke="#111" stroke-width="1.2"/>
+   <g class="toon-head"><circle cx="20" cy="12" r="10" fill="#f5c9a0" stroke="#111" stroke-width="1.2"/>
    <path d="M10 10 Q12 1 20 2 Q29 1 30 10 Q25 6 20 7 Q14 6 10 10Z" fill="#3b2a1a"/>
    <circle cx="16" cy="11" r="2.6" fill="#fff" stroke="#111" stroke-width=".6"/><circle cx="24" cy="11" r="2.6" fill="#fff" stroke="#111" stroke-width=".6"/>
    <circle cx="16.8" cy="11.4" r="1.2" fill="#111"/><circle cx="24.8" cy="11.4" r="1.2" fill="#111"/>
    <path d="${mouth}" fill="${mood==='wow'?'#7a2a2a':'none'}" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
-   ${mood==='sad'?'<path d="M28 9 q1 3 0 4" stroke="#6ec3ff" stroke-width="1.5" fill="none"/>':''}
+   ${mood==='sad'?'<path d="M28 9 q1 3 0 4" stroke="#6ec3ff" stroke-width="1.5" fill="none"/>':''}</g>
   </svg>`;
  }
+ // Kickbase liefert Bildpfade wie "content/file/….png" (Spielerfoto pim, Wappen), Bilder liegen im Kickbase-CDN.
+ const kbImg=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
+ const toonPhoto=(src,cls,alt)=>src?`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('${cls==='toon-face'?'has-face':'has-crest'}');this.remove()">`:'';
  function toonRace(groups,leadIds,bestIds,me){
+  const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
   const vals=groups.map(g=>g.pts??0),lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
   const pos=v=>(4+76*((v??0)-lo)/span).toFixed(1);
@@ -197,9 +201,10 @@
    const lines=g.pts!==null&&g.pts<0?['Autsch!','Ich will nach Hause.','Wer hat mich aufgestellt?']:first&&g.pts!==null?['Fangt mich doch!','Ich bin der Größte!','Wer will noch mal?']:TOON_SAY[g.state]||TOON_SAY.wait;
    const say=lines[(String(g.t.playerId).length+i)%lines.length];
    const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span>`).join('');
+   const info=byId.get(String(g.t.playerId)),face=kbImg(info?.img),crest=kbImg(info?.teamImg);
    return `<div class="toon-lane${crown?' best':''}">
-    <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}" style="left:${pos(g.pts)}%">
-     <div class="toon-bubble">${esc(say)}</div>${crown?'<div class="toon-crown">👑</div>':''}${toon(g,shirt,trim,mood,g.place??'?')}${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
+    <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
+     <div class="toon-bubble">${esc(say)}</div>${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
     </div><div class="toon-finish">🏁</div></div>
     <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${fans}</div>
@@ -363,6 +368,7 @@
    await loadDay(data.day);}
   catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
  });
+ document.addEventListener('toggle',e=>{if(e.target.open&&!players&&e.target.querySelector?.('.toon-race'))loadPlayers().then(()=>render()).catch(()=>{});},true);
  document.addEventListener('toggle',e=>{if(e.target.id==='mvpLate'&&e.target.open)loadPlayers().catch(err=>{const m=$('#mvpLateMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+err.message;});},true);
  document.addEventListener('change',e=>{
   if(e.target.id==='mvpLateWho'){const t=data?.managers.find(m=>m.id===e.target.value)?.tip;$('#mvpLatePlayer').value=t?`${t.player} (${t.team})`:'';$('#mvpLatePoints').value=t?t.points:'';}
