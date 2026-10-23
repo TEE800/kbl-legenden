@@ -1155,7 +1155,24 @@ const TIPP_WERTUNG=[
  {id:'keine',title:'Keine automatische Wertung'}
 ];
 const TIPP_MVP_KINDS=new Set(['volltreffer','zahl','name','drunter','korridor']);
-const tippKind=rule=>rule?.wertung||(TIPP_RULES.some(r=>r.id===rule?.id)?rule.id:null);
+// Ohne eingestellte Wertung erkennt die App sie aus dem Regeltext (Stichwoerter, gleiche Funktion in public/mvp-tipp.js). Nicht erkannt = keine Wertung.
+function detectWertung(text){
+ const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+ if(!t.trim())return null;
+ const pts=/punkt|zahl/.test(t);
+ if(/mvp/.test(t)){
+  if(/korridor/.test(t))return 'korridor';
+  if(/(nicht|ohne|kein) *(drueber|darueber|ueber)|drunter|darunter|ueberbiet/.test(t))return 'drunter';
+  if(pts&&/(spieler|name) *(ist|sind)? *egal|egal,? welche|nur die (punkt)?zahl/.test(t))return 'zahl';
+  if(/punkt\w* *(zaehl\w*|ist|sind) *(nicht|egal)|ohne punkt/.test(t))return 'name';
+  if(/(punktzahl|punkte\w*) des mvp|mvp-punkt/.test(t)&&!/richtig\w* *(mvp|spieler)|mvp richtig/.test(t))return 'zahl';
+  return pts?'volltreffer':'name';
+ }
+ if(/meiste\w* punkte/.test(t))return 'spieler';
+ if(/(eigen|getippt|seine|ihre)\w* *spieler/.test(t)&&/genau|naechst|nah/.test(t))return 'prognose';
+ return null;
+}
+const tippKind=rule=>rule?.wertung||(TIPP_RULES.some(r=>r.id===rule?.id)?rule.id:detectWertung(rule?.text));
 // Export fuer die Online-Seite: nie den eigenen Tipp des Dienst-Kontos vor dem Anstoss mitschreiben, keine Admin-Knoepfe.
 const TIPP_EXPORT=process.env.KBL_EXPORT==='1';
 function readTipps(){try{return JSON.parse(fs.readFileSync(TIPP_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
@@ -1363,11 +1380,12 @@ app.put('/api/mvp-tipps/:day/wertung',(req,res)=>{
  if(!getToken(req))return res.status(401).json({error:'Nicht angemeldet.'});
  if(!isAdmin(req))return res.status(403).json({error:'Nur der Liga-Admin kann die Wertung einstellen.'});
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ // Leer = automatisch aus dem Regeltext.
  const wertung=String(req.body?.wertung||'');
- if(!TIPP_WERTUNG.some(w=>w.id===wertung))return res.status(400).json({error:'Bitte eine Wertung wählen.'});
+ if(wertung&&!TIPP_WERTUNG.some(w=>w.id===wertung))return res.status(400).json({error:'Unbekannte Wertung.'});
  const all=readTipps(),rec=all[day];
  if(!rec?.rule)return res.status(409).json({error:'Bitte zuerst die Tippregel eintragen.'});
- rec.rule={...rec.rule,wertung};saveTipps(all);tippTrackCache.delete(day);
+ const {wertung:_old,...base}=rec.rule;rec.rule={...base,...(wertung?{wertung}:{})};saveTipps(all);tippTrackCache.delete(day);
  res.set('Cache-Control','no-store').json({ok:true,rule:rec.rule});
 });
 // Tipp nachtragen (nur Admin, erst nach dem Anpfiff), z. B. wenn ein Manager im Chat getippt hat.
