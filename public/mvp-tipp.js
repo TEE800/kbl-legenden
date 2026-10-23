@@ -200,7 +200,7 @@
    const mood=g.pts!==null&&g.pts<0?'sad':first?'wow':'happy',run=g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':g.pts!==null&&g.pts<0?' fall':'';
    const lines=g.pts!==null&&g.pts<0?['Autsch!','Ich will nach Hause.','Wer hat mich aufgestellt?']:first&&g.pts!==null?['Fangt mich doch!','Ich bin der Größte!','Wer will noch mal?']:TOON_SAY[g.state]||TOON_SAY.wait;
    const say=lines[(String(g.t.playerId).length+i)%lines.length];
-   const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span>`).join('');
+   const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('');
    const info=byId.get(String(g.t.playerId)),face=kbImg(info?.img),crest=kbImg(info?.teamImg);
    return `<div class="toon-lane${crown?' best':''}">
     <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
@@ -209,7 +209,7 @@
     <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${fans}</div>
    </div>`;}).join('');
-  return `<details class="acc-group" style="margin-top:14px"><summary>Cartoon-Rennen der getippten Spieler</summary><div class="acc-sub"><div class="toon-race">${lanes}</div><p class="muted tiny">Je mehr Punkte, desto weiter rechts. Wer gerade spielt, rennt mit Ball. Minuspunkte: Der Spieler liegt auf der Nase.</p></div></details>`;
+  return `<details class="acc-group" style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub"><div class="toon-race">${lanes}</div><p class="muted tiny">Je mehr Punkte, desto weiter rechts. Wer gerade spielt, rennt mit Ball. Minuspunkte: Der Spieler liegt auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p></div></details>`;
  }
  function allTips(d){
   if(!d.reveal)return '';
@@ -223,20 +223,13 @@
   else if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH DER WERTUNG':'FÜHREND'}</div>${lead.map(r=>`<div><b>${esc(r.m.name)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: getippt ${fmt(r.t.points)}${r.pts===null?'':`, Spieler hat ${fmt(r.pts)}`}${off(r,needMvp,' (',')',pool.length)}</div>`).join('')}${mvpLine}</div>
    <p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.${fin?' Den Joker vergebt ihr in der BumsParade.':' Vorläufig, bis der Spieltag beendet ist.'}</p>`;
   else h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'ERGEBNIS':'FÜHREND'}</div><div>Gerade liegt niemand nach der Wertung vorne.</div>${mvpLine}</div><p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.</p>`;
-  // Rennen: ein Balken je getipptem Spieler (aktuelle Punkte), darunter alle Manager, die ihn getippt haben, mit ihrer Zahl.
+  // Rennen: Spieler gruppiert (aktuelle Punkte), darunter alle Manager, die ihn getippt haben, mit ihrer Zahl (Cartoon-Ansicht in toonRace).
   const leadIds=new Set(lead.map(r=>r.m.id)),bestIds=new Set((mvp?.players||[]).map(p=>String(p.id)));
   const groups=[...rows.reduce((g,r)=>{const k=String(r.t.playerId);if(!g.has(k))g.set(k,{t:r.t,pts:r.pts,state:r.state,rs:[]});g.get(k).rs.push(r);return g;},new Map()).values()];
   groups.sort((a,b)=>(a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||b.rs.length-a.rs.length||a.t.player.localeCompare(b.t.player,'de'));
   let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
   const played=groups.filter(g=>g.pts!==null).length;
   h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span><span><b>${played}</b> davon schon mit Punkten</span>${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
-  h+=`<details class="acc-group" style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub"><div class="mvp-race">`+groups.map(g=>{
-   const crown=bestIds.has(String(g.t.playerId));
-   return `<div class="mvp-lane${crown?' best':''}${g.rs.some(r=>leadIds.has(r.m.id))?' lead':''}">
-    <div class="mvp-lane-head"><span class="mvp-rank">${g.place??'–'}</span><b>${crown?'👑 ':''}${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="mvp-lane-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
-    <div class="mvp-lane-bar" title="Balken = aktuelle Punkte, Striche = getippte Zahlen"><span style="width:${g.pts===null?0:pct(g.pts)}%"></span>${g.rs.map(r=>`<i style="left:${pct(r.t.points)}%" title="${esc(r.m.name)}: ${fmt(r.t.points)}"></i>`).join('')}</div>
-    <div class="mvp-lane-tips"><small class="muted">${esc(STATE[g.state]||'')} · getippt von</small> ${g.rs.slice().sort((a,b)=>a.t.points-b.t.points).map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===d.me?' me':''}" title="${r.t.late?'nachgetragen':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div>
-   </div>`;}).join('')+'</div>'+(rows.some(r=>r.t.late)?'<p class="muted tiny">* nachgetragen</p>':'')+'</div></details>';
   h+=toonRace(groups,leadIds,bestIds,d.me);
   // Zahlenstrahl: wo liegen die getippten Zahlen im Vergleich zur Punktzahl des Besten?
   if(needMvp&&mvpPts!==null){
