@@ -1361,7 +1361,16 @@ async function tippPlayerPoints(token,playerId,day){
 // state: done = Spiel beendet, live = Spiel laeuft, open = noch nicht angepfiffen oder keine Daten (points null).
 async function dayPlayerPoints(token,id,day,finished=false){
  const data=await kbFetch(`/v4/competitions/1/players/${id}/performance`,{token}),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
- if(points!==null)return {points,state:finished||Number(rec?.mdst)===2?'done':'live'};
+ if(points!==null&&finished)return {points,state:'done'};
+ // Laeuft der Spieltag noch, zaehlt nach dem Anstoss playercenter zuerst: direkt nach Abpfiff steht in performance
+ // schon mdst 2 mit 0 Punkten, die echten Punkte kommen erst spaeter (ST 7, Stuttgart-Gladbach: alle auf 0 gefallen).
+ if(points!==null){
+  const k=Date.parse(rec?.md||'');
+  if(!(Number.isFinite(k)&&k<=Date.now()))return {points,state:Number(rec?.mdst)===2?'done':'live'};
+  const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token}).catch(()=>null);
+  const q=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
+  return {points:q??points,state:Number(rec?.mdst)===2?'done':'live',...(q!==null&&q!==points?{perf:points}:{})};
+ }
  // Nicht am Status (mdst) festmachen: der wechselt waehrend des Spiels (z. B. Halbzeit) und dann fehlten die Punkte.
  // Massgeblich ist die Anstosszeit md: ist sie vorbei und fehlen die Punkte in performance, gilt playercenter.
  // Fehlt der Eintrag in performance oder dessen Anstosszeit (z. B. Pejcinovic an ST 7), entscheidet playercenter selbst (eigene Anstosszeit md).
