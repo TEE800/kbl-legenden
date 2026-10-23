@@ -387,3 +387,6 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .pvl-empty{color:var(--bad)}
 .pvl-row>p{margin:0;padding:0 12px 8px}
 @media (max-width:480px){.pvl-row summary{grid-template-columns:22px minmax(0,7rem) 1fr auto;gap:8px;padding:8px 10px}}
+.live-badge{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:5px;background:#c0392b;color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;vertical-align:middle;animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.live-badge{animation:none}}
