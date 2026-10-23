@@ -1451,6 +1451,7 @@ async function renderBumsTabelle(){
  const chips=r=>Object.entries(r).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="${escapeHtml(RN[k]||k)}: zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('');
  const top=rows.length?rows[0].count:0,rankOf=r=>1+rows.filter(x=>x.count>r.count).length;
  const hit=rows.filter(r=>r.count>0),clean=rows.filter(r=>r.count===0);
+ bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count})),clean:clean.map(r=>r.name),half:from===1?'Hinrunde':'Rückrunde'};
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
@@ -1469,6 +1470,7 @@ async function renderBumsTabelle(){
   `<div class="bums-legend">${legend}</div></details>${bumsDaysHtml(days,inHalf,RN)}${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
   `<p class="muted tiny">${inHalf.some(d=>days[d].manual)?`Von Hand nachgetragen: ST ${inHalf.filter(d=>days[d].manual).join(', ')}. `:''}${from===1?'Hinrunde':'Rückrunde'} · ${inHalf.length} von ${finished.filter(d=>d>=from&&d<=to).length} abgeschlossenen Spieltagen erfasst. Übernommen wird automatisch, sobald ein Spieltag in der BumsParade vollständig geprüft ist. Vorläufig: Ändert sich dort etwas, zieht die Tabelle nach.</p>`+
   (missing.length?`<p><button type="button" class="ghost" id="bumsFill">Fehlende Spieltage nachholen (ST ${missing.join(', ')})</button> <span class="muted tiny" id="bumsFillMsg"></span></p>`:'');
+ kblBumsIntroTry();
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('#bumsFill');if(!b)return;
@@ -1539,6 +1541,56 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
+// BumsTabelle: Beim Öffnen des Reiters fliegen einmal alle Gebumsten mit ihrer Anzahl durchs Bild (Kevin-Wunsch).
+// Wenigste zuerst, der Bumskönig zum Schluss groß in der Mitte. Antippen, Esc oder Scrollen überspringt.
+let bumsIntroData=null,bumsIntroPending=false,bumsIntroSkipOnce=false;
+function kblBumsIntroTry(){
+ if(!bumsIntroPending||!bumsIntroData)return;
+ if(!document.querySelector('.kbl-view[data-view="penalties"]')?.classList.contains('kbl-current')){bumsIntroPending=false;return;}
+ bumsIntroPending=false;
+ if(!bumsIntroData.hit.length||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
+ kblBumsIntro(bumsIntroData);
+}
+function kblBumsIntro({hit,clean,half}){
+ document.querySelector('.bums-intro')?.remove();
+ const top=hit[0].count,kings=hit.filter(r=>r.count===top),rest=hit.filter(r=>r.count<top).reverse();
+ const ov=document.createElement('div');ov.className='bums-intro';ov.setAttribute('aria-hidden','true');
+ ov.innerHTML=`<div class="bums-intro-title">💥 Wer wurde gebumst?<small>${escapeHtml(half)}</small></div><div class="bums-intro-skip">Antippen zum Überspringen</div>`;
+ document.body.appendChild(ov);
+ let done=false;const anims=[],timers=[];
+ const end=()=>{if(done)return;done=true;timers.forEach(clearTimeout);removeEventListener('keydown',key);removeEventListener('wheel',end);
+  ov.animate([{opacity:1},{opacity:0}],{duration:350,fill:'forwards'}).onfinish=()=>ov.remove();};
+ const key=e=>{if(e.key==='Escape')end();};
+ ov.addEventListener('click',end);addEventListener('keydown',key);addEventListener('wheel',end,{passive:true});
+ ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
+ ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
+ const step=Math.max(170,Math.min(380,3200/Math.max(1,rest.length))),fly=2300,lanes=[24,40,56,72,32,64,48,80];
+ rest.forEach((r,i)=>{
+  const el=document.createElement('div');el.className='bums-intro-fly';
+  el.innerHTML=`<b>${escapeHtml(r.name)}</b><span>${r.count}×</span>`;
+  el.style.top=lanes[i%lanes.length]+'%';el.style.fontSize=(16+Math.round(r.count/top*16))+'px';
+  ov.appendChild(el);
+  const ltr=i%2===0,rot=(i%3-1)*4,to=ltr?'100vw':'-100%';
+  el.style.left='0';
+  anims.push(el.animate([
+   {transform:`translateX(${ltr?'-100%':'100vw'}) rotate(${-rot}deg)`},
+   {transform:`translateX(calc(50vw - 60%)) rotate(${rot}deg)`,offset:.4},
+   {transform:`translateX(calc(50vw - 40%)) rotate(${rot}deg)`,offset:.6},
+   {transform:`translateX(${to}) rotate(${-rot}deg)`}],
+   {duration:fly,delay:500+i*step,easing:'cubic-bezier(.3,.7,.7,.3)',fill:'both'}));
+ });
+ const kingAt=500+(rest.length?(rest.length-1)*step+fly*.75:300);
+ timers.push(setTimeout(()=>{if(done)return;
+  const k=document.createElement('div');k.className='bums-intro-king';
+  k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${kings.map(r=>escapeHtml(r.name).replaceAll('_','_<wbr>')).join('<br>')}</div><div class="bums-intro-kcount">${top}× gebumst</div><small>${kings.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
+   (clean.length?`<div class="bums-intro-clean">😇 Weiße Weste: ${clean.map(n=>escapeHtml(n)).join(', ')}</div>`:'');
+  ov.appendChild(k);
+  k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
+  k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
+  timers.push(setTimeout(end,2600));
+ },kingAt));
+}
+
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
  for(const id of ['preview','overview','stats','table','rankHistory','progressPanel']){
@@ -1560,7 +1612,8 @@ window.kblCollapseView=view=>{
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
  if(view==='accounting')accTodoOpen=false;
  if(view==='profiles')profOpen.clear();
- if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
+ if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;bumsIntroPending=!bumsIntroSkipOnce;bumsIntroSkipOnce=false;setTimeout(kblBumsIntroTry,0);}
+ else document.querySelector('.bums-intro')?.remove();
 };
 
 // Managerprofil: Kachel „Bumsungen“ führt zur BumsTabelle und zeigt die Zeile des Managers.
@@ -1568,7 +1621,7 @@ function kblBumsFocus(name){const tab=$('#bumsTab');if(!tab)return false;tab.ope
  const row=[...document.querySelectorAll('#bumsTable .bums-row')].find(r=>r.dataset.bumsName===name);
  if(row){row.querySelector('details.bums-dir')?.setAttribute('open','');row.classList.add('bums-focus');row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.classList.remove('bums-focus'),3000);}
  else tab.scrollIntoView({behavior:'smooth',block:'start'});return true;}
-function kblBumsGoto(el){const n=el.dataset.bumsGoto;location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
+function kblBumsGoto(el){const n=el.dataset.bumsGoto;bumsIntroSkipOnce=location.hash!=='#penalties';location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-bums-goto]');if(t)kblBumsGoto(t);});
 document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-goto]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblBumsGoto(t);}});
 

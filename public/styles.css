@@ -446,3 +446,17 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-track{height:132px}
 .toon-runner.has-face .toon-crown{top:-46px;left:10px;transform:rotate(-12deg)}.toon-runner.has-face .toon-bubble{bottom:114px}.toon-track{height:142px}
 .toon-lane.ghost{border-style:dashed;background:transparent}.toon-lane.ghost .toon-track{opacity:.5}.toon-lane.ghost .toon-name{opacity:.85}
+/* BumsTabelle: Intro-Animation beim Öffnen des Reiters */
+.bums-intro{position:fixed;inset:0;z-index:9999;overflow:hidden;cursor:pointer;background:radial-gradient(circle at 50% 45%,rgba(43,36,40,.93),rgba(8,17,24,.96));opacity:0}
+.bums-intro-title{position:absolute;top:7%;left:0;right:0;text-align:center;font-size:clamp(24px,6vw,44px);font-weight:900;color:var(--gold-strong);text-shadow:0 3px 0 #000,0 0 24px rgba(244,215,119,.35);opacity:0}
+.bums-intro-title small{display:block;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-shadow:none;margin-top:4px}
+.bums-intro-skip{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:12px;color:var(--dim)}
+.bums-intro-fly{position:absolute;white-space:nowrap;display:flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;background:var(--shame);border:1px solid var(--shame-line);color:var(--text);box-shadow:0 6px 18px rgba(0,0,0,.45);will-change:transform}
+.bums-intro-fly b{font-weight:800}
+.bums-intro-fly span{color:var(--gold);font-weight:900}
+.bums-intro-king{position:absolute;top:54%;left:50%;width:min(88vw,460px);text-align:center;padding:22px 18px;border-radius:20px;background:var(--surface-1);border:2px solid var(--bad);box-shadow:0 0 0 6px rgba(237,139,133,.12),0 18px 50px rgba(0,0,0,.6);opacity:0}
+.bums-intro-crown{font-size:46px;line-height:1}
+.bums-intro-kname{font-size:clamp(22px,6vw,34px);font-weight:900;color:var(--shame-text);margin:6px 0;overflow-wrap:anywhere}
+.bums-intro-kcount{font-size:clamp(28px,8vw,48px);font-weight:900;color:var(--gold-strong)}
+.bums-intro-king small{display:block;color:var(--muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px;margin-top:4px}
+.bums-intro-clean{margin-top:12px;font-size:13px;color:var(--ok)}
