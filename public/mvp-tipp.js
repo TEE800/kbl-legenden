@@ -189,6 +189,8 @@
  // Kickbase liefert Bildpfade wie "content/file/….png" (Spielerfoto pim, Wappen), Bilder liegen im Kickbase-CDN.
  const kbImg=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
  const toonPhoto=(src,cls,alt)=>src?`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('${cls==='toon-face'?'has-face':'has-crest'}');this.remove()">`:'';
+ // Kurze Sprüche im Stil von Fußball-Social-Media (Kevin-Vorgabe: kein Boomer-Humor).
+ const TOON_SAY={lead:['Er cooked 🔥','Main Character','Ballon d\'Or loading …','GOAT-Modus','Unaufhaltbar'],neg:['Hat gefumbelt 💀','Das war nix','Bro … 💀','Zum Vergessen'],zero:['NPC-Leistung','War der überhaupt da?','0 Aura'],done:['GG','Job erledigt ✅','Abgeliefert'],live:['Locked in 🔒','Gleich passiert was 👀','Lädt …','Auf Betriebstemperatur'],open:['Noch im Warm-up','Kommt noch 👀','Wartet auf seinen Moment'],wait:['…'],error:['Kein Signal']};
  function toonRace(groups,leadIds,bestIds,me){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
@@ -197,11 +199,13 @@
   const lanes=groups.map((g,i)=>{
    const [shirt,trim]=clubColor(g.t.team),crown=bestIds.has(String(g.t.playerId)),first=g.place===1&&g.pts!==null;
    const mood=g.pts!==null&&g.pts<0?'sad':first?'wow':'happy',run=g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':g.pts!==null&&g.pts<0?' fall':'';
+   const pool=g.pts!==null&&g.pts<0?TOON_SAY.neg:first?TOON_SAY.lead:g.state==='done'&&!g.pts?TOON_SAY.zero:TOON_SAY[g.state]||TOON_SAY.wait;
+   const say=pool[(Number(g.t.playerId)||i)%pool.length];
    const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('');
    const info=byId.get(String(g.t.playerId)),face=kbImg(info?.img),crest=kbImg(info?.teamImg);
    return `<div class="toon-lane${crown?' best':''}">
     <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
-     ${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
+     <div class="toon-bubble">${esc(say)}</div>${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
     </div><div class="toon-finish">🏁</div></div>
     <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${fans}</div>
