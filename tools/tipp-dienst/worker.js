@@ -165,12 +165,28 @@ async function handle(req, env, cors) {
     await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
     return json({ ok: true, codeCreated: !!c.created, tip }, 200, cors);
   }
+  // Tipp nachtragen (nur Admin, erst nach dem Anpfiff). Ein eigener Tipp wird nie ueberschrieben, ein nachgetragener darf korrigiert werden.
+  if (parts[2] === 'nachtrag' && req.method === 'PUT') {
+    if (!isAdmin(env, body.adminCode)) return json({ error: 'Falscher Admin-Code.' }, 403, cors);
+    if (!st.locked || st.status === 'upcoming') return json({ error: 'Nachtragen geht erst nach dem Anpfiff. Bis dahin tippt jeder selbst.' }, 409, cors);
+    const me = managers.find(m => String(m.id) === String(body.managerId || ''));
+    if (!me) return json({ error: 'Bitte einen Manager aus der Liste wählen.' }, 400, cors);
+    const playerId = String(body.playerId || ''), points = Number(body.points);
+    if (!/^\d{1,10}$/.test(playerId) || !Number.isInteger(points) || points < -1000 || points > 2000) return json({ error: 'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.' }, 400, cors);
+    const old = await env.TIPPS.get(`tip:${day}:${me.id}`, 'json');
+    if (old && !old.late) return json({ error: `${me.name} hat selbst getippt. Ein eigener Tipp wird nicht überschrieben.` }, 409, cors);
+    const player = ((await siteJson(env, 'mvp-tipps_players.json')).players || []).find(p => String(p.id) === playerId);
+    if (!player) return json({ error: 'Spieler nicht gefunden.' }, 400, cors);
+    const tip = { name: me.name, playerId, player: player.name, team: player.team, points, late: true, updatedAt: new Date().toISOString() };
+    await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
+    return json({ ok: true, tip }, 200, cors);
+  }
   if (!parts[2] && req.method === 'GET') {
     const [tips, codes, rule] = await Promise.all([listTips(env, day), codeIds(env), env.TIPPS.get(`rule:${day}`, 'json')]);
     const reveal = st.locked && st.status !== 'upcoming';
     return json({ day, ...st, reveal, rule: rule || null, rules: info.rules || [], managers: managers.map(m => {
       const t = tips[m.id];
-      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id)), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt } } : {}) };
+      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id)), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
     }), me: null, admin: false, result: null, online: true }, 200, cors);
   }
   return json({ error: 'Nicht gefunden.' }, 404, cors);
