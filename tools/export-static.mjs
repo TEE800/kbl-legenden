@@ -63,6 +63,8 @@ try {
   const live = (status?.days || []).find(d => d.status === 'live')?.day;
 
   // Startelfen einfrieren, solange ein Spieltag laeuft (wird nie ueberschrieben).
+  // Einmalige Testabfrage waehrend des Spieltags: Woher kommen Live-Punkte? (Stammler9, Hendriks)
+  if (live) await save(`/api/live-probe?day=${live}&user=1165589&pid=8247`);
   if (live) { const r = await call('/api/lineup-snapshots/capture-frozen', { method: 'POST', body: JSON.stringify({ day: live }) }); console.log('Startelfen Spieltag', live, r.status, JSON.stringify(r.body).slice(0, 200)); }
 
   fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: false, admin: false, loggedIn: true }));

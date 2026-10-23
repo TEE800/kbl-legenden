@@ -754,6 +754,25 @@ app.get('/api/history-probe', async (req, res) => {
   res.set('Cache-Control', 'no-store').json(out);
 });
 
+// Testabfrage (nur lesend): Welche Kickbase-Quelle liefert waehrend des Spieltags Live-Punkte?
+// Beispiel: /api/live-probe?day=7&user=1165589&pid=8247 . Vergleicht Teamcenter, Ranking, performance und playercenter.
+app.get('/api/live-probe', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const day = validDay(req.query.day), user = String(req.query.user || ''), pid = String(req.query.pid || '');
+  if (!day || !/^\d{1,12}$/.test(user) || !/^\d{1,12}$/.test(pid)) return res.status(400).json({ error: 'Bitte ?day=..&user=..&pid=.. angeben.' });
+  const L = '/v4/leagues/6422780', out = { day, user, pid, at: new Date().toISOString() };
+  const cands = [`${L}/teamcenter/myeleven`, `${L}/users/${user}/teamcenter?dayNumber=${day}`, `${L}/managers/${user}/teamcenter?dayNumber=${day}`,
+    `${L}/teamcenter/${user}?dayNumber=${day}`, `${L}/live`, `${L}/ranking`, `/v4/competitions/1/playercenter/${pid}?dayNumber=${day}`];
+  for (const p of cands) {
+    try { out[p] = JSON.stringify(await kbFetch(p, { token })).slice(0, 4000); }
+    catch (e) { out[p] = { error: e.message, status: e.status || null }; }
+  }
+  try { out.performanceRecord = findDayRecord(await kbFetch(`/v4/competitions/1/players/${pid}/performance`, { token }), day) || null; }
+  catch (e) { out.performanceError = e.message; }
+  res.set('Cache-Control', 'no-store').json(out);
+});
+
 // Testabfrage nach Spielername: findet die Spieler-ID selbst und zeigt Rohdaten aus "performance" und "playercenter" (nur lesend).
 // Beispiel: /api/player-probe?name=Kane&day=6
 app.get('/api/player-probe', async (req, res) => {
