@@ -676,6 +676,21 @@ function extractEntities(json, idKeys, nameKeys) {
   }
   return best;
 }
+// Bildpfade (z. B. pim, tim: "content/file/....png") je ID aus beliebig verschachtelten Kickbase-Antworten.
+function imagesById(root, idKey) {
+  const out = new Map(), seen = new Set();
+  const walk = o => {
+    if (!o || typeof o !== 'object' || seen.has(o)) return; seen.add(o);
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    if (o[idKey] !== undefined && !out.has(String(o[idKey]))) {
+      const k = Object.keys(o).find(k => typeof o[k] === 'string' && /\.(png|jpe?g|webp|svg)$/i.test(o[k]));
+      if (k) out.set(String(o[idKey]), o[k]);
+    }
+    Object.values(o).forEach(walk);
+  };
+  walk(root);
+  return out;
+}
 let allPlayersCache = null;
 async function loadAllPlayers(token) {
   if (allPlayersCache && Date.now() - allPlayersCache.at < 10 * 60 * 1000) return allPlayersCache.value;
@@ -689,12 +704,14 @@ async function loadAllPlayersUncached(token) {
   if (!teams || teams.items.length < 10) throw new Error('Vereinsliste in der Tabelle nicht erkannt. Bitte /api/competition-probe prüfen.');
   const players = new Map();
   const failedTeams = [];
+  const teamImgs = imagesById(table, teams.idKey);
   for (const t of teams.items) {
     try {
       const prof = await kbFetch(`/v4/competitions/1/teams/${t.id}/teamprofile`, { token });
       const pl = extractEntities(prof, ['pi', 'i', 'id'], ['pn', 'n', 'ln', 'name']);
       if (!pl || !pl.items.length) { failedTeams.push(t.name || t.id); continue; }
-      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id });
+      const imgs = imagesById(prof, pl.idKey);
+      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id, img: imgs.get(p.id) || null, teamImg: teamImgs.get(t.id) || null });
     } catch { failedTeams.push(t.name || t.id); }
   }
   return { players, teamCount: teams.items.length, failedTeams, teamKey: teams.idKey };
@@ -1414,7 +1431,7 @@ async function tippResult(token,day,rule,rows){
 app.get('/api/mvp-tipps/players',async(req,res)=>{
  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  try{const all=await loadAllPlayers(token);
-  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>({id:String(id),name:p.name,team:p.team})).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>({id:String(id),name:p.name,team:p.team,...(p.img?{img:p.img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})})).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{

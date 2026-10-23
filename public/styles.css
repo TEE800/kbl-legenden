@@ -417,3 +417,18 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 @keyframes toonHop{0%,70%,100%{transform:translateY(0)}80%{transform:translateY(-6px)}}
 @keyframes toonRoll{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .toon-runner.flip .toon-bubble{transform:translateX(-80%)}.toon-runner.flip .toon-bubble::after{left:76%}
+
+/* Cartoon-Rennen: echtes Spielerfoto als Wackelkopf, Vereinswappen auf der Brust */
+.toon-body{position:relative;width:40px;height:60px}
+.toon-runner.run .toon-body{animation:toonBob .19s ease-in-out infinite alternate}.toon-runner.run .toon-fig{animation:none}
+.toon-runner.idle .toon-body{animation:toonHop 1.4s ease-in-out infinite}.toon-runner.idle .toon-fig{animation:none}
+.toon-runner.fall .toon-body{transform:rotate(-80deg) translate(-14px,6px)}.toon-runner.fall .toon-fig{transform:none}
+.toon-face{position:absolute;left:50%;top:-16px;width:38px;height:38px;margin-left:-19px;border-radius:50%;object-fit:cover;object-position:50% 15%;background:#f5c9a0;border:2px solid #111;box-shadow:0 2px 4px rgba(0,0,0,.35);z-index:1}
+.toon-runner.run .toon-face{animation:toonWobble .38s ease-in-out infinite alternate}
+.toon-runner.has-face .toon-head{display:none}
+.toon-crest{position:absolute;left:50%;top:26px;width:11px;height:11px;margin-left:-5.5px;object-fit:contain;filter:drop-shadow(0 0 1px #fff)}
+.toon-runner.has-crest .toon-fig text{display:none}
+.toon-runner.has-face .toon-bubble{bottom:80px}.toon-runner.has-face .toon-crown{top:-34px}
+.toon-track{height:118px}
+@keyframes toonWobble{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
+.toon-runner.has-face .toon-crown{top:-26px;left:-10px;transform:rotate(-25deg)}
