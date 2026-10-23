@@ -44,15 +44,27 @@ managers.forEach((m,i) => {
 let rankingDay='';
 function renderRankingTable(){
  const body=$('#ranking');if(!body)return;
- const managers=currentManagers;
+ let managers=currentManagers;
  if(!managers.length){body.innerHTML='<tr><td colspan="8">Keine auswertbaren Manager gefunden.</td></tr>';return;}
+ // Live-Tabelle (Kevin-Vorgabe): Während des Spieltags Stand nach dem letzten abgeschlossenen Spieltag plus Live-Punkte
+ // (/api/live-points, wie in der Übersicht). Kickbase schreibt die Punkte erst nach dem Spieltag ins Ranking.
+ const liveDay=pvStatus?.days?.find(d=>d.status==='live')?.day,base=liveDay&&historyData.find(h=>h.day===liveDay-1&&h.status==='finished');
+ const lp=!rankingDay&&base&&pvLive?.day===liveDay&&!pvLive.error?new Map((pvLive.managers||[]).map(x=>[x.name,x.points])):null;
+ const title=$('#tableTitle');if(title)title.innerHTML=lp?'LIGA-TABELLE <span class="live-badge">● LIVE</span>':'LIGA-TABELLE';
+ if(lp){
+  const baseOf=new Map(base.list.map(x=>[x.name,x.score]));
+  managers=managers.map(m=>{const b=baseOf.get(m.name),l=lp.get(m.name);return {...m,base:b??null,live:l??null,score:b==null||l==null?null:b+l};})
+   .sort((a,b)=>(a.score===null)-(b.score===null)||(b.score??0)-(a.score??0)).map((m,i)=>({...m,pos:i+1}));
+ }
  const finished=rankingDay?[]:historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
  const last=finished.at(-1),before=finished.at(-2);
- const now=last?rankMap(last):null,prev=before?rankMap(before):null;
- const lastPoints=new Map((last?.list||[]).map(m=>[m.name,m.dayPoints]));
+ let now=last?rankMap(last):null,prev=before?rankMap(before):null;
+ let lastPoints=new Map((last?.list||[]).map(m=>[m.name,m.dayPoints]));
+ // Live: Platzveränderung gegenüber dem Stand vor dem Spieltag, Spalte zeigt die Live-Punkte.
+ if(lp){now=new Map(managers.map(m=>[m.name,m.pos]));prev=rankMap(base);lastPoints=new Map(managers.map(m=>[m.name,m.live]));}
  const leader=managers.find(m=>m.score!==null)?.score??null;
  const lastPos=Math.max(...managers.filter(m=>m.score!==null).map(m=>m.pos));
- $('#rankingDayHead').textContent=last?`ST ${last.day}`:'SPIELTAG';
+ $('#rankingDayHead').textContent=lp?`ST ${liveDay} LIVE`:last?`ST ${last.day}`:'SPIELTAG';
  // Schnitt und Spieltagssiege über alle abgeschlossenen Spieltage (nur in der Gesamtwertung).
  const avgOf=new Map(),winsOf=new Map();
  for(const h of finished){const scored=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));const best=Math.max(...scored.map(m=>m.dayPoints));
@@ -1571,7 +1583,7 @@ async function pvLoadLive(day){
  if(pvLiveBusy||(pvLive?.day===day&&Date.now()-pvLiveAt<120e3))return;
  pvLiveBusy=true;
  try{pvLive=await api(`/api/live-points/${day}`);}catch(e){pvLive={day,error:e.message};}
- pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();
+ pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();try{renderRankingTable();}catch{}
 }
 setInterval(()=>{if(!document.hidden&&pvStatus?.days?.some(d=>d.status==='live'))renderPreview();},120e3);
 function pvLiveHtml(day){
