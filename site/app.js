@@ -1572,7 +1572,8 @@ function kblBumsIntro({hit,clean,half,RN}){
  ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
  ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
  const names=w=>w.map(n=>escapeHtml(n).replaceAll('_','_<wbr>')).join('<br>');
- const step=1300;
+ // Je Karte: 0,5 s hereinfliegen, 3 s stehen bleiben (Kevin-Vorgabe), 0,5 s hinaus.
+ const step=3600;
  cards.forEach((c,idx)=>timers.push(setTimeout(()=>{if(done)return;
   const el=document.createElement('div');el.className='bums-intro-card';
   el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${names(c.who)}</b><span>${c.n}${c.unit}</span>`;
@@ -1580,11 +1581,11 @@ function kblBumsIntro({hit,clean,half,RN}){
   const ltr=idx%2===0,rot=ltr?-6:6,offL=ltr?'-100vw':'100vw',offR=ltr?'100vw':'-100vw';
   el.animate([
    {transform:`translate(calc(-50% + ${offL}),-50%) rotate(${rot*2}deg)`},
-   {transform:`translate(-50%,-50%) rotate(${-rot/3}deg) scale(1.06)`,offset:.22},
-   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.3},
-   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.78},
+   {transform:`translate(-50%,-50%) rotate(${-rot/3}deg) scale(1.06)`,offset:.1},
+   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.14},
+   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.875},
    {transform:`translate(calc(-50% + ${offR}),-50%) rotate(${-rot*2}deg)`}],
-   {duration:step+500,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>el.remove();
+   {duration:4000,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>el.remove();
  },500+idx*step)));
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
