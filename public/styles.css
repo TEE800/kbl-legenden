@@ -432,4 +432,3 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-track{height:118px}
 @keyframes toonWobble{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
 .toon-runner.has-face .toon-crown{top:-26px;left:-10px;transform:rotate(-25deg)}
-.toon-track{height:100px}
