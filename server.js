@@ -1197,6 +1197,22 @@ async function tippPlayerPoints(token,playerId,day){
  try{const rec=findDayRecord(await kbFetch(`/v4/competitions/1/players/${playerId}/performance`,{token}),day);
   return rec&&rec.p!==undefined&&rec.p!==null&&rec.p!==''&&Number.isFinite(Number(rec.p))?Number(rec.p):null;}catch{return null;}
 }
+// Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
+// state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
+const tippTrackCache=new Map();
+async function tippTracking(token,day,tips,finished){
+ const ids=[...new Set(Object.values(tips).map(t=>String(t.playerId)))].sort(),key=ids.join(','),c=tippTrackCache.get(day);
+ if(c&&c.key===key&&Date.now()-c.at<2*60e3)return c.value;
+ const players={};
+ await Promise.all(ids.map(async id=>{
+  try{const data=await kbFetch(`/v4/competitions/1/players/${id}/performance`,{token}),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
+   players[id]={points,state:points===null?'open':finished||rec?.mdst===2?'done':'live'};}
+  catch{players[id]={points:null,state:'error'};}
+ }));
+ const value={updatedAt:new Date().toISOString(),players};
+ tippTrackCache.set(day,{at:Date.now(),key,value});
+ return value;
+}
 // Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
@@ -1247,12 +1263,14 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
  try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token),codes=readTippCodes();
   const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec);
   const reveal=st.locked&&st.status!=='upcoming';
-  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!codes[m.id],...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt}}:{})};});
+  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!codes[m.id],...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt,...(t.late?{late:true}:{})}}:{})};});
   let result=null;
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
+  let tracking=null;
+  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished');}catch{}
   res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,korridor:TIPP_KORRIDOR,managers:list,
-   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result});
+   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking});
  }catch(e){res.status(502).json({error:e.message});}
 });
 app.put('/api/mvp-tipps/:day',async(req,res)=>{
@@ -1309,6 +1327,28 @@ app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{
   rec.rule={...(base?{...base}:{id:'eigene',title:'Eigene Regel',text}),...(by?{by:{id:by.id,name:by.name}}:{})};
   rec.ruleUpdatedAt=new Date().toISOString();saveTipps(all);
   res.set('Cache-Control','no-store').json({ok:true,rule:rec.rule});
+ }catch(e){res.status(502).json({error:e.message});}
+});
+// Tipp nachtragen (nur Admin, erst nach dem Anpfiff), z. B. wenn ein Manager im Chat getippt hat.
+// Nur fuer Manager ohne eigenen Tipp; ein eigener Tipp wird nie ueberschrieben, ein nachgetragener darf korrigiert werden.
+app.put('/api/mvp-tipps/:day/nachtrag',async(req,res)=>{
+ const day=validDay(req.params.day),token=getToken(req);
+ if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
+ if(!isAdmin(req))return res.status(403).json({error:'Nur der Liga-Admin kann Tipps nachtragen.'});
+ if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ const id=String(req.body?.managerId||''),playerId=String(req.body?.playerId||''),points=Number(req.body?.points);
+ if(!/^\d{1,10}$/.test(playerId)||!Number.isInteger(points)||points<-1000||points>2000)return res.status(400).json({error:'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.'});
+ try{const st=tippState(await tippMatchdays(),day);
+  if(!st.locked||st.status==='upcoming')return res.status(409).json({error:'Nachtragen geht erst nach dem Anpfiff. Bis dahin tippt jeder selbst.'});
+  const me=(await tippManagers(token)).find(m=>m.id===id);
+  if(!me)return res.status(400).json({error:'Bitte einen Manager aus der Liste wählen.'});
+  const all=readTipps(),rec=all[day]||(all[day]={tips:{}});rec.tips=rec.tips||{};
+  if(rec.tips[id]&&!rec.tips[id].late)return res.status(409).json({error:`${me.name} hat selbst getippt. Ein eigener Tipp wird nicht überschrieben.`});
+  const player=(await loadAllPlayers(token)).players.get(playerId);
+  if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
+  rec.tips[id]={name:me.name,playerId,player:player.name,team:player.team,points,late:true,updatedAt:new Date().toISOString()};
+  saveTipps(all);tippTrackCache.delete(day);
+  res.set('Cache-Control','no-store').json({ok:true,tip:rec.tips[id]});
  }catch(e){res.status(502).json({error:e.message});}
 });
 async function finishedMatchday(day) {
