@@ -1585,9 +1585,9 @@ function pvLiveHtml(day){
   const pl=m.players.map(p=>`<li class="pvl-p pvl-${p.state}"><span>${st[p.state]||''} ${escapeHtml(p.name||'Spieler '+p.id)}${p.team?` <small class="muted">${escapeHtml(p.team)}</small>`:''}</span><b>${p.points==null?'–':fmt(p.points)}</b></li>`).join('')
    +(m.empty?`<li class="pvl-p pvl-empty"><span>${m.empty} leere${m.empty>1?'':'r'} Platz${m.empty>1?'e':''}</span><b>−${fmt(100*m.empty)}</b></li>`:'');
   return `<details class="pvl-row${lead?' pvl-lead':''}" data-pvl="${escapeHtml(m.id)}"><summary><span class="pvl-pos">${i+1}.</span><span class="pvl-name">${lead?'👑 ':''}${escapeHtml(m.name)}</span><span class="pvl-bar"><i style="width:${m.points==null?0:Math.max(0,m.points)/max*100}%"></i></span><b class="pvl-pts">${pts}</b></summary>
-   <ul class="pvl-list">${pl}</ul>${m.open?`<p class="muted tiny">${m.open} Spieler noch ohne Punkte (Spiel noch nicht angepfiffen).</p>`:''}</details>`;};
+   <ul class="pvl-list">${pl}</ul>${m.open?`<p class="muted tiny">${m.open} Spieler noch ohne Punkte (Spiel noch nicht angepfiffen oder noch nicht eingesetzt).</p>`:''}</details>`;};
  return `<div class="pv-live"><h4 class="pv-head">Live-Zwischenstand Spieltag ${day}</h4><div class="pvl-table">${ms.map(row).join('')}</div>
-  <p class="muted tiny">Summe der Live-Punkte der Startelf, minus 100 je leerem Platz. Stand ${escapeHtml(time)} Uhr. Kickbase zeigt im Ranking erst nach dem Spieltag Punkte; nach Spielende können sich Punkte noch ändern. ✓ Spiel vorbei · ● läuft · – noch nicht angepfiffen. Auf einen Manager tippen zeigt seine Spieler.</p></div>`;
+  <p class="muted tiny">Summe der Live-Punkte der Startelf, minus 100 je leerem Platz. Stand ${escapeHtml(time)} Uhr. Kickbase zeigt im Ranking erst nach dem Spieltag Punkte; nach Spielende können sich Punkte noch ändern. ✓ Spiel vorbei · ● läuft · – noch keine Punkte. Auf einen Manager tippen zeigt seine Spieler.</p></div>`;
 }
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
