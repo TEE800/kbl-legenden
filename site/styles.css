@@ -367,3 +367,23 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .mvp-card-nums{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px}.mvp-card-nums b{font-size:18px}
 #mvpLateForm #mvpLatePlayer{width:min(320px,100%)}#mvpLateForm #mvpLatePoints{width:110px}
 @media(max-width:600px){.mvp-cards{grid-template-columns:1fr}#mvpLateForm label{flex:1 1 100%}#mvpLateForm #mvpLatePlayer{width:100%}}
+/* Live-Zwischenstand in der Spieltagsvorschau */
+.pv-live{margin:14px 0 6px}
+.pvl-table{display:flex;flex-direction:column;gap:6px}
+.pvl-row{background:var(--surface-2);border:1px solid var(--line);border-radius:10px}
+.pvl-row.pvl-lead{border-color:var(--gold-dark)}
+.pvl-row summary{display:grid;grid-template-columns:28px minmax(0,9rem) 1fr auto;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;list-style:none}
+.pvl-row summary::-webkit-details-marker{display:none}
+.pvl-pos{color:var(--muted);font-size:13px}
+.pvl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.pvl-bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;min-width:30px}
+.pvl-bar i{display:block;height:100%;background:var(--gold-dark);border-radius:4px}
+.pvl-lead .pvl-bar i{background:var(--gold)}
+.pvl-pts{font-variant-numeric:tabular-nums;min-width:3.5em;text-align:right}
+.pvl-list{list-style:none;margin:0;padding:0 12px 8px;display:flex;flex-direction:column;gap:2px}
+.pvl-p{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-top:1px solid var(--line)}
+.pvl-p span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvl-open{opacity:.6}
+.pvl-empty{color:var(--bad)}
+.pvl-row>p{margin:0;padding:0 12px 8px}
+@media (max-width:480px){.pvl-row summary{grid-template-columns:22px minmax(0,7rem) 1fr auto;gap:8px;padding:8px 10px}}
