@@ -22,20 +22,41 @@
   return d?`noch ${d} T. ${h} Std.`:h?`noch ${h} Std. ${m} Min.`:`noch ${m} Min.`;
  }
  async function loadPlayers(){
-  if(players){fillPlayers();return;}
+  if(players)return;
   const d=await get('/api/mvp-tipps/players');players=d.players;
   const seen=new Map();
   for(const p of players){let l=`${p.name} (${p.team})`;const n=(seen.get(l)||0)+1;seen.set(l,n);if(n>1)l+=` #${n}`;p.label=l;playerByLabel.set(l,p);}
-  fillPlayers();
+  for(const el of document.querySelectorAll('[data-mvp-player]'))if(el===document.activeElement)suggest(el);
  }
- function fillPlayers(){
-  if(!players)return;
-  for(const dl of document.querySelectorAll('datalist[data-mvp-players]'))if(!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');
+ // Eigene Vorschlagsliste statt <datalist> (die zeigen manche Handy-Browser nicht an, z. B. Samsung Internet).
+ // Getippte Namen werden ohne Akzente und Groß-/Kleinschreibung verglichen; passt genau ein Spieler, gilt er als gewählt.
+ const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ß/g,'ss').replace(/\s+/g,' ').trim();
+ function findPlayers(q){
+  q=norm(q);if(!q||!players)return [];
+  const exact=players.filter(p=>norm(p.label)===q||norm(p.name)===q);if(exact.length)return exact;
+  const words=q.split(' '),starts=p=>norm(p.name).split(/[ -]/).some(x=>x.startsWith(words[0]));
+  const pool=poolOf(data),inPool=p=>pool.includes(p.team);
+  return players.filter(p=>{const l=norm(p.label);return words.every(w=>l.includes(w));}).sort((a,b)=>inPool(b)-inPool(a)||starts(b)-starts(a)||a.name.localeCompare(b.name,'de'));
  }
+ function pickPlayer(input){
+  const v=input.value.trim(),hit=playerByLabel.get(v);if(hit)return {p:hit};
+  const m=findPlayers(v);if(m.length===1){input.value=m[0].label;return {p:m[0]};}
+  return {error:!players?'Die Spielerliste lädt noch, bitte gleich noch einmal versuchen.':m.length?`Mehrere Spieler passen (${m.slice(0,4).map(p=>p.label).join(', ')}${m.length>4?' …':''}). Bitte einen aus der Liste unter dem Feld antippen.`:'Kein Spieler mit diesem Namen gefunden. Tippe einen Teil des Namens und tippe dann den Spieler in der Liste an.'};
+ }
+ function suggest(input){
+  const box=input.parentElement.querySelector('.mvp-suggest');if(!box)return;
+  if(!players){box.hidden=false;box.innerHTML='<div class="muted tiny">Spielerliste lädt …</div>';return;}
+  const m=playerByLabel.has(input.value.trim())?[]:findPlayers(input.value).slice(0,8);
+  box.hidden=!m.length;box.innerHTML=m.map(p=>`<button type="button" data-mvp-pick="${esc(p.label)}">${esc(p.name)} <small>${esc(p.team)}</small></button>`).join('');
+ }
+ document.addEventListener('input',e=>{if(e.target.matches?.('[data-mvp-player]')){loadPlayers().catch(()=>{});suggest(e.target);}});
+ document.addEventListener('focusout',e=>{if(e.target.matches?.('[data-mvp-player]'))setTimeout(()=>{const b=e.target.parentElement?.querySelector('.mvp-suggest');if(b&&!b.contains(document.activeElement))b.hidden=true;},200);});
+ document.addEventListener('pointerdown',e=>{const b=e.target.closest?.('[data-mvp-pick]');if(b)e.preventDefault();});
+ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-mvp-pick]');if(!b)return;const input=b.closest('.mvp-pick').querySelector('input');input.value=b.dataset.mvpPick;b.parentElement.hidden=true;});
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p></div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${esc(d.rule.by.name)}</b></small>`:''}<small class="muted mvp-wertung">Wertung: ${kindOf(d)?`<b>${esc(kindTitle(d,kindOf(d)))}</b>${kindAuto(d)?' (aus dem Regeltext erkannt)':''}`:'aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen'}</small></div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${esc(d.rule.by.name)}</b></small>`:''}<small class="muted mvp-wertung">Wertung: ${kindOf(d)?`<b>${esc(kindTitle(d,kindOf(d)))}</b>${kindAuto(d)?' (aus dem Regeltext erkannt)':''}`:'aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen'}</small>${poolOf(d).length?`<small class="muted mvp-wertung">Es zählen nur Spieler von: <b>${esc(poolOf(d).join(', '))}</b></small>`:''}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -54,10 +75,9 @@
    <label class="acc-label">Tipp-Code<input id="mvpCode" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required placeholder="4–8 Ziffern"></label>`:'';
   const hint=byCode?(who?(who.hasCode?'Gib deinen Tipp-Code ein.':'Du tippst zum ersten Mal: Den Code legst du jetzt selbst fest (4 bis 8 Ziffern). Merk ihn dir gut, du brauchst ihn für jede Änderung.'):'Wähle deinen Namen.'):'';
   return `<form class="mvp-form" id="mvpForm" autocomplete="off">${codeFields}
-   <label class="acc-label">Spieler<input id="mvpPlayer" list="mvpPlayers" placeholder="Name eintippen …" required value="${esc(mine?`${mine.player} (${mine.team})`:'')}"></label>
+   <label class="acc-label mvp-pick">Spieler<input id="mvpPlayer" data-mvp-player placeholder="Name eintippen …" autocomplete="off" required value="${esc(mine?`${mine.player} (${mine.team})`:'')}"><div class="mvp-suggest" hidden></div></label>
    <label class="acc-label">Punkte<input id="mvpPoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required value="${mine?esc(mine.points):''}"></label>
    <button class="gold" type="submit">${mine||who?.tipped?'Tipp ändern':'Tipp abgeben'}</button>${byCode&&who?.tipped?' <button type="button" class="ghost" id="mvpShowMine">Meinen Tipp anzeigen</button>':''}</form>
-   <datalist id="mvpPlayers" data-mvp-players></datalist>
    ${hint?`<p class="muted tiny" id="mvpHint">${esc(hint)}</p>`:''}
    <p class="muted" id="mvpMsg" role="status">${mine?`Dein Tipp: <b>${esc(mine.player)}</b> (${esc(mine.team)}), ${fmt(mine.points)} Punkte · gespeichert ${esc(when(mine.updatedAt))}. Nur du siehst ihn bis zum Anpfiff.`:byCode?(who?.tipped?'Du hast schon getippt. Mit deinem Code kannst du ihn ansehen oder ändern.':''):'Du hast noch nicht getippt.'}</p>`;
  }
@@ -96,18 +116,26 @@
    if(/(punktzahl|punkte\w*) des mvp|mvp-punkt/.test(t)&&!/richtig\w* *(mvp|spieler)|mvp richtig/.test(t))return 'zahl';
    return pts?'volltreffer':'name';
   }
-  if(/meiste\w* punkte/.test(t))return 'spieler';
+  // "Punktbester Spieler (der Aufsteiger)": wer den Besten tippt; nennt die Regel Vereine, zaehlen nur deren Spieler (ruleTeams).
+  if(/punktbest|beste\w* spieler|meiste\w* punkte|hoechste\w* punkt/.test(t))return 'volltreffer';
   if(/(eigen|getippt|seine|ihre)\w* *spieler/.test(t)&&/genau|naechst|nah/.test(t))return 'prognose';
   return null;
  }
  const kindOf=d=>d.rule?.wertung||(d.rule&&d.rule.id!=='eigene'?d.rule.id:detectWertung(d.rule?.text));
+ // Vereine, die der Regeltext nennt (gleiche Funktion wie in server.js). Leer = alle Spieler zählen.
+ function ruleTeams(text,teams){
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const t=n(text);
+  return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
+ }
+ const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?ruleTeams(d.rule.text,overview.teams):[]);
  const kindAuto=d=>!!d.rule&&!d.rule.wertung&&d.rule.id==='eigene';
  const kindTitle=(d,k)=>(d.wertungen||overview?.wertungen||[]).find(w=>w.id===k)?.title||k;
  const STATE={done:'Spiel vorbei',live:'Spiel läuft',open:'noch nicht gespielt',error:'nicht abrufbar',wait:'Punkte folgen'};
  const clock=s=>s?new Date(s).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
  // Rangfolge nach der Wertung des Spieltags. Während des Spieltags vorläufig (Punkte und MVP-Zwischenstand aus dem letzten Abgleich).
  function standings(d){
-  const kind=kindOf(d),tr=d.tracking?.players||{},auto=!!kind&&kind!=='keine';
+  const kind=kindOf(d),tr=d.tracking?.players||{},auto=!!kind&&kind!=='keine',pool=poolOf(d);
   const mvp=d.status==='finished'?d.result?.mvp:d.tracking?.mvp;
   const mvpIds=new Set((mvp?.players||[]).map(p=>String(p.id))),mvpPts=mvp?.players?.length&&Number.isFinite(mvp.points)?mvp.points:null;
   const needMvp=MVP_KINDS.has(kind),ready=auto&&(!needMvp||mvpPts!==null);
@@ -117,10 +145,11 @@
    let ok=ready,why='';
    if(ready){
     if(!needMvp&&pts===null){ok=false;why='noch keine Punkte';}
-    else if(['volltreffer','name','drunter','korridor'].includes(kind)&&!hit){ok=false;why='nicht der MVP';}
+    else if(['volltreffer','name','drunter','korridor'].includes(kind)&&!hit){ok=false;why=pool.length?'nicht der Beste der genannten Vereine':'nicht der MVP';}
     else if(kind==='drunter'&&m.tip.points>mvpPts){ok=false;why='zu hoch getippt';}
     else if(kind==='korridor'&&diff>KORRIDOR){ok=false;why=`mehr als ${KORRIDOR} daneben`;}
    }
+   if(ready&&pool.length&&!pool.includes(m.tip.team)){ok=false;why='nicht von den genannten Vereinen';}
    return {m,t:m.tip,pts,state:x?.state||'wait',diff,hit,ok,why};
   });
   // Schlüssel: kleiner ist besser. "Name reicht" und "Korridor": alle Treffer gleichauf.
@@ -129,20 +158,20 @@
    return (a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||a.m.name.localeCompare(b.m.name,'de');};
   rows.sort(cmp);
   let rank=0;rows.forEach((r,i)=>{const p=rows[i-1];r.rank=!r.ok?null:p&&p.ok&&String(key(p))===String(key(r))?p.rank:(rank=i+1);});
-  return {rows,lead:rows.filter(r=>r.rank===1),kind,auto,ready,needMvp,mvp,mvpPts};
+  return {rows,lead:rows.filter(r=>r.rank===1),kind,auto,ready,needMvp,mvp,mvpPts,pool};
  }
  // Abstand: bei MVP-Wertungen zur MVP-Punktzahl, sonst zu den Punkten des getippten Spielers.
- const off=(r,toMvp,pre,post)=>r.diff===null?'':pre+(r.diff?`${fmt(r.diff)} ${toMvp?'neben den MVP-Punkten':'daneben'}`:toMvp?'genau die MVP-Punktzahl':'genau getroffen')+post;
+ const off=(r,toMvp,pre,post,pool)=>r.diff===null?'':pre+(r.diff?`${fmt(r.diff)} ${toMvp?(pool?'neben den Punkten des Besten':'neben den MVP-Punkten'):'daneben'}`:toMvp?(pool?'genau die Punkte des Besten':'genau die MVP-Punktzahl'):'genau getroffen')+post;
  function allTips(d){
   if(!d.reveal)return '';
-  const {rows,lead,kind,auto,ready,needMvp,mvp,mvpPts}=standings(d);if(!rows.length)return '';
+  const {rows,lead,kind,auto,ready,needMvp,mvp,mvpPts,pool}=standings(d);if(!rows.length)return '';
   const fin=d.status==='finished',max=Math.max(1,...rows.map(r=>Math.max(r.pts??0,r.t.points)));
   const pct=v=>Math.max(0,Math.min(100,(v/max)*100)).toFixed(1);
   let h=`<h4 style="margin:22px 0 8px">Übersicht aller Tipps <small class="muted">${d.tracking?`Punkte Stand ${esc(clock(d.tracking.updatedAt))} Uhr`:'Punkte folgen'}</small></h4>`;
-  const mvpLine=needMvp&&mvp?.players?.length?`<div class="muted">MVP ${fin?'des Spieltags':'gerade'}: ${mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(mvpPts)}</b> Punkten${fin?'':` · Stand ${esc(clock(mvp.at))} Uhr${mvp.reliable===false?', nicht alle Spieler abrufbar':''}`}</div>`:'';
+  const mvpLine=needMvp&&mvp?.players?.length?`<div class="muted">${pool.length?'Bester der genannten Vereine':'MVP'} ${fin?'am Spieltag':'gerade'}: ${mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(mvpPts)}</b> Punkten${fin?'':` · Stand ${esc(clock(mvp.at))} Uhr${mvp.reliable===false?', nicht alle Spieler abrufbar':''}`}</div>`:'';
   if(!auto)h+=`<p class="muted">${kind?'Für diese Tippregel gibt es keine automatische Wertung.':'Die Wertung ließ sich aus dem Regeltext nicht erkennen. Der Admin kann sie unten wählen.'} Sortiert nach den Punkten der getippten Spieler.</p>`;
   else if(!ready)h+=`<p class="muted">Wertung: ${esc(kindTitle(d,kind))}. Der MVP-Zwischenstand fehlt noch${fin?'':', er wird während der Spiele etwa alle 30 Minuten berechnet'}.</p>`;
-  else if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH DER WERTUNG':'FÜHREND'}</div>${lead.map(r=>`<div><b>${esc(r.m.name)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: getippt ${fmt(r.t.points)}${r.pts===null?'':`, Spieler hat ${fmt(r.pts)}`}${off(r,needMvp,' (',')')}</div>`).join('')}${mvpLine}</div>
+  else if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH DER WERTUNG':'FÜHREND'}</div>${lead.map(r=>`<div><b>${esc(r.m.name)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: getippt ${fmt(r.t.points)}${r.pts===null?'':`, Spieler hat ${fmt(r.pts)}`}${off(r,needMvp,' (',')',pool.length)}</div>`).join('')}${mvpLine}</div>
    <p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.${fin?' Den Joker vergebt ihr in der BumsParade.':' Vorläufig, bis der Spieltag beendet ist.'}</p>`;
   else h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'ERGEBNIS':'FÜHREND'}</div><div>Gerade liegt niemand nach der Wertung vorne.</div>${mvpLine}</div><p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.</p>`;
   const picks=new Map();for(const r of rows){const k=r.t.playerId,c=picks.get(k)||{t:r.t,n:0};c.n++;picks.set(k,c);}
@@ -152,7 +181,7 @@
    <div class="mvp-card-top"><span class="mvp-rank">${r.rank??'–'}</span>${needMvp&&r.hit?'<small class="mvp-late">MVP</small>':''}<b>${esc(r.m.name)}</b>${r.t.late?' <small class="mvp-late">nachgetragen</small>':''}</div>
    <div class="mvp-card-player">${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></div>
    <div class="mvp-bar" title="Balken = aktuelle Punkte, Strich = getippte Punktzahl"><span style="width:${r.pts===null?0:pct(r.pts)}%"></span><i style="left:${pct(r.t.points)}%"></i></div>
-   <div class="mvp-card-nums"><span><b>${r.pts===null?'–':fmt(r.pts)}</b> Pkt. <small class="muted">${esc(STATE[r.state]||'')}</small></span><span class="muted">Tipp ${fmt(r.t.points)}${off(r,needMvp,' · ','')}</span></div>${r.why?`<div class="mvp-why">${esc(r.why)}</div>`:''}
+   <div class="mvp-card-nums"><span><b>${r.pts===null?'–':fmt(r.pts)}</b> Pkt. <small class="muted">${esc(STATE[r.state]||'')}</small></span><span class="muted">Tipp ${fmt(r.t.points)}${off(r,needMvp,' · ','',pool.length)}</span></div>${r.why?`<div class="mvp-why">${esc(r.why)}</div>`:''}
   </div>`).join('')+'</div>';
   const none=d.managers.filter(m=>!m.tipped);
   if(none.length)h+=`<p class="muted tiny">Ohne Tipp: ${none.map(m=>esc(m.name)).join(', ')}</p>`;
@@ -169,10 +198,10 @@
    ${opts.length?`<h4 style="margin:16px 0 4px">Tipp nachtragen</h4><p class="muted">Für Manager, die nicht rechtzeitig in der App getippt haben, zum Beispiel im Chat. Eigene Tipps werden nie überschrieben, nachgetragene kannst du korrigieren.</p>
    <form class="mvp-form" id="mvpLateForm" autocomplete="off">
     <label class="acc-label">Manager<select id="mvpLateWho" required><option value="">Bitte wählen …</option>${opts.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}${m.tip?.late?' (nachgetragen)':''}</option>`).join('')}</select></label>
-    <label class="acc-label">Spieler<input id="mvpLatePlayer" list="mvpLatePlayers" placeholder="Name eintippen …" required></label>
+    <label class="acc-label mvp-pick">Spieler<input id="mvpLatePlayer" data-mvp-player placeholder="Name eintippen …" autocomplete="off" required><div class="mvp-suggest" hidden></div></label>
     <label class="acc-label">Punkte<input id="mvpLatePoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required></label>
     <button class="gold" type="submit">Tipp nachtragen</button></form>
-   <datalist id="mvpLatePlayers" data-mvp-players></datalist>`:''}
+`:''}
    <p class="muted" id="mvpLateMsg" role="status">${esc(lateMsg)}</p></div></details>`;
  }
  function result(d){
@@ -204,7 +233,7 @@
    $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
    $('#mvpRuleWertung').value=d.rule?.wertung||'';
   }
-  if(d.open&&LIVE)loadPlayers().then(()=>{const dl=$('#mvpPlayers');if(dl&&!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');}).catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
+  if(d.open&&LIVE)loadPlayers().catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
  async function loadDay(day){
   const root=$('#mvpContent');
@@ -240,9 +269,11 @@
 
  document.addEventListener('submit',async e=>{
   if(e.target.id!=='mvpForm')return;e.preventDefault();
-  const msg=$('#mvpMsg'),p=playerByLabel.get($('#mvpPlayer').value.trim()),pts=Number($('#mvpPoints').value);
-  if(!p){msg.textContent='Bitte einen Spieler aus der Vorschlagsliste wählen.';return;}
+  const msg=$('#mvpMsg'),pick=pickPlayer($('#mvpPlayer')),p=pick.p,pts=Number($('#mvpPoints').value);
+  if(!p){msg.textContent=pick.error;return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
+  const pool=poolOf(data);
+  if(pool.length&&!pool.includes(p.team)&&!confirm(`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}. Trotzdem tippen?`))return;
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
   if($('#mvpWho')&&!who){msg.textContent='Bitte deinen Namen wählen.';btn.disabled=false;return;}
@@ -253,9 +284,9 @@
  });
  document.addEventListener('submit',async e=>{
   if(e.target.id!=='mvpLateForm')return;e.preventDefault();
-  const msg=$('#mvpLateMsg'),who=$('#mvpLateWho').value,p=playerByLabel.get($('#mvpLatePlayer').value.trim()),pts=Number($('#mvpLatePoints').value);
+  const msg=$('#mvpLateMsg'),who=$('#mvpLateWho').value,pick=pickPlayer($('#mvpLatePlayer')),p=pick.p,pts=Number($('#mvpLatePoints').value);
   if(!who){msg.textContent='Bitte einen Manager wählen.';return;}
-  if(!p){msg.textContent='Bitte einen Spieler aus der Vorschlagsliste wählen.';return;}
+  if(!p){msg.textContent=pick.error;return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
   if($('#mvpLateCode'))lateCode=$('#mvpLateCode').value;
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';

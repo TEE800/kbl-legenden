@@ -592,7 +592,8 @@ async function loadMatchdayMvp(token, day, { live = false } = {}) {
     day, playersChecked: ids.length, failedPlayers: failed, failedTeams: all.failedTeams,
     reliable: failed === 0 && all.failedTeams.length === 0 && scored.length > 0,
     players: top === null ? [] : scored.filter(x => x.points === top),
-    top: scored.slice(0, 5)
+    top: scored.slice(0, 5),
+    all: scored
   };
   if (value.reliable && !live) mvpCache.set(day, { at: Date.now(), value });
   return value;
@@ -1168,9 +1169,23 @@ function detectWertung(text){
   if(/(punktzahl|punkte\w*) des mvp|mvp-punkt/.test(t)&&!/richtig\w* *(mvp|spieler)|mvp richtig/.test(t))return 'zahl';
   return pts?'volltreffer':'name';
  }
- if(/meiste\w* punkte/.test(t))return 'spieler';
+ // "Punktbester Spieler (der Aufsteiger)": wer den Besten tippt; nennt die Regel Vereine, zaehlen nur deren Spieler (ruleTeams).
+ if(/punktbest|beste\w* spieler|meiste\w* punkte|hoechste\w* punkt/.test(t))return 'volltreffer';
  if(/(eigen|getippt|seine|ihre)\w* *spieler/.test(t)&&/genau|naechst|nah/.test(t))return 'prognose';
  return null;
+}
+// Vereine, die der Regeltext nennt (z. B. "von den Aufsteigern Schalke, Elversberg und Paderborn"). Leer = alle Spieler zaehlen.
+function ruleTeams(text,teams){
+ const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+ const t=n(text);
+ return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
+}
+const tippPool=async(token,rule)=>rule?.text?ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team)):[];
+// MVP innerhalb der genannten Vereine (pool), sonst der ganzen Bundesliga.
+function poolMvp(m,pool){
+ if(!pool.length)return m.players;
+ const sc=(m.all||[]).filter(p=>pool.includes(p.team));
+ return sc.length?sc.filter(p=>p.points===sc[0].points):[];
 }
 const tippKind=rule=>rule?.wertung||(TIPP_RULES.some(r=>r.id===rule?.id)?rule.id:detectWertung(rule?.text));
 // Export fuer die Online-Seite: nie den eigenen Tipp des Dienst-Kontos vor dem Anstoss mitschreiben, keine Admin-Knoepfe.
@@ -1232,8 +1247,8 @@ async function tippPlayerPoints(token,playerId,day){
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
 const tippTrackCache=new Map();
-async function tippTracking(token,day,tips,finished,kind){
- const ids=[...new Set(Object.values(tips).map(t=>String(t.playerId)))].sort(),key=ids.join(',')+'|'+kind,c=tippTrackCache.get(day);
+async function tippTracking(token,day,tips,finished,kind,pool=[]){
+ const ids=[...new Set(Object.values(tips).map(t=>String(t.playerId)))].sort(),key=ids.join(',')+'|'+kind+'|'+pool.join(','),c=tippTrackCache.get(day);
  if(c&&c.key===key&&Date.now()-c.at<2*60e3)return c.value;
  const players={};
  await Promise.all(ids.map(async id=>{
@@ -1241,13 +1256,13 @@ async function tippTracking(token,day,tips,finished,kind){
    players[id]={points,state:points===null?'open':finished||rec?.mdst===2?'done':'live'};}
   catch{players[id]={points:null,state:'error'};}
  }));
- const value={updatedAt:new Date().toISOString(),players};
+ const value={updatedAt:new Date().toISOString(),players,...(pool.length?{pool}:{})};
  // Wertungen mit MVP brauchen den MVP-Zwischenstand aller Bundesliga-Spieler: teuer, darum hoechstens alle 30 Minuten (gespeichert in kbl-mvp-tipps.json).
  if(!finished&&TIPP_MVP_KINDS.has(kind)){
   let lm=readTipps()[day]?.liveMvp;
-  if(!lm||Date.now()-Date.parse(lm.at)>30*60e3){
-   const m=await loadMatchdayMvp(token,day,{live:true});
-   lm={at:new Date().toISOString(),points:m.players.length?m.players[0].points:null,players:m.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable};
+  if(!lm||Date.now()-Date.parse(lm.at)>30*60e3||String(lm.pool||[])!==String(pool)){
+   const m=await loadMatchdayMvp(token,day,{live:true}),best=poolMvp(m,pool);
+   lm={at:new Date().toISOString(),points:best.length?best[0].points:null,players:best.map(p=>({id:String(p.id),name:p.name,team:p.team})),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable,...(pool.length?{pool}:{})};
    const all=readTipps();(all[day]||(all[day]={tips:{}})).liveMvp=lm;saveTipps(all);
   }
   value.mvp=lm;
@@ -1259,7 +1274,7 @@ async function tippTracking(token,day,tips,finished,kind){
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
- const mvp=await loadMatchdayMvp(token,day),kind=tippKind(rule);
+ const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule),mvp={...m,players:poolMvp(m,pool)};
  // Ohne eingestellte Wertung: nur den MVP zeigen, Gewinner bestimmt die Liga selbst.
  if(!kind||kind==='keine')return {status:'manual',message:kind?'Den Gewinner bestimmt ihr nach eurer Tippregel selbst.':'Für diese Tippregel ist keine Wertung eingestellt. Den Gewinner bestimmt ihr selbst.',rows:[],winners:[],
   ...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:mvp.players[0].points}}:{})};
@@ -1273,6 +1288,7 @@ async function tippResult(token,day,rule,rows){
   if(['volltreffer','name','drunter','korridor'].includes(kind)&&!hit){ok=false;diff=null;}
   if(kind==='drunter'&&r.points>top)ok=false;
   if(kind==='korridor'&&ok&&diff>TIPP_KORRIDOR)ok=false;
+  if(pool.length&&!pool.includes(r.team))ok=false;
   out.push({managerId:r.managerId,hit,actual,diff,eligible:ok});
  }
  const el=out.filter(r=>r.eligible);
@@ -1281,7 +1297,7 @@ async function tippResult(token,day,rule,rows){
  else if(kind==='spieler'&&el.length){const hi=Math.max(...el.map(r=>r.actual)),b=el.filter(r=>r.actual===hi),best=Math.min(...b.map(r=>r.diff));winners=b.filter(r=>r.diff===best).map(r=>r.managerId);}
  else if(el.length){const best=Math.min(...el.map(r=>r.diff));winners=el.filter(r=>r.diff===best).map(r=>r.managerId);}
  const unsure=!mvp.reliable||missing>0;
- return {status:unsure?'unsure':'ok',kind,...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top}}:{}),rows:out,winners,
+ return {status:unsure?'unsure':'ok',kind,...(pool.length?{pool}:{}),...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top}}:{}),rows:out,winners,
   message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
 }
 app.get('/api/mvp-tipps/players',async(req,res)=>{
@@ -1296,7 +1312,8 @@ app.get('/api/mvp-tipps',async(req,res)=>{
   const days=md.days.filter(d=>d.status!=='upcoming'||d.day===next).map(d=>({day:d.day,status:d.status,tips:Object.keys(all[d.day]?.tips||{}).length}));
   // Managerliste: braucht auch der Online-Tippdienst (tools/tipp-dienst), er liest sie aus der exportierten Datei.
   const token=await tippToken(req),managers=token?await tippManagers(token).catch(()=>null):null;
-  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{})});
+  const teams=token?await loadAllPlayers(token).then(a=>[...new Set([...a.players.values()].map(p=>p.team))].sort()).catch(()=>null):null;
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{})});
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{
@@ -1311,7 +1328,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
   let tracking=null;
-  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule));}catch{}
+  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule));}catch{}
   res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,korridor:TIPP_KORRIDOR,managers:list,
    me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking});
  }catch(e){res.status(502).json({error:e.message});}
