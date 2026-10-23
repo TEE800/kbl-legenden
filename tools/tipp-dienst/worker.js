@@ -142,7 +142,9 @@ async function handle(req, env, cors) {
     // Wer die Regel an diesem Spieltag bestimmt hat (wechselt jeden Spieltag), optional.
     const by = managers.find(m => String(m.id) === String(body.byId || ''));
     if (body.byId && !by) return json({ error: 'Unbekannter Manager.' }, 400, cors);
-    const rule = { ...(base ? { id: base.id, title: base.title, text: base.text } : { id: 'eigene', title: 'Eigene Regel', text }), ...(by ? { by: { id: String(by.id), name: by.name } } : {}) };
+    const wertung = body.wertung ? String(body.wertung) : '';
+    if (wertung && !(info.wertungen || []).some(w => w.id === wertung)) return json({ error: 'Unbekannte Wertung.' }, 400, cors);
+    const rule = { ...(base ? { id: base.id, title: base.title, text: base.text } : { id: 'eigene', title: 'Eigene Regel', text }), ...(by ? { by: { id: String(by.id), name: by.name } } : {}), ...(wertung ? { wertung } : {}) };
     await env.TIPPS.put(`rule:${day}`, JSON.stringify(rule));
     return json({ ok: true, rule }, 200, cors);
   }
@@ -165,6 +167,17 @@ async function handle(req, env, cors) {
     await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
     return json({ ok: true, codeCreated: !!c.created, tip }, 200, cors);
   }
+  // Wertung der Tippregel (nur Admin), auch nach dem Anpfiff. Danach richten sich "fuehrend" und der Gewinner-Vorschlag.
+  if (parts[2] === 'wertung' && req.method === 'PUT') {
+    if (!isAdmin(env, body.adminCode)) return json({ error: 'Falscher Admin-Code.' }, 403, cors);
+    const wertung = String(body.wertung || '');
+    if (!(info.wertungen || []).some(w => w.id === wertung)) return json({ error: 'Bitte eine Wertung wählen.' }, 400, cors);
+    const rule = await env.TIPPS.get(`rule:${day}`, 'json');
+    if (!rule) return json({ error: 'Bitte zuerst die Tippregel eintragen.' }, 409, cors);
+    const next = { ...rule, wertung };
+    await env.TIPPS.put(`rule:${day}`, JSON.stringify(next));
+    return json({ ok: true, rule: next }, 200, cors);
+  }
   // Tipp nachtragen (nur Admin, erst nach dem Anpfiff). Ein eigener Tipp wird nie ueberschrieben, ein nachgetragener darf korrigiert werden.
   if (parts[2] === 'nachtrag' && req.method === 'PUT') {
     if (!isAdmin(env, body.adminCode)) return json({ error: 'Falscher Admin-Code.' }, 403, cors);
@@ -184,7 +197,7 @@ async function handle(req, env, cors) {
   if (!parts[2] && req.method === 'GET') {
     const [tips, codes, rule] = await Promise.all([listTips(env, day), codeIds(env), env.TIPPS.get(`rule:${day}`, 'json')]);
     const reveal = st.locked && st.status !== 'upcoming';
-    return json({ day, ...st, reveal, rule: rule || null, rules: info.rules || [], managers: managers.map(m => {
+    return json({ day, ...st, reveal, rule: rule || null, rules: info.rules || [], wertungen: info.wertungen || [], managers: managers.map(m => {
       const t = tips[m.id];
       return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id)), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
     }), me: null, admin: false, result: null, online: true }, 200, cors);
