@@ -3,7 +3,11 @@
     "rule": {
       "id": "eigene",
       "title": "Eigene Regel",
-      "text": "Punktbester Spieler von den 3 Aufsteigern Schalke, Elversberg und Paderborn \n#die_niederlande"
+      "text": "Punktbester Spieler von den 3 Aufsteigern Schalke, Elversberg und Paderborn",
+      "by": {
+        "id": "1981519",
+        "name": "Daniel_Niederlande"
+      }
     }
   }
 }

@@ -22,11 +22,15 @@
   return d?`noch ${d} T. ${h} Std.`:h?`noch ${h} Std. ${m} Min.`:`noch ${m} Min.`;
  }
  async function loadPlayers(){
-  if(players)return;
+  if(players){fillPlayers();return;}
   const d=await get('/api/mvp-tipps/players');players=d.players;
   const seen=new Map();
   for(const p of players){let l=`${p.name} (${p.team})`;const n=(seen.get(l)||0)+1;seen.set(l,n);if(n>1)l+=` #${n}`;p.label=l;playerByLabel.set(l,p);}
-  const dl=$('#mvpPlayers');if(dl)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');
+  fillPlayers();
+ }
+ function fillPlayers(){
+  if(!players)return;
+  for(const dl of document.querySelectorAll('datalist[data-mvp-players]'))if(!dl.children.length)dl.innerHTML=players.map(p=>`<option value="${esc(p.label)}"></option>`).join('');
  }
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p></div>`;
@@ -53,7 +57,7 @@
    <label class="acc-label">Spieler<input id="mvpPlayer" list="mvpPlayers" placeholder="Name eintippen …" required value="${esc(mine?`${mine.player} (${mine.team})`:'')}"></label>
    <label class="acc-label">Punkte<input id="mvpPoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required value="${mine?esc(mine.points):''}"></label>
    <button class="gold" type="submit">${mine||who?.tipped?'Tipp ändern':'Tipp abgeben'}</button>${byCode&&who?.tipped?' <button type="button" class="ghost" id="mvpShowMine">Meinen Tipp anzeigen</button>':''}</form>
-   <datalist id="mvpPlayers"></datalist>
+   <datalist id="mvpPlayers" data-mvp-players></datalist>
    ${hint?`<p class="muted tiny" id="mvpHint">${esc(hint)}</p>`:''}
    <p class="muted" id="mvpMsg" role="status">${mine?`Dein Tipp: <b>${esc(mine.player)}</b> (${esc(mine.team)}), ${fmt(mine.points)} Punkte · gespeichert ${esc(when(mine.updatedAt))}. Nur du siehst ihn bis zum Anpfiff.`:byCode?(who?.tipped?'Du hast schon getippt. Mit deinem Code kannst du ihn ansehen oder ändern.':''):'Du hast noch nicht getippt.'}</p>`;
  }
@@ -74,6 +78,57 @@
   }).join('');
   return `<h4 style="margin:22px 0 8px">Tipps der Manager <small class="muted">${tipped} von ${d.managers.length} haben getippt${d.reveal?'':' · verdeckt bis zum Anpfiff'}</small></h4><div class="tablewrap"><table class="mvp-table">${head}${body}</table></div>`;
  }
+ // Übersicht nach dem Anpfiff: alle Tipps mit den aktuellen Punkten der getippten Spieler.
+ // Führend = getippter Spieler mit den meisten Punkten, danach kleinster Abstand zur getippten Punktzahl (Grundidee des MVP-Tipps).
+ // Die Tippregel schreibt die Liga als freien Text, darum entscheidet am Ende die Liga selbst.
+ const STATE={done:'Spiel vorbei',live:'Spiel läuft',open:'noch nicht gespielt',error:'nicht abrufbar',wait:'Punkte folgen'};
+ const clock=s=>s?new Date(s).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
+ function standings(d){
+  const tr=d.tracking?.players||{};
+  const rows=d.managers.filter(m=>m.tip).map(m=>{const x=tr[m.tip.playerId],pts=x?.points??null;return {m,t:m.tip,pts,state:x?.state||'wait',diff:pts===null?null:Math.abs(m.tip.points-pts)};});
+  rows.sort((a,b)=>(a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||(a.diff??1e9)-(b.diff??1e9)||a.m.name.localeCompare(b.m.name,'de'));
+  let rank=0;rows.forEach((r,i)=>{const p=rows[i-1];r.rank=r.pts===null?null:p&&p.pts===r.pts&&p.diff===r.diff?p.rank:(rank=i+1);});
+  return {rows,lead:rows.filter(r=>r.rank===1)};
+ }
+ function allTips(d){
+  if(!d.reveal)return '';
+  const {rows,lead}=standings(d);if(!rows.length)return '';
+  const fin=d.status==='finished',max=Math.max(1,...rows.map(r=>Math.max(r.pts??0,r.t.points)));
+  const pct=v=>Math.max(0,Math.min(100,(v/max)*100)).toFixed(1);
+  let h=`<h4 style="margin:22px 0 8px">Übersicht aller Tipps <small class="muted">${d.tracking?`Punkte Stand ${esc(clock(d.tracking.updatedAt))} Uhr`:'Punkte folgen'}</small></h4>`;
+  if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH PUNKTEN':'FÜHREND'}</div>${lead.map(r=>`<div><b>${esc(r.m.name)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: <b>${fmt(r.pts)}</b> Punkte, getippt ${fmt(r.t.points)} (${r.diff?`${fmt(r.diff)} daneben`:'genau getroffen'})</div>`).join('')}</div>
+   <p class="muted tiny">Vorne ist, wessen Spieler gerade die meisten Punkte hat. Bei Gleichstand zählt, wer mit seiner Punktzahl näher dran ist. Wer am Ende gewinnt, entscheidet ihr nach der Tippregel.</p>`;
+  else h+=`<p class="muted">Noch hat keiner der getippten Spieler Punkte.</p>`;
+  const picks=new Map();for(const r of rows){const k=r.t.playerId,c=picks.get(k)||{t:r.t,n:0};c.n++;picks.set(k,c);}
+  const multi=[...picks.values()].filter(c=>c.n>1).sort((a,b)=>b.n-a.n);
+  if(multi.length)h+=`<p class="mvp-picks">Mehrfach getippt: ${multi.map(c=>`<span class="pill">${esc(c.t.player)} ×${c.n}</span>`).join(' ')}</p>`;
+  h+='<div class="mvp-cards">'+rows.map(r=>`<div class="mvp-card${r.rank===1?' lead':''}${r.m.id===d.me?' me':''}">
+   <div class="mvp-card-top"><span class="mvp-rank">${r.rank??'–'}</span><b>${esc(r.m.name)}</b>${r.t.late?' <small class="mvp-late">nachgetragen</small>':''}</div>
+   <div class="mvp-card-player">${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></div>
+   <div class="mvp-bar" title="Balken = aktuelle Punkte, Strich = getippte Punktzahl"><span style="width:${r.pts===null?0:pct(r.pts)}%"></span><i style="left:${pct(r.t.points)}%"></i></div>
+   <div class="mvp-card-nums"><span><b>${r.pts===null?'–':fmt(r.pts)}</b> Pkt. <small class="muted">${esc(STATE[r.state]||'')}</small></span><span class="muted">Tipp ${fmt(r.t.points)}${r.diff===null?'':r.diff?` · ${fmt(r.diff)} daneben`:' · genau'}</span></div>
+  </div>`).join('')+'</div>';
+  const none=d.managers.filter(m=>!m.tipped);
+  if(none.length)h+=`<p class="muted tiny">Ohne Tipp: ${none.map(m=>esc(m.name)).join(', ')}</p>`;
+  return h;
+ }
+ // Nachtragen nach dem Anpfiff (nur Admin): für Manager ohne eigenen Tipp, nachgetragene lassen sich korrigieren.
+ let lateCode='',lateMsg='';
+ function late(d){
+  if(!d.reveal||!(API||d.admin&&!STATIC))return '';
+  const opts=d.managers.filter(m=>!m.tipped||m.tip?.late);
+  if(!opts.length)return '';
+  return `<details class="acc-group" id="mvpLate" style="margin-top:18px"${lateMsg?' open':''}><summary>Tipp nachtragen (nur Admin)</summary><div class="acc-sub">
+   <p class="muted">Für Manager, die nicht rechtzeitig in der App getippt haben, zum Beispiel im Chat. Eigene Tipps werden nie überschrieben, nachgetragene kannst du korrigieren.</p>
+   <form class="mvp-form" id="mvpLateForm" autocomplete="off">
+    <label class="acc-label">Manager<select id="mvpLateWho" required><option value="">Bitte wählen …</option>${opts.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}${m.tip?.late?' (nachgetragen)':''}</option>`).join('')}</select></label>
+    <label class="acc-label">Spieler<input id="mvpLatePlayer" list="mvpLatePlayers" placeholder="Name eintippen …" required></label>
+    <label class="acc-label">Punkte<input id="mvpLatePoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required></label>
+    ${API?`<label class="acc-label">Admin-Code<input id="mvpLateCode" type="password" autocomplete="off" required value="${esc(lateCode)}"></label>`:''}
+    <button class="gold" type="submit">Tipp nachtragen</button></form>
+   <datalist id="mvpLatePlayers" data-mvp-players></datalist>
+   <p class="muted" id="mvpLateMsg" role="status">${esc(lateMsg)}</p></div></details>`;
+ }
  function result(d){
   const r=d.result;if(!r)return d.status==='live'?'<p class="muted">Ausgewertet wird, sobald der Spieltag beendet ist.</p>':'';
   let h='';
@@ -91,7 +146,8 @@
   const d=data;
   $('#mvpMeta').textContent=d.open?`Spieltag ${d.day} · Tipps offen`:d.status==='finished'?`Spieltag ${d.day} · beendet`:`Spieltag ${d.day} · ${d.status==='live'?'läuft':'gesperrt'}`;
   root.className='';
-  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+table(d);
+  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal||d.result?.rows?.length?table(d):'')+late(d);lateMsg='';
+  if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
   if(!admin.hidden){
    const withCode=d.managers.filter(m=>m.hasCode);
@@ -106,7 +162,18 @@
   const root=$('#mvpContent');
   if(!data||data.day!==day){root.className='muted';root.textContent=`Lade Spieltag ${day} …`;}
   try{const st=overview?.days?.find(x=>x.day===day)?.status;
-   data=await get(API&&st!=='finished'?tippUrl(`/api/mvp-tipps/${day}`):`/api/mvp-tipps/${day}`);render();}
+   let d;
+   if(API&&st!=='finished'){
+    // Tipps live vom Tippdienst, Punkte der getippten Spieler aus dem Export (alle 10 Minuten während der Spiele).
+    d=await get(tippUrl(`/api/mvp-tipps/${day}`));
+    if(d.reveal){const x=await get(`/api/mvp-tipps/${day}`).catch(()=>null);d.tracking=x?.tracking||null;}
+   }else{
+    d=await get(`/api/mvp-tipps/${day}`);
+    // Beendeter Spieltag online: gerade nachgetragene Tipps schon zeigen, bevor der nächste Export sie übernimmt.
+    if(API){const x=await get(tippUrl(`/api/mvp-tipps/${day}`)).catch(()=>null);
+     if(x?.managers)for(const m of d.managers){const o=x.managers.find(y=>y.id===m.id);if(o?.tip&&!m.tip){m.tip=o.tip;m.tipped=true;}}}
+   }
+   data=d;render();}
   catch(e){root.className='error';root.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
  }
  async function load(){
@@ -136,7 +203,23 @@
    if(r.codeCreated){const m=$('#mvpMsg');if(m)m.insertAdjacentHTML('beforeend','<br><b>Dein Tipp-Code ist gespeichert.</b> Merk ihn dir gut.');}}
   catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
  });
+ document.addEventListener('submit',async e=>{
+  if(e.target.id!=='mvpLateForm')return;e.preventDefault();
+  const msg=$('#mvpLateMsg'),who=$('#mvpLateWho').value,p=playerByLabel.get($('#mvpLatePlayer').value.trim()),pts=Number($('#mvpLatePoints').value);
+  if(!who){msg.textContent='Bitte einen Manager wählen.';return;}
+  if(!p){msg.textContent='Bitte einen Spieler aus der Vorschlagsliste wählen.';return;}
+  if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
+  if($('#mvpLateCode'))lateCode=$('#mvpLateCode').value;
+  const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
+  try{await get(tippUrl(`/api/mvp-tipps/${data.day}/nachtrag`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({managerId:who,playerId:p.id,points:pts,adminCode:lateCode})});
+   const name=data.managers.find(m=>m.id===who)?.name||'';
+   lateMsg=`Tipp für ${name} nachgetragen.${API?' Die Punkte des Spielers erscheinen mit dem nächsten Abgleich (während der Spiele alle 10 Minuten).':''}`;
+   await loadDay(data.day);}
+  catch(err){msg.textContent='Nicht gespeichert: '+err.message;btn.disabled=false;}
+ });
+ document.addEventListener('toggle',e=>{if(e.target.id==='mvpLate'&&e.target.open)loadPlayers().catch(err=>{const m=$('#mvpLateMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+err.message;});},true);
  document.addEventListener('change',e=>{
+  if(e.target.id==='mvpLateWho'){const t=data?.managers.find(m=>m.id===e.target.value)?.tip;$('#mvpLatePlayer').value=t?`${t.player} (${t.team})`:'';$('#mvpLatePoints').value=t?t.points:'';}
   if(e.target.id==='mvpDay')loadDay(Number(e.target.value));
   if(e.target.id==='mvpWho'){store.set(e.target.value);codeTip=null;const pl=$('#mvpPlayer')?.value,pt=$('#mvpPoints')?.value;render();if($('#mvpPlayer'))$('#mvpPlayer').value=pl||'';if($('#mvpPoints'))$('#mvpPoints').value=pt||'';}
  });
@@ -168,5 +251,7 @@
  setInterval(()=>{
   for(const el of document.querySelectorAll('[data-mvp-left]')){el.textContent=left(el.dataset.mvpLeft);if(Date.parse(el.dataset.mvpLeft)<=Date.now()&&data?.open)load();}
  },30000);
+ // Während der Spiele den Stand alle 2 Minuten neu holen, solange der Reiter sichtbar ist und niemand gerade nachträgt.
+ setInterval(()=>{if(data?.status==='live'&&$('#mvpContent')?.offsetParent&&!$('#mvpLate')?.open&&!document.hidden)loadDay(data.day);},120000);
  if(typeof onConnected!=='undefined')onConnected.push(()=>{load();});
 })();
