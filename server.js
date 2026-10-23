@@ -792,6 +792,44 @@ app.get('/api/live-points/:day', async (req, res) => {
   } catch (err) { res.status(err.status || 502).json({ error: 'Live-Punkte konnten nicht geladen werden.', detail: err.message }); }
 });
 
+// Vollpfosten des Spieltags (Kevin-Vorgabe): wer die meisten Punkte auf der Bank gelassen hat.
+// Bank = beim Einfrieren gespeicherter Gesamtkader (squadIds) ohne die Startelf (playerIds). Summe der Spieltagspunkte der Bankspieler
+// (auch negative). Ohne gespeicherten Kader wird nichts berechnet (nie raten). Waehrend des Spieltags vorlaeufig (Live-Punkte).
+const benchCache=new Map();
+app.get('/api/bench-points/:day', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const day = validDay(req.params.day);
+  if (!day) return res.status(400).json({ error: 'Ungültiger Spieltag.' });
+  try {
+    const md = await loadMatchdays(), st = md.days.find(d => d.day === day)?.status;
+    if (st !== 'live' && st !== 'finished') return res.json({ day, status: st || 'unknown', managers: [], message: 'Spieltag hat noch nicht begonnen.' });
+    const c = benchCache.get(day);
+    if (c && c.status === st && Date.now() - c.at < (st === 'live' ? 5 : 60) * 60e3) return res.set('Cache-Control', 'no-store').json(c.value);
+    const ranking = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
+    const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+    const snaps = readSnapshots(), missing = users.filter(u => !Array.isArray(snaps[`${day}:${u.i}`]?.squadIds)).map(u => u.n);
+    if (missing.length) {
+      const value = { day, status: st, managers: [], message: `Das fehlt: Für Spieltag ${day} ist der Kader beim Anpfiff nicht gespeichert (${missing.length === users.length ? 'alle Manager' : missing.join(', ')}). Darum keine Bankpunkte.` };
+      return res.set('Cache-Control', 'no-store').json(value);
+    }
+    const all = await loadAllPlayers(token).catch(() => null), pts = {};
+    const benchOf = u => { const s = snaps[`${day}:${u.i}`], xi = new Set((s.playerIds || []).map(String)); return s.squadIds.map(String).filter(id => !xi.has(id)); };
+    const ids = [...new Set(users.flatMap(benchOf))];
+    for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+      try { pts[id] = await dayPlayerPoints(token, id, day, st === 'finished'); } catch { pts[id] = { points: null, state: 'error' }; }
+    }));
+    const managers = users.map(u => {
+      const bench = benchOf(u).map(id => ({ id, name: all?.players.get(id)?.name || snaps[`${day}:${u.i}`]?.playerNames?.[id] || null, team: all?.players.get(id)?.team || null, ...pts[id] }))
+        .sort((a, b) => (b.points ?? -1e9) - (a.points ?? -1e9));
+      return { id: String(u.i), name: u.n, points: bench.reduce((s, p) => s + (p.points || 0), 0), open: bench.filter(p => p.points == null).length, bench };
+    }).sort((a, b) => b.points - a.points);
+    const value = { day, status: st, updatedAt: new Date().toISOString(), managers };
+    benchCache.set(day, { at: Date.now(), status: st, value });
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Bankpunkte konnten nicht geladen werden.', detail: err.message }); }
+});
+
 // Testabfrage (nur lesend): Welche Kickbase-Quelle liefert waehrend des Spieltags Live-Punkte?
 // Beispiel: /api/live-probe?day=7&user=1165589&pid=8247 . Vergleicht Teamcenter, Ranking, performance und playercenter.
 app.get('/api/live-probe', async (req, res) => {
