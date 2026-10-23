@@ -387,8 +387,7 @@ async function loadHistory(){
   const winners=[...wins.entries()].sort((a,b)=>b[1]-a[1]);
   const awards=winners.length?winners.slice(0,5).map(([name,n])=>`<span>🏆 ${escapeHtml(name)}: <b>${n}</b> Spieltagssieg${n===1?'':'e'}</span>`).join(''):'Noch keine offiziellen Spieltagssiege.';
   const liveEntry=nextHistory.find(x=>x.status==='live');
-  const leader=liveEntry?.list.find(m=>m.dayPoints!==null);
-  const liveHtml=liveEntry?`<div class="center-live"><strong>● LIVE · Spieltag ${liveEntry.day}</strong><div>${leader?`Aktuell führend: <b>${escapeHtml(leader.name)}</b> (${fmt(leader.dayPoints)} Punkte)`:'Noch keine auswertbaren Punkte'} · Vorläufig, zählt nicht als Spieltagssieg.</div></div>`:'';
+  const liveHtml=liveEntry?`<div class="center-live" id="historyLive">${historyLiveInner(liveEntry.day)}</div>`:'';
   historyData=nextHistory;
   $('#historySummary').innerHTML='<div class="history-awards">'+awards+'</div>'+liveHtml;
   statusEl.textContent='';
@@ -1221,6 +1220,15 @@ function centerExtraCards(finished,card){
  const thousand=card('1.000er-CLUB',club.length?`${club.length} Manager`:'Niemand',club.length?short(club.map(m=>m.name)):'Keiner hat 1.000 Punkte geknackt');
  return lead+rec+jump+thousand;
 }
+// Live-Rangliste des laufenden Spieltags aus /api/live-points (null, solange nicht geladen).
+function liveRanking(day){
+ if(typeof pvLive==='undefined'||!pvLive||pvLive.day!==day||pvLive.error)return null;
+ return (pvLive.managers||[]).filter(m=>isEligibleManager(m.name)&&m.points!=null).map(m=>({name:m.name,dayPoints:m.points})).sort((a,b)=>b.dayPoints-a.dayPoints);
+}
+function historyLiveInner(day){
+ const leader=liveRanking(day)?.[0];
+ return `<strong>● LIVE · Spieltag ${day}</strong><div>${leader?`Aktuell führend: <b>${escapeHtml(leader.name)}</b> (${fmt(leader.dayPoints)} Punkte)`:'Live-Punkte werden geladen …'} · Vorläufig, zählt nicht als Spieltagssieg.</div>`;
+}
 function renderCenter(){
  const el=$('#centerContent');if(!el)return;
  const finished=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
@@ -1230,8 +1238,9 @@ function renderCenter(){
  const names=list=>list.map(m=>escapeHtml(m.name)).join(', ');
  let html='';
  if(live){
-  const scored=live.list.filter(m=>m.dayPoints!==null);
-  html+=`<div class="center-live"><strong>● LIVE · Spieltag ${live.day}</strong>${scored.length?`<ol>${scored.slice(0,3).map(m=>`<li>${escapeHtml(m.name)} <b>${fmt(m.dayPoints)}</b></li>`).join('')}</ol><span class="muted tiny">Letzter im Moment: ${escapeHtml(scored.at(-1).name)} (${fmt(scored.at(-1).dayPoints)}). Vorläufig, zählt erst nach Spielende.</span>`:'<p class="muted">Noch keine Punkte.</p>'}</div>`;
+  // Kickbase-Ranking zeigt während des Spieltags 0: darum die Live-Punkte aus /api/live-points (wie Spieltag und Liga-Tabelle).
+  const lv=liveRanking(live.day),scored=lv||[];
+  html+=`<div class="center-live"><strong>● LIVE · Spieltag ${live.day}</strong>${scored.length?`<ol>${scored.slice(0,3).map(m=>`<li>${escapeHtml(m.name)} <b>${fmt(m.dayPoints)}</b></li>`).join('')}</ol><span class="muted tiny">Letzter im Moment: ${escapeHtml(scored.at(-1).name)} (${fmt(scored.at(-1).dayPoints)}). Vorläufig, zählt erst nach Spielende.</span>`:`<p class="muted">${lv?'Noch keine Punkte.':'Live-Punkte werden geladen …'}</p>`}</div>`;
  }
  const last=finished.at(-1);
  const pill=$('#centerPill');if(pill)pill.textContent=last?`Letzter abgeschlossener Spieltag: ${last.day}`:'Noch kein Spieltag abgeschlossen';
@@ -1583,7 +1592,7 @@ async function pvLoadLive(day){
  if(pvLiveBusy||(pvLive?.day===day&&Date.now()-pvLiveAt<120e3))return;
  pvLiveBusy=true;
  try{pvLive=await api(`/api/live-points/${day}`);}catch(e){pvLive={day,error:e.message};}
- pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();try{renderRankingTable();}catch{}
+ pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();try{renderRankingTable();}catch{}try{renderCenter();}catch{}try{const h=$('#historyLive');if(h)h.innerHTML=historyLiveInner(day);}catch{}
 }
 setInterval(()=>{if(!document.hidden&&pvStatus?.days?.some(d=>d.status==='live'))renderPreview();},120e3);
 function pvLiveHtml(day){
