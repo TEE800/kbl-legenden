@@ -175,8 +175,8 @@
   return `<svg class="toon-fig" viewBox="0 0 40 60" aria-hidden="true">
    <g class="toon-legs"><path class="toon-leg l" d="M17 42 L13 55" /><path class="toon-leg r" d="M23 42 L27 55" /></g>
    <rect x="13" y="37" width="14" height="7" rx="2" fill="${trim}" stroke="#111" stroke-width="1"/>
-   <path d="M11 24 Q20 20 29 24 L28 39 L12 39 Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/>
-   <text x="20" y="35" text-anchor="middle" font-size="8" font-weight="800" fill="${trim}" stroke="#111" stroke-width=".3">${num}</text>
+   <path class="toon-shirt" d="M11 24 Q20 20 29 24 L28 39 L12 39 Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/>
+   <text class="toon-num" x="20" y="35" text-anchor="middle" font-size="8" font-weight="800" fill="${trim}" stroke="#111" stroke-width=".3">${num}</text>
    <g class="toon-arms"><path class="toon-arm l" d="M12 26 L6 33" /><path class="toon-arm r" d="M28 26 L34 31" /></g>
    <g class="toon-head"><circle cx="20" cy="12" r="10" fill="#f5c9a0" stroke="#111" stroke-width="1.2"/>
    <path d="M10 10 Q12 1 20 2 Q29 1 30 10 Q25 6 20 7 Q14 6 10 10Z" fill="#3b2a1a"/>
