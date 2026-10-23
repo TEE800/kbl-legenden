@@ -66,7 +66,6 @@ try {
   if (live) { const r = await call('/api/lineup-snapshots/capture-frozen', { method: 'POST', body: JSON.stringify({ day: live }) }); console.log('Startelfen Spieltag', live, r.status, JSON.stringify(r.body).slice(0, 200)); }
   // Live-Zwischenstand aller Manager (das Liga-Ranking zeigt bis Spieltagsende 0 Punkte).
   if (live) await save(`/api/live-points/${live}`);
-  if (live) await save(`/api/live-probe?day=${live}&user=699062&pid=4296`); // Pruefung Pejcinovic (fehlte live), spaeter entfernen
 
   fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: false, admin: false, loggedIn: true }));
   for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen']) await save(u);
