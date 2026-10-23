@@ -170,7 +170,6 @@
  // Cartoon-Rennen: je getipptem Spieler ein gezeichnetes Männchen im Vereinstrikot, das nach seinen Punkten über den Platz läuft.
  const CLUB_COLORS=[['bayern','#dc052d','#fff'],['dortmund','#fde100','#111'],['leverkusen','#e32221','#111'],['leipzig','#fff','#dd0741'],['frankfurt','#111','#e1000f'],['stuttgart','#fff','#e32219'],['freiburg','#e2001a','#111'],['gladbach','#fff','#00a651'],['wolfsburg','#65b32e','#fff'],['werder','#1d9053','#fff'],['bremen','#1d9053','#fff'],['union','#d4011d','#fff'],['hoffenheim','#1961b5','#fff'],['mainz','#c3141e','#fff'],['augsburg','#ba3733','#46714d'],['köln','#fff','#ed1c24'],['koeln','#fff','#ed1c24'],['heidenheim','#e2001a','#003b79'],['hamburg','#fff','#0a3f86'],['hsv','#fff','#0a3f86'],['pauli','#5c3a21','#fff'],['schalke','#004d9d','#fff'],['elversberg','#111','#fff'],['paderborn','#005ca9','#111'],['bochum','#005ca9','#fff'],['kiel','#0a3f86','#fff'],['darmstadt','#004e9f','#fff'],['berlin','#005ca9','#fff']];
  function clubColor(team){const t=String(team||'').toLowerCase(),c=CLUB_COLORS.find(([k])=>t.includes(k));if(c)return [c[1],c[2]];let n=0;for(const ch of t)n=(n*31+ch.charCodeAt(0))>>>0;return [`hsl(${n%360} 65% 45%)`,'#fff'];}
- const TOON_SAY={done:['Feierabend!','Ab unter die Dusche.','Das war\'s für mich.'],live:['Ich renne!','Gib mir den Ball!','Noch nicht müde!','Hopp hopp hopp!'],open:['Ich wärme mich noch auf …','Wann geht\'s los?','Schnürsenkel binden …'],wait:['Moment …'],error:['Wo bin ich?']};
  function toon(g,shirt,trim,mood,num){
   const mouth=mood==='sad'?'M15 17 Q20 13 25 17':mood==='wow'?'M18 15 a2 2 0 1 0 4 0 a2 2 0 1 0 -4 0':'M15 14 Q20 19 25 14';
   return `<svg class="toon-fig" viewBox="0 0 40 60" aria-hidden="true">
@@ -198,13 +197,11 @@
   const lanes=groups.map((g,i)=>{
    const [shirt,trim]=clubColor(g.t.team),crown=bestIds.has(String(g.t.playerId)),first=g.place===1&&g.pts!==null;
    const mood=g.pts!==null&&g.pts<0?'sad':first?'wow':'happy',run=g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':g.pts!==null&&g.pts<0?' fall':'';
-   const lines=g.pts!==null&&g.pts<0?['Autsch!','Ich will nach Hause.','Wer hat mich aufgestellt?']:first&&g.pts!==null?['Fangt mich doch!','Ich bin der Größte!','Wer will noch mal?']:TOON_SAY[g.state]||TOON_SAY.wait;
-   const say=lines[(String(g.t.playerId).length+i)%lines.length];
    const fans=g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('');
    const info=byId.get(String(g.t.playerId)),face=kbImg(info?.img),crest=kbImg(info?.teamImg);
    return `<div class="toon-lane${crown?' best':''}">
     <div class="toon-track"><div class="toon-runner${run}${pos(g.pts)>50?' flip':''}${face?' has-face':''}${crest?' has-crest':''}" style="left:${pos(g.pts)}%">
-     <div class="toon-bubble">${esc(say)}</div>${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
+     ${crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon(g,shirt,trim,mood,g.place??'?')}${toonPhoto(face,'toon-face',g.t.player)}${toonPhoto(crest,'toon-crest',g.t.team)}</div>${g.state==='live'?'<span class="toon-ball">⚽</span>':''}
     </div><div class="toon-finish">🏁</div></div>
     <div class="toon-name"><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span></div>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${fans}</div>
