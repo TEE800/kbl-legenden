@@ -170,11 +170,13 @@ async function handle(req, env, cors) {
   // Wertung der Tippregel (nur Admin), auch nach dem Anpfiff. Danach richten sich "fuehrend" und der Gewinner-Vorschlag.
   if (parts[2] === 'wertung' && req.method === 'PUT') {
     if (!isAdmin(env, body.adminCode)) return json({ error: 'Falscher Admin-Code.' }, 403, cors);
+    // Leer = automatisch aus dem Regeltext (erkennt die App).
     const wertung = String(body.wertung || '');
-    if (!(info.wertungen || []).some(w => w.id === wertung)) return json({ error: 'Bitte eine Wertung wählen.' }, 400, cors);
+    if (wertung && !(info.wertungen || []).some(w => w.id === wertung)) return json({ error: 'Unbekannte Wertung.' }, 400, cors);
     const rule = await env.TIPPS.get(`rule:${day}`, 'json');
     if (!rule) return json({ error: 'Bitte zuerst die Tippregel eintragen.' }, 409, cors);
-    const next = { ...rule, wertung };
+    const { wertung: _old, ...base } = rule;
+    const next = { ...base, ...(wertung ? { wertung } : {}) };
     await env.TIPPS.put(`rule:${day}`, JSON.stringify(next));
     return json({ ok: true, rule: next }, 200, cors);
   }
