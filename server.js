@@ -579,9 +579,13 @@ async function loadMatchdayMvp(token, day, { live = false } = {}) {
   for (let i = 0; i < ids.length; i += 5) {
     await Promise.all(ids.slice(i, i + 5).map(async id => {
       try {
-        const data = await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token });
-        const rec = findDayRecord(data, day);
-        const pt = rec && rec.p !== undefined && rec.p !== null && rec.p !== '' && Number.isFinite(Number(rec.p)) ? Number(rec.p) : null;
+        let pt;
+        if (live) pt = (await dayPlayerPoints(token, id, day)).points;
+        else {
+          const data = await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token });
+          const rec = findDayRecord(data, day);
+          pt = rec && rec.p !== undefined && rec.p !== null && rec.p !== '' && Number.isFinite(Number(rec.p)) ? Number(rec.p) : null;
+        }
         if (pt !== null) scored.push({ id, name: all.players.get(id).name, team: all.players.get(id).team, points: pt });
       } catch { failed++; }
     }));
@@ -752,6 +756,40 @@ app.get('/api/history-probe', async (req, res) => {
   }
   try { fs.mkdirSync(path.join(process.cwd(), '_probe'), { recursive: true }); fs.writeFileSync(path.join(process.cwd(), '_probe', 'history-probe.json'), JSON.stringify(out, null, 2)); } catch {}
   res.set('Cache-Control', 'no-store').json(out);
+});
+
+// Live-Zwischenstand aller Manager waehrend des Spieltags. Das Liga-Ranking zeigt bis Spieltagsende 0 Punkte (mdp),
+// darum: Startelf aus ranking?dayNumber (lp, null = leerer Platz) und je Spieler die Punkte aus dayPlayerPoints.
+// Leere Plaetze kosten 100 Punkte. Hoechstens alle 5 Minuten neu (ca. 170 bis 340 Kickbase-Abrufe).
+const livePointsCache=new Map();
+app.get('/api/live-points/:day', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const day = validDay(req.params.day);
+  if (!day) return res.status(400).json({ error: 'Ungültiger Spieltag.' });
+  try {
+    const md = await loadMatchdays(), st = md.days.find(d => d.day === day)?.status;
+    if (st !== 'live' && st !== 'finished') return res.json({ day, status: st || 'unknown', managers: [], message: 'Spieltag hat noch nicht begonnen.' });
+    const c = livePointsCache.get(day);
+    if (c && Date.now() - c.at < 5 * 60e3) return res.set('Cache-Control', 'no-store').json(c.value);
+    const ranking = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
+    const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+    const ids = [...new Set(users.flatMap(u => (u.lp || []).filter(x => x != null).map(String)))];
+    const pts = {}, all = await loadAllPlayers(token).catch(() => null);
+    for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+      try { pts[id] = await dayPlayerPoints(token, id, day, st === 'finished'); } catch { pts[id] = { points: null, state: 'error' }; }
+    }));
+    const managers = users.map(u => {
+      const lp = Array.isArray(u.lp) ? u.lp : [], empty = lp.length ? 11 - lp.filter(x => x != null).length : null;
+      const players = lp.filter(x => x != null).map(String).map(id => ({ id, name: all?.players.get(id)?.name || null, team: all?.players.get(id)?.team || null, ...pts[id] }))
+        .sort((a, b) => (b.points ?? -1e9) - (a.points ?? -1e9));
+      const points = empty === null ? null : players.reduce((s, p) => s + (p.points || 0), 0) - 100 * empty;
+      return { id: String(u.i), name: u.n, points, empty, open: players.filter(p => p.state === 'open').length, errors: players.filter(p => p.state === 'error').length, players };
+    }).sort((a, b) => (b.points ?? -1e9) - (a.points ?? -1e9));
+    const value = { day, status: st, updatedAt: new Date().toISOString(), rankingLive: !!ranking.il, managers };
+    livePointsCache.set(day, { at: Date.now(), value });
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Live-Punkte konnten nicht geladen werden.', detail: err.message }); }
 });
 
 // Testabfrage (nur lesend): Welche Kickbase-Quelle liefert waehrend des Spieltags Live-Punkte?
@@ -1263,6 +1301,17 @@ async function tippPlayerPoints(token,playerId,day){
  try{const rec=findDayRecord(await kbFetch(`/v4/competitions/1/players/${playerId}/performance`,{token}),day);
   return rec&&rec.p!==undefined&&rec.p!==null&&rec.p!==''&&Number.isFinite(Number(rec.p))?Number(rec.p):null;}catch{return null;}
 }
+// Spieltagspunkte eines Spielers, auch waehrend des Spiels. "performance" hat Punkte erst nach Spielende;
+// laeuft das Spiel (mdst 1), stehen die Live-Punkte nur in "playercenter" (an ST 7 geprueft: Hendriks 25 Punkte in der 36. Minute).
+// state: done = Spiel beendet, live = Spiel laeuft, open = noch nicht angepfiffen oder keine Daten (points null).
+async function dayPlayerPoints(token,id,day,finished=false){
+ const data=await kbFetch(`/v4/competitions/1/players/${id}/performance`,{token}),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
+ if(points!==null)return {points,state:finished||Number(rec?.mdst)===2?'done':'live'};
+ if(!rec||Number(rec.mdst)!==1)return {points:null,state:'open'};
+ const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});
+ const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
+ return {points:p,state:p===null?'open':'live'};
+}
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
 const tippTrackCache=new Map();
@@ -1271,8 +1320,7 @@ async function tippTracking(token,day,tips,finished,kind,pool=[]){
  if(c&&c.key===key&&Date.now()-c.at<2*60e3)return c.value;
  const players={};
  await Promise.all(ids.map(async id=>{
-  try{const data=await kbFetch(`/v4/competitions/1/players/${id}/performance`,{token}),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
-   players[id]={points,state:points===null?'open':finished||rec?.mdst===2?'done':'live'};}
+  try{players[id]=await dayPlayerPoints(token,id,day,finished);}
   catch{players[id]={points:null,state:'error'};}
  }));
  const value={updatedAt:new Date().toISOString(),players,...(pool.length?{pool}:{})};

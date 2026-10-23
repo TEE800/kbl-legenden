@@ -1553,7 +1553,7 @@ function pvCountdownHtml(){
  if(!pvStatus)return '<p class="muted">Spielplan wird geladen …</p>';
  if(pvStatus.error)return '<p class="muted">Das fehlt: Spielplan von OpenLigaDB ist gerade nicht erreichbar, darum kein Countdown.</p>';
  const days=pvStatus.days||[],live=days.find(d=>d.status==='live');
- if(live)return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.</div>`;
+ if(live){pvLoadLive(live.day);return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.</div>`+pvLiveHtml(live.day);}
  const next=days.find(d=>d.status==='upcoming'),k=pvKickoff(next);
  if(!next)return '<p class="muted">Kein weiterer Spieltag im Spielplan.</p>';
  if(!k)return `<p class="muted">Das fehlt: Anstoßzeit für Spieltag ${next.day} steht noch nicht fest.</p>`;
@@ -1561,6 +1561,33 @@ function pvCountdownHtml(){
  const unit=(i,l)=>`<div class="pv-unit"><b data-pv="${i}">–</b><small>${l}</small></div>`;
  return `<div class="pv-countdown"><div class="pv-label">Anstoß Spieltag ${next.day} in</div><div class="pv-units" id="pvCountdown">${unit(0,'Tage')}${unit(1,'Std')}${unit(2,'Min')}${unit(3,'Sek')}</div>
   <div class="pv-meta">${escapeHtml(pvDate(k.t))}${k.match?` · ${escapeHtml(k.match)}`:''}</div><div class="pv-meta muted tiny">Mit dem ersten Anpfiff friert Kickbase die Startelf ein. Wer bis dahin nicht aufgestellt hat, zahlt 100 Punkte pro leerem Platz.</div></div>`;
+}
+// Live-Zwischenstand (/api/live-points/:day): Summe der Live-Punkte der Startelf minus 100 je leerem Platz.
+// Das Kickbase-Ranking zeigt bis Spieltagsende 0 Punkte, darum rechnet der Server selbst.
+let pvLive=null,pvLiveAt=0,pvLiveBusy=false;
+async function pvLoadLive(day){
+ if(pvLiveBusy||(pvLive?.day===day&&Date.now()-pvLiveAt<120e3))return;
+ pvLiveBusy=true;
+ try{pvLive=await api(`/api/live-points/${day}`);}catch(e){pvLive={day,error:e.message};}
+ pvLiveAt=Date.now();pvLiveBusy=false;renderPreview();
+}
+setInterval(()=>{if(!document.hidden&&pvStatus?.days?.some(d=>d.status==='live'))renderPreview();},120e3);
+function pvLiveHtml(day){
+ if(!pvLive||pvLive.day!==day)return '<p class="muted">Live-Punkte werden geladen …</p>';
+ if(pvLive.error)return `<p class="muted">Das fehlt: Live-Punkte gerade nicht abrufbar (${escapeHtml(pvLive.error)}).</p>`;
+ const ms=(pvLive.managers||[]).filter(m=>isEligibleManager(m.name));
+ if(!ms.length)return `<p class="muted">${escapeHtml(pvLive.message||'Noch keine Live-Punkte.')}</p>`;
+ const scored=ms.filter(m=>m.points!=null),top=scored.length?scored[0].points:null,max=Math.max(1,...scored.map(m=>Math.abs(m.points)));
+ const pill=$('#previewPill');if(pill)pill.textContent=top==null?`Spieltag ${day} läuft`:`LIVE · vorn: ${scored.filter(m=>m.points===top).map(m=>m.name).join(', ')} (${fmt(top)})`;
+ const time=pvLive.updatedAt?new Date(pvLive.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
+ const st={done:'✓',live:'●',open:'–',error:'?'};
+ const row=(m,i)=>{const lead=m.points!=null&&m.points===top,pts=m.points==null?'–':fmt(m.points);
+  const pl=m.players.map(p=>`<li class="pvl-p pvl-${p.state}"><span>${st[p.state]||''} ${escapeHtml(p.name||'Spieler '+p.id)}${p.team?` <small class="muted">${escapeHtml(p.team)}</small>`:''}</span><b>${p.points==null?'–':fmt(p.points)}</b></li>`).join('')
+   +(m.empty?`<li class="pvl-p pvl-empty"><span>${m.empty} leere${m.empty>1?'':'r'} Platz${m.empty>1?'e':''}</span><b>−${fmt(100*m.empty)}</b></li>`:'');
+  return `<details class="pvl-row${lead?' pvl-lead':''}" data-pvl="${escapeHtml(m.id)}"><summary><span class="pvl-pos">${i+1}.</span><span class="pvl-name">${lead?'👑 ':''}${escapeHtml(m.name)}</span><span class="pvl-bar"><i style="width:${m.points==null?0:Math.max(0,m.points)/max*100}%"></i></span><b class="pvl-pts">${pts}</b></summary>
+   <ul class="pvl-list">${pl}</ul>${m.open?`<p class="muted tiny">${m.open} Spieler noch ohne Punkte (Spiel noch nicht angepfiffen).</p>`:''}</details>`;};
+ return `<div class="pv-live"><h4 class="pv-head">Live-Zwischenstand Spieltag ${day}</h4><div class="pvl-table">${ms.map(row).join('')}</div>
+  <p class="muted tiny">Summe der Live-Punkte der Startelf, minus 100 je leerem Platz. Stand ${escapeHtml(time)} Uhr. Kickbase zeigt im Ranking erst nach dem Spieltag Punkte; nach Spielende können sich Punkte noch ändern. ✓ Spiel vorbei · ● läuft · – noch nicht angepfiffen. Auf einen Manager tippen zeigt seine Spieler.</p></div>`;
 }
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
@@ -1613,7 +1640,8 @@ function pvQuestions(){
 }
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
- const qs=pvQuestions();
+ const qs=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
  el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
