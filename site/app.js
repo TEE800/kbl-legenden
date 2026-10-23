@@ -1553,6 +1553,8 @@ function pvCountdownHtml(){
  if(!pvStatus)return '<p class="muted">Spielplan wird geladen …</p>';
  if(pvStatus.error)return '<p class="muted">Das fehlt: Spielplan von OpenLigaDB ist gerade nicht erreichbar, darum kein Countdown.</p>';
  const days=pvStatus.days||[],live=days.find(d=>d.status==='live');
+ // Waehrend des Spieltags heisst der Bereich "Spieltag" mit LIVE-Abzeichen daneben (Kevin-Vorgabe), sonst "Spieltagsvorschau".
+ const title=$('#previewTitle');if(title)title.innerHTML=live?'SPIELTAG <span class="live-badge">● LIVE</span>':'SPIELTAGSVORSCHAU';
  if(live){pvLoadLive(live.day);return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.</div>`+pvLiveHtml(live.day);}
  const next=days.find(d=>d.status==='upcoming'),k=pvKickoff(next);
  if(!next)return '<p class="muted">Kein weiterer Spieltag im Spielplan.</p>';
@@ -1578,7 +1580,7 @@ function pvLiveHtml(day){
  const ms=(pvLive.managers||[]).filter(m=>isEligibleManager(m.name));
  if(!ms.length)return `<p class="muted">${escapeHtml(pvLive.message||'Noch keine Live-Punkte.')}</p>`;
  const scored=ms.filter(m=>m.points!=null),top=scored.length?scored[0].points:null,max=Math.max(1,...scored.map(m=>Math.abs(m.points)));
- const pill=$('#previewPill');if(pill)pill.textContent=top==null?`Spieltag ${day} läuft`:`LIVE · vorn: ${scored.filter(m=>m.points===top).map(m=>m.name).join(', ')} (${fmt(top)})`;
+ const pill=$('#previewPill');if(pill)pill.textContent=top==null?`Spieltag ${day} läuft`:`Vorn: ${scored.filter(m=>m.points===top).map(m=>m.name).join(', ')} (${fmt(top)})`;
  const time=pvLive.updatedAt?new Date(pvLive.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
  const st={done:'✓',live:'●',open:'–',error:'?'};
  const row=(m,i)=>{const lead=m.points!=null&&m.points===top,pts=m.points==null?'–':fmt(m.points);
