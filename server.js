@@ -1437,10 +1437,29 @@ async function tippResult(token,day,rule,rows){
  return {status:unsure?'unsure':'ok',kind,...(pool.length?{pool}:{}),...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top}}:{}),rows:out,winners,
   message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
 }
+// Spielerfotos: Ohne Kickbase-Abo liefert Kickbase nur Silhouetten (Kevin, T1000 hat kein Abo). Darum die Bildpfade
+// mit dem Challenge-Konto (T800, mit Abo) holen, falls eingerichtet; sonst bleiben die Pfade des normalen Logins.
+let photoCache=null;
+async function playerPhotos(){
+ if(!process.env.KBL_CHALLENGE_EMAIL||!process.env.KBL_CHALLENGE_PASSWORD)return null;
+ if(photoCache&&Date.now()-photoCache.at<6*3600*1000)return photoCache.map;
+ const token=await getChallengeToken();
+ const table=await kbFetch('/v4/competitions/1/table',{token});
+ const teams=extractEntities(table,['ti','tid','i','id'],['tn','n','name']);
+ const map=new Map();
+ for(const t of teams?.items||[]){
+  try{const prof=await kbFetch(`/v4/competitions/1/teams/${t.id}/teamprofile`,{token});const pl=extractEntities(prof,['pi','i','id'],['pn','n','ln','name']);
+   if(pl)for(const [id,img] of imagesById(prof,pl.idKey))map.set(id,img);}catch{}
+ }
+ if(map.size)photoCache={at:Date.now(),map};
+ return map;
+}
 app.get('/api/mvp-tipps/players',async(req,res)=>{
  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  try{const all=await loadAllPlayers(token);
-  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>({id:String(id),name:p.name,team:p.team,...(p.img?{img:p.img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})})).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+  const photos=await playerPhotos().catch(e=>{console.log('Spielerfotos (Challenge-Konto) nicht abrufbar:',e.message);return null;});
+  if(photos){let diff=0;for(const [id,p] of all.players)if(photos.get(String(id))&&photos.get(String(id))!==p.img)diff++;console.log(`Spielerfotos ueber Challenge-Konto: ${photos.size}, davon ${diff} anders als beim Dienst-Login`);}
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{
