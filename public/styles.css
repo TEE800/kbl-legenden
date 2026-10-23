@@ -336,6 +336,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .mvp-me td{background:rgba(235,199,104,.07)}.mvp-win{color:var(--gold)}.mvp-mvp{margin:14px 0 6px}
 @media(max-width:600px){.mvp-form label:first-child{flex:1 1 100%}.mvp-form #mvpPlayer{width:100%}.mvp-table th,.mvp-table td{padding:8px 5px;font-size:13px}}
 #mvp [hidden]{display:none!important}
+.mvp-pick{position:relative}.mvp-suggest{position:absolute;top:100%;left:0;right:0;z-index:30;margin-top:4px;background:var(--surface-1);border:1px solid var(--line-strong);border-radius:6px;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.mvp-suggest button{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--text);padding:12px;font-weight:600;font-size:15px}.mvp-suggest button:last-child{border-bottom:0}.mvp-suggest button small{color:var(--muted);font-weight:400}.mvp-suggest button:hover,.mvp-suggest button:focus{background:var(--surface-2)}.mvp-suggest>div{padding:10px 12px}
 .mvp-lead{background:var(--surface-2);border:1px solid var(--fame-line);border-left:4px solid var(--gold);border-radius:8px;padding:12px 14px;margin:0 0 6px;display:grid;gap:4px}
 .mvp-picks{margin:10px 0}.mvp-picks .pill{margin:2px 4px 2px 0}
 .mvp-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:10px 0}
