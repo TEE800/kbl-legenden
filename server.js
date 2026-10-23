@@ -1309,11 +1309,14 @@ async function dayPlayerPoints(token,id,day,finished=false){
  if(points!==null)return {points,state:finished||Number(rec?.mdst)===2?'done':'live'};
  // Nicht am Status (mdst) festmachen: der wechselt waehrend des Spiels (z. B. Halbzeit) und dann fehlten die Punkte.
  // Massgeblich ist die Anstosszeit md: ist sie vorbei und fehlen die Punkte in performance, gilt playercenter.
+ // Fehlt der Eintrag in performance oder dessen Anstosszeit (z. B. Pejcinovic an ST 7), entscheidet playercenter selbst (eigene Anstosszeit md).
  const kick=Date.parse(rec?.md||'');
- if(!rec||!Number.isFinite(kick)||kick>Date.now())return {points:null,state:'open'};
+ if(Number.isFinite(kick)&&kick>Date.now())return {points:null,state:'open'};
  const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});
+ const pcKick=Date.parse(pc?.md||'');
+ if(!Number.isFinite(kick)&&!(Number.isFinite(pcKick)&&pcKick<=Date.now()))return {points:null,state:'open',why:rec?'keine Anstosszeit':'kein Eintrag in performance'};
  const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
- return {points:p,state:p===null?'open':'live',mdst:rec.mdst??null,mst:pc?.mst??null};
+ return {points:p,state:p===null?'open':'live',mdst:rec?.mdst??null,mst:pc?.mst??null,...(rec?{}:{why:'nur playercenter'})};
 }
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
