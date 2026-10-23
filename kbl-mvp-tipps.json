@@ -8,6 +8,156 @@
         "id": "1981519",
         "name": "Daniel_Niederlande"
       }
+    },
+    "tips": {
+      "699062": {
+        "name": "T800",
+        "playerId": "11255",
+        "player": "Katic",
+        "team": "Schalke",
+        "points": 165,
+        "updatedAt": "2026-10-23T18:19:46.476Z"
+      },
+      "841764": {
+        "name": "Hasan",
+        "playerId": "32",
+        "player": "Karius",
+        "team": "Schalke",
+        "points": 180,
+        "late": true,
+        "updatedAt": "2026-10-23T18:34:54.086Z"
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "playerId": "6197",
+        "player": "Curda",
+        "team": "Paderborn",
+        "points": 187,
+        "updatedAt": "2026-10-23T17:19:44.221Z"
+      },
+      "1386995": {
+        "name": "Adam",
+        "playerId": "11255",
+        "player": "Katic",
+        "team": "Schalke",
+        "points": 134,
+        "late": true,
+        "updatedAt": "2026-10-23T18:35:32.470Z"
+      },
+      "1403991": {
+        "name": "Cello",
+        "playerId": "32",
+        "player": "Karius",
+        "team": "Schalke",
+        "points": 184,
+        "updatedAt": "2026-10-23T17:23:01.060Z"
+      },
+      "1450470": {
+        "name": "Meister",
+        "playerId": "2977",
+        "player": "Noll",
+        "team": "Paderborn",
+        "points": 231,
+        "late": true,
+        "updatedAt": "2026-10-23T18:37:31.788Z"
+      },
+      "1631136": {
+        "name": "Fabio",
+        "playerId": "8292",
+        "player": "Castañeda",
+        "team": "Paderborn",
+        "points": 187,
+        "updatedAt": "2026-10-23T18:14:01.605Z"
+      },
+      "1631954": {
+        "name": "YW7",
+        "playerId": "11255",
+        "player": "Katic",
+        "team": "Schalke",
+        "points": 195,
+        "updatedAt": "2026-10-23T18:05:38.590Z"
+      },
+      "1646647": {
+        "name": "Baumann",
+        "playerId": "8292",
+        "player": "Castañeda",
+        "team": "Paderborn",
+        "points": 155,
+        "updatedAt": "2026-10-23T17:32:32.798Z"
+      },
+      "1906625": {
+        "name": "xDanii",
+        "playerId": "6197",
+        "player": "Curda",
+        "team": "Paderborn",
+        "points": 176,
+        "updatedAt": "2026-10-23T17:24:40.834Z"
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "playerId": "2749",
+        "player": "Tigges",
+        "team": "Paderborn",
+        "points": 218,
+        "updatedAt": "2026-10-23T17:25:56.968Z"
+      },
+      "1929473": {
+        "name": "Mic193",
+        "playerId": "2015",
+        "player": "Obermair",
+        "team": "Paderborn",
+        "points": 212,
+        "updatedAt": "2026-10-23T17:28:37.726Z"
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "playerId": "11255",
+        "player": "Katic",
+        "team": "Schalke",
+        "points": 247,
+        "late": true,
+        "updatedAt": "2026-10-23T18:34:10.338Z"
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "playerId": "32",
+        "player": "Karius",
+        "team": "Schalke",
+        "points": 189,
+        "late": true,
+        "updatedAt": "2026-10-23T18:33:42.237Z"
+      },
+      "2710049": {
+        "name": "diminator",
+        "playerId": "3350",
+        "player": "Keidel",
+        "team": "Elversberg",
+        "points": 178,
+        "late": true,
+        "updatedAt": "2026-10-23T18:37:10.149Z"
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "playerId": "8292",
+        "player": "Castañeda",
+        "team": "Paderborn",
+        "points": 188,
+        "late": true,
+        "updatedAt": "2026-10-23T18:38:41.658Z"
+      }
+    },
+    "liveMvp": {
+      "at": "2026-10-23T18:44:32.448Z",
+      "points": null,
+      "players": [],
+      "checked": 468,
+      "failed": 0,
+      "reliable": false,
+      "pool": [
+        "Elversberg",
+        "Paderborn",
+        "Schalke"
+      ]
     }
   }
 }
