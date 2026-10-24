@@ -2,6 +2,7 @@
 (()=>{
  const $=s=>document.querySelector(s);
  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+ const mn=(n,id)=>window.kblMgrName?window.kblMgrName(n,'',id):esc(n);
  const fmt=n=>n==null||!Number.isFinite(n)?'–':new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(n);
  const date=s=>s?new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):'';
  let data=null,sortKey='avg',sortDir=-1,detailCh=null;
@@ -44,7 +45,7 @@
   const rows=all.filter(s=>s.n).sort((a,b)=>{const x=a[sortKey],y=b[sortKey];if(typeof x==='string')return sortDir*x.localeCompare(y);return sortDir*((x??-1e9)-(y??-1e9))||b.avg-a.avg;});
   const none=all.filter(s=>!s.n).map(s=>esc(s.name));
   const head=cols.map(([k,t])=>`<th class="${k==='name'?'':'right'}" data-ch-sort="${k}" style="cursor:pointer" title="Sortieren">${t}${sortKey===k?(sortDir<0?' ▼':' ▲'):''}</th>`).join('');
-  const body=rows.map((s,i)=>`<tr><td>${i+1}. ${esc(s.name)}</td><td class="right">${s.n}</td><td class="right">${s.wins}</td><td class="right">${s.podium}</td><td class="right">${s.last}</td><td class="right">${fmt(s.avgRank)}</td><td class="right"><b>${fmt(Math.round(s.avg))}</b></td><td class="right" title="${esc(s.bestCh)}">${fmt(s.best)}</td><td class="right">${fmt(Math.round(s.avgCapt))}</td><td class="right">${fmt(s.sum)}</td></tr>`).join('');
+  const body=rows.map((s,i)=>`<tr><td>${i+1}. ${mn(s.name,s.id)}</td><td class="right">${s.n}</td><td class="right">${s.wins}</td><td class="right">${s.podium}</td><td class="right">${s.last}</td><td class="right">${fmt(s.avgRank)}</td><td class="right"><b>${fmt(Math.round(s.avg))}</b></td><td class="right" title="${esc(s.bestCh)}">${fmt(s.best)}</td><td class="right">${fmt(Math.round(s.avgCapt))}</td><td class="right">${fmt(s.sum)}</td></tr>`).join('');
   return `<div class="tablewrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Platz, Sieg, Top 3 und Letzter beziehen sich nur auf die Legenden, die die Challenge gespielt haben. Auf eine Spalte tippen zum Sortieren.${none.length?` Keine gewertete Challenge: ${none.join(', ')}.`:''}</p>`;
  }
 
@@ -75,7 +76,7 @@
   const body=rows.map((r,i)=>{
    const arrow=r.prev&&r.d&&r.prev.idx!==r.d.idx?(r.d.idx<r.prev.idx?` <span style="color:#7fd3a6" title="aufgestiegen aus ${esc(r.prev.dvn)}">▲</span>`:` <span style="color:#ed8b85" title="abgestiegen aus ${esc(r.prev.dvn)}">▼</span>`):'';
    const toUp=r.up&&r.total!=null?`<span title="bis ${esc(r.up.dvn)}">${fmt(r.up.bod-r.total)}</span>`:'–';
-   return `<tr><td>${r.total!=null?i+1+'.':'–'} ${esc(r.name)}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?`${esc(r.d.dvn)}${arrow}`:'<span class="muted">unbekannt</span>'}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
+   return `<tr><td>${r.total!=null?i+1+'.':'–'} ${mn(r.name,r.id)}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?`${esc(r.d.dvn)}${arrow}`:'<span class="muted">unbekannt</span>'}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
   }).join('');
   const since=firstAt?date(firstAt):null;
   return `<div class="tablewrap"><table><thead><tr><th>MANAGER</th><th class="right">RUSH-PUNKTE</th><th>DIVISION</th><th class="right">BIS AUFSTIEG</th><th class="right">GESAMTPLATZ</th><th class="right">Ø PRO WOCHE</th></tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Rush-Punkte und Division kommen direkt von Kickbase (Social Hub, gefolgte Manager). „Bis Aufstieg“ = fehlende Punkte bis zur nächsten Division. „Gesamtplatz“ = Platz unter allen ${fmt(R.divisions.reduce((s,x)=>s+(x.uc||0),0))} Rush-Spielern: alle in höheren Divisionen liegen vorne, die genaue Stelle innerhalb der eigenen Division gibt Kickbase nicht heraus, darum der Bereich. „Ø pro Woche“ ist exakt aus den gesicherten Kickbase-Ständen (alle 3 Stunden, seit ${since||'jetzt'}) und zählt nur abgeschlossene Wochen ab Beginn der Aufzeichnung (${weeks.length?weeks.length+' bisher':'noch keine, die erste kommt nach Ende von Woche 22'}).</p>`;

@@ -8,10 +8,41 @@ const onConnected=[];
 const escapeHtml=v=>String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const pick=(o,keys,def='–')=>{for(const k of keys)if(o?.[k]!=null)return o[k];return def};
 const leagueItems=d=>[d?.lins,d?.it,d].find(Array.isArray)||[];
-const rankingItems=d=>[d?.it,d?.us,d?.ranking,d?.users,d?.tom,d?.rnks,d].find(Array.isArray)||[];
+const rankingItems=d=>{const a=[d?.it,d?.us,d?.ranking,d?.users,d?.tom,d?.rnks,d].find(Array.isArray)||[];rememberManagerImgs(a);return a;};
 const managerName=x=>pick(x,['n','unm','userName','name'],pick(x?.u,['n','unm','name'],'Manager'));
 const points=x=>pick(x,['p','pts','points','v','sp','tp'],pick(x?.u,['p','pts','points'],null));
 const position=(x,i)=>pick(x,['r','pos','position','pl','rank'],i+1);
+// Manager-Logos (Kevin-Wunsch): Profilbild des Managers aus dem Kickbase-Ranking (uim), gemerkt je Name und ID.
+// mgrFace(name) setzt das Logo vor einen Namen. Ist das Ranking noch nicht geladen, bleibt ein leerer Platzhalter,
+// den fillMgrFaces füllt, sobald die Bilder bekannt sind. Ohne Bild: Anfangsbuchstabe im Kreis.
+const KBL_MGR_IMG=new Map();
+const mgrKey=n=>String(n??'').trim().toLocaleLowerCase('de-DE');
+const kbImgUrl=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
+function rememberManagerImgs(list){
+ let neu=false;
+ for(const x of list||[]){const n=x&&(x.n??x.u?.n);if(n==null||x.i==null&&x.u?.i==null)continue;const src=kbImgUrl(x.uim??x.u?.uim)||null;
+  for(const k of [mgrKey(n),'#'+(x.i??x.u?.i)])if(!KBL_MGR_IMG.has(k)||src&&KBL_MGR_IMG.get(k)!==src){KBL_MGR_IMG.set(k,src);neu=true;}}
+ if(neu)queueMicrotask(fillMgrFaces);
+}
+const mgrInitial=n=>escapeHtml((String(n??'').trim()[0]||'?').toUpperCase());
+function mgrFaceInner(name,id){
+ const k=id!=null&&KBL_MGR_IMG.has('#'+id)?'#'+id:mgrKey(name);if(!KBL_MGR_IMG.has(k))return null;
+ const src=KBL_MGR_IMG.get(k);
+ return src?`<img src="${escapeHtml(src)}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('mgr-av-txt');this.replaceWith(${escapeHtml(JSON.stringify(String(name??'').trim()[0]?.toUpperCase()||'?'))})">`:mgrInitial(name);
+}
+function mgrFace(name,cls='',id=null){
+ const inner=mgrFaceInner(name,id),txt=inner!=null&&!inner.startsWith('<img');
+ return `<span class="mgr-av${txt?' mgr-av-txt':''}${cls?' '+cls:''}" data-mgr="${escapeHtml(name??'')}"${id!=null?` data-mgr-id="${escapeHtml(id)}"`:''} aria-hidden="true">${inner??''}</span>`;
+}
+// Logo plus Name; Logo und Namensanfang bleiben in einer Zeile, lange Namen dürfen nach „_“ umbrechen.
+function mgrName(name,cls='',id=null){
+ const t=escapeHtml(name??''),i=t.indexOf('_'),head=i<0?t:t.slice(0,i+1),rest=i<0?'':'<wbr>'+t.slice(i+1).replaceAll('_','_<wbr>');
+ return `<span class="mgr-nm">${mgrFace(name,cls,id)}${head}</span>${rest}`;
+}
+function fillMgrFaces(root=document){
+ for(const el of root.querySelectorAll('.mgr-av[data-mgr]:empty')){const inner=mgrFaceInner(el.dataset.mgr,el.dataset.mgrId);if(inner==null)continue;el.innerHTML=inner;if(!inner.startsWith('<img'))el.classList.add('mgr-av-txt');}
+}
+window.kblMgrFace=mgrFace;window.kblMgrName=mgrName;window.kblFillMgrFaces=fillMgrFaces;
 // Abgelaufene Sitzung (z. B. nach einem Server-Neustart): Anmeldemaske wieder zeigen statt Fehlern in jedem Reiter.
 async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(r.status===401&&!String(url).startsWith('/api/login')){try{setConnected(false);}catch{}throw Error('Bitte neu anmelden (Sitzung abgelaufen).');}if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 function setConnected(on){$('#status').textContent=on?'● Kickbase verbunden':'Nicht verbunden';$('#status').classList.toggle('ok',on);$('#loginCard').classList.toggle('hidden',on);$('#leagueCard').classList.add('hidden');if(!on)$('#dashboard').classList.add('hidden')}
@@ -39,7 +70,7 @@ async function loadRanking(){if(!currentLeague)return;const day=$('#dayNumber').
 
 managers.forEach((m,i) => {
   m.pos = i + 1;
-});currentManagers=managers;rankingDay=day;renderProfiles();renderRankingTable();const scored=managers.filter(m=>m.score!==null);const total=scored.reduce((s,m)=>s+m.score,0);const sorted=[...scored].sort((a,b)=>b.score-a.score);const max=Math.max(1,...scored.map(m=>m.score));$('#bars').innerHTML=sorted.map(m=>`<div class="barline"><span>${escapeHtml(m.name)}</span><div class="track"><div class="fill" style="width:${Math.max(0,m.score)/max*100}%"></div></div><b>${fmt(m.score)}</b></div>`).join('')||'<p class="muted">Noch keine Punktedaten.</p>';}catch(e){$('#ranking').innerHTML=`<tr><td colspan="6" class="error">${escapeHtml(e.message)}</td></tr>`}}
+});currentManagers=managers;rankingDay=day;renderProfiles();renderRankingTable();const scored=managers.filter(m=>m.score!==null);const total=scored.reduce((s,m)=>s+m.score,0);const sorted=[...scored].sort((a,b)=>b.score-a.score);const max=Math.max(1,...scored.map(m=>m.score));$('#bars').innerHTML=sorted.map(m=>`<div class="barline"><span>${mgrName(m.name)}</span><div class="track"><div class="fill" style="width:${Math.max(0,m.score)/max*100}%"></div></div><b>${fmt(m.score)}</b></div>`).join('')||'<p class="muted">Noch keine Punktedaten.</p>';}catch(e){$('#ranking').innerHTML=`<tr><td colspan="6" class="error">${escapeHtml(e.message)}</td></tr>`}}
 // Liga-Tabelle: in der Gesamtwertung zusätzlich letzter Spieltag, Platzveränderung und Rückstand auf Platz 1.
 let rankingDay='';
 function renderRankingTable(){
@@ -74,7 +105,7 @@ function renderRankingTable(){
   if(now&&prev&&now.has(m.name)&&prev.has(m.name)){const d=prev.get(m.name)-now.get(m.name);move=d>0?`<span class="rank-up">▲${d}</span>`:d<0?`<span class="rank-down">▼${-d}</span>`:'<span class="muted">=</span>';}
   const cls=m.pos===1?'rank-row-1':m.pos<=3?'rank-row-top':m.pos===lastPos&&managers.length>3?'rank-row-last':'';
   const gap=leader===null||m.score===null||m.pos===1?'':`−${fmt(leader-m.score)}`;
-  return `<tr class="${cls}"><td>${escapeHtml(m.pos)}</td><td class="center">${move}</td><td><button class="manager-link" data-profile="${i}">${escapeHtml(m.name)}</button></td><td class="right muted">${last?fmt(lastPoints.get(m.name)):'–'}</td><td class="right muted">${avgOf.has(m.name)?fmt(Math.round(avgOf.get(m.name).s/avgOf.get(m.name).n)):'–'}</td><td class="right muted">${last?(winsOf.get(m.name)||0):'–'}</td><td class="right muted">${gap}</td><td class="right">${fmt(m.score)}</td></tr>`;
+  return `<tr class="${cls}"><td>${escapeHtml(m.pos)}</td><td class="center">${move}</td><td><button class="manager-link" data-profile="${i}">${mgrName(m.name)}</button></td><td class="right muted">${last?fmt(lastPoints.get(m.name)):'–'}</td><td class="right muted">${avgOf.has(m.name)?fmt(Math.round(avgOf.get(m.name).s/avgOf.get(m.name).n)):'–'}</td><td class="right muted">${last?(winsOf.get(m.name)||0):'–'}</td><td class="right muted">${gap}</td><td class="right">${fmt(m.score)}</td></tr>`;
  }).join('');
 }
 function storageKey(){return 'kbl-penalties-'+String(currentLeague?.id||'none')}
@@ -183,7 +214,8 @@ function renderHall(){
  const card=r=>{
   const winnerNames=[...new Set(r.winners.map(w=>w.name))];
   const shown=winnerNames.length>3?winnerNames.slice(0,2):winnerNames;
-  const names=shown.map(escapeHtml).join(' · ')+(winnerNames.length>3?` <details class="hall-more"><summary>+ ${winnerNames.length-2} weitere</summary>${winnerNames.slice(2).map(escapeHtml).join(' · ')}</details>`:'');
+  const nm=n=>mgrName(n);
+  const names=shown.map(nm).join(' · ')+(winnerNames.length>3?` <details class="hall-more"><summary>+ ${winnerNames.length-2} weitere</summary>${winnerNames.slice(2).map(nm).join(' · ')}</details>`:'');
   const best=r.winners[0];
   const value=best?`${fmt(r.value(best))}${r.unit}`:'–';
   const day=r.day?`<div class="hall-day">${[...new Set(r.winners.map(w=>w.day))].sort((a,b)=>a-b).map(d=>'Spieltag '+d).join(' · ')}</div>`:'';
@@ -285,7 +317,7 @@ function duelHtml(a,b,bm){
   ['Form (Ø letzte 3)',form(a),form(b),true,v=>fmt(v==null?null:Math.round(v))],
   ['Bumsungen',bA,bB,false,v=>v==null?'–':fmt(v)]];
  const cell=(v,o,hi,f)=>`<td class="${v!=null&&o!=null&&v!==o&&(hi?v>o:v<o)?'duel-win':''}">${f(v)}</td>`;
- const table=`<table class="duel-table"><thead><tr><th>${escapeHtml(a)}</th><th></th><th>${escapeHtml(b)}</th></tr></thead><tbody>${lines.map(([l,va,vb,hi,f])=>`<tr>${cell(va,vb,hi,f)}<th>${l}</th>${cell(vb,va,hi,f)}</tr>`).join('')}</tbody></table>`;
+ const table=`<table class="duel-table"><thead><tr><th>${mgrName(a)}</th><th></th><th>${mgrName(b)}</th></tr></thead><tbody>${lines.map(([l,va,vb,hi,f])=>`<tr>${cell(va,vb,hi,f)}<th>${l}</th>${cell(vb,va,hi,f)}</tr>`).join('')}</tbody></table>`;
  // Punkte je Spieltag als kleines Liniendiagramm.
  const W=900,H=260,L=44,R=12,T=14,B=30,vals=rows.flatMap(r=>[r.pa,r.pb]);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=50;hi+=50;}
  const pad=(hi-lo)*.1;lo=Math.floor((lo-pad)/50)*50;const step=Math.max(50,Math.ceil((hi+pad-lo)/4/50)*50);hi=lo+4*step;
@@ -326,7 +358,7 @@ function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
  const diff=other&&m.score!=null&&other.score!=null?m.score-other.score:null;
- $('#profileDetails').innerHTML=`<div class="profiletitle"><img class="clown" src="clown.svg" alt="🤡"> ${escapeHtml(m.name)}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${escapeHtml(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
+ $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${mgrName(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
 }
 $('#profileSelect').addEventListener('change',showProfile);
 $('#compareSelect').addEventListener('change',()=>{if($('#compareSelect').value!=='')profOpen.add(DUEL_SEC);showProfile();});
@@ -435,7 +467,8 @@ function renderLeagueAnalysis(){
  const avgAll=rows.reduce((s,r)=>s+r.avg,0)/rows.length;
  const card=(label,value,sub)=>`<div style="background:#17232c;border:1px solid #34424c;border-radius:10px;padding:16px;min-width:0"><small style="color:#9eafbc">${label}</small><div style="font-size:clamp(16px,4.6vw,24px);font-weight:800;color:#e9c878;margin:8px 0;overflow-wrap:anywhere">${value}</div><small style="color:#a6b7c4">${sub}</small></div>`;
  const esc=x=>escapeHtml(String(x)).replace(/_/g,'_<wbr>');
- const short=list=>list.length>2?`${list.slice(0,2).map(esc).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(esc).join(', ')}</details>`:list.map(esc).join(', ');
+ const nm=x=>mgrName(x);
+ const short=list=>list.length>2?`${list.slice(0,2).map(nm).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(nm).join(', ')}</details>`:list.map(nm).join(', ');
  const pick=(list,val,dir=1)=>{const v=dir>0?Math.max(...list.map(val)):Math.min(...list.map(val));return {v,who:list.filter(x=>val(x)===v)};};
  // Je Spieltag: Ligaschnitt und Abstand Sieger zu Zweitem.
  const dayStats=days.map(h=>{const sc=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)).sort((a,b)=>b.dayPoints-a.dayPoints);
@@ -454,8 +487,8 @@ function renderLeagueAnalysis(){
   hot?card('IN FORM',short(hot.who.map(x=>x.name)),`${fmt(hot.v)} Ø in den letzten ${n} Spieltagen`):''}${
   cold?card('FORMTIEF',short(cold.who.map(x=>x.name)),`${fmt(cold.v)} Ø in den letzten ${n} Spieltagen`):''}${
   bestDay&&worstDay?card('STÄRKSTER SPIELTAG',stDays(bestDay.who),`${fmt(bestDay.v)} Ø Punkte der Liga · schwächster: ${stDays(worstDay.who)} (${fmt(worstDay.v)} Ø)`):''}${
-  (()=>{const rm=window.kblRankMoves;if(!rm)return '';return card('GRÖSSTE AUFHOLJAGD',rm.climbers.length?rm.climbers.map(r=>esc(r.name)).join(', '):'–',rm.climbers.length?rm.moves(rm.climbers,r=>`von Platz ${r.lowest} auf Platz ${r.now} (+${r.climb})`):'Noch niemand hat sich nach vorne gekämpft')+
-   card('TIEFSTER FALL',rm.fallers.length?rm.fallers.map(r=>esc(r.name)).join(', '):'–',rm.fallers.length?rm.moves(rm.fallers,r=>`von Platz ${r.highest} auf Platz ${r.now} (−${r.fall})`):'Noch niemand ist abgerutscht');})()}${
+  (()=>{const rm=window.kblRankMoves;if(!rm)return '';return card('GRÖSSTE AUFHOLJAGD',rm.climbers.length?rm.climbers.map(r=>nm(r.name)).join(', '):'–',rm.climbers.length?rm.moves(rm.climbers,r=>`von Platz ${r.lowest} auf Platz ${r.now} (+${r.climb})`):'Noch niemand hat sich nach vorne gekämpft')+
+   card('TIEFSTER FALL',rm.fallers.length?rm.fallers.map(r=>nm(r.name)).join(', '):'–',rm.fallers.length?rm.moves(rm.fallers,r=>`von Platz ${r.highest} auf Platz ${r.now} (−${r.fall})`):'Noch niemand ist abgerutscht');})()}${
   bigWin?card('DEUTLICHSTER SIEG',short([...new Set(bigWin.who.map(x=>x.winner))]),`+${fmt(bigWin.v)} vor ${bigWin.who.length===1?esc(bigWin.who[0].second)+' · ST '+bigWin.who[0].day:'dem Zweiten · '+stDays(bigWin.who)}`):''}${
   tight?card('KNAPPSTER SIEG',short([...new Set(tight.who.map(x=>x.winner))]),`+${fmt(tight.v)} vor ${tight.who.length===1?esc(tight.who[0].second)+' · ST '+tight.who[0].day:'dem Zweiten · '+stDays(tight.who)}`):''}</div>`;
  const pill=document.querySelector('#stats .sectionhead .pill');if(pill)pill.textContent=`${days.length} abgeschlossene Spieltage · ${rows.length} Manager`;
@@ -636,7 +669,7 @@ function renderRankHistory(){
    return `<td class="right ${cls}" title="${escapeHtml(r.name)} · ${tip}">${v}</td>`;
   }).join('');
   const trend=r.trend===null?'–':r.trend>0?`<span class="rank-up">▲ ${r.trend}</span>`:r.trend<0?`<span class="rank-down">▼ ${-r.trend}</span>`:'<span class="muted">=</span>';
-  return `<tr><td class="rank-name"><b>${r.now??'–'}.</b> ${escapeHtml(r.name)}</td>${cells}<td class="right">${r.best??'–'}</td><td class="right">${r.worst??'–'}</td><td class="right">${trend}</td></tr>`;
+  return `<tr><td class="rank-name"><b>${r.now??'–'}.</b> ${mgrName(r.name)}</td>${cells}<td class="right">${r.best??'–'}</td><td class="right">${r.worst??'–'}</td><td class="right">${trend}</td></tr>`;
  }).join('');
  el.innerHTML=cards+`<div class="rank-wrap"><table class="rank-table"><thead>${head}</thead><tbody>${body}</tbody></table></div><p class="muted tiny" style="margin-top:12px">Platz nach dem Gesamtpunktestand am Ende jedes abgeschlossenen Spieltags. <span class="rank-up">Grün</span> = Plätze gutgemacht, <span class="rank-down">Rot</span> = Plätze verloren, <span class="rank-first">Gold</span> = Tabellenführer. Bei Punktgleichheit teilen sich Manager den Platz. LIVE-Spieltage zählen nicht. Den Verlauf als Linien gibt es weiter unten im Diagramm unter „Tabellenplatz-Verlauf“.</p>`;
  // Neueste Spieltage zuerst sichtbar (wichtig auf dem Handy).
@@ -665,7 +698,7 @@ async function snapshotLoadSaved(){
  const day=snapshotDayValue();if(!day)return;
  try{const d=await api(`/api/lineup-snapshots/${day}`);snapshotState.saved=d.snapshots||[];
  const names=new Map(snapshotState.managers.map(m=>[String(m.id),m.name]));
- $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr><td>${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
+ $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr><td>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
  snapshotUpdateButtons();
  }catch(e){snapshotMsg(e.message,true);}
 }
@@ -785,7 +818,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   coverage.textContent='Prüfe gespeicherte Aufstellungen …';
   try{
    const d=await api(`/api/lineup-coverage/${day.value}`);
-   const rows=d.entries.map(x=>`<tr><td>${safe(x.name)}</td><td>${x.status==='confirmed'?'Bestätigt':x.status==='missing'?'Fehlt':x.status==='invalid'?'Ungültig':'Noch nicht manuell bestätigt'}</td><td>${x.count||'–'}</td></tr>`).join('');
+   const rows=d.entries.map(x=>`<tr><td>${mgrName(x.name)}</td><td>${x.status==='confirmed'?'Bestätigt':x.status==='missing'?'Fehlt':x.status==='invalid'?'Ungültig':'Noch nicht manuell bestätigt'}</td><td>${x.count||'–'}</td></tr>`).join('');
    const ok=d.confirmed===d.expected;
    coverage.innerHTML=`<p style="margin:0"><span class="acc-badge ${ok?'ok':'warn'}">${ok?'✓':'!'} Aufstellungen: ${d.confirmed} von ${d.expected} bestätigt</span></p>${ok?'':'<p class="muted tiny" style="margin:8px 0 0">Ohne vollständige Aufstellungen ist keine verlässliche Abrechnung möglich.</p>'}<details><summary>Details je Manager</summary><div class="tablewrap"><table><thead><tr><th>MANAGER</th><th>STATUS</th><th>SPIELER</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }catch(e){coverage.textContent='Aufstellungsstatus nicht abrufbar: '+e.message;}
@@ -1178,7 +1211,7 @@ function centerTodoHtml(){
  for(const m of everyone)if(isEligibleManager(m.name)&&!known.has(String(m.mid))&&!known.has(m.name))groups.set(String(m.mid||m.name),{mid:m.mid,name:m.name,list:[]});
  const sorted=[...groups.values()].map(g=>{const pts=pointsFor(g.mid,g.name);return {...g,pts,place:placeOf(pts),hits:g.list.filter(x=>x.todo||x.unclear||x.receive).length,open:g.list.filter(x=>x.todo&&!x.finished).length,check:g.list.filter(x=>x.unclear).length};})
   .sort((x,y)=>(x.place??999)-(y.place??999)||x.name.localeCompare(y.name,'de'));
- const groupHtml=sorted.map(g=>`<li class="center-group${g.list.length?'':' center-idle'}${g.open||g.check?'':' center-done'}"><div class="center-grouphead"><span>${g.place?`<span class="center-place">${g.place}.</span>`:''}<b>${safe(g.name)}</b>${g.pts!=null?` <span class="muted tiny" style="white-space:nowrap">${fmt(g.pts)} Pkt.</span>`:''}</span><span class="center-heads"><span class="center-hits${g.hits?'':' none'}">${g.hits?`${g.hits} Bumsung${g.hits===1?'':'en'}`:'keine Bumsung'}</span>${g.list.length?`<span class="center-state ${g.open?'open':g.check?'warn':'ok'}">${g.open?`${g.open} offen`:g.check?'bitte prüfen':'✓ erledigt'}</span>`:''}</span></div>${g.list.length?`<ul class="center-todo">${g.list.map(x=>x.html).join('')}</ul>`:''}</li>`).join('');
+ const groupHtml=sorted.map(g=>`<li class="center-group${g.list.length?'':' center-idle'}${g.open||g.check?'':' center-done'}"><div class="center-grouphead"><span>${g.place?`<span class="center-place">${g.place}.</span>`:''}<b>${mgrName(g.name)}</b>${g.pts!=null?` <span class="muted tiny" style="white-space:nowrap">${fmt(g.pts)} Pkt.</span>`:''}</span><span class="center-heads"><span class="center-hits${g.hits?'':' none'}">${g.hits?`${g.hits} Bumsung${g.hits===1?'':'en'}`:'keine Bumsung'}</span>${g.list.length?`<span class="center-state ${g.open?'open':g.check?'warn':'ok'}">${g.open?`${g.open} offen`:g.check?'bitte prüfen':'✓ erledigt'}</span>`:''}</span></div>${g.list.length?`<ul class="center-todo">${g.list.map(x=>x.html).join('')}</ul>`:''}</li>`).join('');
  const notes=[];
  if(a.probe)notes.push('PROBELAUF: Die heutigen Aufstellungen wurden als Startelf angenommen. Nur ein Test, Haken sind ausgeschaltet.');
  if(!d.complete)notes.push('Aufstellungen oder Spielerpunkte sind unvollständig, Drehtür und Magic Miyoshi fehlen noch.');
@@ -1207,7 +1240,8 @@ let accTodoOpen=false;
 function centerExtraCards(finished,card){
  const last=finished.at(-1),prev=finished.at(-2);if(!last)return '';
  const esc=x=>escapeHtml(String(x)).replace(/_/g,'_<wbr>');
- const short=list=>list.length>2?`${list.slice(0,2).map(esc).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(esc).join(', ')}</details>`:list.map(esc).join(', ');
+ const nm=x=>mgrName(x);
+ const short=list=>list.length>2?`${list.slice(0,2).map(nm).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(nm).join(', ')}</details>`:list.map(nm).join(', ');
  const scored=last.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)).sort((a,b)=>b.dayPoints-a.dayPoints);
  if(!scored.length)return '';
  const best=scored[0].dayPoints,winners=scored.filter(m=>m.dayPoints===best),rest=scored.filter(m=>m.dayPoints<best);
@@ -1250,7 +1284,7 @@ function benchCard(day,card){
  if(b.wait)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','…','Bankpunkte werden geladen');
  if(b.msg)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','–',escapeHtml(b.msg));
  const best=b.list[0].bench.filter(p=>p.points!=null).slice(0,3).map(p=>`${escapeHtml(p.name||'Spieler '+p.id)} ${fmt(p.points)}`).join(', ');
- return card('🤡 VOLLPFOSTEN DES SPIELTAGS',b.list.map(m=>escapeHtml(m.name)).join(', '),`${fmt(b.top)} Punkte auf der Bank gelassen${best&&b.list.length===1?` · ${best}`:''}`);
+ return card('🤡 VOLLPFOSTEN DES SPIELTAGS',b.list.map(m=>mgrName(m.name)).join(', '),`${fmt(b.top)} Punkte auf der Bank gelassen${best&&b.list.length===1?` · ${best}`:''}`);
 }
 function historyLiveInner(day){
  const leader=liveRanking(day)?.[0];
@@ -1261,7 +1295,7 @@ function renderCenter(){
  const finished=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
  if(!finished.length){el.innerHTML='<p class="muted">Noch kein Spieltag abgeschlossen.</p>';return;}
  const card=(label,value,sub)=>`<div><small>${label}</small><strong>${value}</strong><span>${sub}</span></div>`;
- const names=list=>list.map(m=>escapeHtml(m.name)).join(', ');
+ const names=list=>list.map(m=>mgrName(m.name)).join(', ');
  let html='';
  // Kein LIVE-Kasten hier (Kevin-Wunsch): Der laufende Spieltag steht oben in der Kategorie „Spieltag“, hier nur Abgeschlossenes.
  const last=finished.at(-1);
@@ -1288,7 +1322,7 @@ function renderCenter(){
   html+=`<div class="rank-cards">${
    card('SPIELTAGSSIEGER',winners.length?names(winners):'–',best===null?'':`${fmt(best)} Punkte`)}${
    card('LETZTER',losers.length?names(losers):'–',worst===null?'':`${fmt(worst)} Punkte${avg!==null?` · Schnitt ${fmt(Math.round(avg))}`:''}`)}${
-   card('TABELLENFÜHRER',leaders.length?escapeHtml(leaders.join(', ')):'–',leaderScore==null?'':`${fmt(leaderScore)} Punkte${second?` · ${fmt(leaderScore-second.score)} vor ${escapeHtml(second.name)}`:''}`)}${
+   card('TABELLENFÜHRER',leaders.length?leaders.map(n=>mgrName(n)).join(', '):'–',leaderScore==null?'':`${fmt(leaderScore)} Punkte${second?` · ${fmt(leaderScore-second.score)} vor ${escapeHtml(second.name)}`:''}`)}${
    moveCard}${benchCard(last.day,card)}${centerExtraCards(finished,card)}</div>`;
 
  }
@@ -1380,7 +1414,7 @@ let bumsDaysOpen=false,bumsStatsOpen=false,bumsTabOpen=false,bumsPairOpen=false,
 document.addEventListener('toggle',e=>{if(e.target.id==='bumsStats')bumsStatsOpen=e.target.open;if(e.target.id==='bumsTab')bumsTabOpen=e.target.open;if(e.target.id==='bumsPairs')bumsPairOpen=e.target.open;if(e.target.id==='bumsDays')bumsDaysOpen=e.target.open;},true);
 function bumsStatsHtml(rows,hit,inHalf,days,RN){
  if(!hit.length)return '';
- const names=l=>l.map(x=>escapeHtml(x)).join(', ');
+ const names=l=>l.map(x=>mgrName(x)).join(', ');
  const top=(list,val)=>{const m=Math.max(0,...list.map(val));return m>0?{m,who:list.filter(x=>val(x)===m)}:null;};
  const card=(title,t,unit,desc='')=>t?`<article class="hall-card shame"><div class="hall-title">${title}</div><div class="hall-value">${t.m}${unit}</div><div class="hall-desc">${names(t.who.map(x=>x.name))}${desc?' · '+desc:''}</div></article>`:'';
  const codes=Object.keys(RN).filter(k=>hit.some(r=>r.rules[k]));
@@ -1413,8 +1447,8 @@ function bumsPairsHtml(rows){
  const names=[...new Set([...rows.map(r=>r.name),...[...cnt.keys()].flatMap(k=>k.split('\u0000'))])].filter(n=>typeof isEligibleManager!=='function'||isEligibleManager(n)).sort((a,b)=>a.localeCompare(b,'de'));
  const max=Math.max(...cnt.values()),esc=escapeHtml;
  const given=n=>names.reduce((t,o)=>t+(cnt.get(key(n,o))||0),0),taken=n=>names.reduce((t,o)=>t+(cnt.get(key(o,n))||0),0);
- const th=names.map((n,c)=>`<th class="bx-col" data-c="${c}" title="${esc(n)}"><span>${esc(n)}</span></th>`).join('');
- const body=names.map((a,r)=>`<tr><th class="bx-row" data-r="${r}">${esc(a)}</th>${names.map((b,c)=>{if(a===b)return `<td class="bx-self" data-r="${r}" data-c="${c}"></td>`;const v=cnt.get(key(a,b))||0;
+ const th=names.map((n,c)=>`<th class="bx-col" data-c="${c}" title="${esc(n)}"><span>${esc(n)}</span>${mgrFace(n)}</th>`).join('');
+ const body=names.map((a,r)=>`<tr><th class="bx-row" data-r="${r}">${mgrFace(a)}${esc(a)}</th>${names.map((b,c)=>{if(a===b)return `<td class="bx-self" data-r="${r}" data-c="${c}"></td>`;const v=cnt.get(key(a,b))||0;
    return `<td class="bx-cell${v?' hit':''}" data-r="${r}" data-c="${c}"${v?` data-a="${esc(a)}" data-b="${esc(b)}" data-n="${v}" data-rules="${esc(Object.entries(rules.get(key(a,b))).map(([k,n])=>n>1?`${k} ×${n}`:k).join(', '))}" style="--bx:${(.25+.75*v/max).toFixed(2)}" title="${esc(a)} hat ${esc(b)} ${v}× gebumst"`:''}>${v||''}</td>`;}).join('')}<td class="bx-sum">${given(a)||''}</td></tr>`).join('');
  const foot=`<tr><th class="bx-row" title="So oft wurde dieser Manager gebumst">Σ abbekommen</th>${names.map(n=>`<td class="bx-sum">${taken(n)||''}</td>`).join('')}<td class="bx-sum"></td></tr>`;
  return head+`<p class="muted tiny">Zeile bumst Spalte: Die Zahl sagt, wie oft der Manager links den Manager oben gebumst hat. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt. Auf eine Zahl tippen zeigt die Regeln.</p>
@@ -1436,7 +1470,7 @@ function bumsDaysHtml(days,inHalf,RN){
   const when=D.savedAt?new Date(D.savedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   const src=D.manual?'von Hand nachgetragen':'automatisch aus der BumsParade';
   const body=ms.length?ms.map(v=>{const mv=(v.moves||[]);
-    return `<div class="bd-man"><div class="bd-head"><b>${esc(v.name)}</b> <span class="bums-num-s">${v.count}×</span> ${Object.entries(v.rules||{}).map(([k,n])=>chip(k)+(n>1?`<b class="muted"> ×${n}</b>`:'')).join(' ')}</div>${mv.length?`<ul>${mv.map(x=>`<li class="bums-mv-${x.d==='i'?'i':'o'}"><b>${DIRL[x.d]||'•'}</b> ${chip(x.r)} ${esc(x.t||'')}</li>`).join('')}</ul>`:`<p class="muted tiny">${D.manual?'Von Hand eingetragen, ohne Angabe wer an wen.':'Keine Einzelheiten gespeichert.'}</p>`}</div>`;}).join(''):'<p class="muted">An diesem Spieltag gab es keine Bumsung.</p>';
+    return `<div class="bd-man"><div class="bd-head"><b>${mgrName(v.name)}</b> <span class="bums-num-s">${v.count}×</span> ${Object.entries(v.rules||{}).map(([k,n])=>chip(k)+(n>1?`<b class="muted"> ×${n}</b>`:'')).join(' ')}</div>${mv.length?`<ul>${mv.map(x=>`<li class="bums-mv-${x.d==='i'?'i':'o'}"><b>${DIRL[x.d]||'•'}</b> ${chip(x.r)} ${esc(x.t||'')}</li>`).join('')}</ul>`:`<p class="muted tiny">${D.manual?'Von Hand eingetragen, ohne Angabe wer an wen.':'Keine Einzelheiten gespeichert.'}</p>`}</div>`;}).join(''):'<p class="muted">An diesem Spieltag gab es keine Bumsung.</p>';
   return `<details class="bd-day"><summary><b>ST ${d}</b><span>${sum} Bumsung${sum===1?'':'en'}</span><span class="bd-rules">${Object.keys(rules).map(k=>`<span class="bums-rule bums-r-${esc(k)}">${esc(k)}</span>`).join('')}</span><span class="muted tiny">${src}${when?' · '+esc(when):''}</span></summary><div class="bd-body">${body}${D.manual?'':`<p><button type="button" class="ghost bd-open" data-bums-day="${d}">In der BumsParade öffnen</button></p>`}</div></details>`;}).join('');
  return `<details class="hall-section prof-sec bums-statsbox" id="bumsDays"${bumsDaysOpen?' open':''}><summary><h4>🗓️ SPIELTAGE</h4></summary><p class="muted tiny">Jeder Spieltag einzeln zum Nachvollziehen: wer betroffen war, nach welcher Regel und wer an wen abgegeben hat. ↑ = abgegeben (bumst), ↓ = bekommen (gebumst).</p>${items||'<p class="muted">Noch keine Spieltage erfasst.</p>'}</details>`;
 }
@@ -1466,14 +1500,14 @@ async function renderBumsTabelle(){
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
- const podium=podRanks.map(rk=>{const g=hit.filter(r=>rankOf(r)===rk);return `<div class="bums-pod bums-pod-${rk}"><div class="bums-pod-medal">${medal[rk-1]} Platz ${rk}</div><div class="bums-pod-names">${g.map(r=>escapeHtml(r.name).replaceAll('_','_<wbr>')).join('<br>')}</div><div class="bums-pod-count">${g[0].count}<small> Bumsung${g[0].count===1?'':'en'}</small></div></div>`;}).join('');
+ const podium=podRanks.map(rk=>{const g=hit.filter(r=>rankOf(r)===rk);return `<div class="bums-pod bums-pod-${rk}"><div class="bums-pod-medal">${medal[rk-1]} Platz ${rk}</div><div class="bums-pod-names">${g.map(r=>mgrName(r.name)).join('<br>')}</div><div class="bums-pod-count">${g[0].count}<small> Bumsung${g[0].count===1?'':'en'}</small></div></div>`;}).join('');
  const DIRL={o:'↑',i:'↓',x:'•'};
  const dirLine=r=>{const parts=[r.out?`<span class="bums-out">↑ ${r.out} abgegeben</span>`:'',r.in?`<span class="bums-in">↓ ${r.in} bekommen</span>`:''].filter(Boolean).join('');
   if(!parts)return '';
   if(!r.moves.length)return `<div class="bums-dir">${parts}</div>`;
   return `<details class="bums-dir"><summary>${parts}</summary><ul>${r.moves.map(x=>`<li class="bums-mv-${x.d}"><b>${DIRL[x.d]}</b> <span class="bums-rule bums-r-${escapeHtml(x.r)}" data-rule="${escapeHtml(x.r)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(x.r)}</span> ${inHalf.length>1?`<span class="muted">ST ${x.day}:</span> `:''}${escapeHtml(x.t)}</li>`).join('')}</ul></details>`;};
  const perDay=r=>inHalf.length>1?`<div class="bums-perday">${inHalf.map(d=>`<span${r.per[d]?'':' class="zero"'}>ST ${d}: ${r.per[d]??0}</span>`).join('')}</div>`:'';
- const list=hit.map(r=>`<div class="bums-row${rankOf(r)===1?' first':''}" data-bums-name="${escapeHtml(r.name)}"><span class="bums-rank">${rankOf(r)}</span><div class="bums-who"><b>${escapeHtml(r.name).replaceAll('_','_<wbr>')}</b><div class="bums-rules">${chips(r.rules)}</div>${perDay(r)}</div><div class="bums-bar"><i style="width:${top?Math.round(r.count/top*100):0}%"></i></div><span class="bums-num">${r.count}</span>${dirLine(r)}</div>`).join('');
+ const list=hit.map(r=>`<div class="bums-row${rankOf(r)===1?' first':''}" data-bums-name="${escapeHtml(r.name)}"><span class="bums-rank">${rankOf(r)}</span><div class="bums-who"><b>${mgrName(r.name)}</b><div class="bums-rules">${chips(r.rules)}</div>${perDay(r)}</div><div class="bums-bar"><i style="width:${top?Math.round(r.count/top*100):0}%"></i></div><span class="bums-num">${r.count}</span>${dirLine(r)}</div>`).join('');
  const legend=Object.keys(ruleTot).sort((a,b)=>ruleTot[b]-ruleTot[a]).map(k=>`<span><span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(k)}</span> ${escapeHtml(RN[k]||k)} <span class="muted">${ruleTot[k]}×</span></span>`).join('');
  el.innerHTML=(hit.length?`<div class="bums-stats"><div><small>Bumsungen gesamt</small><strong>${total}</strong></div><div><small>Häufigste Regel</small><strong>${topRule?escapeHtml(RN[topRule[0]]||topRule[0]):'–'}</strong><span class="muted tiny">${topRule?topRule[1]+'×':''}</span></div><div><small>Weiße Weste</small><strong>${clean.length}</strong><span class="muted tiny">Manager ohne Bumsung</span></div></div>`+
   `<details class="hall-section prof-sec bums-statsbox" id="bumsTab"${bumsTabOpen?' open':''}><summary><h4>📋 TABELLE</h4></summary><div class="bums-podium">${podium}</div><div class="bums-list">${list}</div>`+
@@ -1505,7 +1539,7 @@ function bumsManualManagers(){
 }
 const BUMS_NAMES={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
 function bumsManualCell(id,name,codes){
- return `<div class="bums-mrow" data-bums-mid="${escapeHtml(id)}" data-bums-name="${escapeHtml(name)}" data-codes="${escapeHtml(codes.join(' '))}"><span class="bums-mname">${escapeHtml(name)}</span><span class="bums-mchips">${codes.map((c,i)=>`<button type="button" class="bums-rule bums-r-${escapeHtml(c)} bums-mdel" data-del="${i}" title="${escapeHtml(BUMS_NAMES[c]||c)} entfernen">${escapeHtml(c)} ✕</button>`).join('')||'<span class="muted tiny">keine</span>'}</span><select class="bums-madd" aria-label="Regel hinzufügen für ${escapeHtml(name)}"><option value="">+ Regel</option>${BUMS_CODES.map(c=>`<option value="${c}">${c} · ${escapeHtml(BUMS_NAMES[c])}</option>`).join('')}</select></div>`;
+ return `<div class="bums-mrow" data-bums-mid="${escapeHtml(id)}" data-bums-name="${escapeHtml(name)}" data-codes="${escapeHtml(codes.join(' '))}"><span class="bums-mname">${mgrName(name,'',id)}</span><span class="bums-mchips">${codes.map((c,i)=>`<button type="button" class="bums-rule bums-r-${escapeHtml(c)} bums-mdel" data-del="${i}" title="${escapeHtml(BUMS_NAMES[c]||c)} entfernen">${escapeHtml(c)} ✕</button>`).join('')||'<span class="muted tiny">keine</span>'}</span><select class="bums-madd" aria-label="Regel hinzufügen für ${escapeHtml(name)}"><option value="">+ Regel</option>${BUMS_CODES.map(c=>`<option value="${c}">${c} · ${escapeHtml(BUMS_NAMES[c])}</option>`).join('')}</select></div>`;
 }
 function bumsManualRender(){
  const box=$('#bumsManual');if(!box)return;const day=Number($('#bumsManualDay')?.value||0);
@@ -1582,7 +1616,7 @@ function kblBumsIntro({hit,clean,half,RN}){
  ov.addEventListener('click',end);addEventListener('keydown',key);addEventListener('wheel',end,{passive:true});
  ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
  ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
- const names=w=>w.map(n=>escapeHtml(n).replaceAll('_','_<wbr>')).join('<br>');
+ const names=w=>w.map(n=>mgrName(n)).join('<br>');
  // Kevin-Vorgabe: je Welle 3 Karten gleichzeitig, verstreut übers Bild und leicht schräg hängend;
  // weich hereinschweben (0,8 s), 3 s stehen, hinaus.
  const per=3,step=4000,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
@@ -1592,7 +1626,7 @@ function kblBumsIntro({hit,clean,half,RN}){
  cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per;
   timers.push(setTimeout(()=>{if(done)return;
   const el=document.createElement('div');el.className='bums-intro-card';
-  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(escapeHtml).join(', ')}</b><span>${c.n}${c.unit}</span>`;
+  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(n=>mgrName(n)).join(', ')}</b><span>${c.n}${c.unit}</span>`;
   const [l,t,rot]=SLOTS[w%2][j],[fx,fy]=FROM[idx%FROM.length];
   el.style.left=l+'%';el.style.top=t+'%';
   ov.appendChild(el);
@@ -1609,7 +1643,7 @@ function kblBumsIntro({hit,clean,half,RN}){
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
   k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
-   (clean.length?`<div class="bums-intro-clean">😇 Weiße Weste: ${clean.map(n=>escapeHtml(n)).join(', ')}</div>`:'');
+   (clean.length?`<div class="bums-intro-clean">😇 Weiße Weste: ${clean.map(n=>mgrName(n)).join(', ')}</div>`:'');
   ov.appendChild(k);
   k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
   k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
@@ -1709,7 +1743,7 @@ function pvLiveHtml(day){
  const row=(m,i)=>{const lead=m.points!=null&&m.points===top,pts=m.points==null?'–':fmt(m.points);
   const pl=m.players.map(p=>`<li class="pvl-p pvl-${p.state}"><span>${st[p.state]||''} ${escapeHtml(p.name||'Spieler '+p.id)}${p.team?` <small class="muted">${escapeHtml(p.team)}</small>`:''}</span><b>${p.points==null?'–':fmt(p.points)}</b></li>`).join('')
    +(m.empty?`<li class="pvl-p pvl-empty"><span>${m.empty} leere${m.empty>1?'':'r'} Platz${m.empty>1?'e':''}</span><b>−${fmt(100*m.empty)}</b></li>`:'');
-  return `<details class="pvl-row${lead?' pvl-lead':''}" data-pvl="${escapeHtml(m.id)}"><summary><span class="pvl-pos">${i+1}.</span><span class="pvl-name">${lead?'👑 ':''}${escapeHtml(m.name)}</span><span class="pvl-bar"><i style="width:${m.points==null?0:Math.max(0,m.points)/max*100}%"></i></span><b class="pvl-pts">${pts}</b></summary>
+  return `<details class="pvl-row${lead?' pvl-lead':''}" data-pvl="${escapeHtml(m.id)}"><summary><span class="pvl-pos">${i+1}.</span><span class="pvl-name">${lead?'👑 ':''}${mgrName(m.name,'',m.id)}</span><span class="pvl-bar"><i style="width:${m.points==null?0:Math.max(0,m.points)/max*100}%"></i></span><b class="pvl-pts">${pts}</b></summary>
    <ul class="pvl-list">${pl}</ul>${m.open?`<p class="muted tiny">${m.open} Spieler noch ohne Punkte (Spiel noch nicht angepfiffen oder noch nicht eingesetzt).</p>`:''}</details>`;};
  return `<div class="pv-live"><h4 class="pv-head">Live-Zwischenstand Spieltag ${day}</h4><div class="pvl-table">${ms.map(row).join('')}</div>
   <p class="muted tiny">Summe der Live-Punkte der Startelf, minus 100 je leerem Platz. Stand ${escapeHtml(time)} Uhr. Kickbase zeigt im Ranking erst nach dem Spieltag Punkte; nach Spielende können sich Punkte noch ändern. ✓ Spiel vorbei · ● läuft · – noch keine Punkte. Auf einen Manager tippen zeigt seine Spieler.</p></div>`;
@@ -1803,7 +1837,7 @@ function accLiveRender(){
   const mvp=d.mvp?.players?.length?`<p class="muted tiny">Gerade bester Spieler des Spieltags: ${d.mvp.players.map(p=>safe(p.name)).join(', ')} (${fmt(d.mvp.points)} Pkt., Stand ${new Date(d.mvp.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}).</p>`:'';
   body=`<p class="muted tiny" style="margin:0 0 10px"><b>Vorläufig:</b> So sähe die BumsParade aus, wenn der Spieltag jetzt vorbei wäre. Punkte, Karten und Elfmeter können sich bis zum Abpfiff (und danach) noch ändern. Stand ${safe(when)} Uhr · ${d.running||0} Spieler im Spiel · ${d.open||0} noch nicht angepfiffen.</p>`+
    (d.notes||[]).map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+
-   (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${safe(g.name)}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
+   (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${mgrName(g.name,'',mid)}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
    '<p class="muted tiny">Schnapszahlen (BD) werden erst nach dem jeweiligen Spielende geprüft, danach alle 30 Minuten (wegen Korrekturen). Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p>';
  }else body=`<p class="muted">${safe(d?.message||'')}</p>`;
  el.innerHTML=`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`;
