@@ -2529,6 +2529,91 @@ async function arenaAuto(){
   arenaMem=null;await arenaState({headers:{}},cur?[cur]:[]);}catch(e){arenaUploadState.error=e.message;}
 }
 setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
+// Transferhistorie (Kevin-Wunsch, Reiter "Transfers"): Käufe und Verkäufe je Manager mit Preisen, Gewinn/Verlust je Spieler
+// (Verkaufspreis minus Kaufpreis) und Summen. Quelle: /managers/{id}/transfer (it[]: pi, pn, tid, tty 1 Kauf / 2 Verkauf,
+// othnm Gegenüber, ohne = Markt, trp Preis, dt) und der heutige Kader (prc Kaufpreis laut Kickbase, mv Marktwert, mvgl = mv - prc).
+// Verkauf ohne Kauf im Verlauf = Startkader: kein Kaufpreis, darum kein Gewinn/Verlust (nie raten).
+function buildTransferHistory(list, squad) {
+  const asc = [...list].filter(t => t && t.pi != null && (t.tty === 1 || t.tty === 2) && Number.isFinite(Number(t.trp)))
+    .sort((a, b) => Date.parse(a.dt) - Date.parse(b.dt));
+  const side = t => ({ price: Number(t.trp), at: t.dt || null, other: t.othnm || null });
+  const open = new Map(), trades = [];
+  for (const t of asc) {
+    const pi = String(t.pi), base = { id: pi, name: t.pn || '?', team: t.tid != null ? String(t.tid) : null, img: t.pim || null };
+    if (t.tty === 1) {
+      // Zweiter Kauf ohne Verkauf dazwischen: Verkauf fehlt im Verlauf, alter Kauf bleibt ohne Verkaufspreis stehen.
+      if (open.has(pi)) trades.push({ ...open.get(pi), status: 'unknown' });
+      open.set(pi, { ...base, buy: side(t), sell: null });
+    } else {
+      const o = open.get(pi); open.delete(pi);
+      const tr = o ? { ...o, ...base, sell: side(t) } : { ...base, buy: null, sell: side(t) };
+      tr.status = tr.buy ? 'sold' : 'start';
+      if (tr.buy) { tr.diff = tr.sell.price - tr.buy.price; tr.days = Math.max(0, Math.round((Date.parse(tr.sell.at) - Date.parse(tr.buy.at)) / 864e5)); }
+      trades.push(tr);
+    }
+  }
+  const sq = new Map(((squad && squad.it) || []).map(p => [String(p.pi), p]));
+  for (const o of open.values()) {
+    const p = sq.get(o.id);
+    if (!p) { trades.push({ ...o, status: 'unknown' }); continue; }
+    const mv = Number.isFinite(Number(p.mv)) ? Number(p.mv) : null;
+    trades.push({ ...o, status: 'held', mv, diff: mv != null ? mv - o.buy.price : null, days: Math.max(0, Math.round((Date.now() - Date.parse(o.buy.at)) / 864e5)) });
+    sq.delete(o.id);
+  }
+  // Spieler im Kader ohne Kauf im Verlauf (Startkader): Kaufpreis laut Kickbase (prc), Marktwert heute.
+  for (const p of sq.values()) {
+    const mv = Number.isFinite(Number(p.mv)) ? Number(p.mv) : null, prc = Number.isFinite(Number(p.prc)) && Number(p.prc) > 0 ? Number(p.prc) : null;
+    trades.push({ id: String(p.pi), name: p.pn || '?', team: p.tid != null ? String(p.tid) : null, img: p.pim || null, buy: prc != null ? { price: prc, at: null, other: null } : null, sell: null,
+      status: 'held', start: true, mv, diff: mv != null && prc != null ? mv - prc : null });
+  }
+  const sum = f => trades.reduce((s, t) => s + (f(t) || 0), 0);
+  const sold = trades.filter(t => t.status === 'sold'), held = trades.filter(t => t.status === 'held');
+  const best = sold.reduce((b, t) => !b || t.diff > b.diff ? t : b, null), worst = sold.reduce((b, t) => !b || t.diff < b.diff ? t : b, null);
+  const pick = t => t && { id: t.id, name: t.name, diff: t.diff };
+  return {
+    buys: asc.filter(t => t.tty === 1).length, sells: asc.filter(t => t.tty === 2).length,
+    spent: asc.filter(t => t.tty === 1).reduce((s, t) => s + Number(t.trp), 0), earned: asc.filter(t => t.tty === 2).reduce((s, t) => s + Number(t.trp), 0),
+    realized: sum(t => t.status === 'sold' ? t.diff : 0), soldCount: sold.length, wins: sold.filter(t => t.diff > 0).length, losses: sold.filter(t => t.diff < 0).length,
+    unrealized: sum(t => t.status === 'held' ? t.diff : 0), squadValue: sum(t => t.status === 'held' ? t.mv : 0), heldCount: held.length,
+    startSold: trades.filter(t => t.status === 'start').length, unknown: trades.filter(t => t.status === 'unknown').length,
+    best: pick(best), worst: pick(worst),
+    trades: trades.sort((a, b) => Date.parse((b.sell || b.buy || {}).at || 0) - Date.parse((a.sell || a.buy || {}).at || 0))
+  };
+}
+// Kickbase liefert den Verlauf evtl. seitenweise: weiter mit ?start=, solange neue Einträge kommen (höchstens 10 Seiten).
+async function fetchTransferList(token, id) {
+  const seen = new Set(), all = [];
+  for (let page = 0; page < 10; page++) {
+    const r = await kbFetch(`/v4/leagues/6422780/managers/${id}/transfer${all.length ? `?start=${all.length}` : ''}`, { token });
+    let neu = 0;
+    for (const t of (r.it || [])) { const k = `${t.pi}|${t.tty}|${t.dt}`; if (!seen.has(k)) { seen.add(k); all.push(t); neu++; } }
+    if (!neu) break;
+  }
+  return all;
+}
+let transferCache = null;
+app.get('/api/transfers', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  if (transferCache && Date.now() - transferCache.at < 30 * 60e3 && req.query.neu !== '1') return res.set('Cache-Control', 'no-store').json(transferCache.value);
+  try {
+    const ranking = await kbFetch('/v4/leagues/6422780/ranking', { token });
+    const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+    const managers = [];
+    for (let i = 0; i < users.length; i += 3) managers.push(...await Promise.all(users.slice(i, i + 3).map(async u => {
+      const base = { id: String(u.i), name: u.n, img: u.uim || null };
+      try {
+        const [list, squad] = await Promise.all([fetchTransferList(token, u.i), kbFetch(`/v4/leagues/6422780/managers/${u.i}/squad`, { token }).catch(() => null)]);
+        return { ...base, squadMissing: !squad, ...buildTransferHistory(list, squad) };
+      } catch (e) { return { ...base, error: e.message }; }
+    })));
+    managers.sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
+    const value = { updatedAt: new Date().toISOString(), managers };
+    transferCache = { at: Date.now(), value };
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
+});
+
 app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
 app.get('/api/arena',async(req,res)=>{
  try{

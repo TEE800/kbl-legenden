@@ -528,3 +528,51 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 @keyframes toonDizzy{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .toon-ko{color:#ff8181;font-weight:800}
 @media (prefers-reduced-motion:reduce){.toon-dizzy{animation:none}}
+
+/* ---- Transfers (Kevin-Wunsch): Transferhistorie je Manager, Gewinn/Verlust ---- */
+.tr-pos{color:var(--ok)!important}.tr-neg{color:var(--bad)!important}
+.tr-face{width:28px;height:28px;border-radius:50%;object-fit:cover;object-position:top;background:var(--surface-2);flex-shrink:0}
+.tr-noimg{display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--muted)}
+.tr-league{margin:4px 0 18px}
+.tr-sorts{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tr-sort{background:var(--field);color:var(--muted);border:1px solid var(--line-strong);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.tr-sort.active{color:#081118;background:var(--gold);border-color:var(--gold);font-weight:700}
+.tr-rank{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.tr-rank li{display:grid;grid-template-columns:26px 28px minmax(90px,150px) 1fr 92px;align-items:center;gap:8px;padding:5px 6px;border-radius:6px}
+.tr-rank li:hover{background:var(--surface-2)}
+.tr-place{color:var(--dim);font-size:13px;text-align:right}
+.tr-mname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-bar{position:relative;height:14px;background:linear-gradient(var(--line),var(--line)) center/1px 100% no-repeat}
+.tr-bar i{position:absolute;top:1px;bottom:1px;border-radius:4px}
+.tr-bar i.pos{background:var(--ok);border-top-left-radius:0;border-bottom-left-radius:0}
+.tr-bar i.neg{background:var(--bad);border-top-right-radius:0;border-bottom-right-radius:0}
+.tr-val{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-2)}
+.tr-h{margin:18px 0 8px;font-size:14px;color:var(--text-2)}
+.tr-managers{display:grid;gap:8px}
+.tr-manager>summary{display:flex;align-items:center;gap:10px}
+.tr-manager>summary .tr-mname{flex:1;min-width:0}
+.tr-count{color:var(--muted);font-size:12px;white-space:nowrap}
+.tr-pill{font-weight:700;font-variant-numeric:tabular-nums;min-width:80px;text-align:right;white-space:nowrap}
+.tr-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 4px}
+.tr-tile{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:3px;min-width:0}
+.tr-tile span{color:var(--muted);font-size:12px}.tr-tile b{font-size:17px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.tr-tile small{color:var(--dim);font-size:11px}
+.tr-trades{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.tr-trade{display:grid;grid-template-columns:minmax(140px,1.3fr) 1fr 1fr 100px;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px}
+.tr-trade.held{border-style:dashed}
+.tr-player{display:flex;align-items:center;gap:8px;min-width:0}.tr-player span{display:grid;min-width:0}
+.tr-player b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-player small,.tr-side small,.tr-diff small{color:var(--dim);font-size:11px}
+.tr-side{display:grid;min-width:0}.tr-side em{font-style:normal;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.tr-side small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr-price{font-variant-numeric:tabular-nums}
+.tr-diff{text-align:right;display:grid;font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+ .tr-rank li{grid-template-columns:22px 24px minmax(60px,96px) 1fr 74px;gap:6px;padding:5px 2px;font-size:14px}
+ .tr-face{width:24px;height:24px}
+ .tr-count{display:none}
+ .tr-sort{min-height:36px;padding:6px 11px}
+ .tr-tiles{grid-template-columns:1fr 1fr}
+ .tr-trade{grid-template-columns:1fr 1fr;gap:6px 10px}
+ .tr-player{grid-column:1/2}.tr-diff{grid-column:2/3;grid-row:1}
+}
