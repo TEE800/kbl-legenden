@@ -520,3 +520,11 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .arena-pairs{display:grid;gap:8px}
 .arena-pair{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-0)}
 .arena-lineups>.acc-sub{display:grid;gap:8px;padding:10px}
+/* K.O. (Kevin-Wunsch): wer nicht mehr gewinnen kann, liegt flach auf dem Rasen, Sterne kreisen über dem Kopf. */
+.toon-runner.ko .toon-body{transform:rotate(-90deg) translate(-22px,4px);filter:saturate(.6) brightness(.85)}
+.toon-runner.ko.flip .toon-body{transform:rotate(90deg) translate(22px,4px)}
+.toon-dizzy{position:absolute;left:-26px;top:12px;font-size:15px;z-index:4;animation:toonDizzy 1.6s linear infinite}
+.toon-runner.ko.flip .toon-dizzy{left:auto;right:-30px}
+@keyframes toonDizzy{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.toon-ko{color:#ff8181;font-weight:800}
+@media (prefers-reduced-motion:reduce){.toon-dizzy{animation:none}}
