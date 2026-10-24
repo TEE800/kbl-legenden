@@ -1854,13 +1854,14 @@ app.get('/api/todo-checks/:day',(req,res)=>{
 app.post('/api/todo-checks/:day',(req,res)=>{
   if(!getToken(req))return res.status(401).json({error:'Nicht angemeldet.'});
   const day=validDay(req.params.day);if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
-  const {key,done,target}=req.body||{};
-  if(!validTodoKey(key)||typeof done!=='boolean')return res.status(400).json({error:'Ungültige Angabe.'});
+  const {key,done,target,removed}=req.body||{};
+  if(!validTodoKey(key)||typeof done!=='boolean'||(removed!=null&&typeof removed!=='boolean'))return res.status(400).json({error:'Ungültige Angabe.'});
   // Magic Miyoshi: wen der Manager bestimmt hat (Managername).
   if(target!=null&&(typeof target!=='string'||!target.trim()||target.length>60))return res.status(400).json({error:'Ungültiger Manager.'});
   try{
     const all=readTodos();all[day]=all[day]||{};
-    if(done)all[day][key]={done:true,at:new Date().toISOString(),...(target?{target:target.trim()}:{})};else delete all[day][key];
+    // Strafe entfernen (Kevin-Wunsch): falsch berechnete Strafe gilt nicht, zaehlt nicht in der BumsTabelle; wiederherstellbar.
+    if(done)all[day][key]={done:true,at:new Date().toISOString(),...(target?{target:target.trim()}:{}),...(removed?{removed:true}:{})};else delete all[day][key];
     saveTodos(all);res.set('Cache-Control','no-store').json({day,checks:all[day]});
   }catch(e){res.status(500).json({error:'Haken nicht gespeichert.'});}
 });
