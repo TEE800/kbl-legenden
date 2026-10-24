@@ -194,6 +194,8 @@
  // Lädt er nicht (kein Foto, kein Hals erkennbar), bleibt das gezeichnete Gesicht. Nie ein Kreis-Ausschnitt.
  const HEAD_VERSION=2;
  const headSrc=id=>window.KBL_STATIC?`heads/v${HEAD_VERSION}/${encodeURIComponent(id)}.png`:`/api/mvp-tipps/head/${encodeURIComponent(id)}`;
+ // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
+ window.kblToon={toon,clubColor,kbImg,headSrc};
  const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`;
  function toonRace(live,groups,leadIds,bestIds,me,best,pool){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
