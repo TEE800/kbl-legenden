@@ -147,9 +147,20 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-24T11:45:22.620Z",
-      "points": null,
-      "players": [],
+      "at": "2026-10-24T13:41:13.495Z",
+      "points": 21,
+      "players": [
+        {
+          "id": "3559",
+          "name": "Ulrich",
+          "team": "Paderborn"
+        },
+        {
+          "id": "7320",
+          "name": "Scheller",
+          "team": "Paderborn"
+        }
+      ],
       "checked": 468,
       "failed": 0,
       "reliable": true,
