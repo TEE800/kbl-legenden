@@ -203,7 +203,8 @@
   const vals=[...groups.map(g=>g.pts??0),...(best?[best.points]:[])],lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
   const pos=v=>(4+78*((v??0)-lo)/span).toFixed(1);
   // Alle Figuren auf einem Platz (Kevin-Wunsch): x nach Punkten, je Spieler eine eigene Höhe, damit sich niemand verdeckt.
-  const ROW=58,TOP=104;
+  // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
+  const ROW=88,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
    return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' ghost':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
     ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}

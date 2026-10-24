@@ -435,7 +435,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bums-intro-title{position:absolute;top:7%;left:0;right:0;text-align:center;font-size:clamp(24px,6vw,44px);font-weight:900;color:var(--gold-strong);text-shadow:0 3px 0 #000,0 0 24px rgba(244,215,119,.35);opacity:0}
 .bums-intro-title small{display:block;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-shadow:none;margin-top:4px}
 .bums-intro-skip{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:0;right:0;text-align:center;font-size:12px;color:var(--dim)}
-.bums-intro-card{position:absolute;top:54%;left:50%;width:min(84vw,290px);text-align:center;padding:12px 14px;border-radius:18px;background:var(--shame);border:2px solid var(--shame-line);color:var(--text);box-shadow:0 14px 40px rgba(0,0,0,.55);will-change:transform;transform:translate(-200vw,-50%)}
+.bums-intro-card{position:absolute;top:54%;left:50%;width:min(74vw,290px);text-align:center;padding:12px 14px;border-radius:18px;background:var(--shame);border:2px solid var(--shame-line);color:var(--text);box-shadow:0 14px 40px rgba(0,0,0,.55);will-change:transform;transform:translate(-200vw,-50%)}
 .bums-intro-card small{display:block;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
 .bums-intro-card em{display:block;font-style:normal;color:var(--dim);font-size:12px;margin-top:2px}
 .bums-intro-card b{display:block;font-size:clamp(18px,5vw,24px);font-weight:900;color:var(--shame-text);margin:4px 0 2px;overflow-wrap:anywhere}
@@ -464,9 +464,10 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-pitch .tp-finish{right:0;width:12px;background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/12px 12px;opacity:.85}
 .toon-pitch .toon-runner{bottom:auto}
 .toon-runner.ghost{opacity:.45}
-.toon-tag{position:absolute;top:62px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px}
+.toon-tag{position:absolute;top:24px;left:40px;transform:none;z-index:3;white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px}
 .toon-tag b{color:var(--gold)}
-.toon-runner.fall .toon-tag{transform:translateX(-50%)}
+.toon-runner.fall .toon-tag{transform:none}
+.toon-runner.flip .toon-tag{left:auto;right:40px}
 .toon-list{display:grid;gap:8px}
 .toon-row{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface-2);display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
 .toon-row .toon-pts{margin-left:auto;font-size:18px}.toon-row .mvp-lane-tips{flex-basis:100%}
