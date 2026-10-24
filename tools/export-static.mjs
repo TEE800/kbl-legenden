@@ -123,7 +123,7 @@ try {
   // Wackelkoepfe fuer das MVP-Rennen: Kopf aus dem Kickbase-Foto, auf dem Server ausgeschnitten (nur fehlende, CDN statt Kickbase-API).
   // Neue Version des Zuschnitts (HEAD_VERSION in server.js und mvp-tipp.js) = neuer Ordner, alte Ordner werden geloescht.
   try {
-    const HV = 3, HEADS = path.join(SITE, 'heads'), dir = path.join(HEADS, 'v' + HV);
+    const HV = 4, HEADS = path.join(SITE, 'heads'), dir = path.join(HEADS, 'v' + HV);
     fs.mkdirSync(dir, { recursive: true });
     for (const f of fs.readdirSync(HEADS)) if (/^v\d+$/.test(f) && f !== 'v' + HV) fs.rmSync(path.join(HEADS, f), { recursive: true, force: true });
     const failFile = path.join(dir, '_fehlt.json');
