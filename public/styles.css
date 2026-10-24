@@ -422,7 +422,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-runner.run .toon-body{animation:toonBob .19s ease-in-out infinite alternate}.toon-runner.run .toon-fig{animation:none}
 .toon-runner.idle .toon-body{animation:toonHop 1.4s ease-in-out infinite}.toon-runner.idle .toon-fig{animation:none}
 .toon-runner.fall .toon-body{transform:rotate(-80deg) translate(-14px,6px)}.toon-runner.fall .toon-fig{transform:none}
-.toon-crest{position:absolute;left:50%;top:26px;width:11px;height:11px;margin-left:-5.5px;object-fit:contain;filter:drop-shadow(0 0 1px #fff)}
+/* Wappen größer und scharf: kein Weichzeichner-Schatten (machte es auf Handys verschwommen), dafür ein kleines weißes Schild. */
+.toon-crest{position:absolute;left:50%;top:26px;width:14px;height:14px;margin-left:-7px;z-index:2;object-fit:contain;background:#fff;border-radius:50%;padding:1px;box-sizing:border-box;image-rendering:auto}
 .toon-runner.has-crest .toon-fig text{display:none}
 .toon-track{height:118px}
 @keyframes toonWobble{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
