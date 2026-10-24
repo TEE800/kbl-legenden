@@ -515,3 +515,5 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 @media(max-width:620px){.arena-name{white-space:normal;overflow-wrap:anywhere;line-height:1.2}.arena-table td,.arena-table th{padding:8px 4px;font-size:13px}.arena-table th{font-size:10px}}
 /* Arena: Name unter der Figur (im Duell stehen zwei Figuren in einer Reihe, seitliche Namen würden sich überdecken) */
 .arena-runner .toon-tag,.arena-runner.flip .toon-tag,.arena-runner.fall .toon-tag{top:62px;left:50%;right:auto;transform:translateX(-50%)}
+/* Arena: liegen beide Gegner fast gleichauf, steht der Name des zweiten über der Figur */
+.arena-runner.tag-up .toon-tag{top:-18px}.arena-runner.tag-up .toon-crown{top:-34px}
