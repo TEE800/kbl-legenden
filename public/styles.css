@@ -586,3 +586,9 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 @keyframes toonCheerR{from{transform:rotate(25deg)}to{transform:rotate(-50deg)}}
 @keyframes toonShimmy{from{transform:rotate(-6deg)}to{transform:rotate(6deg)}}
 @media (prefers-reduced-motion:reduce){.toon-runner.champ .toon-arm,.toon-runner.champ .toon-body{animation:none}}
+
+/* BumsParade: Strafe entfernen (Kevin-Wunsch) */
+button.center-remove{align-self:flex-start;width:auto;margin-top:6px;padding:3px 8px;font-size:11px;font-weight:600;opacity:.7}
+button.center-remove:hover{opacity:1}
+button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11px;margin-left:4px}
+.center-removed s{opacity:.6}

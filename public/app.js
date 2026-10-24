@@ -1134,7 +1134,10 @@ function centerTodoHtml(){
   const first=need?q:`automatisch: ${autoNow||'nicht erkannt'} (ändern …)`;
   return `<select class="center-pick${need?'':' center-fix'}" data-todo-target="${safe(t.key)}"${need?' data-need="1"':''} aria-label="${safe(q)}"${a.probe?' disabled':''}><option value="">${safe(first)}</option>${opts.map(n=>`<option value="${safe(n)}" ${n===target?'selected':''}>${n==='Markt'?(t.rule==='AH'?'Kickbase / Markt':'an den Markt'):safe(n)}</option>`).join('')}</select>`;};
  const pickLabel=t=>{const g=checks[t.key]?.target;if(!g)return '';const k=todoPick(t);return k==='mm'?`hat ${g} bestimmt`:k==='dd'?`${g} an ${(t.to||[]).map(r=>r.manager).join(', ')||'den Letzten'}`:g==='Markt'?'an den Markt':`an ${g}`;};
+ const gone=t=>!!checks[t.key]?.removed;
  const rows=todos.map(t=>{
+  // Von Hand entfernte Strafe (falsch berechnet): durchgestrichen, zählt nicht, lässt sich wiederherstellen.
+  if(gone(t))return {key:t.key,mid:t.managerId,manager:t.manager,todo:false,removed:true,finished:true,html:`<li class="center-info center-done center-removed"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span><s>${safe(t.text)}</s></span><span class="center-status"><span class="center-state">✕ Strafe entfernt</span>${a.probe?'':` <button type="button" class="ghost center-undo" data-todo-restore="${safe(t.key)}">↺ wiederherstellen</button>`}</span></span></li>`};
   const manual=!!checks[t.key]?.done,auto=t.check?.state==='done',finished=manual||auto;
   const [cls,label]=STATE[t.check?.state]||STATE.manual;
   const status=checks[t.key]?.target&&todoPick(t)?`<span class="center-state ok">✓ ${safe(pickLabel(t))}</span>${auto&&t.rule!=='MM'?' <span class="muted tiny">von Hand korrigiert</span>':''}`
@@ -1142,16 +1145,16 @@ function centerTodoHtml(){
    :manual?`<span class="center-state ok">✓ von Hand abgehakt</span>${t.check?.state&&t.check.state!=='manual'?` <span class="muted tiny">App sieht: ${safe(t.check.note)}</span>`:''}`
    :`<span class="center-state ${cls}">${label}</span> <span class="muted tiny">${safe(t.check?.note||'')}</span>`;
   const opts=t.options?.length?`<span class="center-options">${t.options.map(o=>`<span class="center-option${o.moved?' moved':''}"${o.uncertain?` title="Noch nicht sicher: ${safe(o.uncertain)}"`:''}>${o.moved?'✓ ':''}${o.uncertain?'? ':''}${safe(o.name)} <small>${fmt(o.points)} Pkt.${o.uncertain?' · unsicher':''}${o.clash?` · Letzter müsste ${safe(o.clash)} abgeben`:''}</small></span>`).join('')}</span>`:'';
-  return {key:t.key,mid:t.managerId,manager:t.manager,todo:true,finished,html:`<li class="${finished?'center-done':''}"><label class="center-check" title="${auto?'Von der App als erledigt erkannt':'Abhaken, wenn erledigt'}"><input type="checkbox" data-todo-key="${safe(t.key)}" ${finished?'checked':''} ${auto||a.probe?'disabled':''}></label><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${safe(t.text)}</span><span class="center-status">${status}</span>${anyPick(t)}${opts}${detail(t)}</span></li>`};
+  return {key:t.key,mid:t.managerId,manager:t.manager,todo:true,finished,html:`<li class="${finished?'center-done':''}"><label class="center-check" title="${auto?'Von der App als erledigt erkannt':'Abhaken, wenn erledigt'}"><input type="checkbox" data-todo-key="${safe(t.key)}" ${finished?'checked':''} ${auto||a.probe?'disabled':''}></label><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${safe(t.text)}</span><span class="center-status">${status}</span>${anyPick(t)}${opts}${detail(t)}${a.probe?'':`<button type="button" class="ghost center-remove" data-todo-remove="${safe(t.key)}" title="Falls die App hier falsch gerechnet hat">✕ Strafe entfernen</button>`}</span></li>`};
  });
  // Wer bei UM, DD, RK, BN oder AH einen Spieler bekommt, ist ebenfalls betroffen (zählt als Bumsung).
  const midOf=n=>[...(d.plausibility||[])].find(p=>p.manager===n)?.managerId||null;
- for(const t of todos){const g=checks[t.key]?.target,k=todoPick(t);let to=(t.to||[]).map(r=>({...r,playerName:k==='dd'&&g?g:r.playerName}));
+ for(const t of todos){if(gone(t))continue;const g=checks[t.key]?.target,k=todoPick(t);let to=(t.to||[]).map(r=>({...r,playerName:k==='dd'&&g?g:r.playerName}));
   if(k==='to'&&g)to=g==='Markt'?[]:[{managerId:midOf(g),manager:g,playerName:todoPlayer(t)}];
   for(const r of to){const giver=rows.find(x=>x.key===t.key);
   rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>bekommt ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}}
  // Magic Miyoshi: Der bestimmte Manager ist ebenfalls betroffen.
- for(const t of todos.filter(t=>t.rule==='MM'&&checks[t.key]?.target)){const name=checks[t.key].target;
+ for(const t of todos.filter(t=>t.rule==='MM'&&checks[t.key]?.target&&!gone(t))){const name=checks[t.key].target;
   const mid=[...(d.plausibility||[])].find(p=>p.manager===name)?.managerId||null;
   rows.push({mid,manager:name,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule" title="${safe(RULE.MM)}">MM</span><span class="center-text"><span>stellt am nächsten Spieltag einen Spieler weniger auf</span><span class="center-status muted tiny">bestimmt von ${safe(t.manager)}</span></span></li>`});}
  // Nicht eindeutige Fälle und entfallene Schnapszahlen stehen direkt beim Manager.
@@ -1193,7 +1196,7 @@ function renderAccTodo(){
  if(a.day==null){el.innerHTML='';return;}
  bumsSave();
  // Eingeklappt, bis man sie öffnet; der Zustand bleibt beim Neuzeichnen erhalten.
- const d=a.state==='done'&&a.data?.ready?a.data:null,todos=d?.todos||[];
+ const d=a.state==='done'&&a.data?.ready?a.data:null,todos=(d?.todos||[]).filter(t=>a.probe||!a.checks?.[t.key]?.removed);
  const done=todos.filter(t=>t.check?.state==='done'||(!a.probe&&a.checks?.[t.key]?.done)).length;
  const sum=a.state==='loading'?'wird geprüft …':a.state==='error'?'nicht abrufbar':!d?'noch nicht abrechenbar':todos.length?`${done} von ${todos.length} erledigt`:'keine Strafen';
  el.innerHTML=`<details class="center-box acc-todo-box"${accTodoOpen?' open':''}><summary class="center-boxhead"><strong>Spieltag ${a.day} · ${sum}</strong><span class="pill">${a.probe?'PROBELAUF · nur Test':'vorläufig'}</span></summary>${centerTodoHtml()}</details>`;
@@ -1310,6 +1313,16 @@ document.addEventListener('change',async e=>{
  catch(err){box.checked=!box.checked;alert('Haken nicht gespeichert: '+err.message);}
  renderAccTodo();
 });
+// Strafe entfernen / wiederherstellen (Kevin-Wunsch), gespeichert in kbl-todo-checks.json, gilt auf allen Geräten.
+document.addEventListener('click',async e=>{
+ const rm=e.target.closest('[data-todo-remove]'),rs=e.target.closest('[data-todo-restore]');if((!rm&&!rs)||!centerAccounting.day||centerAccounting.probe)return;
+ const key=(rm||rs).dataset.todoRemove||(rs||rm).dataset.todoRestore;
+ if(rm&&!confirm('Diese Strafe entfernen? Sie zählt dann nicht mehr, auch nicht in der BumsTabelle. Du kannst sie wiederherstellen.'))return;
+ (rm||rs).disabled=true;
+ try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rm?{key,done:true,removed:true}:{key,done:false})});centerAccounting.checks=d.checks||{};}
+ catch(err){alert('Nicht gespeichert: '+err.message);}
+ renderAccTodo();
+});
 document.addEventListener('click',e=>{if(e.target.closest('#centerRecheck')&&centerAccounting.day){if(centerAccounting.probe)$('#accountingProbe')?.click();else centerLoadAccounting(centerAccounting.day,true);}});
 
 // Von Hand nachzutragen: bei DD welcher Spieler, bei RK, BN, AH und TL an wen (Manager oder Markt), bei MM wen er bestimmt hat.
@@ -1329,6 +1342,7 @@ function bumsCounts(d,checks){
  const add=(mid,name,rule,dir,text)=>{mid=mid!=null&&mid!==''?String(mid):idOf.get(name);if(!mid||!/^\d+$/.test(mid)||!name||!isEligibleManager(name))return;
   const e=out[mid]||(out[mid]=blank(name));e.count++;e.rules[rule]=(e.rules[rule]||0)+1;e[dir==='o'?'out':dir==='i'?'in':'other']++;e.moves.push({r:rule,d:dir,t:String(text||'').slice(0,200)});};
  for(const t of (d.todos||[])){
+  if(checks?.[t.key]?.removed)continue;
   const tgt=checks?.[t.key]?.target||null,pk=todoPick(t),pl=todoPlayer(t);
   let to=(t.to||[]).map(r=>({...r,playerName:pk==='dd'&&tgt?tgt:r.playerName}));
   if(pk==='to'&&tgt)to=tgt==='Markt'?[]:[{managerId:null,manager:tgt,playerName:pl}];
@@ -1356,7 +1370,7 @@ function kblAccDayLabels(days){
 }
 function bumsSave(){
  const a=centerAccounting;if(a.probe||a.state!=='done'||!a.data?.ready||!a.data?.complete||bumsDays[a.day]?.manual)return;
- const managers=bumsCounts(a.data,a.checks),todos=a.data.todos||[];
+ const managers=bumsCounts(a.data,a.checks),todos=(a.data.todos||[]).filter(t=>!a.checks?.[t.key]?.removed);
  const progress={done:todos.filter(t=>t.check?.state==='done'||a.checks?.[t.key]?.done).length,total:todos.length,unclear:(a.data.autoEvents?.error?[]:(a.data.autoEvents?.unclear||[])).filter(u=>!a.checks?.[unclearKey(u)]?.target).length};
  const sig=a.day+JSON.stringify(managers)+JSON.stringify(progress);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
  api(`/api/bumsungen/${a.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers,progress})}).then(()=>renderBumsTabelle()).catch(()=>{});
