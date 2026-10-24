@@ -1410,10 +1410,10 @@ async function dayPlayerPoints(token,id,day,finished=false){
  // schon mdst 2 mit 0 Punkten, die echten Punkte kommen erst spaeter (ST 7, Stuttgart-Gladbach: alle auf 0 gefallen).
  if(points!==null){
   const k=Date.parse(rec?.md||'');
-  if(!(Number.isFinite(k)&&k<=Date.now()))return {points,state:Number(rec?.mdst)===2?'done':'live'};
+  if(!(Number.isFinite(k)&&k<=Date.now()))return {points,state:Number(rec?.mdst)===2?'done':'live',kick:rec?.md||null};
   const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token}).catch(()=>null);
   const q=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
-  return {points:q??points,state:Number(rec?.mdst)===2?'done':'live',...(q!==null&&q!==points?{perf:points}:{})};
+  return {points:q??points,state:Number(rec?.mdst)===2?'done':'live',kick:rec?.md||null,...(q!==null&&q!==points?{perf:points}:{})};
  }
  // Nicht am Status (mdst) festmachen: der wechselt waehrend des Spiels (z. B. Halbzeit) und dann fehlten die Punkte.
  // Massgeblich ist die Anstosszeit md: ist sie vorbei und fehlen die Punkte in performance, gilt playercenter.
@@ -1424,7 +1424,7 @@ async function dayPlayerPoints(token,id,day,finished=false){
  const pcKick=Date.parse(pc?.md||'');
  if(!Number.isFinite(kick)&&!(Number.isFinite(pcKick)&&pcKick<=Date.now()))return {points:null,state:'open',why:rec?'keine Anstosszeit':'kein Eintrag in performance'};
  const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
- return {points:p,state:p===null?'open':'live',mdst:rec?.mdst??null,mst:pc?.mst??null,...(rec?{}:{why:'nur playercenter'})};
+ return {points:p,state:p===null?'open':'live',kick:pc?.md||rec?.md||null,mdst:rec?.mdst??null,mst:pc?.mst??null,...(rec?{}:{why:'nur playercenter'})};
 }
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
@@ -2426,12 +2426,12 @@ app.get('/api/arena/:day',async(req,res)=>{
    const base={id,name:id==='1'?'Kickbase CPU':info.n||`Manager ${id}`,img:info.uim||null,cpu:id==='1'};
    if(!started||!l)return {...base,points:kb??null,kbPoints:kb??null,players:null};
    const players=l.lp.map(pid=>{const q=pts[pid]||{points:null,state:'open'},p=all?.players.get(pid)||all?.players.get(Number(pid));
-    const cap=pid===l.cpt;return {id:pid,name:p?.name||`Spieler ${pid}`,team:p?.team||null,img:p?.img||null,teamImg:p?.teamImg||null,points:q.points,state:q.state,captain:cap,total:q.points==null?null:q.points*(cap?2:1)};})
+    const cap=pid===l.cpt,kt=Date.parse(q.kick||''),playing=q.state==='live'&&Number.isFinite(kt)&&kt<=Date.now()&&Date.now()-kt<150*60e3;return {id:pid,playing,name:p?.name||`Spieler ${pid}`,team:p?.team||null,img:p?.img||null,teamImg:p?.teamImg||null,points:q.points,state:q.state,captain:cap,total:q.points==null?null:q.points*(cap?2:1)};})
     .sort((x,y)=>(y.total??-1e9)-(x.total??-1e9));
    const calc=players.reduce((s,p)=>s+(p.total||0),0);
    // Beendet: Kickbase-Punkte zaehlen (offiziell, korrigiert). Laufend: eigene Rechnung (Kickbase zeigt waehrend des Spieltags nicht immer den Stand).
    const points=status==='finished'&&kb!=null?kb:calc;
-   return {...base,points,calc,kbPoints:kb??l.mdp??null,captain:l.cpt,open:players.filter(p=>p.state==='open').length,live:players.filter(p=>p.state==='live').length,players};
+   return {...base,points,calc,kbPoints:kb??l.mdp??null,captain:l.cpt,open:players.filter(p=>p.state==='open').length,live:players.filter(p=>p.playing).length,players};
   };
   const duels=m.pairs.map(([x,y,px,py])=>{const A=side(x,px),B=side(y,py);
    const done=status==='finished',diff=A.points!=null&&B.points!=null?A.points-B.points:null;
