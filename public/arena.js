@@ -40,7 +40,7 @@
  function playerList(m){
   if(!m.players)return '<p class="muted tiny">Keine Aufstellung.</p>';
   const K=T();
-  return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.state==='live'?'live':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.state==='open'?'<small class="muted">noch nicht</small>':p.state==='live'?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
+  return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.playing?'live':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.state==='open'?'<small class="muted">noch nicht</small>':p.playing?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
  }
  function duelDetail(d,x){
   if(d.status==='upcoming')return `<p class="muted">Die Aufstellungen von ${esc(x.a.name)} und ${esc(x.b.name)} sind bis zum Anpfiff geheim.</p>`;
@@ -49,24 +49,24 @@
   return `${duelRace(d,[x],true)}<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
  }
  // Cartoon: je Duell eine Reihe auf dem Platz, beide Manager als Männchen mit ihrem Profilbild als Kopf, Position nach Punkten.
- // Ein Seil zwischen beiden zeigt den Abstand. Wer gerade Spieler auf dem Platz hat, rennt mit Ball, Führender mit Krone.
+ // Ein Seil zwischen beiden zeigt den Abstand. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Führender mit Krone.
  function duelRace(d,duels,single){
   const K=T();if(!K||d.status==='upcoming'||!duels.length)return '';
   const vals=duels.flatMap(x=>[x.a.points,x.b.points]).filter(v=>v!=null),lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo||1;
   const pos=v=>4+76*((v??0)-lo)/span;
-  const ROW=single?150:152,TOP=single?34:48;
-  const fig=(m,x,y,lead,place)=>{const [shirt,trim]=K.clubColor(m.name),neg=m.points!=null&&m.points<0,run=m.live?' run':m.open?' idle':neg?' fall':'';
-   return `<div class="toon-runner arena-runner${run}${x>50?' flip':''}" style="left:${x.toFixed(1)}%;top:${y}px">${lead?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${K.toon({},shirt,trim,neg?'sad':lead?'wow':'happy',place??'')}${face(m,'arena-face')}</div>${m.live?'<span class="toon-ball">⚽</span>':''}<div class="toon-tag">${esc(m.name)} <b>${fmt(m.points)}</b></div></div>`;};
+  const ROW=110,TOP=single?30:30;
+  const fig=(m,x,y,lead,place,up)=>{const [shirt,trim]=K.clubColor(m.name),neg=m.points!=null&&m.points<0,run=m.live?' run':m.open?' idle':neg?' fall':'';
+   return `<div class="toon-runner arena-runner${run}${x>50?' flip':''}${up?' tag-up':''}" style="left:${x.toFixed(1)}%;top:${y}px">${lead?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${K.toon({},shirt,trim,neg?'sad':lead?'wow':'happy',place??'')}${face(m,'arena-face')}</div>${m.live?'<span class="toon-ball">⚽</span>':''}<div class="toon-tag">${esc(m.name)} <b>${fmt(m.points)}</b></div></div>`;};
   const place=id=>d.table?.find(r=>r.id===id)?.hhpl??'';
   const rows=duels.map((x,i)=>{
-   const y=TOP+i*ROW,xa=pos(x.a.points),xb=pos(x.b.points),near=Math.abs(xa-xb)<30;
+   const y=TOP+i*ROW,xa=pos(x.a.points),xb=pos(x.b.points),near=Math.abs(xa-xb)<28;
    // Liegen beide nah beieinander, stehen sie versetzt übereinander, damit sich Namen nicht überdecken.
-   const ya=near||single?y-(single?28:42):y,yb=near||single?y+(single?40:42):y;
+   const ya=y,yb=y;
    const l=Math.min(xa,xb),w=Math.abs(xa-xb),lead=x.winner;
-   return `<div class="arena-rope" style="left:${(l+2).toFixed(1)}%;width:${w.toFixed(1)}%;top:${(single?y+30:y+30)}px">${x.diff?`<span>${fmt(Math.abs(x.diff))}</span>`:''}</div>`+
-    fig(x.a,xa,ya,lead===x.a.id,place(x.a.id))+fig(x.b,xb,yb,lead===x.b.id,place(x.b.id));
+   return `<div class="arena-rope" style="left:${(l+2).toFixed(1)}%;width:${w.toFixed(1)}%;top:${y+30}px">${x.diff?`<span>${fmt(Math.abs(x.diff))}</span>`:''}</div>`+
+    fig(x.a,xa,ya,lead===x.a.id,place(x.a.id))+fig(x.b,xb,yb,lead===x.b.id,place(x.b.id),near);
   }).join('');
-  const h=single?TOP+ROW:TOP+duels.length*ROW;
+  const h=TOP+duels.length*ROW;
   return `<div class="toon-pitch arena-pitch${single?' single':''}" style="height:${h}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i>${rows}</div>`;
  }
  function table(d){
@@ -81,7 +81,7 @@
   // Beim automatischen Neuladen bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]')].map(x=>x.dataset.arenaDuel??x.className));
   root.className='';
-  root.innerHTML=stateText(d)+board(d)+(d.status!=='upcoming'&&d.duels.length>1?`<details class="acc-group arena-race"><summary>Duell-Rennen: alle auf einem Platz</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade Spieler auf dem Platz hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`:'')+table(d);
+  root.innerHTML=stateText(d)+board(d)+(d.status!=='upcoming'&&d.duels.length>1?`<details class="acc-group arena-race"><summary>Duell-Rennen: alle auf einem Platz</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`:'')+table(d);
   root.querySelectorAll('details.acc-group').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
  async function loadDay(day){
