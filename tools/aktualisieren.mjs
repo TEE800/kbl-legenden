@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 
 const REPO = 'TEE800/kbl-legenden', BRANCH = 'main';
 const ROOT = process.cwd(), STATE = path.join(ROOT, '.kbl-aktualisieren.json');
-const CODE = ['server.js', 'challenges.js', 'event-types-de.js', 'package.json', 'package-lock.json', 'CLAUDE.md', 'README.md', '.gitignore', '.github/workflows/seite.yml'];
+const CODE = ['server.js', 'challenges.js', 'event-types-de.js', 'package.json', 'package-lock.json', 'CLAUDE.md', 'README.md', '.gitignore', '.github/workflows/seite.yml', 'kbl-head-landmarks.json'];// Kinnlinien: auf GitHub berechnet, damit die Köpfe auch am PC am Kinn enden
 const isCode = p => CODE.includes(p) || p.startsWith('public/') || p.startsWith('tools/');
 // Git-Kennung einer Datei (wie GitHub sie im Verzeichnisbaum angibt).
 const blobSha = buf => crypto.createHash('sha1').update(`blob ${buf.length}\0`).update(buf).digest('hex');

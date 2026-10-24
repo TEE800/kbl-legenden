@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:                      # nach Programm-Aenderungen gleich neu bauen (Daten-Commits des Bots loesen nichts aus)
     branches: [main]
-    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/kickbase-bremse.mjs']
+    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs']
 permissions:
   contents: write
   pages: write
@@ -34,6 +34,13 @@ jobs:
           cache: npm
       - run: npm ci
         if: steps.gate.outputs.aktiv == 'true'
+      - name: Kinnlinien fuer neue Spielerfotos (Wackelkoepfe)
+        if: steps.gate.outputs.aktiv == 'true'
+        continue-on-error: true
+        run: |
+          node tools/kinn-linien.mjs --pruefen && exit 0
+          npm i --no-save --no-package-lock --no-audit --no-fund @vladmandic/face-api@1.7.15 @tensorflow/tfjs@4.22.0 @tensorflow/tfjs-backend-wasm@4.22.0
+          node tools/kinn-linien.mjs
       - name: Daten abrufen und Seite bauen
         if: steps.gate.outputs.aktiv == 'true'
         env:

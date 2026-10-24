@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import os from 'os';
 import fs from 'node:fs';
 import path from 'node:path';
-import zlib from 'node:zlib';
+import { pngDecode, pngEncode } from './tools/png.mjs';
 import { registerChallenges } from './challenges.js';
 import { germanEventTitle } from './event-types-de.js';
 
@@ -1503,40 +1503,11 @@ async function playerPhotos(){
 }
 // Wackelköpfe (Kevin-Wunsch: nur der Kopf, ohne Kreis und ohne Schulteransatz). Das freigestellte Kickbase-Brustbild
 // wird hier auf dem Server zugeschnitten, weil der Browser fremde Bilder wegen CORS nicht auslesen darf.
-// Kleiner PNG-Leser/-Schreiber ohne Zusatzpaket (8 Bit, nicht interlaced; sonst null = gezeichnetes Gesicht).
-function pngDecode(buf){
- if(!buf||buf.length<33||buf.readUInt32BE(0)!==0x89504e47)return null;
- let o=8,w=0,h=0,bd=0,ct=0,il=0,pal=null,trns=null;const idat=[];
- while(o+8<=buf.length){const len=buf.readUInt32BE(o),type=buf.toString('latin1',o+4,o+8),d=buf.subarray(o+8,o+8+len);o+=12+len;
-  if(type==='IHDR'){w=d.readUInt32BE(0);h=d.readUInt32BE(4);bd=d[8];ct=d[9];il=d[12];}
-  else if(type==='PLTE')pal=d;else if(type==='tRNS')trns=d;else if(type==='IDAT')idat.push(d);else if(type==='IEND')break;}
- const ch={0:1,2:3,3:1,4:2,6:4}[ct];if(bd!==8||il||!ch||!w||!h)return null;
- const raw=zlib.inflateSync(Buffer.concat(idat)),stride=w*ch,px=Buffer.alloc(stride*h);
- for(let y=0;y<h;y++){const f=raw[y*(stride+1)],src=y*(stride+1)+1,dst=y*stride;
-  for(let i=0;i<stride;i++){const x=raw[src+i],a=i>=ch?px[dst+i-ch]:0,b=y?px[dst-stride+i]:0,c=y&&i>=ch?px[dst-stride+i-ch]:0;
-   let v=x;if(f===1)v=x+a;else if(f===2)v=x+b;else if(f===3)v=x+((a+b)>>1);else if(f===4){const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);v=x+(pa<=pb&&pa<=pc?a:pb<=pc?b:c);}
-   px[dst+i]=v&255;}}
- const out=Buffer.alloc(w*h*4);
- for(let i=0;i<w*h;i++){const s=i*ch,q=i*4;
-  if(ct===6){px.copy(out,q,s,s+4);}
-  else if(ct===2){out[q]=px[s];out[q+1]=px[s+1];out[q+2]=px[s+2];out[q+3]=255;}
-  else if(ct===0){out[q]=out[q+1]=out[q+2]=px[s];out[q+3]=255;}
-  else if(ct===4){out[q]=out[q+1]=out[q+2]=px[s];out[q+3]=px[s+1];}
-  else{const k=px[s];if(!pal)return null;out[q]=pal[k*3];out[q+1]=pal[k*3+1];out[q+2]=pal[k*3+2];out[q+3]=trns&&k<trns.length?trns[k]:255;}}
- return {w,h,data:out};
-}
-const CRC_T=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
-const crc32=b=>{let c=0xffffffff;for(const x of b)c=CRC_T[(c^x)&255]^(c>>>8);return (c^0xffffffff)>>>0;};
-function pngEncode(w,h,data){
- const chunk=(t,d)=>{const l=Buffer.alloc(4);l.writeUInt32BE(d.length);const td=Buffer.concat([Buffer.from(t,'latin1'),d]),c=Buffer.alloc(4);c.writeUInt32BE(crc32(td));return Buffer.concat([l,td,c]);};
- const ih=Buffer.alloc(13);ih.writeUInt32BE(w,0);ih.writeUInt32BE(h,4);ih[8]=8;ih[9]=6;
- const raw=Buffer.alloc((w*4+1)*h);for(let y=0;y<h;y++)data.copy(raw,y*(w*4+1)+1,y*w*4,(y+1)*w*4);
- return Buffer.concat([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),chunk('IHDR',ih),chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))]);
-}
+// PNG lesen/schreiben: tools/png.mjs (ohne Zusatzpaket).
 // Kopf finden: Breite je Zeile (zusammenhängend um die Kopfmitte). Von oben wird der Kopf breiter, am Hals schmaler,
 // darunter kommen die Schultern. Schnitt an der schmalsten Stelle des Halses; alles außerhalb des Kopfes wird durchsichtig.
-const HEAD_VERSION=3;
-function cropHead(buf){
+const HEAD_VERSION=4;
+function cropHead(buf,jaw){
  const img=pngDecode(buf);if(!img)return null;const {w,h,data}=img,A=(x,y)=>data[(y*w+x)*4+3]>100;
  let top=-1;for(let y=0;y<h&&top<0;y++)for(let x=0;x<w;x++)if(A(x,y)){top=y;break;}
  if(top<0)return null;
@@ -1550,6 +1521,22 @@ function cropHead(buf){
   gap=0;for(let x=x0+1;x<w;x++){if(A(x,y)){r=x;gap=0;}else if(++gap>3)break;}
   L[y]=l;R[y]=r;if(y<top+h*.3)cx=Math.round((l+r)/2);}
  const W=y=>L[y]<0?0:R[y]-L[y]+1;
+ // Mit Kinnlinie (17 Gesichtspunkte von Ohr zu Ohr, tools/kinn-linien.mjs): alles unterhalb der Kinnlinie fällt weg,
+ // so endet der Kopf genau am echten Kinn (Kevin: kein Hals, kein Doppelkinn).
+ if(Array.isArray(jaw)&&jaw.length===17){
+  const fw=jaw[16][0]-jaw[0][0],m=Math.max(2,Math.round(fw*.025));if(fw<20)return null;
+  // Neben dem Gesicht (Ohren) bis auf Höhe von Punkt 2 bzw. 14, damit die Ohrläppchen nicht gerade abgeschnitten werden.
+  const lim=x=>{if(x<=jaw[0][0])return jaw[2][1]+m;if(x>=jaw[16][0])return jaw[14][1]+m;
+   for(let i=0;i<16;i++){const [x1,y1]=jaw[i],[x2,y2]=jaw[i+1];if(x>=x1&&x<=x2)return (x2===x1?Math.max(y1,y2):y1+(y2-y1)*(x-x1)/(x2-x1))+m;}return jaw[8][1]+m;};
+  const bottom=Math.min(h,Math.ceil(Math.max(...jaw.map(p=>p[1]))+m+2));
+  let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0)for(let x=L[y];x<=R[y];x++)if(y<=lim(x)){l=Math.min(l,x);r=Math.max(r,x);}
+  const ow=r-l+1,oh=bottom-top;if(ow<8||oh<8||oh>ow*2.2)return null;
+  const out=Buffer.alloc(ow*oh*4);
+  for(let y=0;y<oh;y++){const yy=top+y;if(L[yy]<0)continue;
+   for(let x=0;x<ow;x++){const xx=l+x;if(xx<L[yy]||xx>R[yy])continue;const edge=Math.max(0,Math.min(1,(lim(xx)-yy)/2));if(!edge)continue;
+    const s=(yy*w+xx)*4,q=(y*ow+x)*4;data.copy(out,q,s,s+4);out[q+3]=Math.round(out[q+3]*edge);}}
+  return pngEncode(ow,oh,out);
+ }
  // Schultern: erste Zeile, die mehr als halb so breit ist wie das Bild unten (Kickbase-Fotos sind alle gleich aufgebaut).
  // Hals: schmalste Zeile in der unteren Hälfte zwischen Kopfoberkante und Schultern. Kopfbreite: breiteste Zeile darüber.
  const Wb=Math.max(...Array.from({length:Math.min(20,h-top)},(_,i)=>W(h-1-i)));
@@ -1574,6 +1561,12 @@ function cropHead(buf){
    data.copy(out,q,s,s+4);out[q+3]=Math.round(out[q+3]*fade*edge);}}
  return pngEncode(ow,oh,out);
 }
+// Kinnlinien je Spieler (von tools/kinn-linien.mjs berechnet, nur gültig für genau dieses Foto).
+let jawFile=null;
+function headJaw(id,src){
+ if(!jawFile||Date.now()-jawFile.at>60e3){try{jawFile={at:Date.now(),data:JSON.parse(fs.readFileSync(path.join(process.cwd(),'kbl-head-landmarks.json'),'utf8')).players||{}};}catch{jawFile={at:Date.now(),data:{}};}}
+ const e=jawFile.data[String(id)];return e&&e.img===src?e.jaw:null;
+}
 const headCache=new Map();
 async function headImage(id,orig,token){
  const k=(orig?'o':'h')+id;if(headCache.has(k))return headCache.get(k);
@@ -1584,7 +1577,7 @@ async function headImage(id,orig,token){
  const url=/^https?:\/\//.test(src)?src:'https://kickbase.b-cdn.net/'+String(src).replace(/^\//,'');
  const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)return null;
  const buf=Buffer.from(await r.arrayBuffer());
- let v=orig?buf:null;if(!orig){try{v=cropHead(buf);}catch{v=null;}}
+ let v=orig?buf:null;if(!orig){try{v=cropHead(buf,headJaw(id,src));}catch{v=null;}}
  if(headCache.size>800)headCache.clear();headCache.set(k,v);return v;
 }
 app.get('/api/mvp-tipps/head/:id',async(req,res)=>{
