@@ -1572,25 +1572,28 @@ function kblBumsIntro({hit,clean,half,RN}){
  ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
  ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
  const names=w=>w.map(n=>escapeHtml(n).replaceAll('_','_<wbr>')).join('<br>');
- // Kevin-Vorgabe: mehrere Karten fliegen gleichzeitig herein (je Welle 3), 0,5 s herein, 3 s stehen, 0,5 s hinaus.
- const per=3,step=3700,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
- cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per,n=Math.min(per,cards.length-w*per);
+ // Kevin-Vorgabe: je Welle 3 Karten gleichzeitig, verstreut übers Bild und leicht schräg hängend;
+ // weich hereinschweben (0,8 s), 3 s stehen, hinaus.
+ const per=3,step=4000,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
+ const SLOTS=wide?[[[24,44,-5],[52,68,4],[78,42,-3]],[[27,68,4],[50,42,-4],[75,66,6]]]
+  :[[[45,30,-5],[56,53,4],[44,77,-3]],[[55,30,4],[44,53,-4],[56,77,5]]];
+ const FROM=[[-130,-30],[20,120],[130,-25],[-120,40],[-15,-120],[125,35]];
+ cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per;
   timers.push(setTimeout(()=>{if(done)return;
   const el=document.createElement('div');el.className='bums-intro-card';
   el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(escapeHtml).join(', ')}</b><span>${c.n}${c.unit}</span>`;
-  // Breit nebeneinander, am Handy untereinander.
-  if(wide){el.style.left=(50+(j-(n-1)/2)*31)+'%';el.style.top='56%';}
-  else{el.style.left='50%';el.style.top=(56+(j-(n-1)/2)*25)+'%';}
+  const [l,t,rot]=SLOTS[w%2][j],[fx,fy]=FROM[idx%FROM.length];
+  el.style.left=l+'%';el.style.top=t+'%';
   ov.appendChild(el);
-  const ltr=idx%2===0,rot=ltr?-6:6,offL=ltr?'-150vw':'150vw',offR=ltr?'150vw':'-150vw';
+  const at=(x,y,r,sc=1)=>`translate(calc(-50% + ${x}vw),calc(-50% + ${y}vh)) rotate(${r}deg) scale(${sc})`;
   el.animate([
-   {transform:`translate(calc(-50% + ${offL}),-50%) rotate(${rot*2}deg)`},
-   {transform:`translate(-50%,-50%) rotate(${-rot/3}deg) scale(1.06)`,offset:.1},
-   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.14},
-   {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.875},
-   {transform:`translate(calc(-50% + ${offR}),-50%) rotate(${-rot*2}deg)`}],
-   {duration:4000,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>el.remove();
- },500+w*step+j*150));});
+   {transform:at(fx,fy,rot*5,.7),opacity:0,easing:'cubic-bezier(.16,1,.3,1)'},
+   {transform:at(0,0,rot),opacity:1,offset:.2},
+   {transform:at(0,-1,rot*.6),offset:.55,easing:'ease-in-out'},
+   {transform:at(0,0,rot),opacity:1,offset:.86,easing:'cubic-bezier(.5,0,.75,0)'},
+   {transform:at(-fx*.8,-fy*.4+30,rot*-4,.8),opacity:0}],
+   {duration:4400,fill:'forwards'}).onfinish=()=>el.remove();
+ },500+w*step+j*180));});
  const cardsEnd=waves?waves*step+300:0;
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
