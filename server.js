@@ -790,19 +790,29 @@ app.get('/api/arena-probe', async (req, res) => {
   const short = r => r.ok ? JSON.stringify(r.data).slice(0, 8000) : r;
   const sel = await get('/v4/leagues/selection'); out.selection = short(sel);
   const all = await get('/v4/leagues'); out.leagues = short(all);
-  const ids = new Set();
-  for (const r of [sel, all]) if (r.ok) for (const arr of findObjectArrays(r.data)) for (const x of arr) { const i = x.i ?? x.id ?? x.lid; if (i != null && /^\d+$/.test(String(i))) ids.add(String(i)); }
+  // Nur echte Ligen (Liste it[] mit Namen), die mit "Arena" im Namen zuerst.
+  const found = [];
+  for (const r of [sel, all]) if (r.ok) for (const x of (r.data.it || r.data.lis || [])) { const i = String(x.i ?? x.id ?? ''); if (/^\d+$/.test(i) && !found.some(f => f.id === i)) found.push({ id: i, name: String(x.n ?? x.name ?? '') }); }
+  out.found = found;
+  const ids = new Set(found.filter(f => /arena/i.test(f.name)).map(f => f.id));
+  if (!ids.size) for (const f of found) ids.add(f.id);
   ids.delete('6422780');
-  if (req.query.id && /^\d{1,12}$/.test(String(req.query.id))) ids.add(String(req.query.id));
+  if (req.query.id && /^\d{1,12}$/.test(String(req.query.id))) { ids.clear(); ids.add(String(req.query.id)); }
   let day = null; try { const md = await loadMatchdays(); day = (md.days.find(d => d.status === 'live') || [...md.days].reverse().find(d => d.status === 'finished'))?.day || null; } catch {}
   out.day = day; out.arena = {};
-  for (const id of [...ids].slice(0, 6)) {
+  for (const id of [...ids].slice(0, 3)) {
     const L = `/v4/leagues/${id}`, r = {};
     const paths = ['overview', 'me', 'settings', 'settings/managers', 'ranking', `ranking?dayNumber=${day}`, `ranking?dayNumber=${day - 1}`, 'lineup', 'teamcenter/myeleven', 'activitiesFeed?max=10',
-      'h2h', 'h2h/matchups', `h2h/matchups?dayNumber=${day}`, 'h2h/ranking', 'h2h/schedule', 'matchups', `matchups?dayNumber=${day}`, `matchups/${day}`, 'duels', 'battles', 'fixtures', 'schedule', 'headtohead', 'head2head', 'arena', 'arena/lineup', 'arena/ranking', 'table', 'standings'];
+      'h2h', 'h2h/matchups', `h2h/matchups?dayNumber=${day}`, 'h2h/ranking', 'h2h/schedule', 'matchups', `matchups?dayNumber=${day}`, `matchups/${day}`, 'duels', 'battles', 'fixtures', 'schedule', 'headtohead', 'head2head', 'arena', 'arena/lineup', 'arena/ranking', 'table', 'standings',
+      `ranking?dayNumber=${day + 1}`, 'ranking/h2h', `h2h/${day}`, `h2h?dayNumber=${day}`, 'h2h/matchday', `matchday/${day}`, `matchdays/${day}`, 'matchup', `matchup?dayNumber=${day}`, 'versus', 'opponents', 'pairings', 'headToHead', `headToHead?dayNumber=${day}`, 'h2hmatchups', `h2hmatchups?dayNumber=${day}`, 'duel', `duel?dayNumber=${day}`];
     for (const p of paths) r[p] = short(await get(`${L}/${p}`));
     const uid = currentSession(req)?.userId;
     if (uid) for (const p of [`managers/${uid}/dashboard`, `managers/${uid}/squad`, `users/${uid}/teamcenter?dayNumber=${day}`, `teamcenter/${uid}?dayNumber=${day}`, `managers/${uid}/lineup?dayNumber=${day}`]) r[p] = short(await get(`${L}/${p}`));
+    // Aufstellung jedes Managers (Arena: jeden Spieltag neu, Kapitaen ictp) und Head-to-Head-Daten je Manager.
+    try {
+      const ov = await get(`${L}/overview`), mids = ov.ok ? (ov.data.mid || []).map(String) : [];
+      for (const m of mids.slice(0, 20)) for (const p of [`users/${m}/teamcenter?dayNumber=${day}`, `users/${m}/teamcenter?dayNumber=${day - 1}`, `managers/${m}/dashboard`, `managers/${m}/h2h`, `users/${m}/h2h`, `managers/${m}/performance`]) r[p] = short(await get(`${L}/${p}`));
+    } catch {}
     out.arena[id] = r;
   }
   try { fs.mkdirSync(path.join(process.cwd(), '_probe'), { recursive: true }); fs.writeFileSync(path.join(process.cwd(), '_probe', 'arena-probe.json'), JSON.stringify(out, null, 2)); } catch {}
