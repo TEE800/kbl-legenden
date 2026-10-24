@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import os from 'os';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { registerChallenges } from './challenges.js';
 import { germanEventTitle } from './event-types-de.js';
 
@@ -1454,6 +1455,90 @@ async function playerPhotos(){
  if(map.size)photoCache={at:Date.now(),map};
  return map;
 }
+// Wackelköpfe (Kevin-Wunsch: nur der Kopf, ohne Kreis und ohne Schulteransatz). Das freigestellte Kickbase-Brustbild
+// wird hier auf dem Server zugeschnitten, weil der Browser fremde Bilder wegen CORS nicht auslesen darf.
+// Kleiner PNG-Leser/-Schreiber ohne Zusatzpaket (8 Bit, nicht interlaced; sonst null = gezeichnetes Gesicht).
+function pngDecode(buf){
+ if(!buf||buf.length<33||buf.readUInt32BE(0)!==0x89504e47)return null;
+ let o=8,w=0,h=0,bd=0,ct=0,il=0,pal=null,trns=null;const idat=[];
+ while(o+8<=buf.length){const len=buf.readUInt32BE(o),type=buf.toString('latin1',o+4,o+8),d=buf.subarray(o+8,o+8+len);o+=12+len;
+  if(type==='IHDR'){w=d.readUInt32BE(0);h=d.readUInt32BE(4);bd=d[8];ct=d[9];il=d[12];}
+  else if(type==='PLTE')pal=d;else if(type==='tRNS')trns=d;else if(type==='IDAT')idat.push(d);else if(type==='IEND')break;}
+ const ch={0:1,2:3,3:1,4:2,6:4}[ct];if(bd!==8||il||!ch||!w||!h)return null;
+ const raw=zlib.inflateSync(Buffer.concat(idat)),stride=w*ch,px=Buffer.alloc(stride*h);
+ for(let y=0;y<h;y++){const f=raw[y*(stride+1)],src=y*(stride+1)+1,dst=y*stride;
+  for(let i=0;i<stride;i++){const x=raw[src+i],a=i>=ch?px[dst+i-ch]:0,b=y?px[dst-stride+i]:0,c=y&&i>=ch?px[dst-stride+i-ch]:0;
+   let v=x;if(f===1)v=x+a;else if(f===2)v=x+b;else if(f===3)v=x+((a+b)>>1);else if(f===4){const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);v=x+(pa<=pb&&pa<=pc?a:pb<=pc?b:c);}
+   px[dst+i]=v&255;}}
+ const out=Buffer.alloc(w*h*4);
+ for(let i=0;i<w*h;i++){const s=i*ch,q=i*4;
+  if(ct===6){px.copy(out,q,s,s+4);}
+  else if(ct===2){out[q]=px[s];out[q+1]=px[s+1];out[q+2]=px[s+2];out[q+3]=255;}
+  else if(ct===0){out[q]=out[q+1]=out[q+2]=px[s];out[q+3]=255;}
+  else if(ct===4){out[q]=out[q+1]=out[q+2]=px[s];out[q+3]=px[s+1];}
+  else{const k=px[s];if(!pal)return null;out[q]=pal[k*3];out[q+1]=pal[k*3+1];out[q+2]=pal[k*3+2];out[q+3]=trns&&k<trns.length?trns[k]:255;}}
+ return {w,h,data:out};
+}
+const CRC_T=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
+const crc32=b=>{let c=0xffffffff;for(const x of b)c=CRC_T[(c^x)&255]^(c>>>8);return (c^0xffffffff)>>>0;};
+function pngEncode(w,h,data){
+ const chunk=(t,d)=>{const l=Buffer.alloc(4);l.writeUInt32BE(d.length);const td=Buffer.concat([Buffer.from(t,'latin1'),d]),c=Buffer.alloc(4);c.writeUInt32BE(crc32(td));return Buffer.concat([l,td,c]);};
+ const ih=Buffer.alloc(13);ih.writeUInt32BE(w,0);ih.writeUInt32BE(h,4);ih[8]=8;ih[9]=6;
+ const raw=Buffer.alloc((w*4+1)*h);for(let y=0;y<h;y++)data.copy(raw,y*(w*4+1)+1,y*w*4,(y+1)*w*4);
+ return Buffer.concat([Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]),chunk('IHDR',ih),chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))]);
+}
+// Kopf finden: Breite je Zeile (zusammenhängend um die Kopfmitte). Von oben wird der Kopf breiter, am Hals schmaler,
+// darunter kommen die Schultern. Schnitt an der schmalsten Stelle des Halses; alles außerhalb des Kopfes wird durchsichtig.
+const HEAD_VERSION=1;
+function cropHead(buf){
+ const img=pngDecode(buf);if(!img)return null;const {w,h,data}=img,A=(x,y)=>data[(y*w+x)*4+3]>100;
+ let top=-1;for(let y=0;y<h&&top<0;y++)for(let x=0;x<w;x++)if(A(x,y)){top=y;break;}
+ if(top<0)return null;
+ let cnt=0;for(let x=0;x<w;x++)if(A(x,top))cnt++;if(cnt>w*.6)return null;// kein freigestelltes Bild
+ // Kopfmitte aus den obersten Zeilen
+ let sx=0,n=0;for(let y=top;y<Math.min(h,top+Math.round(h*.08));y++)for(let x=0;x<w;x++)if(A(x,y)){sx+=x;n++;}
+ let cx=Math.round(sx/n);
+ const L=[],R=[];
+ for(let y=top;y<h;y++){let x0=cx;while(x0<w&&!A(x0,y)&&x0-cx<4)x0++;if(!A(x0,y)){L[y]=R[y]=-1;continue;}
+  let l=x0,r=x0,gap=0;for(let x=x0-1;x>=0;x--){if(A(x,y)){l=x;gap=0;}else if(++gap>3)break;}
+  gap=0;for(let x=x0+1;x<w;x++){if(A(x,y)){r=x;gap=0;}else if(++gap>3)break;}
+  L[y]=l;R[y]=r;if(y<top+h*.3)cx=Math.round((l+r)/2);}
+ const W=y=>L[y]<0?0:R[y]-L[y]+1;
+ // breiteste Stelle des Kopfes (Ohren/Haare), danach Hals (schmalste Zeile), bis es zu den Schultern wieder breiter wird
+ let peak=0,peakY=top,neck=-1,nw=1e9;
+ for(let y=top;y<h;y++){const v=W(y);
+  if(neck<0){if(v>=peak){peak=v;peakY=y;}else if(v<peak*.85){neck=y;nw=v;}continue;}
+  if(v<=nw){nw=v;neck=y;}else if(v>nw*1.15&&v>peak*.9)break;}
+ if(peak<8||neck<0||neck-top<peak*.8||nw>peak*.9)return null;// kein Hals erkennbar: lieber kein Foto
+ // Schnitt knapp unter dem Kinn: erste Zeile, die fast so schmal ist wie der Hals, plus wenig Rand
+ for(let y=peakY;y<neck;y++)if(W(y)<=nw*1.12){neck=Math.min(neck,y+Math.round(peak*.08));break;}
+ const bottom=neck;let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0){l=Math.min(l,L[y]);r=Math.max(r,R[y]);}
+ const ow=r-l+1,oh=bottom-top;if(ow<8||oh<8)return null;
+ const out=Buffer.alloc(ow*oh*4);
+ for(let y=0;y<oh;y++){const yy=top+y,fade=Math.min(1,(oh-y)/Math.max(2,oh*.08));// unten weich auslaufen
+  for(let x=0;x<ow;x++){const xx=l+x;if(L[yy]<0||xx<L[yy]||xx>R[yy])continue;const s=(yy*w+xx)*4,q=(y*ow+x)*4;
+   data.copy(out,q,s,s+4);out[q+3]=Math.round(out[q+3]*fade);}}
+ return pngEncode(ow,oh,out);
+}
+const headCache=new Map();
+async function headImage(id,orig,token){
+ const k=(orig?'o':'h')+id;if(headCache.has(k))return headCache.get(k);
+ const photos=await playerPhotos().catch(()=>null);
+ let src=photos?.get(String(id));
+ if(!src&&token){const all=await loadAllPlayers(token).catch(()=>null);src=all?.players.get(String(id))?.img||all?.players.get(Number(id))?.img;}
+ if(!src)return null;
+ const url=/^https?:\/\//.test(src)?src:'https://kickbase.b-cdn.net/'+String(src).replace(/^\//,'');
+ const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)return null;
+ const buf=Buffer.from(await r.arrayBuffer());
+ let v=orig?buf:null;if(!orig){try{v=cropHead(buf);}catch{v=null;}}
+ if(headCache.size>800)headCache.clear();headCache.set(k,v);return v;
+}
+app.get('/api/mvp-tipps/head/:id',async(req,res)=>{
+ const id=String(req.params.id||'').replace(/\.png$/,'');if(!/^\d{1,9}$/.test(id))return res.status(400).end();
+ try{const v=await headImage(id,req.query.orig==='1',await tippToken(req));if(!v)return res.status(404).end();
+  res.set({'Content-Type':'image/png','Cache-Control':'public, max-age=86400','X-Head-Version':String(HEAD_VERSION)}).send(v);}
+ catch{res.status(502).end();}
+});
 app.get('/api/mvp-tipps/players',async(req,res)=>{
  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  try{const all=await loadAllPlayers(token);

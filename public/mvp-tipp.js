@@ -188,34 +188,12 @@
  }
  // Kickbase liefert Bildpfade wie "content/file/….png" (Spielerfoto pim, Wappen), Bilder liegen im Kickbase-CDN.
  const kbImg=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
- const toonPhoto=(src,cls,alt)=>!src?'':cls==='toon-face'?`<span class="toon-face" data-src="${esc(src)}"><img alt="${esc(alt)}" referrerpolicy="no-referrer"></span>`:`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`;
- // Kopf aus dem freigestellten Kickbase-Brustbild ausschneiden: oberste deckende Zeile bis dort, wo die Schultern
- // deutlich breiter werden als der Kopf. Ohne Transparenz oder ohne Canvas-Zugriff (CORS) null = CSS-Ausschnitt.
- const headCache=new Map();
- function headCut(img){
-  const W=img.naturalWidth,H=img.naturalHeight;if(!W||!H)return null;
-  const k=Math.min(1,256/Math.max(W,H)),w=Math.round(W*k),h=Math.round(H*k);
-  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(img,0,0,w,h);
-  const a=x.getImageData(0,0,w,h).data,L=[],R=[];
-  for(let y=0;y<h;y++){let l=-1,r=-1;for(let i=0;i<w;i++)if(a[(y*w+i)*4+3]>40){if(l<0)l=i;r=i;}L[y]=l;R[y]=r;}
-  const top=L.findIndex(v=>v>=0);if(top<0||R[top]-L[top]>w*.9)return null;
-  let maxW=0,bottom=Math.min(h-1,top+Math.round(h*.6));
-  for(let y=top;y<=bottom;y++){const wd=L[y]<0?0:R[y]-L[y];if(y-top>h*.12&&maxW&&wd>maxW*1.2){bottom=y;break;}maxW=Math.max(maxW,wd);}
-  let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0){l=Math.min(l,L[y]);r=Math.max(r,R[y]);}
-  const bw=r-l+1,bh=bottom-top;if(bw<8||bh<8)return null;
-  const o=document.createElement('canvas');o.width=bw;o.height=bh;o.getContext('2d').drawImage(c,l,top,bw,bh,0,0,bw,bh);return o.toDataURL();
- }
- function fitHeads(root){
-  const apply=(el,src,cut)=>{const im=el.querySelector('img');if(!im)return;
-   im.onerror=()=>{el.closest('.toon-runner')?.classList.remove('has-face');el.remove();};
-   im.src=cut||src;el.classList.add(cut?'cut':'guess');el.closest('.toon-runner')?.classList.add('has-face');};
-  root.querySelectorAll('.toon-face[data-src]:not(.cut):not(.guess)').forEach(el=>{
-   const src=el.dataset.src;
-   if(headCache.has(src)){const v=headCache.get(src);if(v instanceof Promise)v.then(u=>apply(el,src,u));else apply(el,src,v);return;}
-   const p=new Promise(res=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{let u=null;try{u=headCut(im);}catch{}res(u);};im.onerror=()=>res(null);im.src=src;});
-   headCache.set(src,p);p.then(u=>{headCache.set(src,u);apply(el,src,u);});
-  });
- }
+ const toonPhoto=(src,cls,alt)=>!src?'':`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`;
+ // Wackelkopf: nur der Kopf, auf dem Server aus dem Kickbase-Foto ausgeschnitten (online als fertige Datei aus dem Export).
+ // Lädt er nicht (kein Foto, kein Hals erkennbar), bleibt das gezeichnete Gesicht. Nie ein Kreis-Ausschnitt.
+ const HEAD_VERSION=1;
+ const headSrc=id=>window.KBL_STATIC?`heads/v${HEAD_VERSION}/${encodeURIComponent(id)}.png`:`/api/mvp-tipps/head/${encodeURIComponent(id)}`;
+ const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`;
  function toonRace(groups,leadIds,bestIds,me,best,pool){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
@@ -225,7 +203,7 @@
   const ROW=58,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
    return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' ghost':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
-    ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${toonPhoto(face,'toon-face',o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}
+    ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}
     <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b></div></div>`;};
   const figs=[];
   if(best)best.players.forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,crown:true,ghost:true,mood:'wow',num:'★',run:''}));
@@ -310,7 +288,7 @@
   root.className='';
   // Beim automatischen Neuladen (alle 2 Min.) bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]>summary')].map(x=>x.textContent));
-  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';fitHeads(root);
+  root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';
   root.querySelectorAll('details.acc-group>summary').forEach(x=>{if(wasOpen.has(x.textContent))x.parentElement.open=true;});
   if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
