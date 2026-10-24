@@ -2533,7 +2533,9 @@ setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
 // (Verkaufspreis minus Kaufpreis) und Summen. Quelle: /managers/{id}/transfer (it[]: pi, pn, tid, tty 1 Kauf / 2 Verkauf,
 // othnm Gegenüber, ohne = Markt, trp Preis, dt) und der heutige Kader (prc Kaufpreis laut Kickbase, mv Marktwert, mvgl = mv - prc).
 // Verkauf ohne Kauf im Verlauf = Startkader: kein Kaufpreis, darum kein Gewinn/Verlust (nie raten).
-function buildTransferHistory(list, squad) {
+// Saison (Kevin: Saisonwechsel 1. Juli): from/to in ms; to = null = laufende Saison (dann mit heutigem Kader).
+// Gezählt wird ein Deal in der Saison, in der er endet (Verkauf); Käufe und Verkäufe je Saison nach Datum.
+function buildTransferHistory(list, squad, from = 0, to = null) {
   const asc = [...list].filter(t => t && t.pi != null && (t.tty === 1 || t.tty === 2) && Number.isFinite(Number(t.trp)))
     .sort((a, b) => Date.parse(a.dt) - Date.parse(b.dt));
   const side = t => ({ price: Number(t.trp), at: t.dt || null, other: t.othnm || null });
@@ -2566,13 +2568,17 @@ function buildTransferHistory(list, squad) {
     trades.push({ id: String(p.pi), name: p.pn || '?', team: p.tid != null ? String(p.tid) : null, img: p.pim || null, buy: prc != null ? { price: prc, at: null, other: null } : null, sell: null,
       status: 'held', start: true, mv, diff: mv != null && prc != null ? mv - prc : null });
   }
+  const inRange = iso => { const x = Date.parse(iso); return x >= from && (to == null || x < to); };
+  const keep = t => t.status === 'held' ? to == null : inRange((t.sell || t.buy || {}).at);
+  for (let i = trades.length - 1; i >= 0; i--) if (!keep(trades[i])) trades.splice(i, 1);
+  const own = asc.filter(t => inRange(t.dt));
   const sum = f => trades.reduce((s, t) => s + (f(t) || 0), 0);
   const sold = trades.filter(t => t.status === 'sold'), held = trades.filter(t => t.status === 'held');
   const best = sold.reduce((b, t) => !b || t.diff > b.diff ? t : b, null), worst = sold.reduce((b, t) => !b || t.diff < b.diff ? t : b, null);
   const pick = t => t && { id: t.id, name: t.name, diff: t.diff };
   return {
-    buys: asc.filter(t => t.tty === 1).length, sells: asc.filter(t => t.tty === 2).length,
-    spent: asc.filter(t => t.tty === 1).reduce((s, t) => s + Number(t.trp), 0), earned: asc.filter(t => t.tty === 2).reduce((s, t) => s + Number(t.trp), 0),
+    buys: own.filter(t => t.tty === 1).length, sells: own.filter(t => t.tty === 2).length,
+    spent: own.filter(t => t.tty === 1).reduce((s, t) => s + Number(t.trp), 0), earned: own.filter(t => t.tty === 2).reduce((s, t) => s + Number(t.trp), 0),
     realized: sum(t => t.status === 'sold' ? t.diff : 0), soldCount: sold.length, wins: sold.filter(t => t.diff > 0).length, losses: sold.filter(t => t.diff < 0).length,
     unrealized: sum(t => t.status === 'held' ? t.diff : 0), squadValue: sum(t => t.status === 'held' ? t.mv : 0), heldCount: held.length,
     startSold: trades.filter(t => t.status === 'start').length, unknown: trades.filter(t => t.status === 'unknown').length,
@@ -2580,10 +2586,10 @@ function buildTransferHistory(list, squad) {
     trades: trades.sort((a, b) => Date.parse((b.sell || b.buy || {}).at || 0) - Date.parse((a.sell || a.buy || {}).at || 0))
   };
 }
-// Kickbase liefert den Verlauf evtl. seitenweise: weiter mit ?start=, solange neue Einträge kommen (höchstens 10 Seiten).
+// Kickbase liefert den Verlauf seitenweise (25 je Seite): weiter mit ?start=, solange neue Einträge kommen (höchstens 80 Seiten).
 async function fetchTransferList(token, id) {
   const seen = new Set(), all = [];
-  for (let page = 0; page < 10; page++) {
+  for (let page = 0; page < 80; page++) {
     const r = await kbFetch(`/v4/leagues/6422780/managers/${id}/transfer${all.length ? `?start=${all.length}` : ''}`, { token });
     let neu = 0;
     for (const t of (r.it || [])) { const k = `${t.pi}|${t.tty}|${t.dt}`; if (!seen.has(k)) { seen.add(k); all.push(t); neu++; } }
@@ -2599,16 +2605,25 @@ app.get('/api/transfers', async (req, res) => {
   try {
     const ranking = await kbFetch('/v4/leagues/6422780/ranking', { token });
     const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
-    const managers = [];
-    for (let i = 0; i < users.length; i += 3) managers.push(...await Promise.all(users.slice(i, i + 3).map(async u => {
+    const raw = [];
+    for (let i = 0; i < users.length; i += 3) raw.push(...await Promise.all(users.slice(i, i + 3).map(async u => {
       const base = { id: String(u.i), name: u.n, img: u.uim || null };
       try {
         const [list, squad] = await Promise.all([fetchTransferList(token, u.i), kbFetch(`/v4/leagues/6422780/managers/${u.i}/squad`, { token }).catch(() => null)]);
-        return { ...base, squadMissing: !squad, ...buildTransferHistory(list, squad) };
-      } catch (e) { return { ...base, error: e.message }; }
+        return { base, list, squad };
+      } catch (e) { return { base, error: e.message }; }
     })));
-    managers.sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
-    const value = { updatedAt: new Date().toISOString(), managers };
+    // Saisons (1. Juli bis 30. Juni), neueste zuerst; die laufende Saison immer dabei.
+    const startOf = y => Date.UTC(y, 6, 1), yearOf = ms => { const d = new Date(ms); return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; };
+    const nowY = yearOf(Date.now()), years = new Set([nowY]);
+    for (const r of raw) for (const t of r.list || []) { const x = Date.parse(t.dt); if (Number.isFinite(x)) years.add(yearOf(x)); }
+    const seasons = [...years].sort((a, b) => b - a).map(y => {
+      const current = y === nowY;
+      const managers = raw.map(r => r.error ? { ...r.base, error: r.error } : { ...r.base, squadMissing: current && !r.squad, ...buildTransferHistory(r.list, r.squad, startOf(y), current ? null : startOf(y + 1)) })
+        .filter(m => current || m.error || m.buys || m.sells).sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
+      return { key: `${y}/${String(y + 1).slice(2)}`, current, managers };
+    });
+    const value = { updatedAt: new Date().toISOString(), seasons };
     transferCache = { at: Date.now(), value };
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
