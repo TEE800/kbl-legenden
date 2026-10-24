@@ -4,7 +4,7 @@ on:
     - cron: '*/5 * * * *'    # alle 5 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
     - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
-  push:                      # nach Programm-Aenderungen gleich neu bauen (Daten-Commits des Bots loesen nichts aus)
+  push:                      # nach Programm-Aenderungen gleich neu bauen, voll (sonst bleiben beendete Spieltage bis 6:07 auf altem Stand)
     branches: [main]
     paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs']
 permissions:
@@ -47,7 +47,7 @@ jobs:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
           KBL_TIPP_DIENST: ${{ vars.KBL_TIPP_DIENST }}
-        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch') && 'full' || 'live' }}
+        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch' || github.event_name == 'push') && 'full' || 'live' }}
       - uses: actions/upload-pages-artifact@v3
         if: steps.gate.outputs.aktiv == 'true'
         with:
