@@ -2312,9 +2312,31 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
 // Lesen darf das nur ein Mitglied der Arena (T800, nur auf dem PC, nie von GitHub). Jeder erfolgreiche Abruf landet in
 // kbl-arena.json; ohne Zugriff (GitHub) wird diese Datei genommen. Live-Punkte je Spieler wie beim MVP-Tipp (dayPlayerPoints),
 // das darf jedes Konto. Aufstellungen eines noch nicht angepfiffenen Spieltags werden nie gezeigt.
-const ARENA_ID = '12612349', ARENA_FILE = path.join(process.cwd(), 'kbl-arena.json');
+const ARENA_ID = '12612349', ARENA_FILE = path.join(process.cwd(), 'kbl-arena.json'), ARENA_POINTS_FILE = path.join(process.cwd(), 'kbl-arena-points.json');
 function readArena(){try{return JSON.parse(fs.readFileSync(ARENA_FILE,'utf8'));}catch{return null;}}
-function saveArena(d){const tmp=ARENA_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(d));fs.renameSync(tmp,ARENA_FILE);}
+function saveArena(d){const {points,source,fetchError,...rest}=d;const tmp=ARENA_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(rest));fs.renameSync(tmp,ARENA_FILE);arenaUpload(rest).catch(e=>{arenaUploadState.error=e.message;});}
+// Spielerpunkte beendeter Spieltage in eigener Datei: die schreibt jeder selbst (PC und GitHub), kbl-arena.json schreibt nur der PC.
+function readArenaPoints(){try{return JSON.parse(fs.readFileSync(ARENA_POINTS_FILE,'utf8'));}catch{return {};}}
+function saveArenaPoints(d){const tmp=ARENA_POINTS_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(d));fs.renameSync(tmp,ARENA_POINTS_FILE);}
+// Kevin-Entscheidung: Der PC schickt kbl-arena.json selbst zu GitHub (Branch main), damit die Online-Seite die Duelle kennt.
+// Schluessel nur in der Umgebung (KBL_GITHUB_TOKEN in start.bat, fein eingeschraenkt: nur dieses Repository, Contents lesen/schreiben).
+// Nur bei geaenderten Paarungen/Aufstellungen/Tabelle, hoechstens alle 10 Minuten. Auf GitHub selbst nie.
+const arenaUploadState={at:0,hash:null,error:null,lastOk:null};
+async function arenaUpload(d){
+ const gh=process.env.KBL_GITHUB_TOKEN;if(ON_GITHUB||!gh)return;
+ const hash=crypto.createHash('sha1').update(JSON.stringify([d.matchups,d.lineups,d.table?.rows])).digest('hex');
+ if(hash===arenaUploadState.hash||Date.now()-arenaUploadState.at<10*60e3)return;
+ arenaUploadState.at=Date.now();
+ const url='https://api.github.com/repos/TEE800/kbl-legenden/contents/kbl-arena.json';
+ const h={Authorization:`Bearer ${gh}`,Accept:'application/vnd.github+json','User-Agent':'kbl-legenden-app'};
+ const cur=await fetch(url+'?ref=main',{headers:h,signal:AbortSignal.timeout(15000)});
+ const sha=cur.ok?(await cur.json()).sha:undefined;
+ const r=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
+  body:JSON.stringify({message:'Arena-Daten vom PC',branch:'main',content:Buffer.from(JSON.stringify(d)).toString('base64'),...(sha?{sha}:{})})});
+ if(!r.ok)throw new Error(`GitHub HTTP ${r.status}`);
+ arenaUploadState.hash=hash;arenaUploadState.error=null;arenaUploadState.lastOk=new Date().toISOString();
+ console.log('Arena-Daten zu GitHub geschickt.');
+}
 let arenaMem=null;const arenaDayCache=new Map();
 async function arenaReadToken(req){
  const t=getToken(req)||newestToken();if(t)return t;
@@ -2351,6 +2373,14 @@ async function arenaState(req,days=[]){
   return file.matchups?{...file,source:'datei',fetchError:e.status||e.message}:{...file,fetchError:e.status||e.message};
  }
 }
+async function arenaAuto(){
+ if(ON_GITHUB||!process.env.KBL_GITHUB_TOKEN)return;
+ try{const md=await loadMatchdays();const live=md.days.find(d=>d.status==='live')?.day,cur=live||md.lastFinishedDay;
+  if(!live&&Date.now()-arenaUploadState.at<2*3600e3&&arenaUploadState.hash)return;
+  arenaMem=null;await arenaState({headers:{}},cur?[cur]:[]);}catch(e){arenaUploadState.error=e.message;}
+}
+setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
+app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
 app.get('/api/arena',async(req,res)=>{
  try{
   const md=await loadMatchdays().catch(()=>null);
@@ -2375,14 +2405,14 @@ app.get('/api/arena/:day',async(req,res)=>{
   if(!m)return res.status(404).json({error:a.matchups?`Für Spieltag ${day} gibt es keine Paarungen.`:'Die Arena-Daten fehlen noch.'});
   const lu=started?(a.lineups?.[day]||null):null;
   // Punkte je Spieler (nur angepfiffene Spieltage). Beendete Spieltage werden in kbl-arena.json gemerkt.
-  let pts={};const saved=a.points?.[day];
+  let pts={};const saved=readArenaPoints()[day];
   if(started&&lu){
    if(status==='finished'&&saved)pts=saved;
    else{
     const tok=getToken(req)||newestToken()||await getServiceToken().catch(()=>null)||await arenaReadToken(req);
     const ids=[...new Set(Object.values(lu).flatMap(x=>x.lp))];
     for(let i=0;i<ids.length;i+=5)await Promise.all(ids.slice(i,i+5).map(async id=>{try{pts[id]=await dayPlayerPoints(tok,id,day,status==='finished');}catch{pts[id]={points:null,state:'error'};}}));
-    if(status==='finished'&&ids.length&&ids.every(id=>pts[id]?.state==='done')){const f=readArena()||a;f.points={...(f.points||{}),[day]:pts};try{saveArena(f);}catch{}}
+    if(status==='finished'&&ids.length&&ids.every(id=>pts[id]?.state==='done')){try{saveArenaPoints({...readArenaPoints(),[day]:pts});}catch{}}
    }
   }
   const all=started?await loadAllPlayers(getToken(req)||newestToken()||await getServiceToken().catch(()=>null)).catch(()=>null):null;
