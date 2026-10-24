@@ -113,14 +113,12 @@ try {
   // Wackelkoepfe fuer das MVP-Rennen: Kopf aus dem Kickbase-Foto, auf dem Server ausgeschnitten (nur fehlende, CDN statt Kickbase-API).
   // Neue Version des Zuschnitts (HEAD_VERSION in server.js und mvp-tipp.js) = neuer Ordner, alte Ordner werden geloescht.
   try {
-    const HV = 1, HEADS = path.join(SITE, 'heads'), dir = path.join(HEADS, 'v' + HV);
+    const HV = 2, HEADS = path.join(SITE, 'heads'), dir = path.join(HEADS, 'v' + HV);
     fs.mkdirSync(dir, { recursive: true });
     for (const f of fs.readdirSync(HEADS)) if (/^v\d+$/.test(f) && f !== 'v' + HV) fs.rmSync(path.join(HEADS, f), { recursive: true, force: true });
     const failFile = path.join(dir, '_fehlt.json');
     let fehlt = {}; try { fehlt = JSON.parse(fs.readFileSync(failFile, 'utf8')); } catch {}
     const pl = JSON.parse(fs.readFileSync(path.join(DATA, key('/api/mvp-tipps/players')), 'utf8')).players || [];
-    // Zum Pruefen des Zuschnitts: Originale von je 2 Spielern pro Verein (voruebergehend)
-    const perTeam = {}, probe = new Set(pl.filter(p => p.img && (perTeam[p.team] = (perTeam[p.team] || 0) + 1) <= 2).map(p => p.id));
     const get = async (u) => { const r = await fetch(BASE + u, { headers: { cookie }, signal: AbortSignal.timeout(30000) }); return r.ok ? Buffer.from(await r.arrayBuffer()) : (r.status === 404 ? null : Promise.reject(new Error('HTTP ' + r.status))); };
     let neu = 0, ohne = 0;
     for (const p of pl) {
@@ -129,7 +127,6 @@ try {
       if (!fs.existsSync(f) && fehlt[p.id] !== p.img) {
         try { const b = await get('/api/mvp-tipps/head/' + p.id); if (b) { fs.writeFileSync(f, b); neu++; delete fehlt[p.id]; } else { fehlt[p.id] = p.img; ohne++; } } catch {}
       }
-      if (probe.has(p.id)) { const o = path.join(HEADS, '_orig', p.id + '.png'); if (!fs.existsSync(o)) { fs.mkdirSync(path.dirname(o), { recursive: true }); try { const b = await get('/api/mvp-tipps/head/' + p.id + '?orig=1'); if (b) fs.writeFileSync(o, b); } catch {} } }
     }
     fs.writeFileSync(failFile, JSON.stringify(fehlt));
     console.log(`Koepfe: ${neu} neu, ${ohne} ohne erkennbaren Kopf`);
