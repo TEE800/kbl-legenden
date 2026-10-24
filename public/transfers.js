@@ -1,0 +1,86 @@
+// Ansicht "Transfers" (Kevin-Wunsch): Transferhistorie je Manager mit Kauf- und Verkaufspreis und Gewinn/Verlust je Spieler.
+// Daten von /api/transfers (Server: buildTransferHistory). Oben die Liga im Vergleich, darunter je Manager ein eingeklappter Bereich.
+(()=>{
+ const $=s=>document.querySelector(s);
+ const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+ const full=n=>n==null?'–':new Intl.NumberFormat('de-DE').format(n)+' €';
+ // Kurz: 12,8 Mio. / 850 Tsd.; mit Vorzeichen für Gewinn/Verlust.
+ const money=(n,sign)=>{
+  if(n==null||!Number.isFinite(n))return '–';
+  const a=Math.abs(n),s=sign?(n>0?'+':n<0?'−':'±'):n<0?'−':'';
+  const t=a>=1e6?new Intl.NumberFormat('de-DE',{maximumFractionDigits:a>=1e8?0:1}).format(a/1e6)+' Mio.':a>=1e3?new Intl.NumberFormat('de-DE',{maximumFractionDigits:0}).format(a/1e3)+' Tsd.':new Intl.NumberFormat('de-DE').format(a)+' €';
+  return s+t;
+ };
+ const cls=n=>n==null?'':n>0?'tr-pos':n<0?'tr-neg':'';
+ const date=s=>s?new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}):'';
+ const img=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
+ const face=(src,name)=>src?`<img class="tr-face" src="${esc(img(src))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tr-face tr-noimg',textContent:${esc(JSON.stringify((name||'?').trim()[0]||'?'))}}))">`:`<span class="tr-face tr-noimg">${esc((name||'?').trim()[0]||'?')}</span>`;
+ let data=null,loading=false,sortBy='realized';
+
+ async function get(url){
+  const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d;
+ }
+ const SORTS={realized:['Verkaufte Spieler','realized'],unrealized:['Buchwert Kader','unrealized'],total:['Gesamt',m=>(m.realized||0)+(m.unrealized||0)]};
+ const val=(m,k)=>{const f=SORTS[k][1];return typeof f==='function'?f(m):m[f];};
+
+ // Liga im Vergleich: ein Balken je Manager, nach rechts grün (Gewinn), nach links rot (Verlust).
+ function league(ms){
+  const ok=ms.filter(m=>!m.error);
+  const rows=[...ok].sort((a,b)=>val(b,sortBy)-val(a,sortBy));
+  const max=Math.max(1,...rows.map(m=>Math.abs(val(m,sortBy)||0)));
+  const bar=v=>{const w=Math.abs(v||0)/max*50;return `<span class="tr-bar"><i class="${v<0?'neg':'pos'}" style="${v<0?`right:50%`:`left:50%`};width:${w.toFixed(1)}%"></i></span>`;};
+  return `<div class="tr-league"><h4 class="tr-h" style="margin-top:4px">Gewinn/Verlust im Vergleich</h4><div class="tr-sorts" role="group" aria-label="Sortieren nach">${Object.entries(SORTS).map(([k,[t]])=>`<button type="button" class="tr-sort${k===sortBy?' active':''}" data-tr-sort="${k}" aria-pressed="${k===sortBy}">${esc(t)}</button>`).join('')}</div>
+   <ol class="tr-rank">${rows.map((m,i)=>{const v=val(m,sortBy);return `<li title="${esc(`${m.name}: ${full(v)}`)}"><span class="tr-place">${i+1}.</span>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span>${bar(v)}<b class="tr-val ${cls(v)}">${money(v,true)}</b></li>`;}).join('')}</ol>
+   ${ms.some(m=>m.error)?`<p class="error tiny">Das fehlt: Transfers von ${esc(ms.filter(m=>m.error).map(m=>m.name).join(', '))} (Kickbase hat nicht geantwortet).</p>`:''}</div>`;
+ }
+ const side=(s,verb)=>s?`<span class="tr-price">${money(s.price)}</span><small>${s.at?esc(date(s.at))+' · ':''}${verb} ${esc(s.other||'Markt')}</small>`:'';
+ function trade(t){
+  let buy,sell,note='';
+  if(t.status==='start'){buy=`<span class="tr-price muted">?</span><small title="Startkader oder älter als der Kickbase-Verlauf">Kauf nicht im Verlauf</small>`;note='Kaufpreis unbekannt';}
+  else if(t.start){buy=t.buy?`<span class="tr-price">${money(t.buy.price)}</span><small title="Kauf nicht im Verlauf (Startkader oder älter), Preis aus dem Kader">laut Kickbase-Kader</small>`:`<span class="tr-price muted">?</span><small>Kauf nicht im Verlauf</small>`;}
+  else buy=side(t.buy,'von');
+  if(t.status==='sold'||t.status==='start')sell=side(t.sell,'an');
+  else if(t.status==='held')sell=`<span class="tr-price">${money(t.mv)}</span><small>Marktwert heute</small>`;
+  else {sell=`<span class="tr-price muted">?</span><small>Verkauf fehlt im Verlauf</small>`;note='Das fehlt: Verkauf';}
+  const d=t.diff;
+  return `<li class="tr-trade ${t.status}"><div class="tr-player">${face(t.img,t.name)}<span><b>${esc(t.name)}</b>${t.days!=null?`<small>${t.status==='held'?'seit ':''}${t.days} ${t.days===1?'Tag':'Tage'}</small>`:''}</span></div>
+   <div class="tr-side"><em>Kauf</em>${buy}</div><div class="tr-side"><em>${t.status==='held'?'Heute':'Verkauf'}</em>${sell}</div>
+   <div class="tr-diff ${cls(d)}" title="${esc(d==null?note:full(d))}">${d==null?`<small class="muted">${esc(note||'–')}</small>`:`<b>${money(d,true)}</b>${t.status==='held'?'<small>Buchwert</small>':''}`}</div></li>`;
+ }
+ function manager(m){
+  if(m.error)return `<details class="acc-group tr-manager"><summary>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span><span class="tr-pill error">fehlt</span></summary><div class="acc-sub"><p class="error">Das fehlt: Transfer-Verlauf (${esc(m.error)}).</p></div></details>`;
+  const sold=m.trades.filter(t=>t.status==='sold'||t.status==='start'),held=m.trades.filter(t=>t.status==='held'),unk=m.trades.filter(t=>t.status==='unknown');
+  const tile=(label,v,sub,c)=>`<div class="tr-tile"><span>${label}</span><b class="${c||''}">${v}</b>${sub?`<small>${sub}</small>`:''}</div>`;
+  const deal=(t,w)=>t?`${esc(t.name)} ${money(t.diff,true)}`:'–';
+  return `<details class="acc-group tr-manager"><summary>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span><span class="tr-count">${m.buys} Käufe · ${m.sells} Verkäufe</span><span class="tr-pill ${cls(m.realized)}">${money(m.realized,true)}</span></summary><div class="acc-sub">
+   <div class="tr-tiles">${tile('Ausgegeben',money(m.spent),`${m.buys} Käufe`)}${tile('Eingenommen',money(m.earned),`${m.sells} Verkäufe`)}
+    ${tile('Gewinn/Verlust verkauft',money(m.realized,true),`${m.wins} mit Gewinn, ${m.losses} mit Verlust${m.startSold?`, ${m.startSold} ohne Kaufpreis`:''}`,cls(m.realized))}
+    ${tile('Buchwert im Kader',money(m.unrealized,true),`${m.heldCount} Spieler, zusammen ${money(m.squadValue)}`,cls(m.unrealized))}
+    ${tile('Bester Deal',deal(m.best),'','tr-pos')}${tile('Schlechtester Deal',deal(m.worst),'','tr-neg')}</div>
+   ${m.squadMissing?'<p class="error tiny">Das fehlt: der heutige Kader, darum kein Marktwert für die Spieler im Kader.</p>':''}
+   <h4 class="tr-h">Verkaufte Spieler <small class="muted">(${sold.length})</small></h4>${sold.length?`<ol class="tr-trades">${sold.map(trade).join('')}</ol>`:'<p class="muted tiny">Noch keine Verkäufe.</p>'}
+   <h4 class="tr-h">Noch im Kader <small class="muted">(${held.length})</small></h4>${held.length?`<ol class="tr-trades">${held.map(trade).join('')}</ol>`:'<p class="muted tiny">Kein Spieler im Kader.</p>'}
+   ${unk.length?`<h4 class="tr-h">Unklar <small class="muted">(${unk.length})</small></h4><ol class="tr-trades">${unk.map(trade).join('')}</ol>`:''}
+  </div></details>`;
+ }
+ function render(){
+  const root=$('#transfersContent');if(!root||!data)return;
+  root.className='';
+  $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  root.innerHTML=`${league(data.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${data.managers.map(manager).join('')}</div>`;
+ }
+ async function load(){
+  if(loading)return;loading=true;
+  try{data=await get('/api/transfers');render();}
+  catch(e){const r=$('#transfersContent');r.className='error';r.textContent='Transfers nicht abrufbar: '+e.message;$('#transfersMeta').textContent='–';}
+  finally{loading=false;}
+ }
+ document.addEventListener('click',e=>{
+  const s=e.target.closest?.('[data-tr-sort]');
+  if(s){sortBy=s.dataset.trSort;const old=$('.tr-league');if(old&&data)old.outerHTML=league(data.managers);return;}
+  if(e.target.closest?.('[data-kbl-nav="transfers"]'))load();
+ });
+ window.addEventListener('hashchange',()=>{if(location.hash==='#transfers')load();});
+ if(location.hash==='#transfers')load();
+})();
