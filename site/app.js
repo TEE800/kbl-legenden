@@ -1254,16 +1254,11 @@ function historyLiveInner(day){
 function renderCenter(){
  const el=$('#centerContent');if(!el)return;
  const finished=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
- const live=historyData.find(h=>h.status==='live');
- if(!finished.length&&!live){el.innerHTML='<p class="muted">Noch kein Spieltag gespielt.</p>';return;}
+ if(!finished.length){el.innerHTML='<p class="muted">Noch kein Spieltag abgeschlossen.</p>';return;}
  const card=(label,value,sub)=>`<div><small>${label}</small><strong>${value}</strong><span>${sub}</span></div>`;
  const names=list=>list.map(m=>escapeHtml(m.name)).join(', ');
  let html='';
- if(live){
-  // Kickbase-Ranking zeigt während des Spieltags 0: darum die Live-Punkte aus /api/live-points (wie Spieltag und Liga-Tabelle).
-  const lv=liveRanking(live.day),scored=lv||[];
-  html+=`<div class="center-live"><strong>● LIVE · Spieltag ${live.day}</strong>${scored.length?`<ol>${scored.slice(0,3).map(m=>`<li>${escapeHtml(m.name)} <b>${fmt(m.dayPoints)}</b></li>`).join('')}</ol><span class="muted tiny">Letzter im Moment: ${escapeHtml(scored.at(-1).name)} (${fmt(scored.at(-1).dayPoints)}). Vorläufig, zählt erst nach Spielende.</span>${(()=>{benchLoad(live.day);const b=benchTop(live.day);return b.list?`<span class="muted tiny" style="display:block">🤡 Vollpfosten bisher: ${b.list.map(m=>escapeHtml(m.name)).join(', ')} (${fmt(b.top)} Punkte auf der Bank)</span>`:'';})()}`:`<p class="muted">${lv?'Noch keine Punkte.':'Live-Punkte werden geladen …'}</p>`}</div>`;
- }
+ // Kein LIVE-Kasten hier (Kevin-Wunsch): Der laufende Spieltag steht oben in der Kategorie „Spieltag“, hier nur Abgeschlossenes.
  const last=finished.at(-1);
  const pill=$('#centerPill');if(pill)pill.textContent=last?`Letzter abgeschlossener Spieltag: ${last.day}`:'Noch kein Spieltag abgeschlossen';
  if(last){
