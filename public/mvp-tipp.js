@@ -207,15 +207,18 @@
   const ROW=88,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
    return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' ghost':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
-    ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}
-    <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b></div></div>`;};
+    ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}${o.ko?'<span class="toon-dizzy">💫</span>':''}
+    <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.ko?' <span class="toon-ko">K.O.</span>':''}</div></div>`;};
   const figs=[];
   // Ist der Beste selbst getippt, trägt er die Krone im Rennen; halbtransparent nur, wen keiner getippt hat.
   const tipped=new Set(groups.map(g=>String(g.t.playerId)));
   if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,crown:true,ghost:true,mood:'wow',num:'★',run:''}));
-  groups.forEach(g=>{const neg=g.pts!==null&&g.pts<0;
-   figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,crown:bestIds.has(String(g.t.playerId)),mood:neg?'sad':g.place===1&&g.pts!==null?'wow':'happy',num:g.place??'?',
-    run:g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':''});});
+  // K.O. auf dem Rasen (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
+  // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist.
+  const ko=g=>!bestIds.has(String(g.t.playerId))&&((pool.length&&!pool.includes(g.t.team))||(!!best&&g.state==='done'&&g.pts!==null&&g.pts<best.points));
+  groups.forEach(g=>{const neg=g.pts!==null&&g.pts<0,k=ko(g);
+   figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,crown:bestIds.has(String(g.t.playerId)),ko:k,mood:neg||k?'sad':g.place===1&&g.pts!==null?'wow':'happy',num:g.place??'?',
+    run:k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':''});});
   const pitch=`<div class="toon-pitch" style="height:${TOP+(figs.length-1)*ROW+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map(runner).join('')}</div>`;
   const ghostLine=best?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">${pool.length?'Gerade Bester der genannten Vereine':'Gerade MVP'}:</span> <b>${best.players.map(p=>esc(p.name)).join(', ')}</b> <small class="muted">${esc([...new Set(best.players.map(p=>p.team))].join(', '))}</small><span class="toon-pts">${fmt(best.points)}<small> Pkt.</small></span></div>`:'';
   const rows=groups.map(g=>`<div class="toon-row${bestIds.has(String(g.t.playerId))?' best':''}"><span class="mvp-rank">${g.place??'–'}</span><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span>
