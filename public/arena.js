@@ -5,7 +5,7 @@
  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
  const fmt=n=>n==null||!Number.isFinite(Number(n))?'–':new Intl.NumberFormat('de-DE').format(n);
  const when=s=>s?new Date(s).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'–';
- let overview=null,data=null,loading=false;
+ let overview=null,data=null,loading=false,raceOpen=true;
  const T=()=>window.kblToon;
  const avatar=img=>!img?'':/^https?:\/\//.test(img)?img:'https://kickbase.b-cdn.net/'+String(img).replace(/^\//,'');
 
@@ -27,15 +27,16 @@
   if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}. Sie kommen mit dem nächsten Abruf über ein Arena-Konto (T800 am PC).${src}</p>`;
   return src?`<p class="arena-note muted tiny">${src.trim()}</p>`:'';
  }
- // Anzeigetafel: je Duell eine aufklappbare Zeile (Feste Regel: startet zu), darin die beiden Elfen.
- function board(d){
-  const started=d.status!=='upcoming';
-  return `<div class="arena-board">${d.duels.map((x,i)=>{
-   const lead=x.winner,sideCls=m=>lead&&lead!=='draw'?(lead===m.id?' win':' lose'):'';
-   const res=!started?'<span class="arena-vs">vs</span>':`<span class="arena-score"><b class="${sideCls(x.a).trim()}">${fmt(x.a.points)}</b><i>:</i><b class="${sideCls(x.b).trim()}">${fmt(x.b.points)}</b></span>`;
-   const tag=!started?'':x.final?(lead==='draw'?'Unentschieden':`Sieg ${esc(lead===x.a.id?x.a.name:x.b.name)}`):lead==='draw'?'Gleichstand':`${esc(lead===x.a.id?x.a.name:x.b.name)} führt mit ${fmt(Math.abs(x.diff))}`;
-   return `<details class="acc-group arena-duel" data-arena-duel="${i}"><summary><span class="arena-side a${sideCls(x.a)}">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span>${res}<span class="arena-side b${sideCls(x.b)}"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span>${tag?`<small class="arena-tag${x.final?'':' live'}">${tag}</small>`:''}</summary><div class="acc-sub">${duelDetail(d,x)}</div></details>`;
-  }).join('')}</div>`;
+ // Kevin-Wunsch: keine Anzeigetafel oben. Vor dem Anpfiff nur die Paarungen, danach steht alles auf dem Platz (Duell-Rennen).
+ function pairings(d){
+  return `<div class="arena-pairs">${d.duels.map(x=>`<div class="arena-pair"><span class="arena-side a">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span><span class="arena-vs">vs</span><span class="arena-side b"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span></div>`).join('')}</div>`;
+ }
+ // Elfen je Duell: eingeklappt (Feste Regel), je Duell noch einmal aufklappbar.
+ function lineups(d){
+  return `<details class="acc-group arena-lineups"><summary>Aufstellungen der Duelle</summary><div class="acc-sub">${d.duels.map((x,i)=>{
+   const lead=x.winner,cls=m=>lead&&lead!=='draw'?(lead===m.id?'win':'lose'):'';
+   return `<details class="acc-group arena-duel" data-arena-duel="${i}"><summary><span class="arena-side a ${cls(x.a)}">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span><span class="arena-score"><b class="${cls(x.a)}">${fmt(x.a.points)}</b><i>:</i><b class="${cls(x.b)}">${fmt(x.b.points)}</b></span><span class="arena-side b ${cls(x.b)}"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span></summary><div class="acc-sub">${duelDetail(d,x)}</div></details>`;
+  }).join('')}</div></details>`;
  }
  function playerList(m){
   if(!m.players)return '<p class="muted tiny">Keine Aufstellung.</p>';
@@ -46,7 +47,7 @@
   if(d.status==='upcoming')return `<p class="muted">Die Aufstellungen von ${esc(x.a.name)} und ${esc(x.b.name)} sind bis zum Anpfiff geheim.</p>`;
   const extra=m=>m.open||m.live?`<small class="muted">${m.live?`${m.live} spielen gerade`:''}${m.live&&m.open?', ':''}${m.open?`${m.open} noch nicht gespielt`:''}</small>`:'';
   const check=m=>d.status==='finished'&&m.calc!=null&&m.kbPoints!=null&&m.calc!==m.kbPoints?`<small class="muted">Kickbase: ${fmt(m.kbPoints)}, Summe der Spieler: ${fmt(m.calc)}</small>`:'';
-  return `${duelRace(d,[x],true)}<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
+  return `<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
  }
  // Cartoon: je Duell eine Reihe auf dem Platz, beide Manager als Männchen mit ihrem Profilbild als Kopf, Position nach Punkten.
  // Ein Seil zwischen beiden zeigt den Abstand. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Führender mit Krone.
@@ -79,10 +80,13 @@
   const d=data;
   $('#arenaMeta').innerHTML=`${esc(d.name)} · ${d.status==='live'?'<span class="live-badge" style="margin:0">LIVE</span>':d.status==='finished'?'beendet':'kommt noch'}`;
   // Beim automatischen Neuladen bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
+  // Ausnahme (Kevin-Wunsch, wie beim MVP-Tipp): der Platz mit den Figuren ist gleich offen (kbl-keep-open), außer man hat ihn selbst zugeklappt.
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]')].map(x=>x.dataset.arenaDuel??x.className));
+  const raceShut=!raceOpen&&!!root.querySelector('details.arena-race:not([open])');raceOpen=false;
   root.className='';
-  root.innerHTML=stateText(d)+board(d)+(d.status!=='upcoming'&&d.duels.length>1?`<details class="acc-group arena-race"><summary>Duell-Rennen: alle auf einem Platz</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`:'')+table(d);
-  root.querySelectorAll('details.acc-group').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
+  const started=d.status!=='upcoming';
+  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>Duell-Rennen</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`+lineups(d))+table(d);
+  root.querySelectorAll('details.acc-group:not(.arena-race)').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
  async function loadDay(day){
   const root=$('#arenaContent');
@@ -91,7 +95,7 @@
   catch(e){root.className='error';root.textContent='Arena nicht abrufbar: '+e.message;}
  }
  async function load(){
-  if(loading)return;loading=true;
+  if(loading)return;loading=true;raceOpen=true;
   try{
    overview=await get('/api/arena');
    const sel=$('#arenaDay'),keep=Number(sel.value)||null;
