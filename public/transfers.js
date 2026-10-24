@@ -16,7 +16,7 @@
  const img=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
  const face=(src,name)=>src?`<img class="tr-face" src="${esc(img(src))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tr-face tr-noimg',textContent:${esc(JSON.stringify((name||'?').trim()[0]||'?'))}}))">`:`<span class="tr-face tr-noimg">${esc((name||'?').trim()[0]||'?')}</span>`;
  let data=null,loading=false,sortBy='realized',season=null;
- // Saisons (1. Juli bis 30. Juni) vom Server; ältere Exporte ohne Saisons gelten als eine laufende Saison.
+ // Halbserien vom Server (Hinrunde bis Spieltag 17, Rückrunde danach; Feld seasons); ältere Exporte ohne seasons gelten als ein laufender Zeitraum.
  const seasons=()=>data?.seasons||(data?.managers?[{key:'',current:true,managers:data.managers}]:[]);
  const cur=()=>seasons().find(x=>x.key===season)||seasons()[0];
 
@@ -74,7 +74,7 @@
   root.className='';
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
-  const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Saison <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>Saison ${esc(x.key)}${x.current?' (läuft)':''}</option>`).join('')}</select></label></div>`:'';
+  const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${x.current?' (läuft)':''}</option>`).join('')}</select></label></div>`:'';
   root.innerHTML=`${pick}${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
  }
  async function load(){
