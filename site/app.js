@@ -364,11 +364,13 @@ async function loadHistory(){
   const wins=new Map();
   let previous=new Map();
   for(let day=1;day<=lastDay;day++){
-   const isLive=!!liveDay&&day===liveDay.day;
+   let isLive=!!liveDay&&day===liveDay.day;
    statusEl.textContent=`Lade Spieltag ${day} von ${lastDay}${isLive?' (LIVE)':''} …`;
    let data;
    try{data=await api(`/api/ranking/${encodeURIComponent(currentLeague.id)}?dayNumber=${day}`);}
    catch(err){if(isLive)continue;throw err;}
+   // Spiele beendet, aber Kickbase rechnet noch (il = true): noch nicht als abgeschlossen werten, sonst zählt ein Zwischenstand.
+   if(!isLive&&day===completed&&data?.il===true)isLive=true;
    const list=rankingItems(data).filter(x=>isEligibleManager(managerName(x))).map(x=>{
     const name=String(managerName(x)),score=number(points(x));
     const prior=day===1?0:previous.get(name);
