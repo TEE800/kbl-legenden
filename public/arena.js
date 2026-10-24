@@ -23,7 +23,7 @@
 
  function stateText(d){
   if(d.status==='upcoming')return `<p class="arena-note">Anpfiff ${esc(when(d.firstKickoffUTC))} · <b data-arena-left="${esc(d.firstKickoffUTC||'')}">${esc(left(d.firstKickoffUTC))}</b>. Die Paarungen stehen schon, die Aufstellungen werden erst mit dem Anpfiff sichtbar.</p>`;
-  const src=d.source==='datei'&&d.dataAt?` Paarungen und Aufstellungen: Stand ${esc(when(d.dataAt))}.`:'';
+  const src=d.source==='datei'&&d.dataAt?` Die Punkte laufen live. Aufstellungen und Paarungen schickt die PC-App, sobald sie sich ändern (zuletzt geändert: ${esc(when(d.dataAt))}).`:'';
   if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}. Sie kommen mit dem nächsten Abruf über ein Arena-Konto (T800 am PC).${src}</p>`;
   return src?`<p class="arena-note muted tiny">${src.trim()}</p>`:'';
  }
