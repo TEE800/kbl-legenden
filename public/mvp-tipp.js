@@ -210,7 +210,9 @@
     ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}
     <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b></div></div>`;};
   const figs=[];
-  if(best)best.players.forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,crown:true,ghost:true,mood:'wow',num:'★',run:''}));
+  // Ist der Beste selbst getippt, trägt er die Krone im Rennen; halbtransparent nur, wen keiner getippt hat.
+  const tipped=new Set(groups.map(g=>String(g.t.playerId)));
+  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,crown:true,ghost:true,mood:'wow',num:'★',run:''}));
   groups.forEach(g=>{const neg=g.pts!==null&&g.pts<0;
    figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,crown:bestIds.has(String(g.t.playerId)),mood:neg?'sad':g.place===1&&g.pts!==null?'wow':'happy',num:g.place??'?',
     run:g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':''});});

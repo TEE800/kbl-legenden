@@ -1426,6 +1426,21 @@ async function dayPlayerPoints(token,id,day,finished=false,get=p=>kbFetch(p,{tok
  const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
  return {points:p,state:p===null?'open':'live',kick:pc?.md||rec?.md||null,mdst:rec?.mdst??null,mst:pc?.mst??null,...(rec?{}:{why:'nur playercenter'})};
 }
+// Der MVP-Zwischenstand ist bis zu 30 Min. alt, die getippten Spieler sind frischer (alle 5 Min.). Liegt einer von ihnen
+// (bei genannten Vereinen nur aus diesen) inzwischen vorne, gilt er als Bester (Kevin: Krone stand bei 21, ein getippter Schalker hatte 59).
+function freshBest(lm,tips,players,pool){
+ if(!lm)return lm;
+ const info=new Map(Object.values(tips).map(t=>[String(t.playerId),t]));
+ const cand=new Map((lm.points===null?[]:lm.players||[]).map(p=>[String(p.id),{...p,points:lm.points}]));
+ for(const [id,r] of Object.entries(players)){
+  const t=info.get(id);if(!t||r.points===null||r.points===undefined||(pool.length&&!pool.includes(t.team)))continue;
+  cand.set(id,{id,name:cand.get(id)?.name||t.player,team:cand.get(id)?.team||t.team,points:r.points});
+ }
+ if(!cand.size)return lm;
+ const top=Math.max(...[...cand.values()].map(p=>p.points)),best=[...cand.values()].filter(p=>p.points===top);
+ if(top===lm.points&&best.length===(lm.players||[]).length)return lm;
+ return {...lm,points:top,players:best.map(({id,name,team})=>({id,name,team})),tipped:true};
+}
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
 const tippTrackCache=new Map();
@@ -1446,7 +1461,7 @@ async function tippTracking(token,day,tips,finished,kind,pool=[]){
    lm={at:new Date().toISOString(),points:best.length?best[0].points:null,players:best.map(p=>({id:String(p.id),name:p.name,team:p.team})),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable,...(pool.length?{pool}:{})};
    const all=readTipps();(all[day]||(all[day]={tips:{}})).liveMvp=lm;saveTipps(all);
   }
-  value.mvp=lm;
+  value.mvp=freshBest(lm,tips,players,pool);
  }
  tippTrackCache.set(day,{at:Date.now(),key,value});
  return value;
