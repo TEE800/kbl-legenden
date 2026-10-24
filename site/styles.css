@@ -464,7 +464,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-pitch .tp-circle{left:50%;top:50%;bottom:auto;width:90px;height:90px;margin:-45px 0 0 -45px;border:2px solid rgba(255,255,255,.25);border-radius:50%}
 .toon-pitch .tp-finish{right:0;width:12px;background:repeating-conic-gradient(#fff 0 25%,#111 0 50%) 0 0/12px 12px;opacity:.85}
 .toon-pitch .toon-runner{bottom:auto}
-.toon-runner.ghost{opacity:.45}
+/* Nicht "ghost" nennen: die Knopf-Klasse .ghost zeichnet einen Rahmen (Kevin: Viereck um die Figur). */
+.toon-runner.faded{opacity:.45}
 .toon-tag{position:absolute;top:24px;left:40px;transform:none;z-index:3;white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px}
 .toon-tag b{color:var(--gold)}
 .toon-runner.fall .toon-tag{transform:none}

@@ -206,7 +206,7 @@
   // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
   const ROW=88,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' ghost':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
+   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' faded':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
     ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}${o.ko?'<span class="toon-dizzy">💫</span>':''}
     <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.ko?' <span class="toon-ko">K.O.</span>':''}</div></div>`;};
   const figs=[];
