@@ -2599,14 +2599,16 @@ async function fetchTransferList(token, id) {
   return all;
 }
 let transferCache = null;
-// Ende der Hinrunde: letzter Anstoß von Spieltag 17 der Saison y (OpenLigaDB bl1/y/17) plus 3 Stunden.
+// Ende der Hinrunde: letzter regulärer Anstoß von Spieltag 17 der Saison y (OpenLigaDB bl1/y/17) plus 3 Stunden.
 const halfSplitCache = new Map();
 async function halfSeasonSplit(y) {
   if (halfSplitCache.has(y)) return halfSplitCache.get(y);
   try {
     const r = await fetch(`https://api.openligadb.de/getmatchdata/bl1/${y}/17`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
     const ms = r.ok ? (await r.json()).map(m => Date.parse(m.matchDateTimeUTC)).filter(Number.isFinite) : [];
-    const v = ms.length ? Math.max(...ms) + 3 * 3600e3 : null;
+    // Nachholspiele (z. B. Spieltag 17 der Saison 2025/26 erst im März) zählen nicht: nur Spiele bis 4 Tage nach dem ersten Anstoß.
+    const first = ms.length ? Math.min(...ms) : null, regular = ms.filter(x => x - first <= 4 * 864e5);
+    const v = regular.length ? Math.max(...regular) + 3 * 3600e3 : null;
     if (v) halfSplitCache.set(y, v);
     return v;
   } catch { return null; }
