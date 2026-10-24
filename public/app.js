@@ -1615,7 +1615,7 @@ function kblBumsIntro({hit,clean,half,RN}){
 window.kblCollapseView=view=>{
  if(view==='points')return;
  const root=document.querySelector(`.kbl-view[data-view="${view}"]`);if(!root)return;
- root.querySelectorAll('details[open]').forEach(d=>{d.open=false;});
+ root.querySelectorAll('details[open]:not(.kbl-keep-open)').forEach(d=>{d.open=false;});
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
  if(view==='accounting')accTodoOpen=false;
  if(view==='profiles')profOpen.clear();
