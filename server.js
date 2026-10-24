@@ -2483,11 +2483,19 @@ async function arenaState(req,days=[]){
    pairs:(m.it||[]).map(x=>{for(const u of [x.u1,x.u2])if(u?.i!=null)managers[String(u.i)]={n:u.n||managers[String(u.i)]?.n||'',uim:u.uim||managers[String(u.i)]?.uim||null};
     return [String(x.u1?.i??''),String(x.u2?.i??''),x.u1?.p??null,x.u2?.p??null];})}));
   const lineups={...(file.lineups||{})};let table=file.table||null;
+  const md=days.length?await loadMatchdays().catch(()=>null):null;
   for(const d of [...new Set(days)]){
    const r=await kbFetch(`${L}/ranking?dayNumber=${d}`,{token});
-   lineups[d]={};
+   // Kevin-Vorgabe: wie die Startelfen der BumsParade mit dem ersten Anpfiff eingefroren. Nach dem Anpfiff gelesene
+   // Aufstellungen bekommen frozen und werden nie mehr ueberschrieben (nur die Kickbase-Punkte mdp laufen weiter).
+   const kick=Date.parse(md?.days.find(x=>Number(x.day)===Number(d))?.firstKickoffUTC||'');
+   const afterKick=Number.isFinite(kick)&&Date.now()>=kick;
+   const old=lineups[d]||{};lineups[d]={};
    for(const u of (r.us||[])){const id=String(u.i);if(!managers[id])managers[id]={n:u.n||'',uim:u.uim||null};
-    lineups[d][id]={lp:(u.lp||[]).filter(x=>x!=null).map(String),cpt:u.cpti!=null?String(u.cpti):null,opp:u.hhoui!=null?String(u.hhoui):null,mdp:u.mdp??null};}
+    const fresh={lp:(u.lp||[]).filter(x=>x!=null).map(String),cpt:u.cpti!=null?String(u.cpti):null,opp:u.hhoui!=null?String(u.hhoui):null,mdp:u.mdp??null};
+    if(old[id]?.frozen)lineups[d][id]={...old[id],mdp:fresh.mdp};
+    else lineups[d][id]=afterKick&&fresh.lp.length?{...fresh,frozen:new Date().toISOString()}:fresh;}
+   for(const id of Object.keys(old))if(old[id]?.frozen&&!lineups[d][id])lineups[d][id]=old[id];
    if(!table||d>=table.day)table={day:d,at:new Date().toISOString(),rows:(r.us||[]).map(u=>({id:String(u.i),n:u.n,hhsp:u.hhsp??null,hhpl:u.hhpl??null,sp:u.sp??null,spl:u.spl??null}))};
   }
   const value={...file,league:{id:ARENA_ID,name:'Legenden Arena'},updatedAt:new Date().toISOString(),managers,matchups,lineups,table,source:'kickbase'};
