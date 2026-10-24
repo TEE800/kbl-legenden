@@ -512,3 +512,5 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 }
 .arena-table td:nth-child(3){white-space:nowrap}
 @media(max-width:620px){.arena-name{white-space:normal;overflow-wrap:anywhere;line-height:1.2}.arena-table td,.arena-table th{padding:8px 4px;font-size:13px}.arena-table th{font-size:10px}}
+/* Arena: Name unter der Figur (im Duell stehen zwei Figuren in einer Reihe, seitliche Namen würden sich überdecken) */
+.arena-runner .toon-tag,.arena-runner.flip .toon-tag,.arena-runner.fall .toon-tag{top:62px;left:50%;right:auto;transform:translateX(-50%)}

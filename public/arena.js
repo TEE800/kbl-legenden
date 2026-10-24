@@ -54,15 +54,16 @@
   const K=T();if(!K||d.status==='upcoming'||!duels.length)return '';
   const vals=duels.flatMap(x=>[x.a.points,x.b.points]).filter(v=>v!=null),lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo||1;
   const pos=v=>4+76*((v??0)-lo)/span;
-  const ROW=single?150:96,TOP=single?34:30;
+  const ROW=single?150:152,TOP=single?34:48;
   const fig=(m,x,y,lead,place)=>{const [shirt,trim]=K.clubColor(m.name),neg=m.points!=null&&m.points<0,run=m.live?' run':m.open?' idle':neg?' fall':'';
    return `<div class="toon-runner arena-runner${run}${x>50?' flip':''}" style="left:${x.toFixed(1)}%;top:${y}px">${lead?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${K.toon({},shirt,trim,neg?'sad':lead?'wow':'happy',place??'')}${face(m,'arena-face')}</div>${m.live?'<span class="toon-ball">⚽</span>':''}<div class="toon-tag">${esc(m.name)} <b>${fmt(m.points)}</b></div></div>`;};
   const place=id=>d.table?.find(r=>r.id===id)?.hhpl??'';
   const rows=duels.map((x,i)=>{
-   const y=TOP+i*ROW,xa=pos(x.a.points),xb=pos(x.b.points),near=Math.abs(xa-xb)<9;
-   const ya=near||single?y-(single?28:16):y,yb=near||single?y+(single?40:16):y;
+   const y=TOP+i*ROW,xa=pos(x.a.points),xb=pos(x.b.points),near=Math.abs(xa-xb)<30;
+   // Liegen beide nah beieinander, stehen sie versetzt übereinander, damit sich Namen nicht überdecken.
+   const ya=near||single?y-(single?28:42):y,yb=near||single?y+(single?40:42):y;
    const l=Math.min(xa,xb),w=Math.abs(xa-xb),lead=x.winner;
-   return `<div class="arena-rope" style="left:${(l+2).toFixed(1)}%;width:${w.toFixed(1)}%;top:${(single?y+30:y+34)}px">${x.diff?`<span>${fmt(Math.abs(x.diff))}</span>`:''}</div>`+
+   return `<div class="arena-rope" style="left:${(l+2).toFixed(1)}%;width:${w.toFixed(1)}%;top:${(single?y+30:y+30)}px">${x.diff?`<span>${fmt(Math.abs(x.diff))}</span>`:''}</div>`+
     fig(x.a,xa,ya,lead===x.a.id,place(x.a.id))+fig(x.b,xb,yb,lead===x.b.id,place(x.b.id));
   }).join('');
   const h=single?TOP+ROW:TOP+duels.length*ROW;
