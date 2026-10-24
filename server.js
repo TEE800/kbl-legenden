@@ -620,7 +620,8 @@ function ddCandidates(players, excludedMap) {
     excluded:sorted.filter(p=>excludedMap.has(String(p.playerId))&&p.points>=cutoff).map(p=>({...p,reason:excludedMap.get(String(p.playerId)).join(', ')}))};
 }
 function calculateBdDd(roster) {
-  const bd=roster.flatMap(m=>m.players.filter(p=>isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  // BD erst nach Spielende (Kevin-Vorgabe): waehrend des Spiels aendern sich die Punkte staendig.
+  const bd=roster.flatMap(m=>m.players.filter(p=>p.state==='done'&&isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
   const top=Math.max(...roster.map(m=>m.dayPoints)), low=Math.min(...roster.map(m=>m.dayPoints));
   const winners=roster.filter(m=>m.dayPoints===top), last=roster.filter(m=>m.dayPoints===low);
   const excluded=new Map(bd.map(p=>[String(p.playerId),['BD']]));
@@ -1901,7 +1902,7 @@ app.post('/api/bumsungen/:day',(req,res)=>{
 // AH: MVP-Zwischenstand aller Bundesliga-Spieler, hoechstens alle 30 Min. neu (ca. 500 Abrufe, kbl-live-mvp.json).
 // Hoechstens alle 5 Min. neu. Keine Haken, nichts geht in die BumsTabelle, Teamlimit erst in der echten BumsParade.
 const fmtNum=n=>Number(n).toLocaleString('de-DE');
-const LIVE_MVP_FILE=path.join(process.cwd(),'kbl-live-mvp.json'),ruleLiveCache=new Map();
+const LIVE_MVP_FILE=path.join(process.cwd(),'kbl-live-mvp.json'),ruleLiveCache=new Map(),ruleLiveDone=new Map();
 async function liveMvpFor(token,day){
  let file={};try{file=JSON.parse(fs.readFileSync(LIVE_MVP_FILE,'utf8'));}catch{}
  const fresh=x=>x&&Date.now()-Date.parse(x.at)<30*60e3;
@@ -1934,7 +1935,11 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const pname=id=>all?.players.get(String(id))?.name||Object.values(snaps).find(s=>s?.day===day&&s.playerNames?.[id])?.playerNames?.[id]||`Spieler-ID ${id}`;
   const ids=[...new Set(lineups.flatMap(m=>m.ids))],pts={},perf={};
   for(let i=0;i<ids.length;i+=5)await Promise.all(ids.slice(i,i+5).map(async id=>{
-   try{pts[id]=await dayPlayerPoints(token,id,day,false,get);}catch{pts[id]={points:null,state:'error'};}
+   // Spiel vorbei: Punkte nur alle 30 Min. neu (Kevin-Vorgabe: danach reichen groessere Abstaende, wegen Korrekturen).
+   const k=`${day}:${id}`,c=ruleLiveDone.get(k);
+   if(c&&Date.now()-c.at<30*60e3)pts[id]=c.value;
+   else{try{pts[id]=await dayPlayerPoints(token,id,day,false,get);}catch{pts[id]={points:null,state:'error'};}
+    if(pts[id].state==='done')ruleLiveDone.set(k,{at:Date.now(),value:pts[id]});else ruleLiveDone.delete(k);}
    try{perf[id]=await get(`/v4/competitions/1/players/${id}/performance`);}catch{}
   }));
   const roster=lineups.filter(m=>m.ids.length).map(m=>{
@@ -1972,7 +1977,8 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   let mvp=null;try{mvp=await liveMvpFor(token,day);}catch(e){notes.push('Aktueller MVP nicht ermittelbar: '+e.message);}
   const mvpIds=new Set((mvp?.players||[]).map(p=>String(p.id)));
   const ah=roster.flatMap(m=>m.players.filter(p=>mvpIds.has(p.playerId)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
-  const bd=roster.flatMap(m=>m.players.filter(p=>isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  // BD erst nach Spielende (Kevin-Vorgabe): waehrend des Spiels aendern sich die Punkte staendig.
+  const bd=roster.flatMap(m=>m.players.filter(p=>p.state==='done'&&isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
   // Rangfolge wie in der BumsParade: BD tritt hinter allen anderen Regeln zurueck, DD zuletzt.
   const other=new Map(),add=(id,r)=>{id=String(id);if(!other.has(id))other.set(id,new Set());other.get(id).add(r);};
   for(const a of ev.actions)add(a.playerId,a.rule);
@@ -1982,7 +1988,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const multi=id=>(other.get(String(id))?.size||0)>1;
   for(const p of ah)if(!multi(p.playerId))item('AH',p,`${p.playerName} ist mit ${fmtNum(p.points)} Punkten gerade MVP des Spieltags: müsste zum Verkauf angeboten werden`);
   for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`);
-  for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden`,{state:p.state});
+  for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden (Spiel beendet)`,{state:p.state});
   for(const u of (ev.unclear||[]))item(u.rule,u,`${u.playerName}: ${u.reason}`,{unclear:true});
   let dd=null,mm=null;
   if(!noLineup.length&&roster.length){
