@@ -2398,9 +2398,18 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
       if(opt?.options&&!got)for(const o of opt.options){const mates=lastIdsTl.flatMap(rid=>matesOf(rid,o.playerId));if(mates.length)o.clash=mates.map(id=>playerNames.get(id)||`Spieler-ID ${id}`).join(', ');}
     }
     const seenTl=new Set();
+    // Spieler, die der Empfaenger erst NACH dem Erhalt gekauft hat, zaehlen nicht fuers Teamlimit (Kevin-Meldung: Laimer kam
+    // erst spaeter zu xDanii). Zeitpunkt aus dem Transfer-Verlauf des Empfaengers (tty 1 Kauf); ohne Verlauf bleibt alles wie bisher.
+    const tlHist=new Map();
+    const histOf=async rid=>{if(!tlHist.has(rid)){try{tlHist.set(rid,(await kbFetch(`/v4/leagues/6422780/managers/${rid}/transfer`,{token})).it||[]);}catch{tlHist.set(rid,null);}}return tlHist.get(rid);};
     for(const inc of incoming){
       const rname=String(managers.find(m=>String(m.i)===inc.recipientId)?.n||inc.recipientId);
+      const hist=probe?null:await histOf(inc.recipientId);
+      const gotAt=hist?Math.min(...hist.filter(t=>String(t.pi)===inc.playerId&&Number(t.tty)===1).map(t=>Date.parse(t.dt)).filter(Number.isFinite)):Infinity;
+      const atDay=new Set(squadAtDay(inc.recipientId));
+      const laterBuy=mate=>Number.isFinite(gotAt)&&!atDay.has(String(mate))&&(()=>{const buys=hist.filter(t=>String(t.pi)===String(mate)&&Number(t.tty)===1).map(t=>Date.parse(t.dt));return buys.length>0&&buys.every(b=>b>gotAt);})();
       for(const mate of matesOf(inc.recipientId,inc.playerId)){
+        if(laterBuy(mate))continue;
         const key=`TL:${inc.recipientId}:${mate}`;if(seenTl.has(key))continue;seenTl.add(key);
         const here=inSquad(inc.recipientId,mate);
         todo(key,'TL',inc.recipientId,rname,`verkauft ${playerNames.get(mate)||`Spieler-ID ${mate}`} (${clubName(mate)||'gleicher Verein'}), weil ${pname({playerId:inc.playerId})} über ${inc.rule} kommt (Teamlimit 1)`,
