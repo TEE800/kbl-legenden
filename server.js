@@ -1496,7 +1496,7 @@ function pngEncode(w,h,data){
 }
 // Kopf finden: Breite je Zeile (zusammenhängend um die Kopfmitte). Von oben wird der Kopf breiter, am Hals schmaler,
 // darunter kommen die Schultern. Schnitt an der schmalsten Stelle des Halses; alles außerhalb des Kopfes wird durchsichtig.
-const HEAD_VERSION=1;
+const HEAD_VERSION=2;
 function cropHead(buf){
  const img=pngDecode(buf);if(!img)return null;const {w,h,data}=img,A=(x,y)=>data[(y*w+x)*4+3]>100;
  let top=-1;for(let y=0;y<h&&top<0;y++)for(let x=0;x<w;x++)if(A(x,y)){top=y;break;}
@@ -1511,16 +1511,19 @@ function cropHead(buf){
   gap=0;for(let x=x0+1;x<w;x++){if(A(x,y)){r=x;gap=0;}else if(++gap>3)break;}
   L[y]=l;R[y]=r;if(y<top+h*.3)cx=Math.round((l+r)/2);}
  const W=y=>L[y]<0?0:R[y]-L[y]+1;
- // breiteste Stelle des Kopfes (Ohren/Haare), danach Hals (schmalste Zeile), bis es zu den Schultern wieder breiter wird
- let peak=0,peakY=top,neck=-1,nw=1e9;
- for(let y=top;y<h;y++){const v=W(y);
-  if(neck<0){if(v>=peak){peak=v;peakY=y;}else if(v<peak*.85){neck=y;nw=v;}continue;}
-  if(v<=nw){nw=v;neck=y;}else if(v>nw*1.15&&v>peak*.9)break;}
- if(peak<8||neck<0||neck-top<peak*.8||nw>peak*.9)return null;// kein Hals erkennbar: lieber kein Foto
- // Schnitt knapp unter dem Kinn: erste Zeile, die fast so schmal ist wie der Hals, plus wenig Rand
- for(let y=peakY;y<neck;y++)if(W(y)<=nw*1.12){neck=Math.min(neck,y+Math.round(peak*.08));break;}
+ // Schultern: erste Zeile, die mehr als halb so breit ist wie das Bild unten (Kickbase-Fotos sind alle gleich aufgebaut).
+ // Hals: schmalste Zeile in der unteren Hälfte zwischen Kopfoberkante und Schultern. Kopfbreite: breiteste Zeile darüber.
+ const Wb=Math.max(...Array.from({length:Math.min(20,h-top)},(_,i)=>W(h-1-i)));
+ let S=top;while(S<h&&W(S)<=Wb*.55)S++;
+ let neck=-1,nw=1e9;for(let y=top+Math.round((S-top)/2);y<S;y++){const v=W(y);if(v>0&&v<nw){nw=v;neck=y;}}
+ let peak=0;for(let y=top;y<neck;y++)peak=Math.max(peak,W(y));
+ if(S>=h||neck<0||peak<8||nw>peak*.85)return null;// kein Hals erkennbar: lieber kein Foto
+ // Von vorn ist das Kinn etwa so breit wie der Hals: Schnitt erst dort, wo der Kragen beginnt (Breite wächst wieder),
+ // dann ein Stück darüber, damit kein Stoff mitkommt.
+ let cut=neck;while(cut+1<h&&W(cut+1)<=nw*1.08)cut++;
+ neck=Math.max(top+1,cut-Math.round(peak*.02));
  const bottom=neck;let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0){l=Math.min(l,L[y]);r=Math.max(r,R[y]);}
- const ow=r-l+1,oh=bottom-top;if(ow<8||oh<8)return null;
+ const ow=r-l+1,oh=bottom-top;if(ow<8||oh<peak*.9||oh>peak*2)return null;// unplausibel: lieber kein Foto
  const out=Buffer.alloc(ow*oh*4);
  for(let y=0;y<oh;y++){const yy=top+y,fade=Math.min(1,(oh-y)/Math.max(2,oh*.08));// unten weich auslaufen
   for(let x=0;x<ow;x++){const xx=l+x;if(L[yy]<0||xx<L[yy]||xx>R[yy])continue;const s=(yy*w+xx)*4,q=(y*ow+x)*4;
