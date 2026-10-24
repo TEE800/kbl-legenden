@@ -19,7 +19,7 @@ app.use(express.static('public'));
 // Speichern, Abhaken, Loeschen und die Werkzeuge (Scans) nur fuer den Admin (Manager-ID KBL_ADMIN_ID, Standard T800).
 const PREVIEW = process.env.KBL_VORSCHAU === '1';
 const ADMIN_ID = String(process.env.KBL_ADMIN_ID || '699062');
-const ADMIN_ONLY_GET = /^\/api\/(competition-probe|player-probe|challenge-probe|playercenter-scan|event-finder|event-code-scan|event-types|auto-capture-status)\b/;
+const ADMIN_ONLY_GET = /^\/api\/(competition-probe|player-probe|challenge-probe|playercenter-scan|event-finder|event-code-scan|event-types|auto-capture-status|arena-probe)\b/;
 function currentSession(req) {
   const sid = parseCookies(req).kblsid;
   const s = sid ? sessions.get(sid) : null;
@@ -774,6 +774,35 @@ app.get('/api/history-probe', async (req, res) => {
   }
   try { fs.mkdirSync(path.join(process.cwd(), '_probe'), { recursive: true }); fs.writeFileSync(path.join(process.cwd(), '_probe', 'history-probe.json'), JSON.stringify(out, null, 2)); } catch {}
   res.set('Cache-Control', 'no-store').json(out);
+});
+
+// Arena-Untersuchung (einmalig, nur Admin): findet die zweite Liga (Arena, Head-to-Head) im Konto des angemeldeten Nutzers
+// und probiert moegliche Kickbase-Pfade fuer Duelle/Paarungen. Ergebnis zusaetzlich in _probe/arena-probe.json.
+app.get('/api/arena-probe', async (req, res) => {
+  const token = getToken(req);
+  if (!token) return res.status(401).json({ error: 'Bitte zuerst in der App anmelden.' });
+  const out = { at: new Date().toISOString() };
+  const get = async p => { try { return { ok: true, data: await kbFetch(p, { token }) }; } catch (e) { return { ok: false, status: e.status || null, error: String(e.data ? JSON.stringify(e.data) : e.message).slice(0, 300) }; } };
+  const short = r => r.ok ? JSON.stringify(r.data).slice(0, 8000) : r;
+  const sel = await get('/v4/leagues/selection'); out.selection = short(sel);
+  const all = await get('/v4/leagues'); out.leagues = short(all);
+  const ids = new Set();
+  for (const r of [sel, all]) if (r.ok) for (const arr of findObjectArrays(r.data)) for (const x of arr) { const i = x.i ?? x.id ?? x.lid; if (i != null && /^\d+$/.test(String(i))) ids.add(String(i)); }
+  ids.delete('6422780');
+  if (req.query.id && /^\d{1,12}$/.test(String(req.query.id))) ids.add(String(req.query.id));
+  let day = null; try { const md = await loadMatchdays(); day = (md.days.find(d => d.status === 'live') || [...md.days].reverse().find(d => d.status === 'finished'))?.day || null; } catch {}
+  out.day = day; out.arena = {};
+  for (const id of [...ids].slice(0, 6)) {
+    const L = `/v4/leagues/${id}`, r = {};
+    const paths = ['overview', 'me', 'settings', 'settings/managers', 'ranking', `ranking?dayNumber=${day}`, `ranking?dayNumber=${day - 1}`, 'lineup', 'teamcenter/myeleven', 'activitiesFeed?max=10',
+      'h2h', 'h2h/matchups', `h2h/matchups?dayNumber=${day}`, 'h2h/ranking', 'h2h/schedule', 'matchups', `matchups?dayNumber=${day}`, `matchups/${day}`, 'duels', 'battles', 'fixtures', 'schedule', 'headtohead', 'head2head', 'arena', 'arena/lineup', 'arena/ranking', 'table', 'standings'];
+    for (const p of paths) r[p] = short(await get(`${L}/${p}`));
+    const uid = currentSession(req)?.userId;
+    if (uid) for (const p of [`managers/${uid}/dashboard`, `managers/${uid}/squad`, `users/${uid}/teamcenter?dayNumber=${day}`, `teamcenter/${uid}?dayNumber=${day}`, `managers/${uid}/lineup?dayNumber=${day}`]) r[p] = short(await get(`${L}/${p}`));
+    out.arena[id] = r;
+  }
+  try { fs.mkdirSync(path.join(process.cwd(), '_probe'), { recursive: true }); fs.writeFileSync(path.join(process.cwd(), '_probe', 'arena-probe.json'), JSON.stringify(out, null, 2)); } catch {}
+  res.set('Cache-Control', 'no-store').json({ ok: true, gespeichert: '_probe/arena-probe.json', ligen: [...ids], tag: day });
 });
 
 // Live-Zwischenstand aller Manager waehrend des Spieltags. Das Liga-Ranking zeigt bis Spieltagsende 0 Punkte (mdp),
