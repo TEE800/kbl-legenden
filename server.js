@@ -2534,9 +2534,9 @@ setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
 // (Verkaufspreis minus Kaufpreis) und Summen. Quelle: /managers/{id}/transfer (it[]: pi, pn, tid, tty 1 Kauf / 2 Verkauf,
 // othnm Gegenüber, ohne = Markt, trp Preis, dt) und der heutige Kader (prc Kaufpreis laut Kickbase, mv Marktwert, mvgl = mv - prc).
 // Verkauf ohne Kauf im Verlauf = Startkader: kein Kaufpreis, darum kein Gewinn/Verlust (nie raten).
-// Saison (Kevin: Saisonwechsel 1. Juli): from/to in ms; to = null = laufende Saison (dann mit heutigem Kader).
-// Gezählt wird ein Deal in der Saison, in der er endet (Verkauf); Käufe und Verkäufe je Saison nach Datum.
-function buildTransferHistory(list, squad, from = 0, to = null) {
+// Zeitraum (Kevin: Halbserien): from/to in ms (to = null = offen); current = laufende Halbserie (dann mit heutigem Kader).
+// Gezählt wird ein Deal im Zeitraum, in dem er endet (Verkauf); Käufe und Verkäufe je Zeitraum nach Datum.
+function buildTransferHistory(list, squad, from = 0, to = null, current = to == null) {
   const asc = [...list].filter(t => t && t.pi != null && (t.tty === 1 || t.tty === 2) && Number.isFinite(Number(t.trp)))
     .sort((a, b) => Date.parse(a.dt) - Date.parse(b.dt));
   const side = t => ({ price: Number(t.trp), at: t.dt || null, other: t.othnm || null });
@@ -2570,7 +2570,7 @@ function buildTransferHistory(list, squad, from = 0, to = null) {
       status: 'held', start: true, mv, diff: mv != null && prc != null ? mv - prc : null });
   }
   const inRange = iso => { const x = Date.parse(iso); return x >= from && (to == null || x < to); };
-  const keep = t => t.status === 'held' ? to == null : inRange((t.sell || t.buy || {}).at);
+  const keep = t => t.status === 'held' ? current : inRange((t.sell || t.buy || {}).at);
   for (let i = trades.length - 1; i >= 0; i--) if (!keep(trades[i])) trades.splice(i, 1);
   const own = asc.filter(t => inRange(t.dt));
   const sum = f => trades.reduce((s, t) => s + (f(t) || 0), 0);
@@ -2599,6 +2599,18 @@ async function fetchTransferList(token, id) {
   return all;
 }
 let transferCache = null;
+// Ende der Hinrunde: letzter Anstoß von Spieltag 17 der Saison y (OpenLigaDB bl1/y/17) plus 3 Stunden.
+const halfSplitCache = new Map();
+async function halfSeasonSplit(y) {
+  if (halfSplitCache.has(y)) return halfSplitCache.get(y);
+  try {
+    const r = await fetch(`https://api.openligadb.de/getmatchdata/bl1/${y}/17`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
+    const ms = r.ok ? (await r.json()).map(m => Date.parse(m.matchDateTimeUTC)).filter(Number.isFinite) : [];
+    const v = ms.length ? Math.max(...ms) + 3 * 3600e3 : null;
+    if (v) halfSplitCache.set(y, v);
+    return v;
+  } catch { return null; }
+}
 app.get('/api/transfers', async (req, res) => {
   const token = getToken(req) || newestToken();
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
@@ -2614,16 +2626,24 @@ app.get('/api/transfers', async (req, res) => {
         return { base, list, squad };
       } catch (e) { return { base, error: e.message }; }
     })));
-    // Saisons (1. Juli bis 30. Juni), neueste zuerst; die laufende Saison immer dabei.
+    // Halbserien (Kevin: die Liga spielt Halbserien): Hinrunde ab 1. Juli bis zum Ende von Spieltag 17, Rückrunde danach bis 30. Juni.
+    // Neueste zuerst; die laufende Halbserie immer dabei. Ohne Spieltag-17-Termin (OpenLigaDB) wird nichts geteilt (nie raten).
     const startOf = y => Date.UTC(y, 6, 1), yearOf = ms => { const d = new Date(ms); return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; };
-    const nowY = yearOf(Date.now()), years = new Set([nowY]);
+    const now = Date.now(), nowY = yearOf(now), years = new Set([nowY]);
     for (const r of raw) for (const t of r.list || []) { const x = Date.parse(t.dt); if (Number.isFinite(x)) years.add(yearOf(x)); }
-    const seasons = [...years].sort((a, b) => b - a).map(y => {
-      const current = y === nowY;
-      const managers = raw.map(r => r.error ? { ...r.base, error: r.error } : { ...r.base, squadMissing: current && !r.squad, ...buildTransferHistory(r.list, r.squad, startOf(y), current ? null : startOf(y + 1)) })
+    const periods = [];
+    for (const y of [...years].sort((a, b) => b - a)) {
+      const mid = await halfSeasonSplit(y), label = `${y}/${String(y + 1).slice(2)}`;
+      const parts = mid ? [{ key: `Rückrunde ${label}`, from: mid, to: startOf(y + 1) }, { key: `Hinrunde ${label}`, from: startOf(y), to: mid }]
+        : [{ key: `Saison ${label}`, from: startOf(y), to: startOf(y + 1), noSplit: true }];
+      periods.push(...parts);
+    }
+    const seasons = periods.filter(pd => pd.from <= now).map(pd => {
+      const current = now >= pd.from && now < pd.to;
+      const managers = raw.map(r => r.error ? { ...r.base, error: r.error } : { ...r.base, squadMissing: current && !r.squad, ...buildTransferHistory(r.list, r.squad, pd.from, pd.to, current) })
         .filter(m => current || m.error || m.buys || m.sells).sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
-      return { key: `${y}/${String(y + 1).slice(2)}`, current, managers };
-    });
+      return { key: pd.key, current, noSplit: !!pd.noSplit, from: new Date(pd.from).toISOString(), to: new Date(pd.to).toISOString(), managers };
+    }).filter(se => se.current || se.managers.length);
     const value = { updatedAt: new Date().toISOString(), seasons };
     transferCache = { at: Date.now(), value };
     res.set('Cache-Control', 'no-store').json(value);
