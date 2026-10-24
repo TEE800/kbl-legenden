@@ -1622,7 +1622,7 @@ window.kblCollapseView=view=>{
  const root=document.querySelector(`.kbl-view[data-view="${view}"]`);if(!root)return;
  root.querySelectorAll('details[open]:not(.kbl-keep-open)').forEach(d=>{d.open=false;});
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
- if(view==='accounting')accTodoOpen=false;
+ if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accLiveLoad();}
  if(view==='profiles')profOpen.clear();
  if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;bumsIntroPending=!bumsIntroSkipOnce;bumsIntroSkipOnce=false;setTimeout(kblBumsIntroTry,0);}
  else document.querySelector('.bums-intro')?.remove();
@@ -1756,3 +1756,44 @@ function renderPreview(){
  openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
+
+// BumsParade LIVE (Kevin-Wunsch): Während der Spieltag läuft, steht oben ohne „prüfen“, welche Strafen nach dem
+// aktuellen Stand fällig wären (/api/rule-live/:day, Server rechnet höchstens alle 5 Min. neu). Nur vorläufig, keine Haken,
+// nichts geht in die BumsTabelle. Eingeklappt (feste Regel), die Zahl der möglichen Strafen steht schon in der Kopfzeile.
+let accLive=null,accLiveOpen=false,accLiveBusy=false;
+async function accLiveLoad(){
+ const el=$('#accLive');if(!el||accLiveBusy)return;
+ let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
+ const day=st?.days?.find(d=>d.status==='live')?.day;
+ if(!day){accLive=null;el.innerHTML='';return;}
+ accLiveBusy=true;if(!accLive||accLive.day!==day){accLive={day,state:'loading'};accLiveRender();}
+ try{accLive={day,state:'done',data:await api(`/api/rule-live/${day}`)};}
+ catch(e){accLive=/401|angemeldet/i.test(e.message)?null:{day,state:'error',error:e.message};}
+ finally{accLiveBusy=false;}
+ accLiveRender();
+}
+function accLiveRender(){
+ const el=$('#accLive');if(!el)return;const a=accLive;if(!a){el.innerHTML='';return;}
+ const safe=x=>escapeHtml(String(x??'')),d=a.data;
+ const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung'};
+ const items=d?.items||[];
+ const sum=a.state==='loading'?'wird berechnet …':a.state==='error'?'nicht abrufbar':!d?.live?(d?.message||'kein laufender Spieltag'):items.length?`${items.length} mögliche Strafe${items.length===1?'':'n'}`:'aktuell keine Strafen';
+ let body='';
+ if(a.state==='loading')body='<p class="muted">Zwischenstand wird berechnet … Das kann beim ersten Öffnen etwas dauern.</p>';
+ else if(a.state==='error')body=`<p class="error">BumsParade LIVE nicht abrufbar: ${safe(a.error)}</p>`;
+ else if(d?.live){
+  const groups=new Map();for(const it of items){if(!groups.has(it.managerId))groups.set(it.managerId,{name:it.manager,list:[]});groups.get(it.managerId).list.push(it);}
+  const place=new Map((d.standings||[]).map((m,i)=>[m.managerId,{i:i+1,pts:m.dayPoints}]));
+  const sorted=[...groups.entries()].sort((x,y)=>(place.get(x[0])?.i??99)-(place.get(y[0])?.i??99));
+  const when=d.updatedAt?new Date(d.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
+  const mvp=d.mvp?.players?.length?`<p class="muted tiny">Gerade bester Spieler des Spieltags: ${d.mvp.players.map(p=>safe(p.name)).join(', ')} (${fmt(d.mvp.points)} Pkt., Stand ${new Date(d.mvp.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})}).</p>`:'';
+  body=`<p class="muted tiny" style="margin:0 0 10px"><b>Vorläufig:</b> So sähe die BumsParade aus, wenn der Spieltag jetzt vorbei wäre. Punkte, Karten und Elfmeter können sich bis zum Abpfiff (und danach) noch ändern. Stand ${safe(when)} Uhr · ${d.running||0} Spieler im Spiel · ${d.open||0} noch nicht angepfiffen.</p>`+
+   (d.notes||[]).map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+
+   (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${safe(g.name)}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
+   '<p class="muted tiny">Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p>';
+ }else body=`<p class="muted">${safe(d?.message||'')}</p>`;
+ el.innerHTML=`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`;
+ el.querySelector('details').addEventListener('toggle',e=>{accLiveOpen=e.target.open;});
+}
+setInterval(()=>{if(!document.hidden&&accLive&&document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();},5*60e3);
+onConnected.push(()=>{if(document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();});

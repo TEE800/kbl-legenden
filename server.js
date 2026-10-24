@@ -1403,15 +1403,15 @@ async function tippPlayerPoints(token,playerId,day){
 // Spieltagspunkte eines Spielers, auch waehrend des Spiels. "performance" hat Punkte erst nach Spielende;
 // laeuft das Spiel (mdst 1), stehen die Live-Punkte nur in "playercenter" (an ST 7 geprueft: Hendriks 25 Punkte in der 36. Minute).
 // state: done = Spiel beendet, live = Spiel laeuft, open = noch nicht angepfiffen oder keine Daten (points null).
-async function dayPlayerPoints(token,id,day,finished=false){
- const data=await kbFetch(`/v4/competitions/1/players/${id}/performance`,{token}),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
+async function dayPlayerPoints(token,id,day,finished=false,get=p=>kbFetch(p,{token})){
+ const data=await get(`/v4/competitions/1/players/${id}/performance`),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
  if(points!==null&&finished)return {points,state:'done'};
  // Laeuft der Spieltag noch, zaehlt nach dem Anstoss playercenter zuerst: direkt nach Abpfiff steht in performance
  // schon mdst 2 mit 0 Punkten, die echten Punkte kommen erst spaeter (ST 7, Stuttgart-Gladbach: alle auf 0 gefallen).
  if(points!==null){
   const k=Date.parse(rec?.md||'');
   if(!(Number.isFinite(k)&&k<=Date.now()))return {points,state:Number(rec?.mdst)===2?'done':'live',kick:rec?.md||null};
-  const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token}).catch(()=>null);
+  const pc=await get(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`).catch(()=>null);
   const q=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
   return {points:q??points,state:Number(rec?.mdst)===2?'done':'live',kick:rec?.md||null,...(q!==null&&q!==points?{perf:points}:{})};
  }
@@ -1420,7 +1420,7 @@ async function dayPlayerPoints(token,id,day,finished=false){
  // Fehlt der Eintrag in performance oder dessen Anstosszeit (z. B. Pejcinovic an ST 7), entscheidet playercenter selbst (eigene Anstosszeit md).
  const kick=Date.parse(rec?.md||'');
  if(Number.isFinite(kick)&&kick>Date.now())return {points:null,state:'open'};
- const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});
+ const pc=await get(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`);
  const pcKick=Date.parse(pc?.md||'');
  if(!Number.isFinite(kick)&&!(Number.isFinite(pcKick)&&pcKick<=Date.now()))return {points:null,state:'open',why:rec?'keine Anstosszeit':'kein Eintrag in performance'};
  const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
@@ -1878,6 +1878,119 @@ app.post('/api/bumsungen/:day',(req,res)=>{
     const tmp=BUMS_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all,null,2),{mode:0o600});fs.renameSync(tmp,BUMS_FILE);
     res.set('Cache-Control','no-store').json({day,saved:true});
   }catch(e){res.status(500).json({error:'BumsTabelle nicht gespeichert.'});}
+});
+
+// BumsParade LIVE (Kevin-Wunsch): Waehrend der Spieltag laeuft, zeigt die BumsParade ohne "pruefen", welche Strafen nach dem
+// aktuellen Stand faellig waeren. Nur vorlaeufig: Punkte und Ereignisse aendern sich bis Spielende (und koennen danach korrigiert werden).
+// Startelf aus ranking?dayNumber (lp, wie die Live-Punkte), sonst die gespeicherte. Punkte aus dayPlayerPoints.
+// AH: MVP-Zwischenstand aller Bundesliga-Spieler, hoechstens alle 30 Min. neu (ca. 500 Abrufe, kbl-live-mvp.json).
+// Hoechstens alle 5 Min. neu. Keine Haken, nichts geht in die BumsTabelle, Teamlimit erst in der echten BumsParade.
+const fmtNum=n=>Number(n).toLocaleString('de-DE');
+const LIVE_MVP_FILE=path.join(process.cwd(),'kbl-live-mvp.json'),ruleLiveCache=new Map();
+async function liveMvpFor(token,day){
+ let file={};try{file=JSON.parse(fs.readFileSync(LIVE_MVP_FILE,'utf8'));}catch{}
+ const fresh=x=>x&&Date.now()-Date.parse(x.at)<30*60e3;
+ if(fresh(file[day]))return file[day];
+ const t=readTipps()[day]?.liveMvp;if(fresh(t)&&!(t.pool||[]).length)return t;
+ const m=await loadMatchdayMvp(token,day,{live:true});
+ const v={at:new Date().toISOString(),points:m.players.length?m.players[0].points:null,players:m.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable};
+ try{const tmp=LIVE_MVP_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify({[day]:v}));fs.renameSync(tmp,LIVE_MVP_FILE);}catch{}
+ return v;
+}
+app.get('/api/rule-live/:day',async(req,res)=>{
+ const token=getToken(req)||newestToken();
+ if(!token)return res.status(401).json({error:'Nicht angemeldet.'});
+ const day=validDay(req.params.day);
+ if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ try{
+  const md=await loadMatchdays(),st=md.days.find(d=>d.day===day)?.status;
+  if(st!=='live')return res.set('Cache-Control','no-store').json({day,status:st||'unknown',live:false,message:st==='finished'?'Spieltag beendet: Die echte BumsParade gibt es über „BumsParade prüfen“.':'Spieltag hat noch nicht begonnen.'});
+  const c=ruleLiveCache.get(day);
+  if(c&&Date.now()-c.at<5*60e3)return res.set('Cache-Control','no-store').json(c.value);
+  const memo=new Map(),get=p=>{if(!memo.has(p))memo.set(p,kbFetch(p,{token}).catch(e=>{memo.delete(p);throw e;}));return memo.get(p);};
+  const ranking=await get(`/v4/leagues/6422780/ranking?dayNumber=${day}`);
+  const users=(ranking.us||[]).filter(u=>validManager(u.i)&&String(u.n||'').toLowerCase()!=='t1000');
+  const snaps=readSnapshots(),notes=[];
+  const lineups=users.map(u=>{const lp=(u.lp||[]).filter(x=>x!=null).map(String),s=snaps[`${day}:${u.i}`],own=Array.isArray(s?.playerIds)?s.playerIds.map(String):[];
+   return {managerId:String(u.i),name:String(u.n||u.i),ids:lp.length?lp:own};});
+  const noLineup=lineups.filter(m=>!m.ids.length).map(m=>m.name);
+  if(noLineup.length)notes.push(`Das fehlt: Startelf nicht lesbar bei ${noLineup.join(', ')}. Drehtür und Magic Miyoshi werden darum nicht berechnet.`);
+  const all=await loadAllPlayers(token).catch(()=>null);
+  const pname=id=>all?.players.get(String(id))?.name||Object.values(snaps).find(s=>s?.day===day&&s.playerNames?.[id])?.playerNames?.[id]||`Spieler-ID ${id}`;
+  const ids=[...new Set(lineups.flatMap(m=>m.ids))],pts={},perf={};
+  for(let i=0;i<ids.length;i+=5)await Promise.all(ids.slice(i,i+5).map(async id=>{
+   try{pts[id]=await dayPlayerPoints(token,id,day,false,get);}catch{pts[id]={points:null,state:'error'};}
+   try{perf[id]=await get(`/v4/competitions/1/players/${id}/performance`);}catch{}
+  }));
+  const roster=lineups.filter(m=>m.ids.length).map(m=>{
+   const players=m.ids.filter(id=>Number.isFinite(pts[id]?.points)).map(id=>({playerId:id,playerName:pname(id),points:pts[id].points,state:pts[id].state}));
+   return {...m,players,dayPoints:players.reduce((s,p)=>s+p.points,0)-100*Math.max(0,11-m.ids.length),
+    open:m.ids.filter(id=>pts[id]?.state==='open').length,errors:m.ids.filter(id=>pts[id]?.state==='error').length};});
+  const errors=roster.reduce((s,m)=>s+m.errors,0);
+  if(errors)notes.push(`${errors} aufgestellte Spieler nicht abrufbar, ihre Punkte fehlen im Zwischenstand.`);
+  // RK, BN, UM aus den Spieltagsdaten (nur Spieler, deren Spiel schon laeuft oder vorbei ist).
+  const squads=new Map();
+  for(let i=0;i<users.length;i+=4)await Promise.all(users.slice(i,i+4).map(async u=>{try{squads.set(String(u.i),(await get(`/v4/leagues/6422780/managers/${u.i}/squad`)).it||[]);}catch{}}));
+  const owner=new Map();
+  for(const m of lineups){const s=snaps[`${day}:${m.managerId}`];
+   for(const pid of (Array.isArray(s?.squadIds)?s.squadIds:[]))owner.set(String(pid),{managerId:m.managerId,manager:m.name,source:'kader'});}
+  for(const m of lineups)for(const pid of m.ids)if(!owner.has(pid))owner.set(pid,{managerId:m.managerId,manager:m.name,source:'startelf'});
+  // Waehrend des Spieltags ist der heutige Kader der Kader am Spieltag (Transfers sind gesperrt).
+  for(const m of lineups)for(const p of (squads.get(m.managerId)||[]))if(p.pi!=null&&!owner.has(String(p.pi)))owner.set(String(p.pi),{managerId:m.managerId,manager:m.name,source:'kader'});
+  const allSquads=users.every(u=>squads.has(String(u.i)));
+  const ownerOf=id=>owner.get(String(id))||(allSquads?null:{managerId:null,manager:'unbekannt',source:'heute'});
+  const kicked=roster.flatMap(m=>m.players.filter(p=>p.state!=='open').map(p=>({managerId:m.managerId,manager:m.name,playerId:p.playerId,playerName:p.playerName,perf:perf[p.playerId]})));
+  const center=id=>get(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`);
+  let ev;try{ev=await detectAutoEvents({token,day,lineupPlayers:kicked,ownerOf,getCenter:center});}
+  catch(e){ev={actions:[],unclear:[],failures:[]};notes.push('Karten, Eigentore und Elfmeter nicht lesbar: '+e.message);}
+  // 5. Gelbe live: performance kennt die Karte des laufenden Spiels oft noch nicht, playercenter schon.
+  for(const lp of kicked){
+   if(ev.actions.some(a=>a.rule==='RK'&&String(a.playerId)===lp.playerId))continue;
+   let c;try{c=await center(lp.playerId);}catch{continue;}
+   const rec=findDayRecord(lp.perf,day);if(Array.isArray(rec?.k)&&rec.k.includes(4))continue;
+   const today=(Array.isArray(c?.k)?c.k:[]).filter(x=>x===4).length;if(!today)continue;
+   const before=seasonYellowCards(lp.perf,day).before;
+   if(Math.floor((before+today)/5)>Math.floor(before/5))ev.actions.push({managerId:lp.managerId,manager:lp.manager,playerId:lp.playerId,playerName:lp.playerName,rule:'RK',reason:`${Math.floor((before+today)/5)*5}. Gelbe Karte der Saison`});
+  }
+  if(ev.failures?.length)notes.push(`Ereignisse von ${ev.failures.length} Spielern nicht lesbar.`);
+  // AH: aktuell bester Spieler aller Bundesliga-Spieler.
+  let mvp=null;try{mvp=await liveMvpFor(token,day);}catch(e){notes.push('Aktueller MVP nicht ermittelbar: '+e.message);}
+  const mvpIds=new Set((mvp?.players||[]).map(p=>String(p.id)));
+  const ah=roster.flatMap(m=>m.players.filter(p=>mvpIds.has(p.playerId)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  const bd=roster.flatMap(m=>m.players.filter(p=>isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  // Rangfolge wie in der BumsParade: BD tritt hinter allen anderen Regeln zurueck, DD zuletzt.
+  const other=new Map(),add=(id,r)=>{id=String(id);if(!other.has(id))other.set(id,new Set());other.get(id).add(r);};
+  for(const a of ev.actions)add(a.playerId,a.rule);
+  for(const a of ah)add(a.playerId,'AH');
+  const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...extra});
+  for(const [id,r] of other)if(r.size>1){const a=ev.actions.find(x=>String(x.playerId)===id)||ah.find(x=>String(x.playerId)===id);item('EZ',a,`${a.playerName} ist von ${[...r].join(' und ')} betroffen: Einzelfallentscheidung`);}
+  const multi=id=>(other.get(String(id))?.size||0)>1;
+  for(const p of ah)if(!multi(p.playerId))item('AH',p,`${p.playerName} ist mit ${fmtNum(p.points)} Punkten gerade MVP des Spieltags: müsste zum Verkauf angeboten werden`);
+  for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`);
+  for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden`,{state:p.state});
+  for(const u of (ev.unclear||[]))item(u.rule,u,`${u.playerName}: ${u.reason}`,{unclear:true});
+  let dd=null,mm=null;
+  if(!noLineup.length&&roster.length){
+   const ex=new Map();for(const p of bd)ex.set(String(p.playerId),['BD']);for(const [id,r] of other)ex.set(id,[...(ex.get(id)||[]),...r]);
+   const top=Math.max(...roster.map(m=>m.dayPoints)),low=Math.min(...roster.map(m=>m.dayPoints));
+   const winners=roster.filter(m=>m.dayPoints===top),last=roster.filter(m=>m.dayPoints===low);
+   dd={winners:winners.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints,...ddCandidates(m.players,ex)})),last:last.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})),tie:winners.length!==1||last.length!==1};
+   const lastNames=last.map(m=>m.name).join(', ');
+   for(const w of dd.winners)item('DD',w,`führt mit ${fmtNum(w.dayPoints)} Punkten: müsste einen dieser Spieler an ${lastNames} abgeben: ${w.candidates.map(p=>`${p.playerName} (${fmtNum(p.points)})`).join(', ')||'keiner frei'}`);
+   for(const l of dd.last)item('DD',l,`ist mit ${fmtNum(l.dayPoints)} Punkten Letzter: dürfte sich einen Spieler von ${dd.winners.map(w=>w.manager).join(', ')} aussuchen`);
+   if(dd.tie)notes.push('Gleichstand an der Spitze oder am Ende: Die Drehtür gilt dann für alle mit gleicher Punktzahl.');
+   mm=calculateMm(roster);
+   for(const v of mm.affected)item('MM',v,`hat gerade die meisten Minuspunkte (${fmtNum(v.negativeSum)}): dürfte bestimmen, wer am nächsten Spieltag einen Spieler weniger aufstellt`);
+  }
+  const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7};
+  items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
+  const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
+  const value={day,status:'live',live:true,updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
+   standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
+   items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes};
+  ruleLiveCache.set(day,{at:Date.now(),value});
+  res.set('Cache-Control','no-store').json(value);
+ }catch(err){res.status(err.status||502).json({error:'BumsParade LIVE nicht abrufbar.',detail:err.message});}
 });
 
 app.get('/api/rule-accounting/:day', async (req, res) => {
