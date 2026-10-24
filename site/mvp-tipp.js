@@ -192,7 +192,7 @@
  const toonPhoto=(src,cls,alt)=>!src?'':`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`;
  // Wackelkopf: nur der Kopf, auf dem Server aus dem Kickbase-Foto ausgeschnitten (online als fertige Datei aus dem Export).
  // Lädt er nicht (kein Foto, kein Hals erkennbar), bleibt das gezeichnete Gesicht. Nie ein Kreis-Ausschnitt.
- const HEAD_VERSION=3;
+ const HEAD_VERSION=4;
  const headSrc=id=>window.KBL_STATIC?`heads/v${HEAD_VERSION}/${encodeURIComponent(id)}.png`:`/api/mvp-tipps/head/${encodeURIComponent(id)}`;
  // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
  window.kblToon={toon,clubColor,kbImg,headSrc};
