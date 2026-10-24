@@ -1572,13 +1572,17 @@ function kblBumsIntro({hit,clean,half,RN}){
  ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
  ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
  const names=w=>w.map(n=>escapeHtml(n).replaceAll('_','_<wbr>')).join('<br>');
- // Je Karte: 0,5 s hereinfliegen, 3 s stehen bleiben (Kevin-Vorgabe), 0,5 s hinaus.
- const step=3600;
- cards.forEach((c,idx)=>timers.push(setTimeout(()=>{if(done)return;
+ // Kevin-Vorgabe: mehrere Karten fliegen gleichzeitig herein (je Welle 3), 0,5 s herein, 3 s stehen, 0,5 s hinaus.
+ const per=3,step=3700,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
+ cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per,n=Math.min(per,cards.length-w*per);
+  timers.push(setTimeout(()=>{if(done)return;
   const el=document.createElement('div');el.className='bums-intro-card';
-  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${names(c.who)}</b><span>${c.n}${c.unit}</span>`;
+  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(escapeHtml).join(', ')}</b><span>${c.n}${c.unit}</span>`;
+  // Breit nebeneinander, am Handy untereinander.
+  if(wide){el.style.left=(50+(j-(n-1)/2)*31)+'%';el.style.top='56%';}
+  else{el.style.left='50%';el.style.top=(56+(j-(n-1)/2)*25)+'%';}
   ov.appendChild(el);
-  const ltr=idx%2===0,rot=ltr?-6:6,offL=ltr?'-100vw':'100vw',offR=ltr?'100vw':'-100vw';
+  const ltr=idx%2===0,rot=ltr?-6:6,offL=ltr?'-150vw':'150vw',offR=ltr?'150vw':'-150vw';
   el.animate([
    {transform:`translate(calc(-50% + ${offL}),-50%) rotate(${rot*2}deg)`},
    {transform:`translate(-50%,-50%) rotate(${-rot/3}deg) scale(1.06)`,offset:.1},
@@ -1586,7 +1590,8 @@ function kblBumsIntro({hit,clean,half,RN}){
    {transform:'translate(-50%,-50%) rotate(0) scale(1)',offset:.875},
    {transform:`translate(calc(-50% + ${offR}),-50%) rotate(${-rot*2}deg)`}],
    {duration:4000,easing:'ease-in-out',fill:'forwards'}).onfinish=()=>el.remove();
- },500+idx*step)));
+ },500+w*step+j*150));});
+ const cardsEnd=waves?waves*step+300:0;
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
   k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
@@ -1595,7 +1600,7 @@ function kblBumsIntro({hit,clean,half,RN}){
   k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
   k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
   timers.push(setTimeout(end,2600));
- },500+cards.length*step+200));
+ },500+cardsEnd));
 }
 
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
