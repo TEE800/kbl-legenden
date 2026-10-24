@@ -110,6 +110,13 @@ try {
     const u = `/api/mvp-tipps/${d}`;
     if (MODE === 'full' || d === live || d === tipps.next || !have(u)) await save(u);
   }
+  // Arena (Head-to-Head-Liga): Paarungen und Aufstellungen aus kbl-arena.json (vom PC, GitHub ist kein Arena-Mitglied),
+  // Live-Punkte der Spieler rechnet der Server selbst. Live-Lauf: laufender und naechster Spieltag und Fehlendes.
+  const arena = await save('/api/arena');
+  for (const d of (arena?.days || []).map(x => x.day)) {
+    const u = `/api/arena/${d}`;
+    if (MODE === 'full' || d === live || d === arena.next || !have(u)) await save(u);
+  }
   // Wackelkoepfe fuer das MVP-Rennen: Kopf aus dem Kickbase-Foto, auf dem Server ausgeschnitten (nur fehlende, CDN statt Kickbase-API).
   // Neue Version des Zuschnitts (HEAD_VERSION in server.js und mvp-tipp.js) = neuer Ordner, alte Ordner werden geloescht.
   try {

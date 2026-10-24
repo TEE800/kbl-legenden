@@ -2306,6 +2306,144 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
   } catch(err) {res.status(err.status||502).json({error:'Abrechnung fehlgeschlagen.',detail:err.message});}
 });
 
+// ===== Arena (Kevin-Wunsch): zweite Liga "Legenden Arena" (12612349), Head-to-Head. Jeden Spieltag neue Elf mit Kapitaen (Punkte doppelt).
+// Kickbase: /v4/leagues/{id}/matchups (mds[]: day, sd, ed, it[] Paare u1/u2 mit i, n, uim, p = Spieltagspunkte, hhsp) und
+// /ranking?dayNumber=N (us[]: lp Elf, cpti Kapitaen, hhoui Gegner, hhsp H2H-Punkte, hhpl H2H-Platz, sp Gesamtpunkte, mdp).
+// Lesen darf das nur ein Mitglied der Arena (T800, nur auf dem PC, nie von GitHub). Jeder erfolgreiche Abruf landet in
+// kbl-arena.json; ohne Zugriff (GitHub) wird diese Datei genommen. Live-Punkte je Spieler wie beim MVP-Tipp (dayPlayerPoints),
+// das darf jedes Konto. Aufstellungen eines noch nicht angepfiffenen Spieltags werden nie gezeigt.
+const ARENA_ID = '12612349', ARENA_FILE = path.join(process.cwd(), 'kbl-arena.json'), ARENA_POINTS_FILE = path.join(process.cwd(), 'kbl-arena-points.json');
+function readArena(){try{return JSON.parse(fs.readFileSync(ARENA_FILE,'utf8'));}catch{return null;}}
+function saveArena(d){const {points,source,fetchError,...rest}=d;const tmp=ARENA_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(rest));fs.renameSync(tmp,ARENA_FILE);arenaUpload(rest).catch(e=>{arenaUploadState.error=e.message;});}
+// Spielerpunkte beendeter Spieltage in eigener Datei: die schreibt jeder selbst (PC und GitHub), kbl-arena.json schreibt nur der PC.
+function readArenaPoints(){try{return JSON.parse(fs.readFileSync(ARENA_POINTS_FILE,'utf8'));}catch{return {};}}
+function saveArenaPoints(d){const tmp=ARENA_POINTS_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(d));fs.renameSync(tmp,ARENA_POINTS_FILE);}
+// Kevin-Entscheidung: Der PC schickt kbl-arena.json selbst zu GitHub (Branch main), damit die Online-Seite die Duelle kennt.
+// Schluessel nur in der Umgebung (KBL_GITHUB_TOKEN in start.bat, fein eingeschraenkt: nur dieses Repository, Contents lesen/schreiben).
+// Nur bei geaenderten Paarungen/Aufstellungen/Tabelle, hoechstens alle 10 Minuten. Auf GitHub selbst nie.
+const arenaUploadState={at:0,hash:null,error:null,lastOk:null};
+async function arenaUpload(d){
+ const gh=process.env.KBL_GITHUB_TOKEN;if(ON_GITHUB||!gh)return;
+ const hash=crypto.createHash('sha1').update(JSON.stringify([d.matchups,d.lineups,d.table?.rows])).digest('hex');
+ if(hash===arenaUploadState.hash||Date.now()-arenaUploadState.at<10*60e3)return;
+ arenaUploadState.at=Date.now();
+ const url='https://api.github.com/repos/TEE800/kbl-legenden/contents/kbl-arena.json';
+ const h={Authorization:`Bearer ${gh}`,Accept:'application/vnd.github+json','User-Agent':'kbl-legenden-app'};
+ const cur=await fetch(url+'?ref=main',{headers:h,signal:AbortSignal.timeout(15000)});
+ const sha=cur.ok?(await cur.json()).sha:undefined;
+ const r=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
+  body:JSON.stringify({message:'Arena-Daten vom PC',branch:'main',content:Buffer.from(JSON.stringify(d)).toString('base64'),...(sha?{sha}:{})})});
+ if(!r.ok)throw new Error(`GitHub HTTP ${r.status}`);
+ arenaUploadState.hash=hash;arenaUploadState.error=null;arenaUploadState.lastOk=new Date().toISOString();
+ console.log('Arena-Daten zu GitHub geschickt.');
+}
+let arenaMem=null;const arenaDayCache=new Map();
+async function arenaReadToken(req){
+ const t=getToken(req)||newestToken();if(t)return t;
+ if(ON_GITHUB)return getServiceToken().catch(()=>null);// T1000: klappt nur, falls er Mitglied der Arena ist
+ return getChallengeToken().catch(()=>null);
+}
+// Holt Paarungen und Aufstellungen von Kickbase (hoechstens alle 5 Min.) und mischt sie in kbl-arena.json.
+async function arenaState(req,days=[]){
+ const file=readArena()||{league:{id:ARENA_ID}};
+ if(arenaMem&&Date.now()-arenaMem.at<5*60e3&&days.every(d=>arenaMem.days.has(d)))return arenaMem.value;
+ const token=await arenaReadToken(req);
+ if(!token)return file.matchups?{...file,source:'datei'}:file;
+ try{
+  const L=`/v4/leagues/${ARENA_ID}`;
+  const mu=await kbFetch(`${L}/matchups`,{token});
+  const managers={...(file.managers||{})};
+  const matchups=(mu.mds||[]).map(m=>({day:Number(m.day),name:m.mdln||`Spieltag ${m.day}`,start:m.sd||null,end:m.ed||null,live:!!m.il,
+   pairs:(m.it||[]).map(x=>{for(const u of [x.u1,x.u2])if(u?.i!=null)managers[String(u.i)]={n:u.n||managers[String(u.i)]?.n||'',uim:u.uim||managers[String(u.i)]?.uim||null};
+    return [String(x.u1?.i??''),String(x.u2?.i??''),x.u1?.p??null,x.u2?.p??null];})}));
+  const lineups={...(file.lineups||{})};let table=file.table||null;
+  for(const d of [...new Set(days)]){
+   const r=await kbFetch(`${L}/ranking?dayNumber=${d}`,{token});
+   lineups[d]={};
+   for(const u of (r.us||[])){const id=String(u.i);if(!managers[id])managers[id]={n:u.n||'',uim:u.uim||null};
+    lineups[d][id]={lp:(u.lp||[]).filter(x=>x!=null).map(String),cpt:u.cpti!=null?String(u.cpti):null,opp:u.hhoui!=null?String(u.hhoui):null,mdp:u.mdp??null};}
+   if(!table||d>=table.day)table={day:d,at:new Date().toISOString(),rows:(r.us||[]).map(u=>({id:String(u.i),n:u.n,hhsp:u.hhsp??null,hhpl:u.hhpl??null,sp:u.sp??null,spl:u.spl??null}))};
+  }
+  const value={...file,league:{id:ARENA_ID,name:'Legenden Arena'},updatedAt:new Date().toISOString(),managers,matchups,lineups,table,source:'kickbase'};
+  try{saveArena(value);}catch{}
+  arenaMem={at:Date.now(),days:new Set(days),value};
+  return value;
+ }catch(e){
+  // Kein Mitglied (z. B. Dienst-Login auf GitHub) oder Kickbase nicht erreichbar: gespeicherter Stand.
+  return file.matchups?{...file,source:'datei',fetchError:e.status||e.message}:{...file,fetchError:e.status||e.message};
+ }
+}
+async function arenaAuto(){
+ if(ON_GITHUB||!process.env.KBL_GITHUB_TOKEN)return;
+ try{const md=await loadMatchdays();const live=md.days.find(d=>d.status==='live')?.day,cur=live||md.lastFinishedDay;
+  if(!live&&Date.now()-arenaUploadState.at<2*3600e3&&arenaUploadState.hash)return;
+  arenaMem=null;await arenaState({headers:{}},cur?[cur]:[]);}catch(e){arenaUploadState.error=e.message;}
+}
+setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
+app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
+app.get('/api/arena',async(req,res)=>{
+ try{
+  const md=await loadMatchdays().catch(()=>null);
+  const live=md?.days.find(d=>d.status==='live')?.day,next=md?.days.find(d=>d.status==='upcoming')?.day;
+  const cur=live||md?.lastFinishedDay||null;
+  const a=await arenaState(req,cur?[cur]:[]);
+  if(!a.matchups)return res.status(404).json({error:'Die Arena-Daten fehlen noch. Sie kommen mit dem nächsten Abruf über ein Konto, das in der Legenden Arena spielt (T800 am PC).'});
+  const st=d=>md?.days.find(x=>x.day===d)?.status||'unknown';
+  res.set('Cache-Control','no-store').json({league:a.league,updatedAt:a.updatedAt||null,source:a.source||null,live:live||null,next:next||null,current:cur,
+   days:a.matchups.map(m=>({day:m.day,name:m.name,start:m.start,status:st(m.day)}))});
+ }catch(e){res.status(502).json({error:'Arena nicht abrufbar.',detail:e.message});}
+});
+app.get('/api/arena/:day',async(req,res)=>{
+ const day=validDay(req.params.day);if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
+ try{
+  const md=await loadMatchdays().catch(()=>null),mdd=md?.days.find(d=>d.day===day),status=mdd?.status||'unknown';
+  const started=status==='live'||status==='finished';
+  const c=arenaDayCache.get(day);
+  if(c&&(c.final||Date.now()-c.at<5*60e3))return res.set('Cache-Control','no-store').json(c.value);
+  const a=await arenaState(req,started?[day]:[]);
+  const m=a.matchups?.find(x=>x.day===day);
+  if(!m)return res.status(404).json({error:a.matchups?`Für Spieltag ${day} gibt es keine Paarungen.`:'Die Arena-Daten fehlen noch.'});
+  const lu=started?(a.lineups?.[day]||null):null;
+  // Punkte je Spieler (nur angepfiffene Spieltage). Beendete Spieltage werden in kbl-arena.json gemerkt.
+  let pts={};const saved=readArenaPoints()[day];
+  if(started&&lu){
+   if(status==='finished'&&saved)pts=saved;
+   else{
+    const tok=getToken(req)||newestToken()||await getServiceToken().catch(()=>null)||await arenaReadToken(req);
+    const ids=[...new Set(Object.values(lu).flatMap(x=>x.lp))];
+    for(let i=0;i<ids.length;i+=5)await Promise.all(ids.slice(i,i+5).map(async id=>{try{pts[id]=await dayPlayerPoints(tok,id,day,status==='finished');}catch{pts[id]={points:null,state:'error'};}}));
+    if(status==='finished'&&ids.length&&ids.every(id=>pts[id]?.state==='done')){try{saveArenaPoints({...readArenaPoints(),[day]:pts});}catch{}}
+   }
+  }
+  const all=started?await loadAllPlayers(getToken(req)||newestToken()||await getServiceToken().catch(()=>null)).catch(()=>null):null;
+  const side=(id,kb)=>{
+   const info=a.managers?.[id]||{},l=lu?.[id];
+   const base={id,name:id==='1'?'Kickbase CPU':info.n||`Manager ${id}`,img:info.uim||null,cpu:id==='1'};
+   if(!started||!l)return {...base,points:kb??null,kbPoints:kb??null,players:null};
+   const players=l.lp.map(pid=>{const q=pts[pid]||{points:null,state:'open'},p=all?.players.get(pid)||all?.players.get(Number(pid));
+    const cap=pid===l.cpt;return {id:pid,name:p?.name||`Spieler ${pid}`,team:p?.team||null,img:p?.img||null,teamImg:p?.teamImg||null,points:q.points,state:q.state,captain:cap,total:q.points==null?null:q.points*(cap?2:1)};})
+    .sort((x,y)=>(y.total??-1e9)-(x.total??-1e9));
+   const calc=players.reduce((s,p)=>s+(p.total||0),0);
+   // Beendet: Kickbase-Punkte zaehlen (offiziell, korrigiert). Laufend: eigene Rechnung (Kickbase zeigt waehrend des Spieltags nicht immer den Stand).
+   const points=status==='finished'&&kb!=null?kb:calc;
+   return {...base,points,calc,kbPoints:kb??l.mdp??null,captain:l.cpt,open:players.filter(p=>p.state==='open').length,live:players.filter(p=>p.state==='live').length,players};
+  };
+  const duels=m.pairs.map(([x,y,px,py])=>{const A=side(x,px),B=side(y,py);
+   const done=status==='finished',diff=A.points!=null&&B.points!=null?A.points-B.points:null;
+   return {a:A,b:B,diff,winner:diff==null||!started?null:diff>0?x:diff<0?y:'draw',final:done};});
+  // H2H-Tabelle: Kickbase-Stand (hhsp, hhpl), dazu Siege/Unentschieden/Niederlagen aus allen angepfiffenen Spieltagen.
+  const rec={};
+  for(const mm of a.matchups||[]){const s2=md?.days.find(d=>d.day===mm.day)?.status;if(s2!=='live'&&s2!=='finished')continue;
+   for(const [x,y,px,py] of mm.pairs){if(px==null||py==null)continue;for(const [u,me,ot] of [[x,px,py],[y,py,px]]){const r=rec[u]||(rec[u]={w:0,d:0,l:0});if(me>ot)r.w++;else if(me<ot)r.l++;else r.d++;}}}
+  const table=(a.table?.rows||[]).map(r=>({...r,name:r.id==='1'?'Kickbase CPU':r.n,img:a.managers?.[r.id]?.uim||null,...(rec[r.id]||{w:0,d:0,l:0})})).sort((x,y)=>(x.hhpl??99)-(y.hhpl??99));
+  const value={day,name:m.name,status,start:m.start,firstKickoffUTC:mdd?.firstKickoffUTC||m.start,updatedAt:new Date().toISOString(),dataAt:a.updatedAt||null,source:a.source||null,
+   lineupsMissing:started&&!lu,duels,table,tableDay:a.table?.day||null};
+  const final=status==='finished'&&!!saved;
+  arenaDayCache.set(day,{at:Date.now(),final,value});
+  res.set('Cache-Control','no-store').json(value);
+ }catch(e){res.status(502).json({error:'Arena nicht abrufbar.',detail:e.message});}
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`KBL-Prototyp läuft auf http://localhost:${PORT}`);
   // Adressen fuer Handy/Tablet im selben WLAN anzeigen
