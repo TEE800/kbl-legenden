@@ -46,6 +46,7 @@
   else buy=side(t.buy,'von');
   if(t.status==='sold'||t.status==='start')sell=side(t.sell,'an');
   else if(t.status==='held')sell=`<span class="tr-price">${money(t.mv)}</span><small>Marktwert heute</small>`;
+  else if(!cur()?.current){sell=`<span class="tr-price muted">–</span><small>bei Saisonende noch im Kader</small>`;note='nicht verkauft';}
   else {sell=`<span class="tr-price muted">?</span><small title="Kein Verkauf im Kickbase-Verlauf und nicht mehr im Kader, z. B. weil der Spieler die Bundesliga verlassen hat">Spieler nicht mehr da</small>`;note='kein Verkaufspreis';}
   const d=t.diff;
   return `<li class="tr-trade ${t.status}"><div class="tr-player">${face(t.img,t.name)}<span><b>${esc(t.name)}</b>${t.days!=null?`<small>${t.status==='held'?'seit ':''}${t.days} ${t.days===1?'Tag':'Tage'}</small>`:''}</span></div>
@@ -65,7 +66,7 @@
    ${m.squadMissing?'<p class="error tiny">Das fehlt: der heutige Kader, darum kein Marktwert für die Spieler im Kader.</p>':''}
    <h4 class="tr-h">Verkaufte Spieler <small class="muted">(${sold.length})</small></h4>${sold.length?`<ol class="tr-trades">${sold.map(trade).join('')}</ol>`:'<p class="muted tiny">Noch keine Verkäufe.</p>'}
    ${!cur()?.current?'':`<h4 class="tr-h">Noch im Kader <small class="muted">(${held.length})</small></h4>${held.length?`<ol class="tr-trades">${held.map(trade).join('')}</ol>`:'<p class="muted tiny">Kein Spieler im Kader.</p>'}`}
-   ${unk.length?`<h4 class="tr-h">Ohne Verkauf <small class="muted">(${unk.length})</small></h4><ol class="tr-trades">${unk.map(trade).join('')}</ol>`:''}
+   ${unk.length?`<h4 class="tr-h">${cur()?.current?'Ohne Verkauf':'Bei Saisonende im Kader'} <small class="muted">(${unk.length})</small></h4><ol class="tr-trades">${unk.map(trade).join('')}</ol>`:''}
   </div></details>`;
  }
  function render(){
