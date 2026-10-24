@@ -1535,7 +1535,7 @@ function pngEncode(w,h,data){
 }
 // Kopf finden: Breite je Zeile (zusammenhängend um die Kopfmitte). Von oben wird der Kopf breiter, am Hals schmaler,
 // darunter kommen die Schultern. Schnitt an der schmalsten Stelle des Halses; alles außerhalb des Kopfes wird durchsichtig.
-const HEAD_VERSION=2;
+const HEAD_VERSION=3;
 function cropHead(buf){
  const img=pngDecode(buf);if(!img)return null;const {w,h,data}=img,A=(x,y)=>data[(y*w+x)*4+3]>100;
  let top=-1;for(let y=0;y<h&&top<0;y++)for(let x=0;x<w;x++)if(A(x,y)){top=y;break;}
@@ -1560,13 +1560,18 @@ function cropHead(buf){
  // Von vorn ist das Kinn etwa so breit wie der Hals: Schnitt erst dort, wo der Kragen beginnt (Breite wächst wieder),
  // dann ein Stück darüber, damit kein Stoff mitkommt.
  let cut=neck;while(cut+1<h&&W(cut+1)<=nw*1.08)cut++;
- neck=Math.max(top+1,cut-Math.round(peak*.02));
+ neck=Math.max(top+1,cut-Math.round(peak*.04));
  const bottom=neck;let l=w,r=0;for(let y=top;y<bottom;y++)if(L[y]>=0){l=Math.min(l,L[y]);r=Math.max(r,R[y]);}
  const ow=r-l+1,oh=bottom-top;if(ow<8||oh<peak*.9||oh>peak*2)return null;// unplausibel: lieber kein Foto
  const out=Buffer.alloc(ow*oh*4);
- for(let y=0;y<oh;y++){const yy=top+y,fade=Math.min(1,(oh-y)/Math.max(2,oh*.08));// unten weich auslaufen
+ // Keine geraden Halsränder (Kevin): unten läuft der Kopf in einem U zusammen wie ein Kinn. Im unteren Viertel nur, was in
+ // einer Halbellipse um die Halsmitte liegt (von Halsbreite auf ein Drittel), weicher Rand, ganz unten kurz ausblenden.
+ const nc=(L[bottom-1]+R[bottom-1])/2-l,Rr=Math.round(oh*.25),half=Math.max(nw,W(top+oh-Rr))/2+1;
+ for(let y=0;y<oh;y++){const yy=top+y,fade=Math.min(1,(oh-y)/Math.max(2,oh*.03));
+  const t=(y-(oh-Rr))/Rr,hw=t>0?half*(.35+.65*Math.sqrt(Math.max(0,1-t*t))):1e9;
   for(let x=0;x<ow;x++){const xx=l+x;if(L[yy]<0||xx<L[yy]||xx>R[yy])continue;const s=(yy*w+xx)*4,q=(y*ow+x)*4;
-   data.copy(out,q,s,s+4);out[q+3]=Math.round(out[q+3]*fade);}}
+   const edge=Math.max(0,Math.min(1,(hw-Math.abs(x+.5-nc))/2));if(!edge)continue;
+   data.copy(out,q,s,s+4);out[q+3]=Math.round(out[q+3]*fade*edge);}}
  return pngEncode(ow,oh,out);
 }
 const headCache=new Map();
