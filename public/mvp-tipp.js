@@ -206,7 +206,7 @@
   // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
   const ROW=88,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' faded':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
+   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' leader':''}${o.crown?' champ':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
     ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}${o.ko?'<span class="toon-dizzy">💫</span>':''}
     <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.ko?' <span class="toon-ko">K.O.</span>':''}</div></div>`;};
   const figs=[];
@@ -224,7 +224,7 @@
   const rows=groups.map(g=>`<div class="toon-row${bestIds.has(String(g.t.playerId))?' best':''}"><span class="mvp-rank">${g.place??'–'}</span><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${esc(r.m.name)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div></div>`).join('');
   // Während des Spieltags gleich offen und ohne Erklärtext (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel: kbl-keep-open).
-  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Halbtransparent mit Krone: wer gerade nach der Tippregel vorne liegt. Wer gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
+  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Mit Krone: wer gerade nach der Tippregel vorne liegt. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wer gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
  }
  function allTips(d){
   if(!d.reveal)return '';
