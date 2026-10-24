@@ -448,11 +448,9 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bums-intro-clean{margin-top:12px;font-size:13px;color:var(--ok)}
 .toon-track{height:120px}
 /* Wackelkopf (Kevin-Wunsch): nur der Kopf aus dem Kickbase-Foto, übergroß auf dem gezeichneten Körper.
-   .cut = Kopf per Canvas aus dem freigestellten Bild ausgeschnitten, .guess = Ersatz-Ausschnitt per CSS (Bild ohne CORS). */
-.toon-face{position:absolute;left:0;right:0;bottom:35px;margin:auto;display:none;z-index:1;transform-origin:50% 100%;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
-.toon-face img{display:block}
-.toon-face.cut{display:block;width:fit-content}.toon-face.cut img{height:46px;width:auto;max-width:56px;object-fit:contain}
-.toon-face.guess{display:block;width:42px;height:42px;border-radius:50%;overflow:hidden;background:#f5c9a0;border:2px solid #111}.toon-face.guess img{width:210%;max-width:none;margin:-4% 0 0 -55%}
+   Der Kopf wird auf dem Server ausgeschnitten (/api/mvp-tipps/head/:id, online heads/v1/<id>.png); sitzt unten am Hals. */
+.toon-face{position:absolute;left:-20px;right:-20px;margin:0 auto;bottom:33px;height:50px;width:auto;max-width:60px;object-fit:contain;transform-origin:50% 100%;z-index:1;display:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.toon-runner.has-face .toon-face{display:block}
 .toon-runner.run .toon-face{animation:toonWobble .38s ease-in-out infinite alternate}
 .toon-runner.has-face .toon-head{display:none}
 .toon-runner.has-face .toon-crown{top:-40px;left:10px;transform:rotate(-12deg)}
