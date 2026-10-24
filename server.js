@@ -379,7 +379,11 @@ async function getServiceToken(force = false) {
 // Optional eigenes Konto nur fuer die Challenges (KBL_CHALLENGE_EMAIL/KBL_CHALLENGE_PASSWORD), weil die Challenge-Wertung
 // die selbst gespielten Challenges des Kontos braucht. Ohne diese Angaben wird der Dienst-Login genommen.
 let challengeToken = null, challengeTokenAt = 0;
+// Auf GitHub (Server in den USA) nie mit T800 anmelden: jede Anmeldung von dort stellt Kevins Kickbase-App auf den
+// US-Markt um (Ligen fehlen, Push englisch), auch mit Accept-Language de. Challenges und Fotos kommen dort aus den Dateien vom PC.
+const ON_GITHUB = !!process.env.GITHUB_ACTIONS;
 async function getChallengeToken() {
+  if (ON_GITHUB) return null;
   const email = process.env.KBL_CHALLENGE_EMAIL, pass = process.env.KBL_CHALLENGE_PASSWORD;
   if (!email || !pass) return getServiceToken();
   if (challengeToken && Date.now() - challengeTokenAt < 3 * 3600 * 1000) return challengeToken;
@@ -896,7 +900,7 @@ app.get('/api/player-probe', async (req, res) => {
 
 
 // Challenge-Wertung der Legenden (Ansicht "Challenges"), siehe challenges.js.
-registerChallenges(app, { kbFetch, getToken, validManager, autoToken: async () => (await getChallengeToken().catch(() => null)) || newestToken() });
+registerChallenges(app, { kbFetch, getToken, validManager, autoToken: async () => ON_GITHUB ? null : (await getChallengeToken().catch(() => null)) || newestToken() });
 
 // Testabfrage Challenges (nur lesend, nur GET): zeigt die Rohform der Kickbase-Challenge-Daten.
 // Ohne id: Uebersicht, aktuelle Auswahl, Archiv, Lobby. Mit ?id=...: Profil, Tabelle, Ranking, Top 10, Aufstellung.
@@ -1439,11 +1443,14 @@ async function tippResult(token,day,rule,rows){
   message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
 }
 // Spielerfotos: Ohne Kickbase-Abo liefert Kickbase nur Silhouetten (Kevin, T1000 hat kein Abo). Darum die Bildpfade
-// mit dem Challenge-Konto (T800, mit Abo) holen, falls eingerichtet; sonst bleiben die Pfade des normalen Logins.
+// mit dem Challenge-Konto (T800, mit Abo) holen, falls eingerichtet, und in kbl-player-photos.json sichern.
+// Auf GitHub wird nur diese Datei gelesen (keine T800-Anmeldung von dort, siehe getChallengeToken).
+const PHOTO_FILE=path.join(process.cwd(),'kbl-player-photos.json');
 let photoCache=null;
+function readPhotoFile(){try{const j=JSON.parse(fs.readFileSync(PHOTO_FILE,'utf8'));const m=new Map(Object.entries(j.photos||{}));return m.size?m:null;}catch{return null;}}
 async function playerPhotos(){
- if(!process.env.KBL_CHALLENGE_EMAIL||!process.env.KBL_CHALLENGE_PASSWORD)return null;
  if(photoCache&&Date.now()-photoCache.at<6*3600*1000)return photoCache.map;
+ if(ON_GITHUB||!process.env.KBL_CHALLENGE_EMAIL||!process.env.KBL_CHALLENGE_PASSWORD){const m=readPhotoFile();if(m)photoCache={at:Date.now(),map:m};return m;}
  const token=await getChallengeToken();
  const table=await kbFetch('/v4/competitions/1/table',{token});
  const teams=extractEntities(table,['ti','tid','i','id'],['tn','n','name']);
@@ -1452,7 +1459,7 @@ async function playerPhotos(){
   try{const prof=await kbFetch(`/v4/competitions/1/teams/${t.id}/teamprofile`,{token});const pl=extractEntities(prof,['pi','i','id'],['pn','n','ln','name']);
    if(pl)for(const [id,img] of imagesById(prof,pl.idKey))map.set(id,img);}catch{}
  }
- if(map.size)photoCache={at:Date.now(),map};
+ if(map.size){photoCache={at:Date.now(),map};try{fs.writeFileSync(PHOTO_FILE,JSON.stringify({updatedAt:new Date().toISOString(),photos:Object.fromEntries(map)},null,1));}catch{}}
  return map;
 }
 // Wackelköpfe (Kevin-Wunsch: nur der Kopf, ohne Kreis und ohne Schulteransatz). Das freigestellte Kickbase-Brustbild
