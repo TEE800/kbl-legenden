@@ -1184,10 +1184,12 @@ function centerTodoHtml(){
   const opts=t.options?.length?`<span class="center-options">${t.options.map(o=>`<span class="center-option${o.moved?' moved':''}"${o.uncertain?` title="Noch nicht sicher: ${safe(o.uncertain)}"`:''}>${o.moved?'✓ ':''}${o.uncertain?'? ':''}${safe(o.name)} <small>${fmt(o.points)} Pkt.${o.uncertain?' · unsicher':''}${o.clash?` · Letzter müsste ${safe(o.clash)} abgeben`:''}</small></span>`).join('')}</span>`:'';
   return {key:t.key,mid:t.managerId,manager:t.manager,todo:true,finished,html:`<li class="${finished?'center-done':''}"><label class="center-check" title="${auto?'Von der App als erledigt erkannt':'Abhaken, wenn erledigt'}"><input type="checkbox" data-todo-key="${safe(t.key)}" ${finished?'checked':''} ${auto||a.probe?'disabled':''}></label><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${safe(t.text)}</span><span class="center-status">${status}</span>${saleInfo(t,finished)}${anyPick(t)}${opts}${detail(t)}${a.probe?'':`<button type="button" class="ghost center-remove" data-todo-remove="${safe(t.key)}" title="Falls die App hier falsch gerechnet hat">✕ Strafe entfernen</button>`}</span></li>`};
  });
- // Wer bei UM, DD, RK, BN oder AH einen Spieler bekommt, ist ebenfalls betroffen (zählt als Bumsung).
+ // Wer bei UM, DD, RK, BN oder AH einen Spieler bekommt, ist ebenfalls betroffen (zählt als Bumsung). Käufer eines TL-Spielers nicht.
  const midOf=n=>[...(d.plausibility||[])].find(p=>p.manager===n)?.managerId||null;
  for(const t of todos){if(gone(t))continue;const g=checks[t.key]?.target,k=todoPick(t);let to=(t.to||[]).map(r=>({...r,playerName:k==='dd'&&g?g:r.playerName}));
   if(k==='to'&&g)to=g==='Markt'?[]:[{managerId:midOf(g),manager:g,playerName:todoPlayer(t)}];
+  // TL nur in erster Ebene (Kevin-Vorgabe): Wer den Teamlimit-Spieler kauft, gehört nicht zur BumsParade.
+  if(t.rule==='TL')continue;
   for(const r of to){const giver=rows.find(x=>x.key===t.key);
   rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${recvVerb(t.rule)} ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}}
  // Magic Miyoshi: Der bestimmte Manager ist ebenfalls betroffen.
@@ -1387,7 +1389,7 @@ function bumsCounts(d,checks){
   const to0=to[0],moved=to0?.playerName&&['DD','AH','RK','BN','TL','UM'].includes(t.rule)?`${t.rule==='AH'||t.rule==='TL'?'verkauft':'gibt'} ${to0.playerName} an ${to.map(r=>r.manager).join(', ')}`:pk==='to'&&tgt==='Markt'?`verkauft ${pl||'den Spieler'} an den Markt`:null;
   const mmTo=t.rule==='MM'?tgt:null;
   add(t.managerId,t.manager,t.rule,'o',t.rule==='MM'?(mmTo?`verteilt MM an ${mmTo}`:'verteilt MM · Empfänger noch in der BumsParade auswählen'):(moved||t.text));
-  for(const r of to)add(r.managerId,r.manager,t.rule,'i',`${recvVerb(t.rule)} ${r.playerName||'einen Spieler'} von ${t.manager}`);
+  if(t.rule!=='TL')for(const r of to)add(r.managerId,r.manager,t.rule,'i',`${recvVerb(t.rule)} ${r.playerName||'einen Spieler'} von ${t.manager}`);
   if(mmTo)add(null,mmTo,'MM','i',`bekommt MM von ${t.manager}: einen Spieler weniger aufstellen`);}
  for(const u of (d.autoEvents?.error?[]:(d.autoEvents?.unclear||[]))){const g=checks?.[unclearKey(u)]?.target,pn=u.playerName||'den Spieler';
   if(g==='Entfällt')continue;
