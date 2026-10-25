@@ -90,6 +90,10 @@ try {
       if (needed) await save(u);
     }
   }
+  // Spieltag gespielt, aber von Kickbase noch nicht abgeschlossen (Ranking il, meist bis zum Abend danach): LIVE-Anzeigen weiter
+  // aktualisieren (Kevin-Wunsch). Der Server prueft il selbst und liefert sonst "beendet".
+  const closing = !live && status?.lastFinishedDay;
+  if (closing && rankingLive(`/api/ranking/${LEAGUE}?dayNumber=${closing}`)) { await save(`/api/live-points/${closing}`); await save(`/api/rule-live/${closing}`); }
   // MVP-Tipp: Regeln und aufgedeckte Tipps (nur angepfiffene Spieltage) vom Online-Tippdienst in kbl-mvp-tipps.json uebernehmen,
   // damit die App sie anzeigt und nach dem Spieltag auswertet. Verdeckte Tipps kommen hier nie an.
   if (TIPP_DIENST) {

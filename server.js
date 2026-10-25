@@ -1940,11 +1940,17 @@ app.get('/api/rule-live/:day',async(req,res)=>{
  if(!day)return res.status(400).json({error:'Ungültiger Spieltag.'});
  try{
   const md=await loadMatchdays(),st=md.days.find(d=>d.day===day)?.status;
-  if(st!=='live')return res.set('Cache-Control','no-store').json({day,status:st||'unknown',live:false,message:st==='finished'?'Spieltag beendet: Die echte BumsParade gibt es über „BumsParade prüfen“.':'Spieltag hat noch nicht begonnen.'});
+  // Alle Spiele vorbei, aber Kickbase hat den Spieltag noch nicht abgeschlossen (Ranking il, meist bis zum Abend danach):
+  // bleibt LIVE (Kevin-Wunsch), closing = true.
+  const ended=()=>res.set('Cache-Control','no-store').json({day,status:st||'unknown',live:false,message:st==='finished'?'Spieltag beendet: Die echte BumsParade gibt es über „BumsParade prüfen“.':'Spieltag hat noch nicht begonnen.'});
+  const maybeClosing=st==='finished'&&day===md.lastFinishedDay;
+  if(st!=='live'&&!maybeClosing)return ended();
   const c=ruleLiveCache.get(day);
   if(c&&Date.now()-c.at<5*60e3)return res.set('Cache-Control','no-store').json(c.value);
   const memo=new Map(),get=p=>{if(!memo.has(p))memo.set(p,kbFetch(p,{token}).catch(e=>{memo.delete(p);throw e;}));return memo.get(p);};
   const ranking=await get(`/v4/leagues/6422780/ranking?dayNumber=${day}`);
+  if(st!=='live'&&ranking.il!==true)return ended();
+  const closing=st!=='live';
   const users=(ranking.us||[]).filter(u=>validManager(u.i)&&String(u.n||'').toLowerCase()!=='t1000');
   const snaps=readSnapshots(),notes=[];
   const lineups=users.map(u=>{const lp=(u.lp||[]).filter(x=>x!=null).map(String),s=snaps[`${day}:${u.i}`],own=Array.isArray(s?.playerIds)?s.playerIds.map(String):[];
@@ -2027,7 +2033,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7};
   items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
-  const value={day,status:'live',live:true,updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
+  const value={day,status:'live',live:true,...(closing?{closing:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
    standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
    items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,
    // Punkte aller Spieler mit beendetem Spiel: Push-Entwarnung, wenn eine gemeldete Schnapszahl korrigiert wird (worker.js).
