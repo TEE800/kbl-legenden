@@ -2017,7 +2017,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
    const winners=roster.filter(m=>m.dayPoints===top),last=roster.filter(m=>m.dayPoints===low);
    dd={winners:winners.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints,...ddCandidates(m.players,ex)})),last:last.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})),tie:winners.length!==1||last.length!==1};
    const lastNames=last.map(m=>m.name).join(', ');
-   for(const w of dd.winners)item('DD',w,`führt mit ${fmtNum(w.dayPoints)} Punkten: müsste einen dieser Spieler an ${lastNames} abgeben: ${w.candidates.map(p=>`${p.playerName} (${fmtNum(p.points)})`).join(', ')||'keiner frei'}`,{role:'give',to:dd.last.map(l=>String(l.manager||l.name))});
+   for(const w of dd.winners)item('DD',w,`führt mit ${fmtNum(w.dayPoints)} Punkten: müsste einen dieser Spieler an ${lastNames} abgeben: ${w.candidates.map(p=>`${p.playerName} (${fmtNum(p.points)})`).join(', ')||'keiner frei'}`,{role:'give',to:dd.last.map(l=>String(l.manager||l.name)),cands:w.candidates.map(p=>({id:String(p.playerId),name:p.playerName,points:p.points,state:p.state||null}))});
    for(const l of dd.last)item('DD',l,`ist mit ${fmtNum(l.dayPoints)} Punkten Letzter: dürfte sich einen Spieler von ${dd.winners.map(w=>w.manager).join(', ')} aussuchen`,{role:'get'});
    if(dd.tie)notes.push('Gleichstand an der Spitze oder am Ende: Die Drehtür gilt dann für alle mit gleicher Punktzahl.');
    mm=calculateMm(roster);
