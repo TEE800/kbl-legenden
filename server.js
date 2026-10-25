@@ -2373,7 +2373,9 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
         for(const t of todos){
           if(!['AH','RK','BN'].includes(t.rule))continue;
           const pid=String(t.key).split(':')[2];if(!pid)continue;
-          const sale=await firstSale(t.managerId,pid);if(!sale)continue;
+          const sale=await firstSale(t.managerId,pid);
+          // Nie raten: Steht kein Verkauf im Verlauf, ist der heutige Besitzer nur ein Hinweis (Kevin-Meldung Suzuki ST 1).
+          if(!sale){if(await salesOf(String(t.managerId))&&t.check?.state==='done'&&t.to?.[0]?.manager)t.check={state:'unknown',note:`heute bei ${t.to[0].manager}, Verkauf nicht im Transfer-Verlauf gefunden, bitte prüfen`};continue;}
           const buyer=sale.othnm?byName(sale.othnm):null;
           if(buyer&&String(buyer.i)!==String(t.managerId)){t.to=[{managerId:String(buyer.i),manager:String(buyer.n),playerName:pname({playerId:pid})}];t.check={state:'done',note:`laut Transfer-Verlauf an ${buyer.n}`};}
           else if(!sale.othnm){delete t.to;t.check={state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};}
