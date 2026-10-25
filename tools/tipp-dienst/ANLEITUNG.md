@@ -69,3 +69,16 @@ Ohne diesen Schritt muss `worker.js` nach einer Änderung von Hand neu in den Cl
    - Name `CLOUDFLARE_API_TOKEN`, Wert: der Schlüssel aus Schritt 3
    - Nochmal: Name `CLOUDFLARE_ACCOUNT_ID`, Wert: die Account ID aus Schritt 4
 Ab dann spielt GitHub jede Änderung am Tippdienst selbst ein.
+
+## Push-Nachrichten einschalten (einmalig, ca. 5 Minuten)
+Der Tippdienst verschickt auch die Push-Nachrichten (gebumst, Tippschluss in 1 Stunde, MVP-Tipp fertig).
+Die nötigen Schlüssel erzeugt er beim ersten Mal selbst, ein Geheimnis musst du nicht anlegen.
+1. Neuen Code einspielen: wie in Schritt 3 den ganzen Text von
+   https://raw.githubusercontent.com/TEE800/kbl-legenden/main/tools/tipp-dienst/worker.js
+   in den Cloudflare-Editor kopieren und **Deploy** klicken
+   (entfällt, wenn GitHub das schon automatisch macht, siehe unten).
+2. Im Dienst `kbl-tipps` auf **Settings** → **Trigger Events** (oder „Triggers“) → **Add** → **Cron Triggers**.
+3. Bei „Cron“ eintragen: `*/5 * * * *` (heißt: alle 5 Minuten) → **Add** bzw. **Save**.
+   Mit dem automatischen Einspielen (unten) steht das schon in `wrangler.toml` und wird mit eingespielt.
+4. Fertig. Jeder Manager schaltet Push auf der Online-Seite selbst ein: oben auf die 🔔 tippen.
+   iPhone: nur, wenn die Seite auf dem Home-Bildschirm liegt (die Glocke erklärt das).

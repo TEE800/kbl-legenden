@@ -2,7 +2,7 @@
 // Nimmt die verdeckten Tipps an, solange der Spieltag nicht angepfiffen ist, und zeigt sie erst danach.
 // Managerliste, Spielerliste und Regel-Vorlagen liest er von der Online-Seite (data/mvp-tipps*.json),
 // Anstosszeiten von OpenLigaDB. Kickbase braucht er nicht. Die Auswertung macht weiter die App (GitHub-Export holt /export).
-// Einstellungen im Cloudflare-Dashboard: KV-Bindung TIPPS, Variable SITE_URL, Geheimnis ADMIN_CODE. Anleitung: ANLEITUNG.md.
+// Einstellungen im Cloudflare-Dashboard: KV-Bindung TIPPS, Variable SITE_URL, Geheimnis ADMIN_CODE, Cron-Trigger */5 * * * * (Push). Anleitung: ANLEITUNG.md.
 const SEASON_URL = 'https://api.openligadb.de/getmatchdata/bl1/2026';
 const json = (body, status = 200, cors = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors } });
 const enc = new TextEncoder();
@@ -99,10 +99,284 @@ async function checkCode(env, id, code, set) {
 }
 function isAdmin(env, given) { return !!env.ADMIN_CODE && typeof given === 'string' && sameText(given, String(env.ADMIN_CODE)); }
 
+// ===== Push-Nachrichten (Web Push, Kevin-Wunsch) =====
+// Jeder schaltet auf der Online-Seite (🔔 oben) selbst ein und waehlt seinen Manager. Abos liegen in KV unter sub:<hash>
+// (Daten in den Metadaten, damit eine einzige Liste reicht). Schluessel (VAPID) erzeugt der Dienst beim ersten Mal selbst
+// und legt sie in KV ab (push:vapid). Der Zeitplan (Cron alle 5 Min.) liest die Online-Seite und schickt:
+//  bums: "gebumst" (BD, RK, BN, UM) erst nach Spielende, je Spieler hoechstens einmal, je Manager gebuendelt,
+//        erst wenn der Treffer 8 Min. lang stabil ist; nach der Abrechnung des Spieltags einmal alle Aufgaben (DD, AH, MM ...).
+//  tipp: Tippschluss in einer Stunde, nur an Manager ohne Tipp.   mvp: getippter Spieler hat sein Spiel beendet.
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(s).length + 3) % 4)), c => c.charCodeAt(0));
+const cat = (...a) => { const out = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of a) { out.set(x, o); o += x.length; } return out; };
+async function hmac(key, data) { const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); return new Uint8Array(await crypto.subtle.sign('HMAC', k, data)); }
+const PUSH_HOSTS = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)$/;
+const PUSH_PREFS = ['bums', 'tipp', 'mvp', 'spieltag', 'arena'];
+const BERLIN = { timeZone: 'Europe/Berlin' };
+
+async function vapid(env) {
+  const v = await env.TIPPS.get('push:vapid', 'json');
+  if (v) return v;
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const nv = { publicKey: b64u(await crypto.subtle.exportKey('raw', kp.publicKey)), privateJwk: await crypto.subtle.exportKey('jwk', kp.privateKey), createdAt: new Date().toISOString() };
+  await env.TIPPS.put('push:vapid', JSON.stringify(nv));
+  return nv;
+}
+// Verschluesselung nach RFC 8291 (aes128gcm), Anmeldung beim Push-Dienst nach RFC 8292 (VAPID).
+async function encryptPayload(sub, text) {
+  const ua = unb64u(sub.p), auth = unb64u(sub.a);
+  const kp = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const as = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', ua, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, kp.privateKey, 256));
+  const ikm = await hmac(await hmac(auth, shared), cat(enc.encode('WebPush: info\0'), ua, as, new Uint8Array([1])));
+  const salt = crypto.getRandomValues(new Uint8Array(16)), prk = await hmac(salt, ikm);
+  const cek = (await hmac(prk, cat(enc.encode('Content-Encoding: aes128gcm\0'), new Uint8Array([1])))).slice(0, 16);
+  const nonce = (await hmac(prk, cat(enc.encode('Content-Encoding: nonce\0'), new Uint8Array([1])))).slice(0, 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, cat(enc.encode(text), new Uint8Array([2]))));
+  return cat(salt, new Uint8Array([0, 0, 16, 0]), new Uint8Array([as.length]), as, ct);
+}
+const jwtMemo = new Map();
+async function vapidHeader(env, keys, endpoint) {
+  const aud = new URL(endpoint).origin, c = jwtMemo.get(aud);
+  if (c && c.exp - Date.now() > 3600e3) return c.value;
+  const exp = Date.now() + 12 * 3600e3;
+  const head = b64u(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const body = b64u(enc.encode(JSON.stringify({ aud, exp: Math.floor(exp / 1000), sub: env.VAPID_SUBJECT || String(env.SITE_URL || 'https://tee800.github.io/kbl-legenden') })));
+  const pk = await crypto.subtle.importKey('jwk', keys.privateJwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, pk, enc.encode(`${head}.${body}`));
+  const value = `vapid t=${head}.${body}.${b64u(sig)}, k=${keys.publicKey}`;
+  jwtMemo.set(aud, { exp, value });
+  return value;
+}
+// Eine Nachricht an ein Abo. Antwortet der Push-Dienst mit 404/410, ist das Abo erloschen und wird geloescht.
+async function sendPush(env, keys, sub, msg) {
+  const body = await encryptPayload(sub, JSON.stringify(msg));
+  const r = await fetch(sub.e, { method: 'POST', body, headers: { Authorization: await vapidHeader(env, keys, sub.e), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: String(msg.ttl || 6 * 3600), Urgency: 'normal', ...(msg.tag ? { Topic: String(msg.tag).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) } : {}) } });
+  if (r.status === 404 || r.status === 410) { await env.TIPPS.delete(sub.key); return 'gone'; }
+  return r.ok ? 'ok' : `HTTP ${r.status}`;
+}
+async function subKey(endpoint) { return 'sub:' + hex(await crypto.subtle.digest('SHA-256', enc.encode(endpoint))).slice(0, 40); }
+async function listSubs(env) {
+  const out = []; let cursor;
+  do {
+    const page = await env.TIPPS.list({ prefix: 'sub:', cursor });
+    for (const k of page.keys) { const m = k.metadata || await env.TIPPS.get(k.name, 'json'); if (m?.e) out.push({ ...m, key: k.name }); }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return out;
+}
+async function freshSite(env, file) {
+  const base = String(env.SITE_URL || '').replace(/\/+$/, '');
+  const r = await fetch(`${base}/data/${file}?t=${Math.floor(Date.now() / 60e3)}`, { cf: { cacheTtl: 0 } });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`${file}: HTTP ${r.status}`);
+  const d = await r.json();
+  return d && d.__status ? null : d;
+}
+const fmtTime = ms => new Date(ms).toLocaleTimeString('de-DE', { ...BERLIN, hour: '2-digit', minute: '2-digit' });
+const fmtDay = ms => new Date(ms).toLocaleDateString('de-DE', { ...BERLIN, weekday: 'short' }) + ' ' + fmtTime(ms);
+const berlinHour = () => Number(new Intl.DateTimeFormat('en-GB', { ...BERLIN, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
+// Waehrend des Spieltags nur melden, was passiert ist, keine Aufforderung (Kevin-Vorgabe: verkauft wird erst nach der Abrechnung).
+const BUMS_LIVE = { BD: 1, RK: 1, BN: 1, UM: 1 };
+function liveLine(it) {
+  if (it.rule === 'BD') return `🍺 ${it.playerName} ist besoffen!${Number.isFinite(it.points) ? ` (${it.points} Punkte)` : ''}`;
+  if (it.rule === 'UM') return `UM · ${it.playerName}: Foul-Elfmeter verursacht`;
+  return `${it.rule} · ${it.playerName}${it.reason ? `: ${it.reason}` : ''}`;
+}
+
+// Zeitplan: alle 5 Minuten. Schreibt in KV nur, wenn sich etwas tut (kostenloser Tarif: 1000 Schreibvorgaenge am Tag).
+async function pushTick(env) {
+  const now = Date.now(), days = await matchdays(), outbox = [];
+  const stateKey = d => `push:st:${d}`;
+  // 1. Tippschluss in einer Stunde (nur wer noch nicht getippt hat).
+  const next = days.find(d => d.status === 'upcoming'), kick = next?.firstKickoffUTC ? Date.parse(next.firstKickoffUTC) : NaN;
+  if (Number.isFinite(kick) && kick - now > 0 && kick - now <= 61 * 60e3 && !(await env.TIPPS.get(`push:done:tipp:${next.day}`))) {
+    const [tips, rule] = await Promise.all([listTips(env, next.day), env.TIPPS.get(`rule:${next.day}`, 'json')]);
+    const mins = Math.max(1, Math.round((kick - now) / 60e3));
+    outbox.push({ pref: 'tipp', skip: id => !!tips[id], done: async () => env.TIPPS.put(`push:done:tipp:${next.day}`, '1', { expirationTtl: 14 * 86400 }),
+      msg: () => ({ title: `⏰ Tippschluss in ${mins} Minuten`, body: `Du hast für Spieltag ${next.day} noch keinen MVP-Tipp. Anstoß ${fmtTime(kick)} Uhr: ${next.firstMatch || ''}${rule?.text ? `\nTippregel: ${rule.text}` : ''}`.trim(), url: './#mvp', tag: `tipp${next.day}`, ttl: Math.max(60, Math.round((kick - now) / 1000)) }) });
+  }
+  // 2. Laufende und gerade beendete Spieltage.
+  const active = days.filter(d => d.status === 'live' || (d.status === 'finished' && d.firstKickoffUTC && now - Date.parse(d.firstKickoffUTC) < 5 * 86400e3));
+  const states = new Map();
+  for (const d of active) {
+    const st = (await env.TIPPS.get(stateKey(d.day), 'json')) || { seen: {}, sent: {}, end: false };
+    if (d.status === 'finished' && st.end) continue;
+    states.set(d.day, { st, dirty: false });
+    const S = states.get(d.day), stable = k => { if (!S.st.seen[k]) { S.st.seen[k] = now; S.dirty = true; return false; } return now - S.st.seen[k] >= 8 * 60e3; };
+    if (d.status === 'live') {
+      const live = await freshSite(env, `rule-live_${d.day}.json`).catch(() => null);
+      const per = new Map();
+      for (const it of (live?.live ? live.items || [] : [])) {
+        if (!BUMS_LIVE[it.rule] || it.unclear || it.state !== 'done' || !it.playerId) continue;
+        const k = `${it.rule}:${it.managerId}:${it.playerId}`;
+        if (S.st.sent[k] || !stable(k)) continue;
+        if (!per.has(it.managerId)) per.set(it.managerId, []);
+        per.get(it.managerId).push({ k, line: liveLine(it), pid: it.playerId, name: it.playerName });
+        // UM: Der Besitzer des gefoulten Spielers bekaeme ihn (Kevin-Wunsch: "Du bekommst einen Spieler").
+        if (it.rule === 'UM') for (const name of (it.to || [])) {
+          const r = (live.standings || []).find(x => x.manager === name), rk = r && `UMR:${r.managerId}:${it.playerId}`;
+          if (!r || S.st.sent[rk]) continue;
+          if (!per.has(r.managerId)) per.set(r.managerId, []);
+          per.get(r.managerId).push({ k: rk, get: 1, line: `🎁 UM · ${it.playerName} (${it.manager}) hat deinen Spieler gefoult und ginge an dich` });
+        }
+      }
+      // Entwarnung (Kevin-Wunsch): Wurde "besoffen" gemeldet und ist die Schnapszahl durch eine Korrektur weg, einmal "wieder nuechtern".
+      const schnaps = n => Math.abs(n) >= 11 && /^(\d)\1+$/.test(String(Math.abs(n)));
+      for (const k of Object.keys(S.st.sent)) {
+        const [r, mid, pid] = k.split(':'), pts = live?.donePoints?.[pid], nk = `NUE:${mid}:${pid}`;
+        if (r !== 'BD' || !live?.live || !Number.isFinite(pts) || schnaps(pts) || S.st.sent[nk] || !stable(nk)) continue;
+        const name = (live.items || []).find(x => x.playerId === pid)?.playerName || S.st.names?.[pid] || 'Dein Spieler';
+        if (!per.has(mid)) per.set(mid, []);
+        per.get(mid).push({ k: nk, calm: 1, line: `☕ ${name} ist wieder nüchtern (jetzt ${pts} Punkte)` });
+      }
+      for (const [mid, list] of per) outbox.push({ pref: 'bums', only: mid, done: () => { for (const x of list) { S.st.sent[x.k] = now; if (x.pid) (S.st.names ||= {})[x.pid] = x.name; } S.dirty = true; },
+        msg: () => ({ title: list.every(x => x.calm) ? '☕ Entwarnung' : list.every(x => x.get) ? '🎁 Du bekommst vielleicht einen Spieler' : list.length > 1 ? `💥 Du wurdest ${list.length}× gebumst!` : '💥 Du wurdest gebumst!', body: list.map(x => x.line).join('\n') + (list.every(x => x.calm) ? '' : '\nVorläufig, abgerechnet wird nach dem Spieltag.'), url: './#accounting', tag: `bums${d.day}` }) });
+      // MVP-Tipp: getippter Spieler hat sein Spiel beendet.
+      const mt = await freshSite(env, `mvp-tipps_${d.day}.json`).catch(() => null), tr = mt?.tracking;
+      const lead = tr?.mvp?.players?.length ? `${tr.mvp.players.map(p => p.name).join(', ')} (${tr.mvp.points} Punkte)` : '';
+      for (const m of (mt?.managers || [])) {
+        const t = m.tip, p = t && tr?.players?.[t.playerId], k = `MVP:${m.id}`;
+        if (!p || p.state !== 'done' || !Number.isFinite(p.points) || S.st.sent[k] || !stable(k)) continue;
+        outbox.push({ pref: 'mvp', only: String(m.id), done: () => { S.st.sent[k] = now; S.dirty = true; },
+          msg: () => ({ title: `🎯 ${t.player} ist fertig: ${p.points} Punkte`, body: `Dein MVP-Tipp für Spieltag ${d.day}: getippt ${t.points}, geholt ${p.points}.${lead ? `\nGerade vorn laut Tippregel: ${lead}` : ''}`, url: './#mvp', tag: `mvp${d.day}` }) });
+      }
+    } else if (berlinHour() >= 8) {
+      // Spieltag beendet (laut Online-Seite). Nachts (vor 8 Uhr) wird gewartet. Jeder Teil einmal, je Manager eine Nachricht;
+      // ein Teil gilt erst als erledigt, wenn alle seine Nachrichten raus sind (SEC:…), danach ist der Spieltag fertig (end).
+      const status = await freshSite(env, 'matchday-status.json').catch(() => null);
+      if (status?.days?.find(x => x.day === d.day)?.status !== 'finished') continue;
+      const SECS = ['acc', 'sum', 'mvp', 'arena'], secDone = sec => () => { S.st.sent['SEC:' + sec] = now; if (SECS.every(x => S.st.sent['SEC:' + x])) S.st.end = true; S.dirty = true; };
+      const perMsg = (sec, pref, per, make) => {
+        for (const [mid, data] of per) { const k = `${sec.toUpperCase()}:${mid}`; if (S.st.sent[k]) continue;
+          outbox.push({ pref, only: mid, done: () => { S.st.sent[k] = now; S.dirty = true; }, msg: () => make(mid, data) }); }
+        outbox.push({ pref: null, done: secDone(sec) });
+      };
+      const open = sec => !S.st.sent['SEC:' + sec];
+      // a) BumsParade: eigene Aufgaben und was man bekommt (DD: Letzter sucht aus, UM: Empfaenger), ohne Erledigtes und schon Gemeldetes.
+      if (open('acc')) {
+        const acc = await freshSite(env, `rule-accounting_${d.day}.json`).catch(() => null);
+        if (acc?.ready && acc.complete) {
+          const per = new Map(), add = (mid, line) => { mid = String(mid); if (!per.has(mid)) per.set(mid, { give: [], get: [] }); per.get(mid)[line.get ? 'get' : 'give'].push(line.text); };
+          const todo = new Map((acc.todos || []).map(t => [t.key, t]));
+          for (const t of (acc.todos || [])) if (t.managerId && t.text && !t.check?.removed && t.check?.state !== 'done' && !S.st.sent[t.key]) add(t.managerId, { text: `${t.rule} · ${t.text}` });
+          for (const w of (acc.dd?.winners || [])) {
+            const t = todo.get(`DD:${w.managerId}`); if (!t || t.check?.removed || t.check?.state === 'done') continue;
+            for (const l of (acc.dd?.lastPlace || [])) add(l.managerId, { get: 1, text: `DD · Du darfst dir einen Spieler von ${w.manager} aussuchen${(w.candidates || []).length ? ': ' + w.candidates.map(c => c.playerName).join(', ') : ''}` });
+          }
+          for (const a of (acc.autoEvents?.actions || [])) {
+            const t = todo.get(`UM:${a.managerId}:${a.playerId}`);
+            if (a.rule === 'UM' && a.recipientId && t && !t.check?.removed && t.check?.state !== 'done') add(a.recipientId, { get: 1, text: `UM · Du bekommst ${a.playerName} von ${a.manager}` });
+          }
+          const dl = acc.saleDeadline ? Date.parse(acc.saleDeadline) : NaN;
+          perMsg('acc', 'bums', per, (mid, x) => ({ title: x.give.length ? `💥 BumsParade Spieltag ${d.day}` : `🎁 BumsParade Spieltag ${d.day}: du bekommst was`,
+            body: [...x.give, ...x.get].join('\n') + (Number.isFinite(dl) ? `\nFrist: ${fmtDay(dl)} Uhr` : ''), url: './#accounting', tag: `abr${d.day}`, ttl: 24 * 3600 }));
+        }
+      }
+      // b) Spieltag vorbei: Sieger, Letzter, eigener Platz (ohne T1000).
+      if (open('sum')) {
+        const rk = await freshSite(env, `ranking_6422780_dayNumber_${d.day}.json`).catch(() => null);
+        const us = (rk?.us || []).filter(u => String(u.i) !== '3783040' && String(u.n || '').toLowerCase() !== 't1000' && Number.isFinite(u.mdp));
+        if (us.length && !rk.il && us.some(u => u.mdp)) {
+          const day = [...us].sort((a, b) => b.mdp - a.mdp), all = [...us].sort((a, b) => (b.sp || 0) - (a.sp || 0));
+          const top = day.filter(u => u.mdp === day[0].mdp), low = day.filter(u => u.mdp === day[day.length - 1].mdp);
+          const place = (list, u, f) => 1 + list.filter(x => f(x) > f(u)).length;
+          const per = new Map(us.map(u => [String(u.i), u]));
+          perMsg('sum', 'spieltag', per, (mid, u) => {
+            const p = place(day, u, x => x.mdp), win = top.some(x => x === u), last = low.some(x => x === u);
+            return { title: win ? `🥇 Du hast Spieltag ${d.day} gewonnen!` : last ? `🪦 Letzter an Spieltag ${d.day}` : `📊 Spieltag ${d.day} ist vorbei`,
+              body: `Sieger: ${top.map(x => `${x.n} (${x.mdp})`).join(', ')}\nLetzter: ${low.map(x => `${x.n} (${x.mdp})`).join(', ')}\nDu: Platz ${p} mit ${u.mdp} Punkten, gesamt Platz ${place(all, u, x => x.sp || 0)}`, url: './#table', tag: `sum${d.day}` };
+          });
+        }
+      }
+      // c) MVP-Tipp-Ergebnis. Ohne Tippregel gibt es nichts zu melden.
+      if (open('mvp')) {
+        const mt = await freshSite(env, `mvp-tipps_${d.day}.json`).catch(() => null), r = mt?.result;
+        if (mt && !mt.rule) secDone('mvp')();
+        else if (r && ['ok', 'unsure', 'manual'].includes(r.status)) {
+          const names = new Map((mt.managers || []).map(m => [String(m.id), m])), win = (r.winners || []).map(String);
+          const mvp = r.mvp?.players?.length ? `${r.mvp.players.map(p => p.name).join(', ')} (${r.mvp.points} Punkte)` : '';
+          const per = new Map((mt.managers || []).map(m => [String(m.id), m]));
+          perMsg('mvp', 'mvp', per, (mid, m) => {
+            const row = (r.rows || []).find(x => String(x.managerId) === mid), t = m.tip;
+            const winTxt = win.length ? `Gewonnen: ${win.map(id => { const w = names.get(id); return w ? `${w.name}${w.tip ? ` (${w.tip.player}, ${w.tip.points})` : ''}` : id; }).join(', ')}` : r.status === 'manual' ? 'Den Gewinner bestimmt ihr selbst.' : 'Diesmal hat keiner gewonnen.';
+            return { title: win.includes(mid) ? `🏆 Du hast den MVP-Tipp gewonnen!` : `🎯 MVP-Tipp Spieltag ${d.day}: Ergebnis`,
+              body: [mvp && `MVP laut Tippregel: ${mvp}`, winTxt, t ? `Dein Tipp: ${t.player}, ${t.points}${Number.isFinite(row?.actual) && row.actual !== r.mvp?.points ? ` (geholt ${row.actual})` : ''}` : '', r.status === 'unsure' ? 'Noch vorläufig.' : ''].filter(Boolean).join('\n'), url: './#mvp', tag: `mvpr${d.day}` };
+          });
+        }
+      }
+      // d) Arena-Duell (zweite Liga, gleiche Manager-IDs).
+      if (open('arena')) {
+        const ar = await freshSite(env, `arena_${d.day}.json`).catch(() => null);
+        if (ar && !(ar.duels || []).length) secDone('arena')();
+        else if (ar?.status === 'finished' && ar.duels.every(x => x.final)) {
+          const per = new Map(), tab = ar.tableDay === d.day ? ar.table || [] : [];
+          for (const x of ar.duels) for (const [me, op] of [[x.a, x.b], [x.b, x.a]]) if (me?.id && !me.cpu) per.set(String(me.id), { me, op, w: x.winner });
+          perMsg('arena', 'arena', per, (mid, x) => {
+            const res = !x.w ? 'Unentschieden' : String(x.w) === mid ? 'Sieg' : 'Niederlage', row = tab.find(t => String(t.id) === mid);
+            return { title: `⚔️ Arena: ${res}${res === 'Sieg' ? '!' : ''}`, body: `Spieltag ${d.day}: ${x.me.points} : ${x.op.points} gegen ${x.op.name}${row ? `\nArena-Tabelle: Platz ${row.hhpl} (${row.hhsp} Punkte)` : ''}`, url: './#arena', tag: `arena${d.day}` };
+          });
+        }
+      }
+    }
+  }
+  // 3. Verschicken (hoechstens 40 Nachrichten je Lauf; der Rest kommt beim naechsten Lauf).
+  if (outbox.some(o => o.pref)) {
+    const [keys, subs] = await Promise.all([vapid(env), listSubs(env)]);
+    let budget = 40;
+    for (const o of outbox) {
+      if (!o.pref) { if (budget > 0) await o.done(); continue; }
+      const to = subs.filter(s => s.pr?.[o.pref] && s.k === keys.publicKey && (!o.only || String(s.m) === o.only) && !(o.skip && o.skip(String(s.m))));
+      if (to.length > budget) { budget = 0; continue; }
+      const msg = o.msg();
+      for (const s of to) { budget--; try { await sendPush(env, keys, s, msg); } catch {} }
+      if (o.done) await o.done();
+    }
+  }
+  for (const [day, S] of states) if (S.dirty) await env.TIPPS.put(stateKey(day), JSON.stringify(S.st), { expirationTtl: 30 * 86400 });
+}
+
+async function handlePush(req, env, cors, parts, body) {
+  if (parts[1] === 'info' && req.method === 'GET') {
+    const [keys, info] = await Promise.all([vapid(env), siteJson(env, 'mvp-tipps.json')]);
+    const managers = (info.managers || []).filter(m => /^\d{1,15}$/.test(String(m.id)) && String(m.id) !== '3783040').map(m => ({ id: String(m.id), name: m.name }));
+    return json({ publicKey: keys.publicKey, managers, prefs: PUSH_PREFS }, 200, cors);
+  }
+  const s = body.subscription || {}, endpoint = String(s.endpoint || body.endpoint || '');
+  let host = ''; try { const u = new URL(endpoint); host = u.protocol === 'https:' ? u.hostname : ''; } catch {}
+  if (!PUSH_HOSTS.test(host) || endpoint.length > 600) return json({ error: 'Unbekannter Push-Dienst.' }, 400, cors);
+  const key = await subKey(endpoint);
+  if (parts[1] === 'subscribe' && req.method === 'POST') {
+    const p = String(s.keys?.p256dh || ''), a = String(s.keys?.auth || '');
+    if (!/^[A-Za-z0-9_-]{80,100}$/.test(p) || !/^[A-Za-z0-9_-]{16,30}$/.test(a)) return json({ error: 'Ungültiges Abo.' }, 400, cors);
+    const info = await siteJson(env, 'mvp-tipps.json'), m = String(body.managerId || '');
+    if (!(info.managers || []).some(x => String(x.id) === m) || m === '3783040') return json({ error: 'Bitte deinen Namen aus der Liste wählen.' }, 400, cors);
+    const keys = await vapid(env), pr = {};
+    for (const k of PUSH_PREFS) if (body.prefs?.[k]) pr[k] = 1;
+    const meta = { e: endpoint, p, a, m, pr, k: keys.publicKey, at: new Date().toISOString() };
+    await env.TIPPS.put(key, JSON.stringify(meta), { metadata: meta, expirationTtl: 400 * 86400 });
+    return json({ ok: true }, 200, cors);
+  }
+  if (parts[1] === 'unsubscribe' && req.method === 'POST') { await env.TIPPS.delete(key); return json({ ok: true }, 200, cors); }
+  if (parts[1] === 'test' && req.method === 'POST') {
+    const sub = await env.TIPPS.get(key, 'json');
+    if (!sub) return json({ error: 'Dieses Gerät ist nicht angemeldet.' }, 404, cors);
+    const last = memo.get('test:' + key);
+    if (last && Date.now() - last.at < 30e3) return json({ error: 'Bitte kurz warten.' }, 429, cors);
+    memo.set('test:' + key, { at: Date.now() });
+    const r = await sendPush(env, await vapid(env), { ...sub, key }, { title: '🔔 KBL Legenden', body: 'Push-Nachrichten funktionieren. Bis zur nächsten Bumsung!', url: './', tag: 'test' });
+    return r === 'ok' ? json({ ok: true }, 200, cors) : json({ error: `Push-Dienst antwortet: ${r}` }, 502, cors);
+  }
+  return json({ error: 'Nicht gefunden.' }, 404, cors);
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
   if (parts[0] === '' || parts[0] === 'status') return json({ ok: true, dienst: 'KBL Legenden MVP-Tipp' }, 200, cors);
+  if (parts[0] === 'push') return handlePush(req, env, cors, parts, body);
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {
@@ -208,6 +482,8 @@ async function handle(req, env, cors) {
 }
 
 export default {
+  // Zeitplan (Cron-Trigger alle 5 Minuten, wrangler.toml bzw. Cloudflare-Dashboard): Push-Nachrichten.
+  async scheduled(event, env, ctx) { if (env.TIPPS) ctx.waitUntil(pushTick(env).catch(e => console.log('Push:', e.message))); },
   async fetch(req, env) {
     // Nur die eigene Online-Seite darf aus dem Browser zugreifen (ALLOWED_ORIGIN, Standard: Herkunft von SITE_URL).
     const allowed = String(env.ALLOWED_ORIGIN || (env.SITE_URL ? new URL(env.SITE_URL).origin : '')).replace(/\/+$/, '');
