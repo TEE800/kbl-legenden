@@ -2422,6 +2422,8 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
         const here=inSquad(inc.recipientId,mate);
         todo(key,'TL',inc.recipientId,rname,`verkauft ${playerNames.get(mate)||`Spieler-ID ${mate}`} (${clubName(mate)||'gleicher Verein'}), weil ${pname({playerId:inc.playerId})} über ${inc.rule} kommt (Teamlimit 1)`,
           here===null?{state:'unknown',note:'Kader nicht lesbar'}:!here?{state:'done',note:'verkauft'}:onMarket(inc.recipientId,mate)?{state:'progress',note:'steht auf dem Transfermarkt'}:{state:'open',note:'noch im Kader'});
+        const buyer=here===false?ownerMap.get(String(mate)):null;
+        if(buyer?.managerId&&String(buyer.managerId)!==String(inc.recipientId))todos.at(-1).to=[{managerId:String(buyer.managerId),manager:buyer.manager,playerName:playerNames.get(mate)||null}];
       }
     }
     // Teamlimit nachtraeglich aus dem Transfer-Verlauf des Empfaengers (/managers/{id}/transfer: tty 1 Kauf, 2 Verkauf,
@@ -2444,6 +2446,8 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
           const key = `TL:${inc.recipientId}:${pid}`; if (seenTl.has(key)) continue; seenTl.add(key);
           todo(key, 'TL', inc.recipientId, rname, `verkauft ${t.pn || playerNames.get(pid) || `Spieler-ID ${pid}`} (gleicher Verein), weil ${pname({ playerId: inc.playerId })} über ${inc.rule} kam (Teamlimit 1)`,
             { state: 'done', note: `laut Transfer-Verlauf verkauft${t.othnm ? ' an ' + t.othnm : ' an den Markt'}` });
+          // Kaeufer fuer die Auswahl „automatisch: …“ (Kevin-Meldung: stand „nicht erkannt“, obwohl der Verlauf ihn kennt).
+          if (t.othnm) { const b = managers.find(m => String(m.n) === String(t.othnm)); todos.at(-1).to = [{ managerId: b ? String(b.i) : null, manager: String(t.othnm), playerName: t.pn || playerNames.get(pid) || null }]; }
         }
       }
     }
