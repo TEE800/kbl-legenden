@@ -1999,11 +1999,11 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const other=new Map(),add=(id,r)=>{id=String(id);if(!other.has(id))other.set(id,new Set());other.get(id).add(r);};
   for(const a of ev.actions)add(a.playerId,a.rule);
   for(const a of ah)add(a.playerId,'AH');
-  const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...extra});
+  const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...(m.playerName?{playerId:String(m.playerId),playerName:m.playerName}:{}),...extra});
   for(const [id,r] of other)if(r.size>1){const a=ev.actions.find(x=>String(x.playerId)===id)||ah.find(x=>String(x.playerId)===id);item('EZ',a,`${a.playerName} ist von ${[...r].join(' und ')} betroffen: Einzelfallentscheidung`);}
   const multi=id=>(other.get(String(id))?.size||0)>1;
   for(const p of ah)if(!multi(p.playerId))item('AH',p,`${p.playerName} ist mit ${fmtNum(p.points)} Punkten gerade MVP des Spieltags: müsste zum Verkauf angeboten werden`);
-  for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`);
+  for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`,a.rule==='UM'&&a.recipientKind==='manager'?{to:[String(a.recipient)]}:{});
   for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden (Spiel beendet)`,{state:p.state});
   for(const u of (ev.unclear||[]))item(u.rule,u,`${u.playerName}: ${u.reason}`,{unclear:true});
   let dd=null,mm=null;
@@ -2013,8 +2013,8 @@ app.get('/api/rule-live/:day',async(req,res)=>{
    const winners=roster.filter(m=>m.dayPoints===top),last=roster.filter(m=>m.dayPoints===low);
    dd={winners:winners.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints,...ddCandidates(m.players,ex)})),last:last.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})),tie:winners.length!==1||last.length!==1};
    const lastNames=last.map(m=>m.name).join(', ');
-   for(const w of dd.winners)item('DD',w,`führt mit ${fmtNum(w.dayPoints)} Punkten: müsste einen dieser Spieler an ${lastNames} abgeben: ${w.candidates.map(p=>`${p.playerName} (${fmtNum(p.points)})`).join(', ')||'keiner frei'}`);
-   for(const l of dd.last)item('DD',l,`ist mit ${fmtNum(l.dayPoints)} Punkten Letzter: dürfte sich einen Spieler von ${dd.winners.map(w=>w.manager).join(', ')} aussuchen`);
+   for(const w of dd.winners)item('DD',w,`führt mit ${fmtNum(w.dayPoints)} Punkten: müsste einen dieser Spieler an ${lastNames} abgeben: ${w.candidates.map(p=>`${p.playerName} (${fmtNum(p.points)})`).join(', ')||'keiner frei'}`,{role:'give',to:dd.last.map(l=>String(l.manager||l.name))});
+   for(const l of dd.last)item('DD',l,`ist mit ${fmtNum(l.dayPoints)} Punkten Letzter: dürfte sich einen Spieler von ${dd.winners.map(w=>w.manager).join(', ')} aussuchen`,{role:'get'});
    if(dd.tie)notes.push('Gleichstand an der Spitze oder am Ende: Die Drehtür gilt dann für alle mit gleicher Punktzahl.');
    mm=calculateMm(roster);
    for(const v of mm.affected)item('MM',v,`hat gerade die meisten Minuspunkte (${fmtNum(v.negativeSum)}): dürfte bestimmen, wer am nächsten Spieltag einen Spieler weniger aufstellt`);
