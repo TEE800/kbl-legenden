@@ -63,7 +63,7 @@
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
   if(d.status==='upcoming')return `<p class="muted">Auf diesen Spieltag wird erst getippt, wenn er als nächster dran ist.</p>`;
-  if(d.status==='live')return '';// während des Spieltags nur die Tippregel (Kevin-Wunsch)
+  if(d.status==='live'||d.closing)return '';// während des Spieltags (bis Kickbase ihn abschließt) nur die Tippregel (Kevin-Wunsch)
   return `<p class="muted">Angepfiffen am ${esc(when(d.deadline))}. Die Tipps sind gesperrt und für alle sichtbar.</p>`;
  }
  // Ohne Anmeldung: Name wählen und mit eigenem Tipp-Code tippen (beim ersten Tipp selbst festgelegt).
@@ -269,7 +269,7 @@
   let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
   const played=groups.filter(g=>g.pts!==null).length;
   h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span><span><b>${played}</b> davon schon mit Punkten</span>${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
-  h+=toonRace(live,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready?rows.filter(r=>!leadIds.has(r.m.id)).slice(0,3):[]);
+  h+=toonRace(live||!!d.closing,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready?rows.filter(r=>!leadIds.has(r.m.id)).slice(0,3):[]);
   // Top 10 des Spieltags unter allen Spielern, die die Tippregel erlaubt (Kevin-Wunsch), eingeklappt.
   h+=top10(d,rows,pool,bestIds,fin);
   // Zahlenstrahl „Wer liegt mit der Zahl am nächsten?“ entfernt (Kevin-Wunsch).
@@ -316,7 +316,7 @@
   // Beim automatischen Neuladen (alle 2 Min.) bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]>summary')].map(x=>x.textContent));
   const raceShut=root.querySelector('details.toon-race.kbl-keep-open:not([open])');// von Hand zugeklappt: so lassen
-  const intro=$('#mvpIntro');if(intro)intro.hidden=d.status==='live';
+  const intro=$('#mvpIntro');if(intro)intro.hidden=d.status==='live'||!!d.closing;
   root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';
   root.querySelectorAll('details.acc-group>summary').forEach(x=>{if(wasOpen.has(x.textContent))x.parentElement.open=true;});
   const race=root.querySelector('details.toon-race');if(race&&raceShut)race.open=false;
@@ -334,6 +334,16 @@
   }
   if(d.open&&LIVE)loadPlayers().catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
+ // Spieltag gespielt, aber Kickbase hat ihn noch nicht abgeschlossen (Ranking il, meist bis zum Abend nach dem letzten Spiel):
+ // Rennen bleibt offen stehen und der Spieltag wird beim Öffnen gewählt (Kevin-Wunsch).
+ let closingMemo=null;
+ async function closingDay(){
+  if(closingMemo&&Date.now()-closingMemo.at<5*60e3)return closingMemo.day;
+  let day=null;
+  try{const st=await get('/api/matchday-status'),n=Number(st.lastFinishedDay);
+   if(n&&!(st.days||[]).some(x=>x.status==='live')){const r=await get(`/api/ranking/6422780?dayNumber=${n}`);if(r?.il===true)day=n;}}catch{}
+  closingMemo={at:Date.now(),day};return day;
+ }
  async function loadDay(day){
   const root=$('#mvpContent');
   if(!data||data.day!==day){root.className='muted';root.textContent=`Lade Spieltag ${day} …`;}
@@ -349,6 +359,7 @@
     if(API){const x=await get(tippUrl(`/api/mvp-tipps/${day}`)).catch(()=>null);
      if(x?.managers)for(const m of d.managers){const o=x.managers.find(y=>y.id===m.id);if(o?.tip&&!m.tip){m.tip=o.tip;m.tipped=true;}}}
    }
+   if(d.status==='finished'&&await closingDay()===day)d.closing=true;
    data=d;render();}
   catch(e){root.className='error';root.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
  }
@@ -361,7 +372,7 @@
    sel.innerHTML=days.map(d=>`<option value="${d.day}">Spieltag ${d.day}${d.day===overview.next?' · offen':d.status==='live'?' · läuft':''}${d.tips?` (${d.tips} Tipps)`:''}</option>`).join('');
    // Beim Öffnen des Reiters zuerst der laufende Spieltag (Kevin-Vorgabe), sonst die letzte Auswahl, sonst der offene.
    const liveDay=days.find(d=>d.status==='live')?.day;
-   const pick=liveDay||(keep&&days.some(d=>d.day===keep)?keep:overview.next||days[0]?.day);
+   const pick=liveDay||await closingDay()||(keep&&days.some(d=>d.day===keep)?keep:overview.next||days[0]?.day);
    if(pick){sel.value=String(pick);await loadDay(pick);}
    else $('#mvpContent').textContent='Kein Spieltag zum Tippen gefunden.';
   }catch(e){$('#mvpContent').className='error';$('#mvpContent').textContent='MVP-Tipps nicht abrufbar: '+e.message;}
