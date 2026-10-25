@@ -2758,6 +2758,10 @@ app.get('/api/arena/:day',async(req,res)=>{
    }
   }
   const all=started?await loadAllPlayers(getToken(req)||newestToken()||await getServiceToken().catch(()=>null)).catch(()=>null):null;
+  // Kickbase-Punkte (p) eines beendeten Spieltags nur nehmen, wenn die Arena-Daten vom PC nach dem letzten Spiel abgerufen wurden
+  // (letzter Anstoss + 2,5 Std.). Sonst sind es Zwischenstaende (am 25.10. standen so mehrere Manager auf 0), dann eigene Rechnung.
+  const win=status==='finished'?await dayWindow(day).catch(()=>null):null;
+  const kbOk=status==='finished'&&!!win&&Date.parse(a.updatedAt||'')>=win.end+150*60e3;
   const side=(id,kb)=>{
    const info=a.managers?.[id]||{},l=lu?.[id];
    const base={id,name:id==='1'?'Kickbase CPU':info.n||`Manager ${id}`,img:info.uim||null,cpu:id==='1'};
@@ -2767,7 +2771,7 @@ app.get('/api/arena/:day',async(req,res)=>{
     .sort((x,y)=>(y.total??-1e9)-(x.total??-1e9));
    const calc=players.reduce((s,p)=>s+(p.total||0),0);
    // Beendet: Kickbase-Punkte zaehlen (offiziell, korrigiert). Laufend: eigene Rechnung (Kickbase zeigt waehrend des Spieltags nicht immer den Stand).
-   const points=status==='finished'&&kb!=null?kb:calc;
+   const points=kbOk&&kb!=null?kb:calc;
    return {...base,points,calc,kbPoints:kb??l.mdp??null,captain:l.cpt,open:players.filter(p=>p.state==='open').length,live:players.filter(p=>p.playing).length,players};
   };
   const duels=m.pairs.map(([x,y,px,py])=>{const A=side(x,px),B=side(y,py);
@@ -2776,11 +2780,13 @@ app.get('/api/arena/:day',async(req,res)=>{
   // H2H-Tabelle: Kickbase-Stand (hhsp, hhpl), dazu Siege/Unentschieden/Niederlagen aus allen angepfiffenen Spieltagen.
   const rec={};
   for(const mm of a.matchups||[]){const s2=md?.days.find(d=>d.day===mm.day)?.status;if(s2!=='live'&&s2!=='finished')continue;
-   for(const [x,y,px,py] of mm.pairs){if(px==null||py==null)continue;for(const [u,me,ot] of [[x,px,py],[y,py,px]]){const r=rec[u]||(rec[u]={w:0,d:0,l:0});if(me>ot)r.w++;else if(me<ot)r.l++;else r.d++;}}}
+   // Gezeigter Spieltag mit unsicheren Kickbase-Punkten: Ergebnis aus der eigenen Rechnung (duels).
+   const pairs=mm.day===day&&started&&!kbOk?duels.map(d=>[d.a.id,d.b.id,d.a.points,d.b.points]):mm.pairs;
+   for(const [x,y,px,py] of pairs){if(px==null||py==null)continue;for(const [u,me,ot] of [[x,px,py],[y,py,px]]){const r=rec[u]||(rec[u]={w:0,d:0,l:0});if(me>ot)r.w++;else if(me<ot)r.l++;else r.d++;}}}
   const table=(a.table?.rows||[]).map(r=>({...r,name:r.id==='1'?'Kickbase CPU':r.n,img:a.managers?.[r.id]?.uim||null,...(rec[r.id]||{w:0,d:0,l:0})})).sort((x,y)=>(x.hhpl??99)-(y.hhpl??99));
   const value={day,name:m.name,status,start:m.start,firstKickoffUTC:mdd?.firstKickoffUTC||m.start,updatedAt:new Date().toISOString(),dataAt:a.updatedAt||null,source:a.source||null,
    lineupsMissing:started&&!lu,duels,table,tableDay:a.table?.day||null};
-  const final=status==='finished'&&!!saved;
+  const final=status==='finished'&&!!saved&&kbOk;
   arenaDayCache.set(day,{at:Date.now(),final,value});
   res.set('Cache-Control','no-store').json(value);
  }catch(e){res.status(502).json({error:'Arena nicht abrufbar.',detail:e.message});}
