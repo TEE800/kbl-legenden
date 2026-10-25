@@ -249,7 +249,7 @@ async function dayWindow(day){
   }
   const cur=dayTimesCache.by.get(day),next=dayTimesCache.by.get(day+1);
   if(!cur)return null;
-  return {end:cur.last,next:next?next.first:cur.last+7*864e5};
+  return {first:cur.first,end:cur.last,next:next?next.first:cur.last+7*864e5};
 }
 app.get('/api/matchday-status', async (req, res) => {
   try {
@@ -2356,6 +2356,8 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
     // Vereinskollegen aus dem Kader am Spieltag (falls gespeichert) und dem heutigen Kader.
     const clubName=id=>clubOf.get(String(id))?.team||null;
     const sameClub=(a,b)=>{const x=clubOf.get(String(a))?.teamId,y=clubOf.get(String(b))?.teamId;return x!=null&&y!=null&&String(x)===String(y);};
+    // Transfer-Verlauf nur bis eine Woche vor dem ersten Anstoss des Spieltags zurueck laden (ohne Termin: ganz).
+    let histSince=0;if(!probe){try{const w0=await dayWindow(day);if(w0)histSince=w0.first-7*864e5;}catch{}}
     // Empfaenger aus dem Transfer-Verlauf des Abgebenden (/managers/{id}/transfer: tty 2 Verkauf, othnm Kaeufer, dt Zeitpunkt).
     // Wichtig fuer alte Spieltage: Der heutige Kader zeigt nur, wo der Spieler jetzt ist, nicht wohin er damals ging.
     // Gesucht wird der erste Verkauf nach dem letzten Anstoss des Spieltags, bevorzugt vor dem naechsten Spieltag.
@@ -2363,7 +2365,7 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
       let win=null;try{win=await dayWindow(day);}catch{win=null;}
       if(win){
         const hCache=new Map();
-        const salesOf=async gid=>{if(!hCache.has(gid)){try{hCache.set(gid,(await kbFetch(`/v4/leagues/6422780/managers/${gid}/transfer`,{token})).it||[]);}catch{hCache.set(gid,null);}}return hCache.get(gid);};
+        const salesOf=async gid=>{if(!hCache.has(gid)){try{hCache.set(gid,await transfersSince(token,gid,histSince));}catch{hCache.set(gid,null);}}return hCache.get(gid);};
         const firstSale=async(gid,pid)=>{const list=await salesOf(String(gid));if(!list)return null;
           const c=list.filter(t=>String(t.pi)===String(pid)&&Number(t.tty)===2&&Date.parse(t.dt)>=win.end).sort((a,b)=>Date.parse(a.dt)-Date.parse(b.dt));
           return c.find(t=>Date.parse(t.dt)<=win.next)||c.find(t=>Date.parse(t.dt)<=win.end+14*864e5)||null;};
@@ -2409,7 +2411,7 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
     // Spieler, die der Empfaenger erst NACH dem Erhalt gekauft hat, zaehlen nicht fuers Teamlimit (Kevin-Meldung: Laimer kam
     // erst spaeter zu xDanii). Zeitpunkt aus dem Transfer-Verlauf des Empfaengers (tty 1 Kauf); ohne Verlauf bleibt alles wie bisher.
     const tlHist=new Map();
-    const histOf=async rid=>{if(!tlHist.has(rid)){try{tlHist.set(rid,(await kbFetch(`/v4/leagues/6422780/managers/${rid}/transfer`,{token})).it||[]);}catch{tlHist.set(rid,null);}}return tlHist.get(rid);};
+    const histOf=async rid=>{if(!tlHist.has(rid)){try{tlHist.set(rid,await transfersSince(token,rid,histSince));}catch{tlHist.set(rid,null);}}return tlHist.get(rid);};
     for(const inc of incoming){
       const rname=String(managers.find(m=>String(m.i)===inc.recipientId)?.n||inc.recipientId);
       const hist=probe?null:await histOf(inc.recipientId);
@@ -2433,7 +2435,7 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
       const ruleIds = new Set(todos.map(t => String(t.key).split(':')[2]).filter(Boolean));
       for (const w of dd) { const got = (w.candidates || []).find(c => lastIdsTl.includes(String(ownerMap.get(String(c.playerId))?.managerId))); if (got) ruleIds.add(String(got.playerId)); }
       const tCache = new Map();
-      const transfersOf = async rid => { if (!tCache.has(rid)) { try { tCache.set(rid, (await kbFetch(`/v4/leagues/6422780/managers/${rid}/transfer`, { token })).it || []); } catch { tCache.set(rid, null); } } return tCache.get(rid); };
+      const transfersOf = async rid => { if (!tCache.has(rid)) { try { tCache.set(rid, await transfersSince(token, rid, histSince)); } catch { tCache.set(rid, null); } } return tCache.get(rid); };
       for (const inc of incoming) {
         const list = await transfersOf(inc.recipientId); if (!list) continue;
         const got = list.find(t => String(t.pi) === inc.playerId && Number(t.tty) === 1); if (!got) continue;
@@ -2459,7 +2461,7 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
       if(win){
         saleDeadline=berlinNextDay22(win.end);
         const sCache=new Map();
-        const salesList=async gid=>{if(!sCache.has(gid)){try{sCache.set(gid,(await kbFetch(`/v4/leagues/6422780/managers/${gid}/transfer`,{token})).it||[]);}catch{sCache.set(gid,null);}}return sCache.get(gid);};
+        const salesList=async gid=>{if(!sCache.has(gid)){try{sCache.set(gid,await transfersSince(token,gid,histSince));}catch{sCache.set(gid,null);}}return sCache.get(gid);};
         for(const t of todos){
           if(!['BD','AH','RK','BN','UM','TL','DD'].includes(t.rule))continue;
           const pid=t.rule==='DD'?(t.options||[]).find(o=>o.moved)?.playerId:String(t.key).split(':')[2];
@@ -2617,6 +2619,21 @@ function buildTransferHistory(list, squad, from = 0, to = null, current = to == 
     best: pick(best), worst: pick(worst),
     trades: trades.sort((a, b) => Date.parse((b.sell || b.buy || {}).at || 0) - Date.parse((a.sell || a.buy || {}).at || 0))
   };
+}
+// Transfer-Verlauf fuer die BumsParade: seitenweise (25 je Seite) bis vor `since` zurueck. Nur die erste Seite reichte bei alten
+// Spieltagen nicht (Kevin-Meldung ST 1: Schwaebe als verkauft angezeigt und zugleich „Frist abgelaufen, noch nicht verkauft“).
+const transferSinceCache=new Map();
+async function transfersSince(token,id,since=0){
+  const c=transferSinceCache.get(id);if(c&&Date.now()-c.at<120e3&&c.since<=since)return c.list;
+  const seen=new Set(),all=[];
+  for(let page=0;page<80;page++){
+    const r=await kbFetch(`/v4/leagues/6422780/managers/${id}/transfer${all.length?`?start=${all.length}`:''}`,{token});
+    let neu=0,oldest=Infinity;
+    for(const t of (r.it||[])){const k=`${t.pi}|${t.tty}|${t.dt}`;oldest=Math.min(oldest,Date.parse(t.dt));if(!seen.has(k)){seen.add(k);all.push(t);neu++;}}
+    if(!neu||oldest<since)break;
+  }
+  transferSinceCache.set(id,{at:Date.now(),since,list:all});
+  return all;
 }
 // Kickbase liefert den Verlauf seitenweise (25 je Seite): weiter mit ?start=, solange neue Einträge kommen (höchstens 80 Seiten).
 async function fetchTransferList(token, id) {
