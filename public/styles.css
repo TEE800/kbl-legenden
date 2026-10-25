@@ -609,3 +609,5 @@ button.center-remove{align-self:flex-start;width:auto;margin-top:6px;padding:3px
 button.center-remove:hover{opacity:1}
 button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11px;margin-left:4px}
 .center-removed s{opacity:.6}
+.center-sale{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.center-sale.late{color:#ff8181;font-weight:700}
