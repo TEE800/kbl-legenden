@@ -82,3 +82,22 @@ Die nötigen Schlüssel erzeugt er beim ersten Mal selbst, ein Geheimnis musst d
    Mit dem automatischen Einspielen (unten) steht das schon in `wrangler.toml` und wird mit eingespielt.
 4. Fertig. Jeder Manager schaltet Push auf der Online-Seite selbst ein: oben auf die 🔔 tippen.
    iPhone: nur, wenn die Seite auf dem Home-Bildschirm liegt (die Glocke erklärt das).
+
+## Nutzung der App zählen (einmalig, ca. 5 Minuten)
+Der Tippdienst zählt, wie oft die Online-Seite geöffnet wird, welche Reiter beliebt sind und welcher Manager sie nutzt.
+Keine IP-Adressen, keine Namen: Jedes Gerät bekommt nur eine Zufallsnummer. Ein Manager wird erkannt, wenn er auf seinem Gerät bei der 🔔 oder im MVP-Tipp seinen Namen gewählt hat.
+Die Zahlen sieht nur, wer den Admin-Code kennt.
+1. Neuen Code einspielen: den ganzen Text von
+   https://raw.githubusercontent.com/TEE800/kbl-legenden/main/tools/tipp-dienst/worker.js
+   in den Cloudflare-Editor des Dienstes `kbl-tipps` kopieren (alten Text vorher löschen) und **Deploy** klicken.
+2. Datenbank anlegen: im Cloudflare-Dashboard links **Storage & Databases** → **D1 SQL Database** → **Create** (oder „Create database“).
+   Name: `kbl-nutzung` → **Create**. Sonst nichts eintragen, die Tabelle legt der Dienst selbst an.
+3. Verbinden: links **Compute (Workers)** → **Workers & Pages** → `kbl-tipps` → **Settings** → **Bindings** → **Add binding** → **D1 database**:
+   - Variable name: `NUTZUNG`
+   - D1 database: `kbl-nutzung`
+   - **Add binding** bzw. **Deploy**.
+4. Fertig. Ab jetzt zählt die Seite mit.
+
+Ansehen: Auf der Online-Seite **5× schnell auf das Clown-Logo** tippen (am Handy oben links, am PC links über dem Menü).
+Es öffnet sich ein Fenster, dort den Admin-Code eingeben. Ganz unten kannst du „Dieses Gerät nicht mitzählen“ anhaken,
+damit deine eigenen Besuche die Zahlen nicht aufblähen (je Gerät einmal).

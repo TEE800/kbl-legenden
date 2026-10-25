@@ -15,3 +15,11 @@ SITE_URL = "https://tee800.github.io/kbl-legenden"
 # Push-Nachrichten: alle 5 Minuten pruefen (worker.js, pushTick).
 [triggers]
 crons = ["*/5 * * * *"]
+
+# Nutzung zaehlen (ANLEITUNG.md, "Nutzung der App zaehlen"): D1-Datenbank kbl-nutzung als NUTZUNG.
+# Bevor GitHub hier automatisch einspielt, die database_id aus Cloudflare (D1 → kbl-nutzung) eintragen und die
+# drei Zeilen einkommentieren, sonst entfernt das Einspielen die im Dashboard angelegte Verbindung.
+# [[d1_databases]]
+# binding = "NUTZUNG"
+# database_name = "kbl-nutzung"
+# database_id = "HIER-DIE-ID"
