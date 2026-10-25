@@ -1826,7 +1826,8 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
     if (info.yellowBan) rk.push(`${info.yellowBan}. Gelbe Karte der Saison`);
     if (rk.length) actions.push({ ...base(lp), rule: 'RK', reason: rk.join(' + '), action: 'An einen beliebigen Mitmanager abgeben; Empfänger stellt ihn am nächsten Spieltag auf' });
   }
-  // UM: verursachter Elfmeter durch Foul (Gegner hat in derselben Minute +-1 "Elfmeter herausgeholt")
+  // UM: verursachter Elfmeter durch Foul (Gegner hat "Elfmeter herausgeholt" bis 5 Min. daneben: Kickbase stempelt
+  // Foul und Pfiff nach VAR-Pruefung unterschiedlich, Tapsoba ST 7: 4171 in der 78., Asllani 4177 in der 75. Min.)
   for (const { lp, center, info } of infos) {
     for (const minute of info.penCaused) {
       const own = String(center?.tid ?? ''), t1 = String(center?.t1 ?? ''), t2 = String(center?.t2 ?? '');
@@ -1835,12 +1836,12 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
       if (!oppTeam) { unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}), Gegner nicht erkennbar` }); continue; }
       let all; try { all = await loadAllPlayers(token); } catch { unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}), Spielerliste nicht ladbar` }); continue; }
       const opp = [...all.players.entries()].filter(([, p]) => String(p.teamId) === oppTeam);
-      const hits = []; let oppFailed = 0;
+      const hits = [], other = []; let oppFailed = 0;
       for (let i = 0; i < opp.length; i += 5) {
         await Promise.all(opp.slice(i, i + 5).map(async ([id, p]) => {
           try {
             const c = await getCenter(id);
-            for (const e of netEvents(c)) if (e.eti === ETI_PEN_WON && e.net > 0 && Math.abs(e.minute - minute) <= 1) hits.push({ playerId: id, name: p.name, minute: e.minute });
+            for (const e of netEvents(c)) if (e.eti === ETI_PEN_WON && e.net > 0) (Math.abs(e.minute - minute) <= 5 ? hits : other).push({ playerId: id, name: p.name, minute: e.minute });
           } catch { oppFailed++; }
         }));
       }
@@ -1851,7 +1852,8 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
         else actions.push({ ...base(lp), rule: 'UM', reason: `Elfmeter per Foul verursacht (${label}), gefoult wurde ${fouled.name}`,
           recipient: owner ? owner.manager : 'Markt', recipientId: owner ? String(owner.managerId) : null, recipientKind: owner ? 'manager' : 'markt',
           action: owner ? `An ${owner.manager} abgeben; Empfänger stellt ihn am nächsten Spieltag auf` : 'Niemand hat den gefoulten Spieler: an den Markt verkaufen' });
-      } else if (!hits.length && !oppFailed) { /* Handspiel: zaehlt nicht fuer UM */ }
+      } else if (!hits.length && !oppFailed && !other.length) { /* Handspiel: zaehlt nicht fuer UM */ }
+      else if (!hits.length && !oppFailed) unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}); beim Gegner "Elfmeter herausgeholt" nur zu anderer Zeit: ${other.map(o => `${o.name} ${o.minute}. Min.`).join(', ')}. Bitte prüfen` });
       else unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}): ${oppFailed ? 'Gegnerdaten nicht vollständig lesbar' : hits.length + ' mögliche gefoulte Spieler'}, bitte prüfen` });
     }
   }
