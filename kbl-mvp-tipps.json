@@ -147,13 +147,81 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-25T13:17:14.532Z",
+      "at": "2026-10-25T15:57:15.259Z",
       "points": 176,
       "players": [
         {
           "id": "7320",
           "name": "Scheller",
           "team": "Paderborn"
+        }
+      ],
+      "top10": [
+        {
+          "id": "7320",
+          "name": "Scheller",
+          "team": "Paderborn",
+          "points": 176
+        },
+        {
+          "id": "8292",
+          "name": "Castañeda",
+          "team": "Paderborn",
+          "points": 175
+        },
+        {
+          "id": "32",
+          "name": "Karius",
+          "team": "Schalke",
+          "points": 162
+        },
+        {
+          "id": "1964",
+          "name": "Götze",
+          "team": "Paderborn",
+          "points": 149
+        },
+        {
+          "id": "6292",
+          "name": "Hansen",
+          "team": "Paderborn",
+          "points": 147
+        },
+        {
+          "id": "6217",
+          "name": "Philippe",
+          "team": "Paderborn",
+          "points": 141
+        },
+        {
+          "id": "2762",
+          "name": "Becker",
+          "team": "Schalke",
+          "points": 139
+        },
+        {
+          "id": "2015",
+          "name": "Obermair",
+          "team": "Paderborn",
+          "points": 134
+        },
+        {
+          "id": "6197",
+          "name": "Curda",
+          "team": "Paderborn",
+          "points": 121
+        },
+        {
+          "id": "2977",
+          "name": "Noll",
+          "team": "Paderborn",
+          "points": 115
+        },
+        {
+          "id": "11255",
+          "name": "Katic",
+          "team": "Schalke",
+          "points": 115
         }
       ],
       "checked": 468,

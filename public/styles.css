@@ -652,11 +652,6 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .bradar-side{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;min-width:0}
 .bradar-side b{overflow-wrap:anywhere}
 .bradar-side .mgr-av-lg{margin:0}
-.bradar-arrow{display:flex;flex-direction:column;align-items:center;color:var(--shame-text);font-weight:800}
-.bradar-arrow span{font-size:34px;animation:bradarBang 1.4s ease-in-out infinite}
-.bradar-arrow small{letter-spacing:1px;text-transform:uppercase;font-size:10px}
-.bradar-cap{grid-column:1/-1;margin:6px 0 0;text-align:center;color:var(--text-2);font-size:13px}
-@keyframes bradarBang{0%,100%{transform:scale(1) rotate(-6deg)}50%{transform:scale(1.25) rotate(6deg)}}
 .bradar-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .bradar-card{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px;position:relative;overflow:hidden}
 .bradar-card.hot{border-color:#c0392b;box-shadow:0 0 0 1px #c0392b inset,0 0 18px rgba(192,57,43,.25)}
@@ -675,8 +670,27 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .bradar-faces{display:flex;flex-wrap:wrap;gap:10px}
 .bradar-faces span{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);max-width:70px;text-align:center;overflow-wrap:anywhere}
 .bradar-faces .mgr-av{margin:0;width:30px;height:30px;top:0;filter:grayscale(.3)}
-@media(max-width:560px){.bradar-grid{grid-template-columns:1fr}.bradar-duel{padding:10px}.bradar-arrow span{font-size:28px}}
-@media (prefers-reduced-motion:reduce){.bradar-arrow span{animation:none}}
+/* Drehtür in der Mitte (Kevin-Wunsch): vier Glasflügel drehen sich um die Mittelachse */
+.bradar-duel{grid-template-areas:"give door get"}
+.bradar-side.give{grid-area:give}.bradar-side.get{grid-area:get}.rdoor{grid-area:door}
+.rdoor{display:flex;flex-direction:column;align-items:center;width:96px;color:var(--shame-text);font-weight:800}
+.rdoor small{margin-top:6px;letter-spacing:1px;text-transform:uppercase;font-size:10px}
+.rdoor-roof{width:96px;height:12px;border-radius:50%/100%;background:linear-gradient(#5b6b77,#2c3740);border:1px solid #7d8d99;position:relative;z-index:2}
+.rdoor-floor{width:96px;height:14px;border-radius:50%;background:radial-gradient(ellipse,#3d4a54,#1b242b);border:1px solid #56656f;margin-top:-6px}
+.rdoor-stage{width:96px;height:96px;perspective:420px;position:relative;margin-top:-4px;border-left:3px solid #7d8d99;border-right:3px solid #7d8d99}
+.rdoor-rot{position:absolute;inset:0;transform-style:preserve-3d;animation:rdoorSpin 4s linear infinite}
+.rdoor-rot::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#9fb0bc;border-radius:2px}
+.rdoor-rot i{position:absolute;left:50%;top:4px;bottom:4px;width:44px;transform-origin:0 50%;background:linear-gradient(90deg,rgba(150,210,255,.45),rgba(150,210,255,.15));border:2px solid #9fb0bc;border-left:0;border-radius:0 3px 3px 0;backface-visibility:visible}
+.rdoor-rot i:nth-child(1){transform:rotateY(0deg)}.rdoor-rot i:nth-child(2){transform:rotateY(90deg)}.rdoor-rot i:nth-child(3){transform:rotateY(180deg)}.rdoor-rot i:nth-child(4){transform:rotateY(270deg)}
+@keyframes rdoorSpin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}
+/* Drehtür-Kandidaten als Männchen wie im MVP-Tipp, nebeneinander stehend */
+.rd-cands{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-top:34px}
+.rd-fig.toon-runner{position:relative;left:auto;bottom:auto;margin:0;width:auto;display:flex;flex-direction:column;align-items:center;transition:none}
+.rd-fig .toon-ball{right:-14px;bottom:22px}
+.rd-tag{margin-top:3px;font-size:11px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:6px;padding:1px 6px;white-space:nowrap;display:flex;gap:5px}
+.rd-tag b{color:var(--gold)}
+@media(max-width:560px){.bradar-grid{grid-template-columns:1fr}.bradar-duel{padding:10px;grid-template-areas:"give give" "door get";grid-template-columns:auto 1fr;row-gap:14px}}
+@media (prefers-reduced-motion:reduce){.rdoor-rot{animation:none;transform:rotateY(30deg)}}
 /* Push-Nachrichten (push.js): Glocke in der Kopfzeile, einmaliger Hinweis, Fenster */
 .push-bell{position:relative;flex:0 0 36px;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:0;padding:0;line-height:0;border-radius:50%;background:var(--surface-2);border:1px solid var(--line-strong);color:var(--text-2)}
 .push-bell:hover{color:var(--gold);border-color:var(--gold-dark)}
