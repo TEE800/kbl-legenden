@@ -2015,6 +2015,13 @@ app.get('/api/rule-live/:day',async(req,res)=>{
  }catch(err){res.status(err.status||502).json({error:'BumsParade LIVE nicht abrufbar.',detail:err.message});}
 });
 
+// 22:00 Uhr deutscher Zeit am Tag nach dem Zeitpunkt ms (Verkaufsfrist der BumsParade), als UTC-Millisekunden.
+function berlinNextDay22(ms){
+ const [y,m,d]=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms)).split('-').map(Number);
+ const guess=Date.UTC(y,m-1,d+1,22,0);
+ const wall=Date.parse(new Date(guess).toLocaleString('sv-SE',{timeZone:'Europe/Berlin'}).replace(' ','T')+'Z');
+ return guess-(wall-guess);
+}
 app.get('/api/rule-accounting/:day', async (req, res) => {
   const token = getToken(req);
   if (!token) return res.status(401).json({error:'Nicht angemeldet.'});
@@ -2440,7 +2447,27 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
         }
       }
     }
-    return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,todos,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
+    // Verkaufszeitpunkt je Strafe (Kevin-Wunsch): Laut Regel muss bis 22:00 Uhr am Tag nach dem Spieltag verkauft sein
+    // (Tag nach dem letzten Anstoss, deutsche Zeit). Aus dem Transfer-Verlauf des Abgebenden: erster Verkauf nach dem letzten Anstoss.
+    let saleDeadline=null;
+    if(!probe){
+      let win=null;try{win=await dayWindow(day);}catch{win=null;}
+      if(win){
+        saleDeadline=berlinNextDay22(win.end);
+        const sCache=new Map();
+        const salesList=async gid=>{if(!sCache.has(gid)){try{sCache.set(gid,(await kbFetch(`/v4/leagues/6422780/managers/${gid}/transfer`,{token})).it||[]);}catch{sCache.set(gid,null);}}return sCache.get(gid);};
+        for(const t of todos){
+          if(!['BD','AH','RK','BN','UM','TL','DD'].includes(t.rule))continue;
+          const pid=t.rule==='DD'?(t.options||[]).find(o=>o.moved)?.playerId:String(t.key).split(':')[2];
+          if(!pid){if(t.check?.state==='open'&&Date.now()>saleDeadline)t.overdue=true;continue;}
+          const list=await salesList(String(t.managerId));if(!list)continue;
+          const sale=list.filter(x=>String(x.pi)===String(pid)&&Number(x.tty)===2&&Date.parse(x.dt)>=win.end).sort((a,b)=>Date.parse(a.dt)-Date.parse(b.dt))[0];
+          if(sale){t.soldAt=new Date(Date.parse(sale.dt)).toISOString();t.late=Date.parse(sale.dt)>saleDeadline;}
+          else if(t.check?.state!=='done'&&Date.now()>saleDeadline)t.overdue=true;
+        }
+      }
+    }
+    return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,todos,saleDeadline:saleDeadline?new Date(saleDeadline).toISOString():null,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
       actions:bdActive.map(p=>({rule:'BD',managerId:p.managerId,manager:p.manager,playerId:p.playerId,playerName:p.playerName,points:p.points,action:'Spieler an den Markt verkaufen',status:'zu_pruefen',marketStatus:p.marketStatus})),
       mm:mm&&{...mm,values:mm.values.map(v=>({...v,negatives:v.negatives.map(n=>({...n,playerName:playerNames.get(String(n.playerId))||null}))}))},ah:{...ahFinal,affected:(ahFinal.affected||[]).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||null}))},autoEvents,bd:bdActive,bdDropped,conflicts,dd:{winners:complete?dd:[],lastPlace:complete?last.map(m=>({managerId:m.managerId,manager:m.manager||m.name,dayPoints:m.dayPoints})):[],tie:complete&&tie},
       warnings:[...histNotes,...(probe?[`PROBELAUF: Die heutigen Aufstellungen wurden als Startelf von Spieltag ${day} angenommen. Nur ein Funktionstest, keine echte Abrechnung, nichts gespeichert.`,...(probeUnreadable.length?[`Startelf nicht lesbar bei: ${probeUnreadable.join(', ')}.`]:[])]:[]),...(rankingWarning?[rankingWarning]:[]),...(inferredZero.size?[`${inferredZero.size} aufgestellte Spieler hatten keinen Spieltagseintrag und wurden mit 0 Punkten gewertet (nicht eingesetzt): ${[...inferredZero].map(id=>playerNames.get(String(id))||id).join(', ')}.`]:[]),...(fromCenter.size?[`${fromCenter.size} aufgestellte Spieler hatten keinen Eintrag in den Leistungsdaten; die Punkte stammen aus den Spieltagsdaten: ${[...fromCenter].map(([id,pt])=>(playerNames.get(String(id))||id)+' ('+pt+')').join(', ')}.`]:[]),...(centerConflicts.length?[`Abweichende Punkte in zwei Quellen (verwendet: Leistungsdaten): ${centerConflicts.map(c=>(playerNames.get(c.playerId)||c.playerId)+' '+c.performance+' statt '+c.center).join(', ')}.`]:[]),...(!complete?['Unvollständige Daten: BD zeigt alle nachgewiesenen Schnapszahlen; weitere BD-Fälle können fehlen. DD und MM sind nicht verbindlich berechenbar.']:[]),...incompletePoints.map(m=>m.name+': Spielerpunkte fehlen ('+m.playerIds.length+' Spieler-IDs: '+m.playerIds.map(id=>{if(failedIds.has(String(id)))return id+' [API-Fehler]';const rec=findDayRecord(performancePayloads.get(id),day);if(!rec)return id+' [kein Spieltagseintrag]';const keep={};for(const k of ['day','p','mp','st','cur','mdst','md','k'])if(rec[k]!==undefined)keep[k]=rec[k];return id+' [Eintrag ohne verwertbare Punkte: '+JSON.stringify(keep)+']';}).join(', ')+').'),...missing.map(m=>m.name+': Aufstellung fehlt.'),...invalid.map(m=>m.name+': '+m.reason),...scored.filter(m=>!Number.isFinite(m.dayPoints)).map(m=>m.name+': Spieltagspunkte laut Ranking nicht ermittelbar.'),...(ahFinal.mvp&&!ahFinal.mvp.error&&ahFinal.mvp.reliable?[]:['AH: Der Spieltags-MVP konnte nicht sicher ermittelt werden'+(ahFinal.mvp?.error?' ('+ahFinal.mvp.error+')':ahFinal.mvp?` (${ahFinal.mvp.failedPlayers} Spieler nicht abrufbar, ${(ahFinal.mvp.failedTeams||[]).length} Vereine nicht lesbar)`:'')+'. AH und die Ausschlüsse bei der Drehtür sind unsicher.']),
