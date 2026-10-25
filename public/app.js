@@ -1238,7 +1238,10 @@ function renderAccTodo(){
  const d=a.state==='done'&&a.data?.ready?a.data:null,todos=(d?.todos||[]).filter(t=>a.probe||!a.checks?.[t.key]?.removed);
  const done=todos.filter(t=>t.check?.state==='done'||(!a.probe&&a.checks?.[t.key]?.done)).length;
  const sum=a.state==='loading'?'wird geprüft …':a.state==='error'?'nicht abrufbar':!d?'noch nicht abrechenbar':todos.length?`${done} von ${todos.length} erledigt`:'keine Strafen';
- el.innerHTML=`<details class="center-box acc-todo-box"${accTodoOpen?' open':''}><summary class="center-boxhead"><strong>Spieltag ${a.day} · ${sum}</strong><span class="pill">${a.probe?'PROBELAUF · nur Test':'vorläufig'}</span></summary>${centerTodoHtml()}</details>`;
+ // Gesamtzahl der Bumsungen (Kevin-Wunsch), gleiche Zählung wie in der BumsTabelle.
+ const nBums=d&&!a.probe?Object.values(bumsCounts(d,a.checks||{})).reduce((n,m)=>n+m.count,0):0;
+ const bumsTxt=nBums?` · ${nBums} Bumsung${nBums===1?'':'en'}`:'';
+ el.innerHTML=`<details class="center-box acc-todo-box"${accTodoOpen?' open':''}><summary class="center-boxhead"><strong>Spieltag ${a.day} · ${sum}${bumsTxt}</strong><span class="pill">${a.probe?'PROBELAUF · nur Test':'vorläufig'}</span></summary>${centerTodoHtml()}</details>`;
  el.querySelector('details').addEventListener('toggle',e=>{accTodoOpen=e.target.open;});
 }
 let accTodoOpen=false;
