@@ -1189,7 +1189,7 @@ function centerTodoHtml(){
  for(const t of todos){if(gone(t))continue;const g=checks[t.key]?.target,k=todoPick(t);let to=(t.to||[]).map(r=>({...r,playerName:k==='dd'&&g?g:r.playerName}));
   if(k==='to'&&g)to=g==='Markt'?[]:[{managerId:midOf(g),manager:g,playerName:todoPlayer(t)}];
   for(const r of to){const giver=rows.find(x=>x.key===t.key);
-  rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>bekommt ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}}
+  rows.push({mid:r.managerId,manager:r.manager,todo:false,receive:true,html:`<li class="center-info${giver?.finished?' center-done':''}"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span>${recvVerb(t.rule)} ${r.playerName?safe(r.playerName):'einen Spieler'} von ${safe(t.manager)}</span><span class="center-status">${giver?.finished?'<span class="center-state ok">✓ angekommen</span>':'<span class="center-state">wartet auf Abgabe</span>'}</span></span></li>`});}}
  // Magic Miyoshi: Der bestimmte Manager ist ebenfalls betroffen.
  for(const t of todos.filter(t=>t.rule==='MM'&&checks[t.key]?.target&&!gone(t))){const name=checks[t.key].target;
   const mid=[...(d.plausibility||[])].find(p=>p.manager===name)?.managerId||null;
@@ -1199,7 +1199,7 @@ function centerTodoHtml(){
   const sel=ok?`<select class="center-pick" data-todo-target="${safe(k)}" aria-label="Wie wurde entschieden?"${a.probe?' disabled':''}><option value="">Wie wurde entschieden?</option>${['Entfällt','Markt',...mmNames.filter(n=>n!==u.manager)].map(n=>`<option value="${safe(n)}" ${n===g?'selected':''}>${n==='Entfällt'?'Regel entfällt':n==='Markt'?'an den Markt':'an '+safe(n)}</option>`).join('')}</select>`:'';
   const st=g?`<span class="center-state ok">✓ ${g==='Entfällt'?'Regel entfällt':g==='Markt'?'an den Markt':'an '+safe(g)}</span>`:`<span class="center-state warn">? bitte prüfen</span>`;
   rows.push({mid:u.managerId,manager:u.manager,todo:false,unclear:!g,html:`<li class="center-info${g?' center-done':''}"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${pl(u)}: bitte von Hand prüfen</span><span class="center-status">${st} <span class="muted tiny">${safe(u.reason)}</span></span>${sel}</span></li>`});
-  if(g&&g!=='Entfällt'&&g!=='Markt')rows.push({mid:midOf(g),manager:g,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>bekommt ${pl(u)} von ${safe(u.manager)}</span><span class="center-status"><span class="center-state ok">✓ von Hand nachgetragen</span></span></span></li>`});}
+  if(g&&g!=='Entfällt'&&g!=='Markt')rows.push({mid:midOf(g),manager:g,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${recvVerb(u.rule)} ${pl(u)} von ${safe(u.manager)}</span><span class="center-status"><span class="center-state ok">✓ von Hand nachgetragen</span></span></span></li>`});}
  for(const x of (d.bdDropped||[]))rows.push({mid:x.managerId,manager:x.manager,todo:false,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">BD</span><span class="center-text"><span>${pl(x)} (${fmt(x.points)} Pkt.): Schnapszahl entfällt</span><span class="center-status muted tiny">weil auch ${x.because.map(safe).join(' und ')} gilt, BD tritt zurück</span></span></li>`});
  // Reihenfolge wie bei der Abrechnung: chronologisch vom Spieltagssieger abwärts.
  const dayList=historyData.find(h=>Number(h.day)===Number(a.day))?.list||[];
@@ -1387,12 +1387,12 @@ function bumsCounts(d,checks){
   const to0=to[0],moved=to0?.playerName&&['DD','AH','RK','BN','TL','UM'].includes(t.rule)?`${t.rule==='AH'||t.rule==='TL'?'verkauft':'gibt'} ${to0.playerName} an ${to.map(r=>r.manager).join(', ')}`:pk==='to'&&tgt==='Markt'?`verkauft ${pl||'den Spieler'} an den Markt`:null;
   const mmTo=t.rule==='MM'?tgt:null;
   add(t.managerId,t.manager,t.rule,'o',t.rule==='MM'?(mmTo?`verteilt MM an ${mmTo}`:'verteilt MM · Empfänger noch in der BumsParade auswählen'):(moved||t.text));
-  for(const r of to)add(r.managerId,r.manager,t.rule,'i',`bekommt ${r.playerName||'einen Spieler'} von ${t.manager}`);
+  for(const r of to)add(r.managerId,r.manager,t.rule,'i',`${recvVerb(t.rule)} ${r.playerName||'einen Spieler'} von ${t.manager}`);
   if(mmTo)add(null,mmTo,'MM','i',`bekommt MM von ${t.manager}: einen Spieler weniger aufstellen`);}
  for(const u of (d.autoEvents?.error?[]:(d.autoEvents?.unclear||[]))){const g=checks?.[unclearKey(u)]?.target,pn=u.playerName||'den Spieler';
   if(g==='Entfällt')continue;
   if(!g){add(u.managerId,u.manager,u.rule,'o',`unklar, bitte prüfen: ${u.reason||''}`);continue;}
-  add(u.managerId,u.manager,u.rule,'o',g==='Markt'?`verkauft ${pn} an den Markt`:`gibt ${pn} an ${g}`);if(g!=='Markt')add(null,g,u.rule,'i',`bekommt ${pn} von ${u.manager}`);}
+  add(u.managerId,u.manager,u.rule,'o',g==='Markt'?`verkauft ${pn} an den Markt`:`gibt ${pn} an ${g}`);if(g!=='Markt')add(null,g,u.rule,'i',`${recvVerb(u.rule)} ${pn} von ${u.manager}`);}
  return out;
 }
 let bumsLastSaved='',bumsDays={};
@@ -1437,7 +1437,9 @@ function bumsStatsHtml(rows,hit,inHalf,days,RN){
   card('MEISTE VERSCHIEDENE REGELN',top(hit,r=>Object.keys(r.rules).length),'','verschiedene Regeln erwischt')];
  return `<details class="hall-section prof-sec bums-statsbox" id="bumsStats"${bumsStatsOpen?' open':''}><summary><h4>📊 STATISTIKEN JE REGEL</h4></summary><div class="hall-grid">${[...ruleCards,...dirCards,...extra].join('')}</div></details>`;
 }
-// Wer bumst wen: aus den Empfänger-Einträgen („bekommt … von X“). Liga-Vorgabe: Wer abgibt (Spieler oder MM), bumst den Aufnehmenden.
+// Bei AH kauft der Empfaenger freiwillig (Kevin-Vorgabe), sonst bekommt er den Spieler.
+function recvVerb(rule){return rule==='AH'?'kauft':'bekommt';}
+// Wer bumst wen: aus den Empfänger-Einträgen („bekommt/kauft … von X“). Liga-Vorgabe: Wer abgibt (Spieler oder MM), bumst den Aufnehmenden.
 function bumsPairsHtml(rows){
  // Kreuztabelle: Zeile bumst Spalte. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt.
  const cnt=new Map(),rules=new Map(),key=(a,b)=>a+'\u0000'+b;
