@@ -2003,12 +2003,13 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const other=new Map(),add=(id,r)=>{id=String(id);if(!other.has(id))other.set(id,new Set());other.get(id).add(r);};
   for(const a of ev.actions)add(a.playerId,a.rule);
   for(const a of ah)add(a.playerId,'AH');
-  const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...(m.playerName?{playerId:String(m.playerId),playerName:m.playerName}:{}),...extra});
+  // state je Spieler (open/live/done): Push-Nachrichten "gebumst" gehen erst nach Spielende raus (tools/tipp-dienst/worker.js).
+  const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...(m.playerName?{playerId:String(m.playerId),playerName:m.playerName,...(pts[String(m.playerId)]?.state?{state:pts[String(m.playerId)].state}:{})}:{}),...extra});
   for(const [id,r] of other)if(r.size>1){const a=ev.actions.find(x=>String(x.playerId)===id)||ah.find(x=>String(x.playerId)===id);item('EZ',a,`${a.playerName} ist von ${[...r].join(' und ')} betroffen: Einzelfallentscheidung`);}
   const multi=id=>(other.get(String(id))?.size||0)>1;
   for(const p of ah)if(!multi(p.playerId))item('AH',p,`${p.playerName} ist mit ${fmtNum(p.points)} Punkten gerade MVP des Spieltags: müsste zum Verkauf angeboten werden`);
-  for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`,a.rule==='UM'&&a.recipientKind==='manager'?{to:[String(a.recipient)]}:{});
-  for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden (Spiel beendet)`,{state:p.state});
+  for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`,{reason:a.reason,...(a.rule==='UM'&&a.recipientKind==='manager'?{to:[String(a.recipient)]}:{})});
+  for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden (Spiel beendet)`,{state:p.state,points:p.points});
   for(const u of (ev.unclear||[]))item(u.rule,u,`${u.playerName}: ${u.reason}`,{unclear:true});
   let dd=null,mm=null;
   if(!noLineup.length&&roster.length){

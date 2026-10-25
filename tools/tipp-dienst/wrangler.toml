@@ -11,3 +11,7 @@ id = "8829ebef1b34462584800039bb03d78d"
 
 [vars]
 SITE_URL = "https://tee800.github.io/kbl-legenden"
+
+# Push-Nachrichten: alle 5 Minuten pruefen (worker.js, pushTick).
+[triggers]
+crons = ["*/5 * * * *"]
