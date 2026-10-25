@@ -2,7 +2,8 @@
 // Nimmt die verdeckten Tipps an, solange der Spieltag nicht angepfiffen ist, und zeigt sie erst danach.
 // Managerliste, Spielerliste und Regel-Vorlagen liest er von der Online-Seite (data/mvp-tipps*.json),
 // Anstosszeiten von OpenLigaDB. Kickbase braucht er nicht. Die Auswertung macht weiter die App (GitHub-Export holt /export).
-// Einstellungen im Cloudflare-Dashboard: KV-Bindung TIPPS, Variable SITE_URL, Geheimnis ADMIN_CODE, Cron-Trigger */5 * * * * (Push). Anleitung: ANLEITUNG.md.
+// Einstellungen im Cloudflare-Dashboard: KV-Bindung TIPPS, Variable SITE_URL, Geheimnis ADMIN_CODE, Cron-Trigger */5 * * * * (Push),
+// D1-Bindung NUTZUNG (Nutzung der Seite zaehlen, freiwillig). Anleitung: ANLEITUNG.md.
 const SEASON_URL = 'https://api.openligadb.de/getmatchdata/bl1/2026';
 const json = (body, status = 200, cors = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...cors } });
 const enc = new TextEncoder();
@@ -372,11 +373,91 @@ async function handlePush(req, env, cors, parts, body) {
   return json({ error: 'Nicht gefunden.' }, 404, cors);
 }
 
+// ===== Nutzung der Online-Seite (Kevin-Wunsch, nur fuer den Admin) =====
+// Die Seite meldet je Besuch und je geoeffnetem Reiter einen kleinen Eintrag (public/nutzung.js). Gespeichert in der
+// D1-Datenbank NUTZUNG (kostenlos: 100.000 Schreibvorgaenge am Tag; KV haette nur 1000). Keine IP, kein Name im Klartext:
+// Besucher = Zufallsnummer des Geraets, Manager nur, wenn auf dem Geraet einer gewaehlt ist (🔔 oder MVP-Tipp).
+// Die Zahlen gibt es nur mit dem Admin-Code (POST /nutzung/zahlen), hoechstens 5 Fehlversuche in 15 Minuten.
+const NZ_VIEWS = /^[a-z]{2,20}$/;
+const berlinDate = ms => new Intl.DateTimeFormat('en-CA', { ...BERLIN, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+const berlinH = ms => Number(new Intl.DateTimeFormat('en-GB', { ...BERLIN, hour: '2-digit', hourCycle: 'h23' }).format(new Date(ms)));
+async function nzDb(env) {
+  if (!env.NUTZUNG) return null;
+  if (!memo.get('nz:init')) {
+    await env.NUTZUNG.batch([
+      env.NUTZUNG.prepare('CREATE TABLE IF NOT EXISTS hits (ts INTEGER NOT NULL, d TEXT NOT NULL, h INTEGER, vid TEXT NOT NULL, mid TEXT, kind TEXT NOT NULL, view TEXT, dev TEXT, app INTEGER)'),
+      env.NUTZUNG.prepare('CREATE INDEX IF NOT EXISTS hits_d ON hits (d)'),
+      env.NUTZUNG.prepare('CREATE INDEX IF NOT EXISTS hits_ts ON hits (ts)')
+    ]);
+    memo.set('nz:init', { at: Date.now(), value: 1 });
+  }
+  return env.NUTZUNG;
+}
+async function handleNutzung(req, env, cors, parts, body) {
+  if (parts[1] === 'melden' && req.method === 'POST') {
+    const db = await nzDb(env);
+    if (!db) return json({ ok: false }, 200, cors);
+    const vid = String(body.vid || ''), kind = body.kind === 'open' ? 'open' : 'view', view = String(body.view || '');
+    if (!/^[a-z0-9]{8,32}$/.test(vid) || !NZ_VIEWS.test(view)) return json({ error: 'Ungültig.' }, 400, cors);
+    // Schutz gegen Dauerfeuer: je Geraet hoechstens 200 Meldungen pro Stunde (je Worker-Instanz).
+    const k = 'nzr:' + vid, r = memo.get(k), now = Date.now();
+    const n = r && now - r.at < 3600e3 ? r.value + 1 : 1;
+    memo.set(k, { at: n === 1 ? now : r.at, value: n });
+    if (n > 200) return json({ ok: false }, 429, cors);
+    const mid = /^\d{1,15}$/.test(String(body.mid || '')) && String(body.mid) !== '3783040' ? String(body.mid) : null;
+    const dev = ['handy', 'tablet', 'pc'].includes(body.dev) ? body.dev : null;
+    await db.prepare('INSERT INTO hits (ts, d, h, vid, mid, kind, view, dev, app) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(now, berlinDate(now), berlinH(now), vid, mid, kind, view, dev, body.app ? 1 : 0).run();
+    return json({ ok: true }, 200, cors);
+  }
+  if (parts[1] === 'zahlen' && req.method === 'POST') {
+    const fails = ((await env.TIPPS.get('fail:nutzung', 'json')) || []).filter(t => Date.now() - t < 15 * 60e3);
+    if (fails.length >= 5) return json({ error: 'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.' }, 429, cors);
+    if (!isAdmin(env, body.adminCode)) {
+      fails.push(Date.now());
+      await env.TIPPS.put('fail:nutzung', JSON.stringify(fails), { expirationTtl: 16 * 60 });
+      return json({ error: 'Falscher Code.' }, 403, cors);
+    }
+    const db = await nzDb(env);
+    if (!db) return json({ error: 'Die Datenbank NUTZUNG ist im Tippdienst noch nicht verbunden (Anleitung: Nutzung zählen).' }, 503, cors);
+    const tage = [7, 30, 90, 365].includes(Number(body.tage)) ? Number(body.tage) : 30;
+    // Tage als Kalenderdaten zaehlen (nicht in Millisekunden), sonst verrutscht es bei der Zeitumstellung.
+    const now = Date.now(), today = berlinDate(now), day = n => new Date(Date.parse(today + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+    const from = day(tage - 1);
+    // Alte Eintraege nach gut einem Jahr loeschen.
+    await db.prepare('DELETE FROM hits WHERE ts < ?').bind(now - 400 * 864e5).run();
+    const q = (sql, ...a) => db.prepare(sql).bind(...a);
+    const sum = d => q("SELECT SUM(kind = 'open') AS visits, COUNT(DISTINCT vid) AS visitors, COUNT(DISTINCT mid) AS managers FROM hits WHERE d >= ?", d);
+    const res = await db.batch([
+      sum(today), sum(day(6)), sum(day(29)),
+      q("SELECT SUM(kind = 'open') AS visits, COUNT(DISTINCT vid) AS visitors, MIN(d) AS since FROM hits"),
+      q("SELECT d, SUM(kind = 'open') AS visits, COUNT(DISTINCT vid) AS visitors FROM hits WHERE d >= ? GROUP BY d ORDER BY d", from),
+      q('SELECT view, COUNT(*) AS n, COUNT(DISTINCT vid) AS visitors FROM hits WHERE d >= ? GROUP BY view ORDER BY n DESC', from),
+      q("SELECT mid, SUM(kind = 'open') AS visits, COUNT(*) AS views, COUNT(DISTINCT vid) AS devices, MAX(ts) AS last FROM hits WHERE d >= ? AND mid IS NOT NULL GROUP BY mid ORDER BY visits DESC", from),
+      q('SELECT COUNT(DISTINCT vid) AS n FROM hits WHERE d >= ? AND vid NOT IN (SELECT DISTINCT vid FROM hits WHERE mid IS NOT NULL)', from),
+      q("SELECT COALESCE(dev, '?') AS dev, app, COUNT(DISTINCT vid) AS visitors, SUM(kind = 'open') AS visits FROM hits WHERE d >= ? GROUP BY dev, app ORDER BY visits DESC", from),
+      q("SELECT h, SUM(kind = 'open') AS visits FROM hits WHERE d >= ? GROUP BY h", from)
+    ]);
+    const rows = i => res[i].results || [], one = i => rows(i)[0] || {};
+    const tile = r => ({ visits: r.visits || 0, visitors: r.visitors || 0, managers: r.managers || 0 });
+    let names = {};
+    try { for (const m of (await siteJson(env, 'mvp-tipps.json')).managers || []) names[String(m.id)] = m.name; } catch {}
+    const hours = Array(24).fill(0); for (const r of rows(9)) if (r.h >= 0 && r.h < 24) hours[r.h] = r.visits || 0;
+    const dayMap = new Map(rows(4).map(r => [r.d, r]));
+    const daily = []; for (let i = tage - 1; i >= 0; i--) { const d = day(i), r = dayMap.get(d); daily.push({ d, visits: r?.visits || 0, visitors: r?.visitors || 0 }); }
+    return json({ tage, today: tile(one(0)), d7: tile(one(1)), d30: tile(one(2)), all: { ...tile(one(3)), since: one(3).since || null },
+      daily, views: rows(5), managers: rows(6).map(r => ({ ...r, name: names[r.mid] || `Manager ${r.mid}` })),
+      unknown: one(7).n || 0, devices: rows(8), hours, at: new Date(now).toISOString() }, 200, cors);
+  }
+  return json({ error: 'Nicht gefunden.' }, 404, cors);
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
   if (parts[0] === '' || parts[0] === 'status') return json({ ok: true, dienst: 'KBL Legenden MVP-Tipp' }, 200, cors);
   if (parts[0] === 'push') return handlePush(req, env, cors, parts, body);
+  if (parts[0] === 'nutzung') return handleNutzung(req, env, cors, parts, body);
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {
