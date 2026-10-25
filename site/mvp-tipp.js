@@ -199,7 +199,7 @@
  // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
  window.kblToon={toon,clubColor,kbImg,headSrc};
  const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`;
- function toonRace(live,groups,leadIds,bestIds,me,best,pool){
+ function toonRace(live,groups,leadIds,bestIds,me,best,pool,losers=[]){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
   const vals=[...groups.map(g=>g.pts??0),...(best?[best.points]:[])],lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
@@ -221,7 +221,12 @@
   groups.forEach(g=>{const neg=g.pts!==null&&g.pts<0,k=ko(g);
    figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,crown:bestIds.has(String(g.t.playerId)),ko:k,mood:neg||k?'sad':g.place===1&&g.pts!==null?'wow':'happy',num:g.place??'?',
     run:k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':''});});
-  const pitch=`<div class="toon-pitch" style="height:${TOP+(figs.length-1)*ROW+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map(runner).join('')}</div>`;
+  // Kevin-Wunsch: die drei Manager, die den Sieg am knappsten verpassen, liegen weinend hinter dem Sieger (eigene Zeile unter ihm).
+  const wi=figs.findIndex(f=>f.crown);
+  if(wi>=0&&losers.length)figs.splice(wi+1,0,{mourn:true,pts:figs[wi].pts});
+  const face=window.kblMgrFace||(()=>'');
+  const mourners=(o,row)=>`<div class="toon-mourners" style="right:${(100-Number(pos(o.pts))+3).toFixed(1)}%;top:${TOP+row*ROW-130}px">${losers.map(r=>`<div class="toon-mourner"><div class="toon-mourner-body">${toon({},'#6b7280','#fff','sad','')}<span class="toon-mourner-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-tears">💧</span><span class="toon-mourner-name">${esc(r.m.name)}</span></div>`).join('')}</div>`;
+  const pitch=`<div class="toon-pitch" style="height:${TOP+(figs.length-1)*ROW+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.mourn?mourners(o,row):runner(o,row)).join('')}</div>`;
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&(!pool.length||pool.includes(g.t.team))),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
   const ghostLine=tops.length?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">Gerade bester getippter Spieler:</span> <b>${tops.map(g=>esc(g.t.player)).join(', ')}</b> <small class="muted">${esc([...new Set(tops.map(g=>g.t.team))].join(', '))}</small><span class="toon-pts">${fmt(top)}<small> Pkt.</small></span></div>`:'';
@@ -254,7 +259,7 @@
   let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
   const played=groups.filter(g=>g.pts!==null).length;
   h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span><span><b>${played}</b> davon schon mit Punkten</span>${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
-  h+=toonRace(live,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool);
+  h+=toonRace(live,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready?rows.filter(r=>!leadIds.has(r.m.id)).slice(0,3):[]);
   // Zahlenstrahl „Wer liegt mit der Zahl am nächsten?“ entfernt (Kevin-Wunsch).
   // Rangliste je Manager (eingeklappt, Liga-Vorgabe).
   h+=`<details class="acc-group" style="margin-top:14px"><summary>Rangliste aller Manager</summary><div class="acc-sub"><div class="tablewrap"><table class="mvp-table"><tr><th>Pl.</th><th>Manager</th><th>Spieler</th><th class="num">Tipp</th><th class="num">Punkte</th><th>Stand</th></tr>${rows.map(r=>`<tr${r.m.id===d.me?' class="mvp-me"':''}><td>${r.rank??'–'}</td><td>${mn(r.m.name,r.m.id)}${r.t.late?'<sup>*</sup>':''}</td><td>${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></td><td class="num">${fmt(r.t.points)}</td><td class="num">${r.pts===null?'–':fmt(r.pts)}</td><td><small class="muted">${r.why?esc(r.why):off(r,needMvp,'','',pool.length)||esc(STATE[r.state]||'')}</small></td></tr>`).join('')}</table></div></div></details>`;

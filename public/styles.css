@@ -620,3 +620,15 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .me-year{color:var(--gold);font:900 20px Georgia;padding-top:1px}.me-card h4{margin:0 0 6px;font-size:15px}.me-card p{margin:0 0 8px;line-height:1.5;color:var(--text-2)}
 .me-quote{font-style:italic;color:var(--muted)!important;border-left:2px solid var(--line-strong);padding-left:8px;margin-bottom:0!important}.me-quote b{font-style:normal;color:var(--gold)}.me-note{margin-top:14px}
 @media(max-width:620px){.me-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.me-kpis strong{font-size:21px}.me-sub{display:block;margin:2px 0 0 26px}.me-card{grid-template-columns:1fr;gap:4px}.me-year{font-size:17px}}
+/* Weinende Verlierer (Kevin-Wunsch): die drei knappsten Verpasser liegen hinter dem Sieger, Tränen tropfen. */
+.toon-mourners{position:absolute;display:flex;gap:16px;align-items:flex-end;z-index:1}
+.toon-mourner{position:relative;width:46px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.toon-mourner-body{position:relative;width:40px;height:60px;transform:rotate(-90deg) translate(-18px,2px) scale(.8);transform-origin:50% 100%}
+.toon-mourner-body .toon-head{display:none}
+.toon-mourner-face{position:absolute;left:50%;top:-6px;margin-left:-15px;width:30px;height:30px;transform:rotate(90deg)}
+.toon-mourner-face .mgr-av{width:30px;height:30px;margin:0;top:0;box-shadow:0 0 0 2px #111;font-size:16px}
+.toon-tears{position:absolute;left:-12px;top:66px;font-size:11px;animation:toonTear 1s ease-in infinite}
+.toon-mourner:nth-child(2) .toon-tears{animation-delay:.3s}.toon-mourner:nth-child(3) .toon-tears{animation-delay:.6s}
+@keyframes toonTear{0%{opacity:0;transform:translateY(-4px)}20%{opacity:1}100%{opacity:0;transform:translateY(16px)}}
+.toon-mourner-name{position:absolute;bottom:-34px;left:-4px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:5px;padding:0 4px;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis}
+@media (prefers-reduced-motion:reduce){.toon-tears{animation:none}}
