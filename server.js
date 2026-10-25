@@ -2029,7 +2029,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
   const value={day,status:'live',live:true,updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
    standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
-   items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes};
+   items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,
+   // Punkte aller Spieler mit beendetem Spiel: Push-Entwarnung, wenn eine gemeldete Schnapszahl korrigiert wird (worker.js).
+   donePoints:Object.fromEntries(ids.filter(id=>pts[id]?.state==='done'&&Number.isFinite(pts[id].points)).map(id=>[id,pts[id].points]))};
   ruleLiveCache.set(day,{at:Date.now(),value});
   res.set('Cache-Control','no-store').json(value);
  }catch(err){res.status(err.status||502).json({error:'BumsParade LIVE nicht abrufbar.',detail:err.message});}

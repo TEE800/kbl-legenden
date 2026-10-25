@@ -214,7 +214,7 @@ async function pushTick(env) {
         const k = `${it.rule}:${it.managerId}:${it.playerId}`;
         if (S.st.sent[k] || !stable(k)) continue;
         if (!per.has(it.managerId)) per.set(it.managerId, []);
-        per.get(it.managerId).push({ k, line: liveLine(it) });
+        per.get(it.managerId).push({ k, line: liveLine(it), pid: it.playerId, name: it.playerName });
         // UM: Der Besitzer des gefoulten Spielers bekaeme ihn (Kevin-Wunsch: "Du bekommst einen Spieler").
         if (it.rule === 'UM') for (const name of (it.to || [])) {
           const r = (live.standings || []).find(x => x.manager === name), rk = r && `UMR:${r.managerId}:${it.playerId}`;
@@ -223,8 +223,17 @@ async function pushTick(env) {
           per.get(r.managerId).push({ k: rk, get: 1, line: `🎁 UM · ${it.playerName} (${it.manager}) hat deinen Spieler gefoult und ginge an dich` });
         }
       }
-      for (const [mid, list] of per) outbox.push({ pref: 'bums', only: mid, done: () => { for (const x of list) S.st.sent[x.k] = now; S.dirty = true; },
-        msg: () => ({ title: list.every(x => x.get) ? '🎁 Du bekommst vielleicht einen Spieler' : list.length > 1 ? `💥 Du wurdest ${list.length}× gebumst!` : '💥 Du wurdest gebumst!', body: list.map(x => x.line).join('\n') + '\nVorläufig, abgerechnet wird nach dem Spieltag.', url: './#accounting', tag: `bums${d.day}` }) });
+      // Entwarnung (Kevin-Wunsch): Wurde "besoffen" gemeldet und ist die Schnapszahl durch eine Korrektur weg, einmal "wieder nuechtern".
+      const schnaps = n => Math.abs(n) >= 11 && /^(\d)\1+$/.test(String(Math.abs(n)));
+      for (const k of Object.keys(S.st.sent)) {
+        const [r, mid, pid] = k.split(':'), pts = live?.donePoints?.[pid], nk = `NUE:${mid}:${pid}`;
+        if (r !== 'BD' || !live?.live || !Number.isFinite(pts) || schnaps(pts) || S.st.sent[nk] || !stable(nk)) continue;
+        const name = (live.items || []).find(x => x.playerId === pid)?.playerName || S.st.names?.[pid] || 'Dein Spieler';
+        if (!per.has(mid)) per.set(mid, []);
+        per.get(mid).push({ k: nk, calm: 1, line: `☕ ${name} ist wieder nüchtern (jetzt ${pts} Punkte)` });
+      }
+      for (const [mid, list] of per) outbox.push({ pref: 'bums', only: mid, done: () => { for (const x of list) { S.st.sent[x.k] = now; if (x.pid) (S.st.names ||= {})[x.pid] = x.name; } S.dirty = true; },
+        msg: () => ({ title: list.every(x => x.calm) ? '☕ Entwarnung' : list.every(x => x.get) ? '🎁 Du bekommst vielleicht einen Spieler' : list.length > 1 ? `💥 Du wurdest ${list.length}× gebumst!` : '💥 Du wurdest gebumst!', body: list.map(x => x.line).join('\n') + (list.every(x => x.calm) ? '' : '\nVorläufig, abgerechnet wird nach dem Spieltag.'), url: './#accounting', tag: `bums${d.day}` }) });
       // MVP-Tipp: getippter Spieler hat sein Spiel beendet.
       const mt = await freshSite(env, `mvp-tipps_${d.day}.json`).catch(() => null), tr = mt?.tracking;
       const lead = tr?.mvp?.players?.length ? `${tr.mvp.players.map(p => p.name).join(', ')} (${tr.mvp.points} Punkte)` : '';
