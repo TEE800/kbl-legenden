@@ -1655,7 +1655,7 @@ function kblBumsIntro({hit,clean,half,RN}){
  cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per;
   timers.push(setTimeout(()=>{if(done)return;
   const el=document.createElement('div');el.className='bums-intro-card';
-  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(n=>mgrName(n)).join(', ')}</b><span>${c.n}${c.unit}</span>`;
+  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(n=>`<i class="bi-n">${mgrName(n)}</i>`).join(', ')}</b><span>${c.n}${c.unit}</span>`;
   const [l,t,rot]=SLOTS[w%2][j],[fx,fy]=FROM[idx%FROM.length];
   el.style.left=l+'%';el.style.top=t+'%';
   ov.appendChild(el);
