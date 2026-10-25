@@ -2630,19 +2630,21 @@ async function fetchTransferList(token, id) {
   return all;
 }
 let transferCache = null;
-// Ende der Hinrunde: letzter regulärer Anstoß von Spieltag 17 der Saison y (OpenLigaDB bl1/y/17) plus 3 Stunden.
-const halfSplitCache = new Map();
-async function halfSeasonSplit(y) {
-  if (halfSplitCache.has(y)) return halfSplitCache.get(y);
-  try {
-    const r = await fetch(`https://api.openligadb.de/getmatchdata/bl1/${y}/17`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(12000) });
-    const ms = r.ok ? (await r.json()).map(m => Date.parse(m.matchDateTimeUTC)).filter(Number.isFinite) : [];
-    // Nachholspiele (z. B. Spieltag 17 der Saison 2025/26 erst im März) zählen nicht: nur Spiele bis 4 Tage nach dem ersten Anstoß.
-    const first = ms.length ? Math.min(...ms) : null, regular = ms.filter(x => x - first <= 4 * 864e5);
-    const v = regular.length ? Math.max(...regular) + 3 * 3600e3 : null;
-    if (v) halfSplitCache.set(y, v);
-    return v;
-  } catch { return null; }
+// Halbserien aus den Rücksetzungen der Liga: Kickbase startet jede Saison ein paar Wochen vor Spieltag 1, vorher ruht der Markt.
+// Eine Lücke von mindestens 5 Tagen ohne einen einzigen Transfer in der ganzen Liga = Rücksetzung; die Halbserie beginnt mit dem ersten Transfer danach.
+// Name nach dem Startmonat: Juni bis Oktober = Hinrunde, sonst Rückrunde. Ergibt sich derselbe Name zweimal, wird nicht geteilt (nie raten).
+function transferPeriods(times, now = Date.now()) {
+  const ts = [...new Set(times.filter(Number.isFinite))].sort((a, b) => a - b);
+  if (!ts.length) return [];
+  const starts = [ts[0]];
+  for (let i = 1; i < ts.length; i++) if (ts[i] - ts[i - 1] >= 5 * 864e5) starts.push(ts[i]);
+  const keyOf = ms => { const d = new Date(ms), m = d.getUTCMonth(), y = m >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; return `${m >= 5 && m <= 9 ? 'Hinrunde' : 'Rückrunde'} ${y}/${String(y + 1).slice(2)}`; };
+  const periods = [];
+  for (const st of starts) { const key = keyOf(st); if (periods.length && periods[periods.length - 1].key === key) continue; if (periods.length) periods[periods.length - 1].to = st; periods.push({ key, from: st, to: null }); }
+  // Der Zeitraum beginnt am Tag des ersten Transfers (0 Uhr UTC), damit nichts vom ersten Tag fehlt.
+  for (const pd of periods) pd.from = Date.UTC(new Date(pd.from).getUTCFullYear(), new Date(pd.from).getUTCMonth(), new Date(pd.from).getUTCDate());
+  for (let i = 0; i < periods.length - 1; i++) periods[i].to = periods[i + 1].from;
+  return periods.reverse();
 }
 app.get('/api/transfers', async (req, res) => {
   const token = getToken(req) || newestToken();
@@ -2659,23 +2661,13 @@ app.get('/api/transfers', async (req, res) => {
         return { base, list, squad };
       } catch (e) { return { base, error: e.message }; }
     })));
-    // Halbserien (Kevin: die Liga spielt Halbserien): Hinrunde ab 1. Juli bis zum Ende von Spieltag 17, Rückrunde danach bis 30. Juni.
-    // Neueste zuerst; die laufende Halbserie immer dabei. Ohne Spieltag-17-Termin (OpenLigaDB) wird nichts geteilt (nie raten).
-    const startOf = y => Date.UTC(y, 6, 1), yearOf = ms => { const d = new Date(ms); return d.getUTCMonth() >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; };
-    const now = Date.now(), nowY = yearOf(now), years = new Set([nowY]);
-    for (const r of raw) for (const t of r.list || []) { const x = Date.parse(t.dt); if (Number.isFinite(x)) years.add(yearOf(x)); }
-    const periods = [];
-    for (const y of [...years].sort((a, b) => b - a)) {
-      const mid = await halfSeasonSplit(y), label = `${y}/${String(y + 1).slice(2)}`;
-      const parts = mid ? [{ key: `Rückrunde ${label}`, from: mid, to: startOf(y + 1) }, { key: `Hinrunde ${label}`, from: startOf(y), to: mid }]
-        : [{ key: `Saison ${label}`, from: startOf(y), to: startOf(y + 1), noSplit: true }];
-      periods.push(...parts);
-    }
-    const seasons = periods.filter(pd => pd.from <= now).map(pd => {
-      const current = now >= pd.from && now < pd.to;
+    // Halbserien (Kevin: die Liga spielt Halbserien) ab den Rücksetzungen, neueste zuerst; die letzte läuft noch.
+    const now = Date.now(), periods = transferPeriods(raw.flatMap(r => (r.list || []).map(t => Date.parse(t.dt))), now);
+    const seasons = periods.map(pd => {
+      const current = pd.to == null;
       const managers = raw.map(r => r.error ? { ...r.base, error: r.error } : { ...r.base, squadMissing: current && !r.squad, ...buildTransferHistory(r.list, r.squad, pd.from, pd.to, current) })
         .filter(m => current || m.error || m.buys || m.sells).sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
-      return { key: pd.key, current, noSplit: !!pd.noSplit, from: new Date(pd.from).toISOString(), to: new Date(pd.to).toISOString(), managers };
+      return { key: pd.key, current, from: new Date(pd.from).toISOString(), to: pd.to == null ? null : new Date(pd.to).toISOString(), managers };
     }).filter(se => se.current || se.managers.length);
     const value = { updatedAt: new Date().toISOString(), seasons };
     transferCache = { at: Date.now(), value };
