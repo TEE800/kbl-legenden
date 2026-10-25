@@ -623,6 +623,19 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .me-quote{font-style:italic;color:var(--muted)!important;border-left:2px solid var(--line-strong);padding-left:8px;margin-bottom:0!important}.me-quote b{font-style:normal;color:var(--gold)}.me-note{margin-top:14px}
 @media(max-width:620px){.me-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.me-kpis strong{font-size:21px}.me-sub{display:block;margin:2px 0 0 26px}.me-card{grid-template-columns:1fr;gap:4px}.me-year{font-size:17px}}
 /* Weinende Verlierer (Kevin-Wunsch): die drei knappsten Verpasser liegen hinter dem Sieger, Tränen tropfen. */
+/* Kevin-Wunsch: wer den Sieger getippt hat, tanzt neben ihm (Profilbild als Kopf, gleicher Tanz wie der Sieger) */
+.toon-dancers{position:absolute;display:flex;gap:12px;align-items:flex-end;z-index:1}
+.toon-dancer{position:relative;width:40px;height:84px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+.toon-dancer-body{position:relative;width:40px;height:60px;animation:toonShimmy .44s ease-in-out infinite alternate}
+.toon-dancer:nth-child(2n) .toon-dancer-body{animation-delay:.22s}
+.toon-dancer-body .toon-head{display:none}
+.toon-dancer-body .toon-arm.l{transform-origin:12px 26px;animation:toonCheerL .22s ease-in-out infinite alternate}
+.toon-dancer-body .toon-arm.r{transform-origin:28px 26px;animation:toonCheerR .22s ease-in-out infinite alternate}
+.toon-dancer-face{position:absolute;left:50%;top:-8px;margin-left:-15px;width:30px;height:30px}
+.toon-dancer-face .mgr-av{width:30px;height:30px;margin:0;top:0;box-shadow:0 0 0 2px var(--gold);font-size:16px}
+.toon-dancer-name{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:5px;padding:0 4px;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+.toon-dancer-name b{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.toon-dancer-body,.toon-dancer-body .toon-arm{animation:none}}
 .toon-mourners{position:absolute;display:flex;gap:16px;align-items:flex-end;z-index:1}
 .toon-mourner{position:relative;width:46px;height:62px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
 .toon-mourner-body{position:relative;width:40px;height:60px;transform:rotate(-90deg) translate(-18px,2px) scale(.8);transform-origin:50% 100%}
