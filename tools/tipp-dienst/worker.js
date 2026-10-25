@@ -178,11 +178,12 @@ async function freshSite(env, file) {
 const fmtTime = ms => new Date(ms).toLocaleTimeString('de-DE', { ...BERLIN, hour: '2-digit', minute: '2-digit' });
 const fmtDay = ms => new Date(ms).toLocaleDateString('de-DE', { ...BERLIN, weekday: 'short' }) + ' ' + fmtTime(ms);
 const berlinHour = () => Number(new Intl.DateTimeFormat('en-GB', { ...BERLIN, hour: '2-digit', hourCycle: 'h23' }).format(new Date()));
-const BUMS_LIVE = { BD: 'an den Markt', RK: 'an einen Mitmanager', BN: 'an einen Mitmanager', UM: 'Foul-Elfmeter' };
+// Waehrend des Spieltags nur melden, was passiert ist, keine Aufforderung (Kevin-Vorgabe: verkauft wird erst nach der Abrechnung).
+const BUMS_LIVE = { BD: 1, RK: 1, BN: 1, UM: 1 };
 function liveLine(it) {
-  if (it.rule === 'BD') return `BD · ${it.playerName}${Number.isFinite(it.points) ? ` (${it.points} Punkte)` : ''} → an den Markt`;
-  if (it.rule === 'UM') return `UM · ${it.playerName} (Foul-Elfmeter) → ${it.to?.length ? 'an ' + it.to.join(', ') : 'an den Markt'}`;
-  return `${it.rule} · ${it.playerName}${it.reason ? ` (${it.reason})` : ''} → ${BUMS_LIVE[it.rule]}`;
+  if (it.rule === 'BD') return `🍺 ${it.playerName} ist besoffen!${Number.isFinite(it.points) ? ` (${it.points} Punkte)` : ''}`;
+  if (it.rule === 'UM') return `UM · ${it.playerName}: Foul-Elfmeter verursacht`;
+  return `${it.rule} · ${it.playerName}${it.reason ? `: ${it.reason}` : ''}`;
 }
 
 // Zeitplan: alle 5 Minuten. Schreibt in KV nur, wenn sich etwas tut (kostenloser Tarif: 1000 Schreibvorgaenge am Tag).
