@@ -1890,10 +1890,12 @@ function accRadarHtml(d){
  const safe=x=>escapeHtml(String(x??'')),items=d.items||[],st=d.standings||[];
  const place=new Map(st.map((m,i)=>[String(m.managerId),i+1]));
  const by=new Map();for(const it of items){const k=String(it.managerId);if(!by.has(k))by.set(k,{id:k,name:it.manager,list:[]});by.get(k).list.push(it);}
+ // Kevin-Wunsch: Wer per UM einen Spieler bekommt, steht auch in seiner eigenen Karte (Gegenseite).
+ for(const it of items){if(it.rule!=='UM'||!(it.to||[]).length)continue;for(const nm of it.to){const m=st.find(x=>x.manager===nm);const k=m?String(m.managerId):'n:'+nm;if(!by.has(k))by.set(k,{id:m?k:'',name:nm,list:[]});by.get(k).list.push({rule:'UM',role:'recv',playerName:it.playerName,from:it.manager});}}
  const victims=[...by.values()].sort((a,b)=>b.list.length-a.list.length||(place.get(a.id)??99)-(place.get(b.id)??99));
  const sum=victims.length?`${victims.length} Manager im Visier`:'gerade keiner im Visier';
  const verdict=n=>n>=3?'Komplett zerlegt.':n===2?'Doppelt dran.':'Erwischt.';
- const where=it=>it.rule==='BD'?'→ 🗑️ ab auf den Markt':it.rule==='AH'?'→ 🔨 unter den Hammer':it.rule==='DD'?(it.role==='get'?'← darf sich bedienen':`→ 🎁 an ${(it.to||[]).join(', ')}`):it.rule==='MM'?'🎯 darf einen Manager auswählen':it.rule==='UM'?((it.to||[]).length?`→ an ${it.to.join(', ')}`:'→ 🗑️ an den Markt'):it.rule==='EZ'?'⚖️ Einzelfall':'→ an einen Mitmanager';
+ const where=it=>it.rule==='BD'?'→ 🗑️ ab auf den Markt':it.rule==='AH'?'→ 🔨 unter den Hammer':it.rule==='DD'?(it.role==='get'?'← darf sich bedienen':`→ 🎁 an ${(it.to||[]).join(', ')}`):it.rule==='MM'?'🎯 darf einen Manager auswählen':it.rule==='UM'&&it.role==='recv'?`← bekommt ihn von ${it.from}`:it.rule==='UM'?((it.to||[]).length?`→ an ${it.to.join(', ')}`:'→ 🗑️ an den Markt'):it.rule==='EZ'?'⚖️ Einzelfall':'→ an einen Mitmanager';
  const shot=it=>`<li><span class="bradar-stamp r-${safe(it.rule)}">${safe(it.rule)}</span><span class="bradar-shot">${it.playerName?`<b>${safe(it.playerName)}</b> `:''}<span class="muted">${safe(where(it))}</span></span></li>`;
  // Hauptduell der Drehtür: Spieltagsführender gegen Letzten.
  const give=items.filter(it=>it.rule==='DD'&&it.role==='give'),get=items.filter(it=>it.rule==='DD'&&it.role==='get');
