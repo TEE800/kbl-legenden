@@ -113,7 +113,9 @@ try {
   const tipps = await save('/api/mvp-tipps');
   for (const d of (tipps?.days || []).map(x => x.day)) {
     const u = `/api/mvp-tipps/${d}`;
-    if (MODE === 'full' || d === live || d === tipps.next || !have(u)) await save(u);
+    // Nach Spielende einmal endgueltig nachladen (sonst bleibt der Spieltag bis 6:07 auf dem letzten Live-Stand ohne Auswertung).
+    const tippLive = () => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).status !== 'finished'; } catch { return true; } };
+    if (MODE === 'full' || d === live || d === tipps.next || !have(u) || tippLive()) await save(u);
   }
   // Transfers je Manager (Reiter "Transfers"): je Manager Verlauf und Kader. Im Live-Lauf hoechstens stuendlich neu.
   const transfersOld = () => { try { return !(Date.now() - Date.parse(JSON.parse(fs.readFileSync(path.join(DATA, key('/api/transfers')), 'utf8')).updatedAt) <= 3600e3); } catch { return true; } };
