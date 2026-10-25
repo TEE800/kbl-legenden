@@ -111,7 +111,7 @@ const unb64u = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_
 const cat = (...a) => { const out = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of a) { out.set(x, o); o += x.length; } return out; };
 async function hmac(key, data) { const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); return new Uint8Array(await crypto.subtle.sign('HMAC', k, data)); }
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)$/;
-const PUSH_PREFS = ['bums', 'tipp', 'mvp'];
+const PUSH_PREFS = ['bums', 'tipp', 'mvp', 'spieltag', 'arena'];
 const BERLIN = { timeZone: 'Europe/Berlin' };
 
 async function vapid(env) {
@@ -215,9 +215,16 @@ async function pushTick(env) {
         if (S.st.sent[k] || !stable(k)) continue;
         if (!per.has(it.managerId)) per.set(it.managerId, []);
         per.get(it.managerId).push({ k, line: liveLine(it) });
+        // UM: Der Besitzer des gefoulten Spielers bekaeme ihn (Kevin-Wunsch: "Du bekommst einen Spieler").
+        if (it.rule === 'UM') for (const name of (it.to || [])) {
+          const r = (live.standings || []).find(x => x.manager === name), rk = r && `UMR:${r.managerId}:${it.playerId}`;
+          if (!r || S.st.sent[rk]) continue;
+          if (!per.has(r.managerId)) per.set(r.managerId, []);
+          per.get(r.managerId).push({ k: rk, get: 1, line: `🎁 UM · ${it.playerName} (${it.manager}) hat deinen Spieler gefoult und ginge an dich` });
+        }
       }
       for (const [mid, list] of per) outbox.push({ pref: 'bums', only: mid, done: () => { for (const x of list) S.st.sent[x.k] = now; S.dirty = true; },
-        msg: () => ({ title: list.length > 1 ? `💥 Du wurdest ${list.length}× gebumst!` : '💥 Du wurdest gebumst!', body: list.map(x => x.line).join('\n') + '\nVorläufig, abgerechnet wird nach dem Spieltag.', url: './#accounting', tag: `bums${d.day}` }) });
+        msg: () => ({ title: list.every(x => x.get) ? '🎁 Du bekommst vielleicht einen Spieler' : list.length > 1 ? `💥 Du wurdest ${list.length}× gebumst!` : '💥 Du wurdest gebumst!', body: list.map(x => x.line).join('\n') + '\nVorläufig, abgerechnet wird nach dem Spieltag.', url: './#accounting', tag: `bums${d.day}` }) });
       // MVP-Tipp: getippter Spieler hat sein Spiel beendet.
       const mt = await freshSite(env, `mvp-tipps_${d.day}.json`).catch(() => null), tr = mt?.tracking;
       const lead = tr?.mvp?.players?.length ? `${tr.mvp.players.map(p => p.name).join(', ')} (${tr.mvp.points} Punkte)` : '';
@@ -228,19 +235,82 @@ async function pushTick(env) {
           msg: () => ({ title: `🎯 ${t.player} ist fertig: ${p.points} Punkte`, body: `Dein MVP-Tipp für Spieltag ${d.day}: getippt ${t.points}, geholt ${p.points}.${lead ? `\nGerade vorn laut Tippregel: ${lead}` : ''}`, url: './#mvp', tag: `mvp${d.day}` }) });
       }
     } else if (berlinHour() >= 8) {
-      // Spieltag beendet und abgerechnet: alle Aufgaben je Manager einmal (ohne die schon gemeldeten). Nachts (vor 8 Uhr) wird gewartet.
-      const [status, acc] = await Promise.all([freshSite(env, 'matchday-status.json').catch(() => null), freshSite(env, `rule-accounting_${d.day}.json`).catch(() => null)]);
-      if (status?.days?.find(x => x.day === d.day)?.status !== 'finished' || !acc?.ready || !acc.complete) continue;
-      const per = new Map();
-      for (const t of (acc.todos || [])) {
-        if (!t.managerId || !t.text || t.check?.removed || t.check?.state === 'done' || S.st.sent[t.key]) continue;
-        if (!per.has(String(t.managerId))) per.set(String(t.managerId), []);
-        per.get(String(t.managerId)).push(`${t.rule} · ${t.text}`);
+      // Spieltag beendet (laut Online-Seite). Nachts (vor 8 Uhr) wird gewartet. Jeder Teil einmal, je Manager eine Nachricht;
+      // ein Teil gilt erst als erledigt, wenn alle seine Nachrichten raus sind (SEC:…), danach ist der Spieltag fertig (end).
+      const status = await freshSite(env, 'matchday-status.json').catch(() => null);
+      if (status?.days?.find(x => x.day === d.day)?.status !== 'finished') continue;
+      const SECS = ['acc', 'sum', 'mvp', 'arena'], secDone = sec => () => { S.st.sent['SEC:' + sec] = now; if (SECS.every(x => S.st.sent['SEC:' + x])) S.st.end = true; S.dirty = true; };
+      const perMsg = (sec, pref, per, make) => {
+        for (const [mid, data] of per) { const k = `${sec.toUpperCase()}:${mid}`; if (S.st.sent[k]) continue;
+          outbox.push({ pref, only: mid, done: () => { S.st.sent[k] = now; S.dirty = true; }, msg: () => make(mid, data) }); }
+        outbox.push({ pref: null, done: secDone(sec) });
+      };
+      const open = sec => !S.st.sent['SEC:' + sec];
+      // a) BumsParade: eigene Aufgaben und was man bekommt (DD: Letzter sucht aus, UM: Empfaenger), ohne Erledigtes und schon Gemeldetes.
+      if (open('acc')) {
+        const acc = await freshSite(env, `rule-accounting_${d.day}.json`).catch(() => null);
+        if (acc?.ready && acc.complete) {
+          const per = new Map(), add = (mid, line) => { mid = String(mid); if (!per.has(mid)) per.set(mid, { give: [], get: [] }); per.get(mid)[line.get ? 'get' : 'give'].push(line.text); };
+          const todo = new Map((acc.todos || []).map(t => [t.key, t]));
+          for (const t of (acc.todos || [])) if (t.managerId && t.text && !t.check?.removed && t.check?.state !== 'done' && !S.st.sent[t.key]) add(t.managerId, { text: `${t.rule} · ${t.text}` });
+          for (const w of (acc.dd?.winners || [])) {
+            const t = todo.get(`DD:${w.managerId}`); if (!t || t.check?.removed || t.check?.state === 'done') continue;
+            for (const l of (acc.dd?.lastPlace || [])) add(l.managerId, { get: 1, text: `DD · Du darfst dir einen Spieler von ${w.manager} aussuchen${(w.candidates || []).length ? ': ' + w.candidates.map(c => c.playerName).join(', ') : ''}` });
+          }
+          for (const a of (acc.autoEvents?.actions || [])) {
+            const t = todo.get(`UM:${a.managerId}:${a.playerId}`);
+            if (a.rule === 'UM' && a.recipientId && t && !t.check?.removed && t.check?.state !== 'done') add(a.recipientId, { get: 1, text: `UM · Du bekommst ${a.playerName} von ${a.manager}` });
+          }
+          const dl = acc.saleDeadline ? Date.parse(acc.saleDeadline) : NaN;
+          perMsg('acc', 'bums', per, (mid, x) => ({ title: x.give.length ? `💥 BumsParade Spieltag ${d.day}` : `🎁 BumsParade Spieltag ${d.day}: du bekommst was`,
+            body: [...x.give, ...x.get].join('\n') + (Number.isFinite(dl) ? `\nFrist: ${fmtDay(dl)} Uhr` : ''), url: './#accounting', tag: `abr${d.day}`, ttl: 24 * 3600 }));
+        }
       }
-      const dl = acc.saleDeadline ? Date.parse(acc.saleDeadline) : NaN;
-      for (const [mid, lines] of per) outbox.push({ pref: 'bums', only: mid,
-        msg: () => ({ title: `💥 BumsParade Spieltag ${d.day}`, body: lines.join('\n') + (Number.isFinite(dl) ? `\nFrist: ${fmtDay(dl)} Uhr` : ''), url: './#accounting', tag: `abr${d.day}`, ttl: 24 * 3600 }) });
-      outbox.push({ pref: null, done: () => { S.st.end = true; S.dirty = true; } });
+      // b) Spieltag vorbei: Sieger, Letzter, eigener Platz (ohne T1000).
+      if (open('sum')) {
+        const rk = await freshSite(env, `ranking_6422780_dayNumber_${d.day}.json`).catch(() => null);
+        const us = (rk?.us || []).filter(u => String(u.i) !== '3783040' && String(u.n || '').toLowerCase() !== 't1000' && Number.isFinite(u.mdp));
+        if (us.length && !rk.il && us.some(u => u.mdp)) {
+          const day = [...us].sort((a, b) => b.mdp - a.mdp), all = [...us].sort((a, b) => (b.sp || 0) - (a.sp || 0));
+          const top = day.filter(u => u.mdp === day[0].mdp), low = day.filter(u => u.mdp === day[day.length - 1].mdp);
+          const place = (list, u, f) => 1 + list.filter(x => f(x) > f(u)).length;
+          const per = new Map(us.map(u => [String(u.i), u]));
+          perMsg('sum', 'spieltag', per, (mid, u) => {
+            const p = place(day, u, x => x.mdp), win = top.some(x => x === u), last = low.some(x => x === u);
+            return { title: win ? `🥇 Du hast Spieltag ${d.day} gewonnen!` : last ? `🪦 Letzter an Spieltag ${d.day}` : `📊 Spieltag ${d.day} ist vorbei`,
+              body: `Sieger: ${top.map(x => `${x.n} (${x.mdp})`).join(', ')}\nLetzter: ${low.map(x => `${x.n} (${x.mdp})`).join(', ')}\nDu: Platz ${p} mit ${u.mdp} Punkten, gesamt Platz ${place(all, u, x => x.sp || 0)}`, url: './#table', tag: `sum${d.day}` };
+          });
+        }
+      }
+      // c) MVP-Tipp-Ergebnis. Ohne Tippregel gibt es nichts zu melden.
+      if (open('mvp')) {
+        const mt = await freshSite(env, `mvp-tipps_${d.day}.json`).catch(() => null), r = mt?.result;
+        if (mt && !mt.rule) secDone('mvp')();
+        else if (r && ['ok', 'unsure', 'manual'].includes(r.status)) {
+          const names = new Map((mt.managers || []).map(m => [String(m.id), m])), win = (r.winners || []).map(String);
+          const mvp = r.mvp?.players?.length ? `${r.mvp.players.map(p => p.name).join(', ')} (${r.mvp.points} Punkte)` : '';
+          const per = new Map((mt.managers || []).map(m => [String(m.id), m]));
+          perMsg('mvp', 'mvp', per, (mid, m) => {
+            const row = (r.rows || []).find(x => String(x.managerId) === mid), t = m.tip;
+            const winTxt = win.length ? `Gewonnen: ${win.map(id => { const w = names.get(id); return w ? `${w.name}${w.tip ? ` (${w.tip.player}, ${w.tip.points})` : ''}` : id; }).join(', ')}` : r.status === 'manual' ? 'Den Gewinner bestimmt ihr selbst.' : 'Diesmal hat keiner gewonnen.';
+            return { title: win.includes(mid) ? `🏆 Du hast den MVP-Tipp gewonnen!` : `🎯 MVP-Tipp Spieltag ${d.day}: Ergebnis`,
+              body: [mvp && `MVP laut Tippregel: ${mvp}`, winTxt, t ? `Dein Tipp: ${t.player}, ${t.points}${Number.isFinite(row?.actual) && row.actual !== r.mvp?.points ? ` (geholt ${row.actual})` : ''}` : '', r.status === 'unsure' ? 'Noch vorläufig.' : ''].filter(Boolean).join('\n'), url: './#mvp', tag: `mvpr${d.day}` };
+          });
+        }
+      }
+      // d) Arena-Duell (zweite Liga, gleiche Manager-IDs).
+      if (open('arena')) {
+        const ar = await freshSite(env, `arena_${d.day}.json`).catch(() => null);
+        if (ar && !(ar.duels || []).length) secDone('arena')();
+        else if (ar?.status === 'finished' && ar.duels.every(x => x.final)) {
+          const per = new Map(), tab = ar.tableDay === d.day ? ar.table || [] : [];
+          for (const x of ar.duels) for (const [me, op] of [[x.a, x.b], [x.b, x.a]]) if (me?.id && !me.cpu) per.set(String(me.id), { me, op, w: x.winner });
+          perMsg('arena', 'arena', per, (mid, x) => {
+            const res = !x.w ? 'Unentschieden' : String(x.w) === mid ? 'Sieg' : 'Niederlage', row = tab.find(t => String(t.id) === mid);
+            return { title: `⚔️ Arena: ${res}${res === 'Sieg' ? '!' : ''}`, body: `Spieltag ${d.day}: ${x.me.points} : ${x.op.points} gegen ${x.op.name}${row ? `\nArena-Tabelle: Platz ${row.hhpl} (${row.hhsp} Punkte)` : ''}`, url: './#arena', tag: `arena${d.day}` };
+          });
+        }
+      }
     }
   }
   // 3. Verschicken (hoechstens 40 Nachrichten je Lauf; der Rest kommt beim naechsten Lauf).

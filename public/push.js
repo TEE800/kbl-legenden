@@ -10,9 +10,11 @@
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
  const standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
  const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
- const PREFS=[['bums','💥 Du wurdest gebumst','Nach Spielende, je Spiel gebündelt, je Spieler nur einmal. Nach der Abrechnung einmal alle Aufgaben des Spieltags.'],
+ const PREFS=[['bums','💥 Gebumst','Nach Spielende, je Spieler nur einmal. Nach der Abrechnung einmal deine Aufgaben und was du bekommst.'],
   ['tipp','⏰ Tippschluss in 1 Stunde','Nur wenn du für den Spieltag noch keinen MVP-Tipp hast.'],
-  ['mvp','🎯 Dein MVP-Tipp ist fertig','Sobald das Spiel deines getippten Spielers vorbei ist, mit seinen Punkten.']];
+  ['mvp','🎯 MVP-Tipp','Sobald das Spiel deines getippten Spielers vorbei ist, und das Ergebnis nach dem Spieltag.'],
+  ['spieltag','📊 Spieltag vorbei','Sieger, Letzter und dein Platz.'],
+  ['arena','⚔️ Arena-Duell','Dein Ergebnis in der Legenden Arena.']];
  const call=async(path,body)=>{const r=await fetch(API+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Fehler ${r.status}`);return d;};
  const keyBytes=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0));
  const sameKey=(sub,pub)=>{try{const a=new Uint8Array(sub.options.applicationServerKey),b=keyBytes(pub);return a.length===b.length&&a.every((x,i)=>x===b[i]);}catch{return true;}};
@@ -61,7 +63,7 @@
   body.innerHTML='<p class="muted">Wird geladen …</p>';
   try{info=info||await call('/push/info');}catch(e){body.innerHTML=`<p class="error">Push-Dienst nicht erreichbar: ${esc(e.message)}</p>`;return;}
   const sub=await currentSub(),saved=ls.get(LS),on=!!sub&&!!saved;
-  const prefs=saved?.prefs||{bums:1,tipp:1,mvp:1};
+  const prefs=saved?.prefs||{bums:1,tipp:1,mvp:1,spieltag:1,arena:1};
   body.innerHTML=`<p class="muted">${on?'Push ist auf diesem Gerät an. Du kannst die Auswahl hier ändern.':'Du bekommst eine Nachricht auf dieses Gerät, wenn etwas passiert. Jedes Gerät wird einzeln eingeschaltet.'}</p>
    <label class="acc-label push-who">Ich bin <select id="pushManager"><option value="">Manager wählen …</option>${info.managers.map(m=>`<option value="${esc(m.id)}"${String(saved?.managerId)===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
    <div class="push-prefs">${PREFS.map(([k,t,d])=>`<label class="push-pref"><input type="checkbox" data-pref="${k}"${prefs[k]?' checked':''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</div>
