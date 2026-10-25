@@ -46,7 +46,7 @@
  function duelDetail(d,x){
   if(d.status==='upcoming')return `<p class="muted">Die Aufstellungen von ${esc(x.a.name)} und ${esc(x.b.name)} sind bis zum Anpfiff geheim.</p>`;
   const extra=m=>m.open||m.live?`<small class="muted">${m.live?`${m.live} spielen gerade`:''}${m.live&&m.open?', ':''}${m.open?`${m.open} noch nicht gespielt`:''}</small>`:'';
-  const check=m=>d.status==='finished'&&m.calc!=null&&m.kbPoints!=null&&m.calc!==m.kbPoints?`<small class="muted">Kickbase: ${fmt(m.kbPoints)}, Summe der Spieler: ${fmt(m.calc)}</small>`:'';
+  const check=m=>d.status==='finished'&&m.calc!=null&&m.kbPoints!=null&&m.points===m.kbPoints&&m.calc!==m.kbPoints?`<small class="muted">Kickbase: ${fmt(m.kbPoints)}, Summe der Spieler: ${fmt(m.calc)}</small>`:'';
   return `<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
  }
  // Cartoon: je Duell eine Reihe auf dem Platz, beide Manager als Männchen mit ihrem Profilbild als Kopf, Position nach Punkten.
