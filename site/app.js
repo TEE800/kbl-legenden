@@ -79,7 +79,7 @@ function renderRankingTable(){
  if(!managers.length){body.innerHTML='<tr><td colspan="8">Keine auswertbaren Manager gefunden.</td></tr>';return;}
  // Live-Tabelle (Kevin-Vorgabe): Während des Spieltags Stand nach dem letzten abgeschlossenen Spieltag plus Live-Punkte
  // (/api/live-points, wie in der Übersicht). Kickbase schreibt die Punkte erst nach dem Spieltag ins Ranking.
- const liveDay=pvStatus?.days?.find(d=>d.status==='live')?.day,base=liveDay&&historyData.find(h=>h.day===liveDay-1&&h.status==='finished');
+ const liveDay=kblLiveDay()?.day,base=liveDay&&historyData.find(h=>h.day===liveDay-1&&h.status==='finished');
  const lp=!rankingDay&&base&&pvLive?.day===liveDay&&!pvLive.error?new Map((pvLive.managers||[]).map(x=>[x.name,x.points])):null;
  const title=$('#tableTitle');if(title)title.innerHTML=lp?'LIGA-TABELLE <span class="live-badge">● LIVE</span>':'LIGA-TABELLE';
  if(lp){
@@ -431,6 +431,7 @@ async function loadHistory(){
   renderHall();
   renderLeagueAnalysis();
   renderProgressChart();renderRankHistory();renderCenter();renderPreview();
+  if(document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();
  }catch(err){
   statusEl.textContent=`Abruf fehlgeschlagen: ${String(err.message).replace(/\.+$/,'')}. Keine ungeprüften Spieltagssiege hinzugefügt.`;
   if(historyData.length){renderHistory();renderHall();renderLeagueAnalysis();renderProgressChart();renderRankHistory();renderCenter();renderPreview();}
@@ -1717,6 +1718,13 @@ document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-g
 // Spieltagsvorschau (Übersicht, erste Kategorie): Countdown bis zum ersten Anstoß des nächsten Spieltags
 // und Fragen-Kacheln aus den geladenen Daten (nur abgeschlossene Spieltage und BumsTabelle, keine weiteren Kickbase-Abfragen).
 let pvStatus=null,pvTarget=null;
+// Spieltag fuer die LIVE-Anzeigen: laeuft laut OpenLigaDB, oder alle Spiele sind vorbei, aber Kickbase hat ihn noch nicht
+// abgeschlossen (Ranking il = true, meist bis zum Abend nach dem letzten Spiel). Dann bleibt alles LIVE (Kevin-Wunsch), closing = true.
+function kblLiveDay(st=pvStatus){
+ const days=st?.days||[],l=days.find(d=>d.status==='live');if(l)return l;
+ const f=days.find(d=>d.day===Number(st?.lastFinishedDay));
+ return f&&historyData.some(h=>h.day===f.day&&h.status==='live')?{...f,closing:true}:null;
+}
 async function pvLoadStatus(){try{pvStatus=await api('/api/matchday-status');}catch{pvStatus=pvStatus||{error:true};}renderPreview();}
 onConnected.push(pvLoadStatus);setInterval(()=>{if(currentLeague&&!document.hidden)pvLoadStatus();},900000);
 function pvKickoff(d){
@@ -1738,10 +1746,10 @@ function pvCountdownHtml(){
  pvTarget=null;
  if(!pvStatus)return '<p class="muted">Spielplan wird geladen …</p>';
  if(pvStatus.error)return '<p class="muted">Das fehlt: Spielplan von OpenLigaDB ist gerade nicht erreichbar, darum kein Countdown.</p>';
- const days=pvStatus.days||[],live=days.find(d=>d.status==='live');
+ const days=pvStatus.days||[],live=kblLiveDay();
  // Waehrend des Spieltags heisst der Bereich "Spieltag" mit LIVE-Abzeichen daneben (Kevin-Vorgabe), sonst "Spieltagsvorschau".
  const title=$('#previewTitle');if(title)title.innerHTML=live?'SPIELTAG <span class="live-badge">● LIVE</span>':'SPIELTAGSVORSCHAU';
- if(live){pvLoadLive(live.day);return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.</div>`+pvLiveHtml(live.day);}
+ if(live){pvLoadLive(live.day);return `<div class="pv-kickoff">● LIVE · Spieltag ${live.day} ${live.closing?'ist gespielt, Kickbase schließt ihn erst am Abend nach dem letzten Spiel ab. Bis dahin vorläufiger Stand.':`läuft (${live.finishedMatches} von ${live.matches} Spielen beendet). Die Startelfen sind eingefroren.`}</div>`+pvLiveHtml(live.day);}
  const next=days.find(d=>d.status==='upcoming'),k=pvKickoff(next);
  if(!next)return '<p class="muted">Kein weiterer Spieltag im Spielplan.</p>';
  if(!k)return `<p class="muted">Das fehlt: Anstoßzeit für Spieltag ${next.day} steht noch nicht fest.</p>`;
@@ -1759,7 +1767,7 @@ async function pvLoadLive(day){
  try{pvLive=await api(`/api/live-points/${day}`);}catch(e){pvLive={day,error:e.message};}
  pvLiveAt=Date.now();pvLiveBusy=false;benchLoad(day,true);renderPreview();try{renderRankingTable();}catch{}try{renderCenter();}catch{}try{const h=$('#historyLive');if(h)h.innerHTML=historyLiveInner(day);}catch{}
 }
-setInterval(()=>{if(!document.hidden&&pvStatus?.days?.some(d=>d.status==='live'))renderPreview();},120e3);
+setInterval(()=>{if(!document.hidden&&kblLiveDay())renderPreview();},120e3);
 function pvLiveHtml(day){
  if(!pvLive||pvLive.day!==day)return '<p class="muted">Live-Punkte werden geladen …</p>';
  if(pvLive.error)return `<p class="muted">Das fehlt: Live-Punkte gerade nicht abrufbar (${escapeHtml(pvLive.error)}).</p>`;
@@ -1841,7 +1849,7 @@ let accLive=null,accLiveOpen=false,accLiveBusy=false,accRadarOpen=true,accRadarP
 async function accLiveLoad(){
  const el=$('#accLive');if(!el||accLiveBusy)return;
  let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
- const day=st?.days?.find(d=>d.status==='live')?.day;
+ const day=kblLiveDay(st)?.day;
  if(!day){accLive=null;el.innerHTML='';return;}
  accLiveBusy=true;if(!accLive||accLive.day!==day){accLive={day,state:'loading'};accLiveRender();}
  try{accLive={day,state:'done',data:await api(`/api/rule-live/${day}`)};}
