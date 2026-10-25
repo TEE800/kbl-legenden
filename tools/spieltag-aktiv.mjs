@@ -1,7 +1,8 @@
 // Prueft fuer den 5-Minuten-Lauf, ob gerade Bundesliga gespielt wird.
 // Aktiv = ein Spiel hat vor hoechstens 3 Stunden angefangen oder beginnt in den naechsten 10 Minuten.
-// Danach (bis 12 Stunden nach dem letzten Anstoss) weiter aktiv, solange die Online-Daten des Spieltags noch auf dem Live-Stand sind
-// (Kickbase-Ranking il = true oder MVP-Tipp noch nicht ausgewertet). Sonst fehlen MVP und Bumsungen bis zum Voll-Lauf um 6:07.
+// Danach (bis 30 Stunden nach dem letzten Anstoss) weiter aktiv, solange die Online-Daten des Spieltags noch auf dem Live-Stand sind
+// (Kickbase-Ranking il = true, Kickbase schliesst den Spieltag erst am Abend nach dem letzten Spiel ab, oder MVP-Tipp noch nicht
+// ausgewertet). Solange bleiben die LIVE-Anzeigen stehen (Kevin-Wunsch). In dieser Zeit nur jede Viertelstunde (Kickbase schonen).
 // Schreibt aktiv=true/false nach GITHUB_OUTPUT. Ist OpenLigaDB nicht erreichbar, wird sicherheitshalber abgerufen.
 import fs from 'node:fs';
 let aktiv = true;
@@ -14,10 +15,10 @@ try {
   if (!aktiv) {
     const started = matches.filter(m => Number.isFinite(kick(m)) && kick(m) <= now).sort((a, b) => kick(b) - kick(a));
     const last = started[0], day = last?.group?.groupOrderID;
-    if (last && day && now - kick(last) <= 12 * 3600 * 1000) {
+    if (last && day && now - kick(last) <= 30 * 3600 * 1000) {
       const rk = read(`ranking_6422780_dayNumber_${day}.json`), mt = read(`mvp-tipps_${day}.json`);
       const offen = [rk?.il === true && 'Ranking noch live', mt && mt.status !== 'finished' && 'MVP-Tipp noch nicht ausgewertet'].filter(Boolean);
-      if (offen.length) { aktiv = true; console.log(`Spieltag ${day} vorbei, Online-Daten noch nicht endgültig (${offen.join(', ')}).`); }
+      if (offen.length) { aktiv = !(now - Date.parse(read('_meta.json')?.exportedAt) < 14 * 60 * 1000); console.log(`Spieltag ${day} vorbei, Online-Daten noch nicht endgültig (${offen.join(', ')}).`); }
     }
   }
 } catch (e) { console.log('Spielplan nicht abrufbar, Lauf findet statt:', e.message); }
