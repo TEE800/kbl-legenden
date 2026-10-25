@@ -697,6 +697,21 @@ function imagesById(root, idKey) {
   walk(root);
   return out;
 }
+// Zahlenfelder (z. B. ap = Punkteschnitt, p = Saisonpunkte) je ID aus dem Vereinsprofil; fehlt ein Feld, bleibt es leer (nie raten).
+function numsById(root, idKey, keys) {
+  const out = new Map(), seen = new Set();
+  const walk = o => {
+    if (!o || typeof o !== 'object' || seen.has(o)) return; seen.add(o);
+    if (Array.isArray(o)) { o.forEach(walk); return; }
+    if (o[idKey] !== undefined && !out.has(String(o[idKey]))) {
+      const v = {}; for (const k of keys) if (Number.isFinite(o[k])) v[k] = o[k];
+      if (Object.keys(v).length) out.set(String(o[idKey]), v);
+    }
+    Object.values(o).forEach(walk);
+  };
+  walk(root);
+  return out;
+}
 let allPlayersCache = null;
 async function loadAllPlayers(token) {
   if (allPlayersCache && Date.now() - allPlayersCache.at < 10 * 60 * 1000) return allPlayersCache.value;
@@ -716,8 +731,8 @@ async function loadAllPlayersUncached(token) {
       const prof = await kbFetch(`/v4/competitions/1/teams/${t.id}/teamprofile`, { token });
       const pl = extractEntities(prof, ['pi', 'i', 'id'], ['pn', 'n', 'ln', 'name']);
       if (!pl || !pl.items.length) { failedTeams.push(t.name || t.id); continue; }
-      const imgs = imagesById(prof, pl.idKey);
-      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id, img: imgs.get(p.id) || null, teamImg: teamImgs.get(t.id) || null });
+      const imgs = imagesById(prof, pl.idKey), nums = numsById(prof, pl.idKey, ['ap', 'p']);
+      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id, img: imgs.get(p.id) || null, teamImg: teamImgs.get(t.id) || null, ap: nums.get(p.id)?.ap ?? null, tp: nums.get(p.id)?.p ?? null });
     } catch { failedTeams.push(t.name || t.id); }
   }
   return { players, teamCount: teams.items.length, failedTeams, teamKey: teams.idKey };
@@ -1607,7 +1622,7 @@ app.get('/api/mvp-tipps/players',async(req,res)=>{
  try{const all=await loadAllPlayers(token);
   const photos=await playerPhotos().catch(e=>{console.log('Spielerfotos (Challenge-Konto) nicht abrufbar:',e.message);return null;});
   if(photos){let diff=0;for(const [id,p] of all.players)if(photos.get(String(id))&&photos.get(String(id))!==p.img)diff++;console.log(`Spielerfotos ueber Challenge-Konto: ${photos.size}, davon ${diff} anders als beim Dienst-Login`);}
-  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{}),...(p.ap!=null?{ap:p.ap}:{}),...(p.tp!=null?{tp:p.tp}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{

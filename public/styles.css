@@ -632,3 +632,11 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 @keyframes toonTear{0%{opacity:0;transform:translateY(-4px)}20%{opacity:1}100%{opacity:0;transform:translateY(16px)}}
 .toon-mourner-name{position:absolute;bottom:-34px;left:-4px;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);border-radius:5px;padding:0 4px;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis}
 @media (prefers-reduced-motion:reduce){.toon-tears{animation:none}}
+/* MVP-Tipp: Top 10 der Saison als Tipphilfe */
+.mvp-top10{list-style:none;margin:0;padding:0;counter-reset:t10}
+.mvp-top10 li{counter-increment:t10}
+.mvp-top10 button{display:flex;width:100%;align-items:center;gap:8px;background:none;border:0;border-bottom:1px solid var(--line,rgba(255,255,255,.1));padding:7px 2px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mvp-top10 button::before{content:counter(t10)".";min-width:24px;opacity:.6}
+.mvp-top10 button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mvp-top10 small{opacity:.65}
+.mvp-top10 b{white-space:nowrap}
