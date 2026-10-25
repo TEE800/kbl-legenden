@@ -57,7 +57,7 @@
  // seit Erfassung gesammelten Rush-Punkten. Gesamt-Rushpunkte gibt Kickbase nur fuer T800 heraus.
  function rushList(){return Object.values(data.challenges||{}).filter(c=>c.fav&&Object.keys(c.fav).length).sort((a,b)=>String(a.end).localeCompare(String(b.end))||Number(a.ch)-Number(b.ch));}
  function rushTable(){
-  const R=data.rush;if(!R||!R.divisions?.length)return '<p class="muted">Noch keine Rush-Daten. Nach dem nächsten „Neue Challenges laden“ erscheinen hier die Divisionen der Legenden.</p>';
+  const R=data.rush;if(!R||!R.divisions?.length)return `<p class="muted">Noch keine Rush-Daten. ${window.KBL_STATIC?'Sobald der PC neue Challenges geladen hat, erscheinen hier die Divisionen der Legenden.':'Nach dem nächsten „Neue Challenges laden“ erscheinen hier die Divisionen der Legenden.'}</p>`;
   const div=new Map(R.divisions.map((d,i)=>[String(d.dvi),{...d,idx:i}]));
   // Exakte Werte aus den gesicherten Kickbase-Gesamtstaenden: seit Beginn der Aufzeichnung und Schnitt je abgeschlossener Woche.
   const weeks=weekList().filter(w=>w.exact&&!w.open);
@@ -177,7 +177,7 @@
   const root=$('#challengeContent');if(!root||!data)return;
   const {list,all}=stats();
   $('#challengeMeta').textContent=data.updatedAt?`Stand ${new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}`:'Noch nicht geladen';
-  if(!list.length&&!Object.keys(data.challenges||{}).length){root.innerHTML='<p class="muted">Noch keine Challenges gespeichert. Mit „Neue Challenges laden“ holt die App alle abgeschlossenen Challenges dieser Saison (nur Admin, dauert beim ersten Mal ein paar Minuten).</p>';return;}
+  if(!list.length&&!Object.keys(data.challenges||{}).length){root.innerHTML=window.KBL_STATIC?'<p class="muted">Noch keine Challenges gespeichert. Die Challenges lädt der PC der Liga.</p>':'<p class="muted">Noch keine Challenges gespeichert. Mit „Neue Challenges laden“ holt die App alle abgeschlossenen Challenges dieser Saison (nur Admin, dauert beim ersten Mal ein paar Minuten).</p>';return;}
   const out=Object.values(data.challenges||{}).filter(c=>c.counted===false);
   const outHtml=out.length?`<p class="muted tiny">Nicht gewertet (${out.length}): ${out.map(c=>esc(c.name)+(c.check&&!c.check.ok?` – Gegenprobe T800: ${fmt(c.check.computed)} statt ${fmt(c.check.expected)}`:c.found?' – gefunden, Wettbewerb nicht bestätigt':'')).join(' · ')}</p>`:'';
   root.innerHTML=`<details class="acc-group pts-group" id="challengeRush"${rushOpen?' open':''}><summary>Rush-Platzierung <span class="pts-sub">Rush-Punkte, Division und Wochenschnitt der Legenden</span></summary><div class="acc-sub">${rushTable()}</div></details><details class="acc-group pts-group" id="challengeDev"${devOpen?' open':''}><summary>Entwicklung <span class="pts-sub">Rush-Punkte, Platz und Wochen im Verlauf</span></summary><div class="acc-sub">${progress(list)}</div></details>`;
@@ -229,6 +229,8 @@
   const rm=RUSH_MODES.includes(progMode),tot=id=>list.reduce((s,c)=>s+(rm?(c.rush?.[id]?.skp||0):(c.results?.[id]?.points||0)),0);
   progSel.clear();progCleared=b.dataset.chProg==='none';if(b.dataset.chProg==='top')ids.sort((a,b)=>tot(b)-tot(a)).slice(0,5).forEach(id=>progSel.add(id));if(b.dataset.chProg==='all')ids.forEach(id=>progSel.add(id));render();
  });
- $('#challengeRefresh')?.addEventListener('click',refresh);
+ // Online-Seite ist nur lesend: dort kann man nicht nachladen, also Knopf weg (lädt nur der PC).
+ if(window.KBL_STATIC)$('#challengeRefresh')?.closest('.controls')?.remove();
+ else $('#challengeRefresh')?.addEventListener('click',refresh);
  poll();
 })();
