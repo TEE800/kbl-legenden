@@ -18,6 +18,8 @@
  let data=null,loading=false,sortBy='realized',season=null;
  // Halbserien vom Server (Hinrunde bis Spieltag 17, Rückrunde danach; Feld seasons); ältere Exporte ohne seasons gelten als ein laufender Zeitraum.
  const seasons=()=>data?.seasons||(data?.managers?[{key:'',current:true,managers:data.managers}]:[]);
+ // Liga-Zählung (Kevin): jede Halbserie heißt „Saison“, Saison 0 = Rückrunde 2024/25, dann je Halbserie eins weiter.
+ const ligaSaison=key=>{const m=/^(Hin|Rück)runde (\d{4})\//.exec(key||'');if(!m)return '';const n=m[1]==='Hin'?2*(+m[2]-2025)+1:2*(+m[2]-2024);return n>=0?` (Saison ${n})`:' (vor Saison 0)';};
  const cur=()=>seasons().find(x=>x.key===season)||seasons()[0];
 
  async function get(url){
@@ -74,7 +76,7 @@
   root.className='';
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
-  const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${x.current?' (läuft)':''}</option>`).join('')}</select></label></div>`:'';
+  const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
   root.innerHTML=`${pick}${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
  }
  async function load(){
