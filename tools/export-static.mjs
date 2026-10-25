@@ -94,6 +94,8 @@ try {
   // aktualisieren (Kevin-Wunsch). Der Server prueft il selbst und liefert sonst "beendet".
   const closing = !live && status?.lastFinishedDay;
   if (closing && rankingLive(`/api/ranking/${LEAGUE}?dayNumber=${closing}`)) { await save(`/api/live-points/${closing}`); await save(`/api/rule-live/${closing}`); }
+  // VORUEBERGEHEND (Pruefung UM Tapsoba ST 7, wird wieder entfernt): Elfmeter verursacht/herausgeholt am Spieltag 7.
+  if (MODE === 'full') for (const u of ['/api/event-finder?eti=4171&day=7', '/api/event-finder?eti=4177&day=7', '/api/live-probe?day=7&user=2038365&pid=2783']) await save(u);
   // MVP-Tipp: Regeln und aufgedeckte Tipps (nur angepfiffene Spieltage) vom Online-Tippdienst in kbl-mvp-tipps.json uebernehmen,
   // damit die App sie anzeigt und nach dem Spieltag auswertet. Verdeckte Tipps kommen hier nie an.
   if (TIPP_DIENST) {
