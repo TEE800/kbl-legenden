@@ -741,3 +741,22 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .push-msg.ok{color:var(--ok)}
 .push-steps{margin:8px 0;padding-left:22px;line-height:1.6}
 @media(max-width:560px){.push-hint{padding:8px 12px;top:56px;font-size:12px}.push-bell{width:32px;height:32px;flex-basis:32px}}
+/* Nutzung der App (versteckter Admin-Bereich, public/nutzung.js) */
+.nz-box{max-width:560px}
+.nz-login{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.nz-login .push-who{flex:1;margin:8px 0 0}.nz-login input{width:100%}
+.nz-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 4px}
+.nz-tile{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;min-width:0}
+.nz-tile small{display:block;color:var(--muted);font-size:11px;letter-spacing:1px}
+.nz-tile strong{display:block;color:var(--gold);font-size:24px;margin:2px 0}
+.nz-tile span{display:block;color:var(--muted);font-size:11px;line-height:1.3}
+.nz-span{display:grid;gap:5px;margin:10px 0;color:var(--muted);font-size:12px}
+.nz-sec{margin-top:8px}
+.nz-row{display:grid;grid-template-columns:minmax(0,9.5em) 1fr auto auto;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.nz-row .nz-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nz-row small{color:var(--muted);font-size:11px;white-space:nowrap}
+.nz-track{height:9px;background:var(--line);border-radius:5px;overflow:hidden}.nz-track i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dark),var(--gold-strong))}
+.nz-days{display:flex;align-items:flex-end;gap:2px;height:110px;padding-top:6px;border-bottom:1px solid var(--line)}
+.nz-col{flex:1;height:100%;display:flex;align-items:flex-end;min-width:0}.nz-col i{display:block;width:100%;min-height:1px;background:var(--gold);border-radius:2px 2px 0 0}
+.nz-axis{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:4px}
+.nz-off{margin-top:14px}
+@media(max-width:560px){.nz-tile strong{font-size:20px}.nz-row{grid-template-columns:minmax(0,7.5em) 1fr auto auto;font-size:12px}}
