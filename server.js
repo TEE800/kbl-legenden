@@ -697,21 +697,6 @@ function imagesById(root, idKey) {
   walk(root);
   return out;
 }
-// Zahlenfelder (z. B. ap = Punkteschnitt, p = Saisonpunkte) je ID aus dem Vereinsprofil; fehlt ein Feld, bleibt es leer (nie raten).
-function numsById(root, idKey, keys) {
-  const out = new Map(), seen = new Set();
-  const walk = o => {
-    if (!o || typeof o !== 'object' || seen.has(o)) return; seen.add(o);
-    if (Array.isArray(o)) { o.forEach(walk); return; }
-    if (o[idKey] !== undefined && !out.has(String(o[idKey]))) {
-      const v = {}; for (const k of keys) if (Number.isFinite(o[k])) v[k] = o[k];
-      if (Object.keys(v).length) out.set(String(o[idKey]), v);
-    }
-    Object.values(o).forEach(walk);
-  };
-  walk(root);
-  return out;
-}
 let allPlayersCache = null;
 async function loadAllPlayers(token) {
   if (allPlayersCache && Date.now() - allPlayersCache.at < 10 * 60 * 1000) return allPlayersCache.value;
@@ -731,8 +716,8 @@ async function loadAllPlayersUncached(token) {
       const prof = await kbFetch(`/v4/competitions/1/teams/${t.id}/teamprofile`, { token });
       const pl = extractEntities(prof, ['pi', 'i', 'id'], ['pn', 'n', 'ln', 'name']);
       if (!pl || !pl.items.length) { failedTeams.push(t.name || t.id); continue; }
-      const imgs = imagesById(prof, pl.idKey), nums = numsById(prof, pl.idKey, ['ap', 'p']);
-      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id, img: imgs.get(p.id) || null, teamImg: teamImgs.get(t.id) || null, ap: nums.get(p.id)?.ap ?? null, tp: nums.get(p.id)?.p ?? null });
+      const imgs = imagesById(prof, pl.idKey);
+      for (const p of pl.items) if (!players.has(p.id)) players.set(p.id, { name: p.name || p.id, team: t.name || t.id, teamId: t.id, img: imgs.get(p.id) || null, teamImg: teamImgs.get(t.id) || null });
     } catch { failedTeams.push(t.name || t.id); }
   }
   return { players, teamCount: teams.items.length, failedTeams, teamKey: teams.idKey };
@@ -1457,6 +1442,21 @@ function freshBest(lm,tips,players,pool){
  if(top===lm.points&&best.length===(lm.players||[]).length)return lm;
  return {...lm,points:top,players:best.map(({id,name,team})=>({id,name,team})),tipped:true};
 }
+// Top 10 des Spieltags unter allen Spielern, die die Tippregel erlaubt (Kevin-Wunsch); Gleichstand auf Platz 10 = alle.
+function poolTop(list,pool,n=10){
+ const sc=(list||[]).filter(p=>!pool.length||pool.includes(p.team)).sort((a,b)=>b.points-a.points);
+ const cut=sc.length>=n?sc[n-1].points:null;
+ return (cut===null?sc:sc.filter(p=>p.points>=cut)).map(p=>({id:String(p.id),name:p.name,team:p.team,points:p.points}));
+}
+// Wie freshBest: getippte Spieler haben frischere Punkte als der Zwischenstand (alle 30 Min.).
+function freshTop(top,tips,players,pool){
+ if(!top)return top;
+ const m=new Map(top.map(p=>[p.id,{...p}]));
+ for(const t of Object.values(tips)){const id=String(t.playerId),r=players[id];
+  if(!r||r.points===null||r.points===undefined||(pool.length&&!pool.includes(t.team)))continue;
+  m.set(id,{id,name:m.get(id)?.name||t.player,team:m.get(id)?.team||t.team,points:r.points});}
+ return poolTop([...m.values()],[]);
+}
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
 const tippTrackCache=new Map();
@@ -1470,14 +1470,18 @@ async function tippTracking(token,day,tips,finished,kind,pool=[]){
  }));
  const value={updatedAt:new Date().toISOString(),players,...(pool.length?{pool}:{})};
  // Wertungen mit MVP brauchen den MVP-Zwischenstand aller Bundesliga-Spieler: teuer, darum hoechstens alle 30 Minuten (gespeichert in kbl-mvp-tipps.json).
- if(!finished&&TIPP_MVP_KINDS.has(kind)){
+ // Die Top 10 (Kevin-Wunsch) brauchen ihn bei jeder Wertung.
+ if(!finished){
   let lm=readTipps()[day]?.liveMvp;
-  if(!lm||Date.now()-Date.parse(lm.at)>30*60e3||String(lm.pool||[])!==String(pool)){
+  if(!lm||!lm.top10||Date.now()-Date.parse(lm.at)>30*60e3||String(lm.pool||[])!==String(pool)){
    const m=await loadMatchdayMvp(token,day,{live:true}),best=poolMvp(m,pool);
-   lm={at:new Date().toISOString(),points:best.length?best[0].points:null,players:best.map(p=>({id:String(p.id),name:p.name,team:p.team})),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable,...(pool.length?{pool}:{})};
+   lm={at:new Date().toISOString(),points:best.length?best[0].points:null,players:best.map(p=>({id:String(p.id),name:p.name,team:p.team})),top10:poolTop(m.all,pool),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable,...(pool.length?{pool}:{})};
    const all=readTipps();(all[day]||(all[day]={tips:{}})).liveMvp=lm;saveTipps(all);
   }
-  value.mvp=freshBest(lm,tips,players,pool);
+  if(TIPP_MVP_KINDS.has(kind))value.mvp=freshBest(lm,tips,players,pool);
+  value.top10={at:lm.at,reliable:lm.reliable,players:freshTop(lm.top10,tips,players,pool)};
+ }else{
+  try{const m=await loadMatchdayMvp(token,day);value.top10={reliable:m.reliable,players:poolTop(m.all,pool)};}catch{}
  }
  tippTrackCache.set(day,{at:Date.now(),key,value});
  return value;
@@ -1622,7 +1626,7 @@ app.get('/api/mvp-tipps/players',async(req,res)=>{
  try{const all=await loadAllPlayers(token);
   const photos=await playerPhotos().catch(e=>{console.log('Spielerfotos (Challenge-Konto) nicht abrufbar:',e.message);return null;});
   if(photos){let diff=0;for(const [id,p] of all.players)if(photos.get(String(id))&&photos.get(String(id))!==p.img)diff++;console.log(`Spielerfotos ueber Challenge-Konto: ${photos.size}, davon ${diff} anders als beim Dienst-Login`);}
-  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{}),...(p.ap!=null?{ap:p.ap}:{}),...(p.tp!=null?{tp:p.tp}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{
