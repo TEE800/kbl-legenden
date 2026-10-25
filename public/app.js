@@ -820,7 +820,9 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    const d=await api(`/api/lineup-coverage/${day.value}`);
    const rows=d.entries.map(x=>`<tr><td>${mgrName(x.name)}</td><td>${x.status==='confirmed'?'Bestätigt':x.status==='missing'?'Fehlt':x.status==='invalid'?'Ungültig':'Noch nicht manuell bestätigt'}</td><td>${x.count||'–'}</td></tr>`).join('');
    const ok=d.confirmed===d.expected;
-   coverage.innerHTML=`<p style="margin:0"><span class="acc-badge ${ok?'ok':'warn'}">${ok?'✓':'!'} Aufstellungen: ${d.confirmed} von ${d.expected} bestätigt</span></p>${ok?'':'<p class="muted tiny" style="margin:8px 0 0">Ohne vollständige Aufstellungen ist keine verlässliche Abrechnung möglich.</p>'}<details><summary>Details je Manager</summary><div class="tablewrap"><table><thead><tr><th>MANAGER</th><th>STATUS</th><th>SPIELER</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+   // Abgeschlossene Spieltage: fehlende Startelfen nimmt die Abrechnung aus dem Kickbase-Verlauf (historisches Ranking), kein Alarm.
+   const past=!ok&&historyData.some(h=>h.status==='finished'&&Number(h.day)===Number(day.value));
+   coverage.innerHTML=`<p style="margin:0"><span class="acc-badge ${ok?'ok':past?'':'warn'}">${ok?'✓':past?'ℹ':'!'} Aufstellungen: ${d.confirmed} von ${d.expected} bestätigt</span></p>${ok?'':past?'<p class="muted tiny" style="margin:8px 0 0">Spieltag ist vorbei: Fehlende Startelfen nimmt die Abrechnung aus dem Kickbase-Verlauf. Was dabei fehlt, steht unten in der Prüfung.</p>':'<p class="muted tiny" style="margin:8px 0 0">Ohne vollständige Aufstellungen ist keine verlässliche Abrechnung möglich.</p>'}<details><summary>Details je Manager</summary><div class="tablewrap"><table><thead><tr><th>MANAGER</th><th>STATUS</th><th>SPIELER</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }catch(e){coverage.textContent='Aufstellungsstatus nicht abrufbar: '+e.message;}
  }
  async function selectDay(){try{const d=await api('/api/matchday-status');day.value=String(Math.max(1,Math.min(34,Number(d.lastFinishedDay||0))));}catch{day.value='1';}await loadCoverage();}
@@ -1486,9 +1488,25 @@ function bumsDaysHtml(days,inHalf,RN){
  return `<details class="hall-section prof-sec bums-statsbox" id="bumsDays"${bumsDaysOpen?' open':''}><summary><h4>🗓️ SPIELTAGE</h4></summary><p class="muted tiny">Jeder Spieltag einzeln zum Nachvollziehen: wer betroffen war, nach welcher Regel und wer an wen abgegeben hat. ↑ = abgegeben (bumst), ↓ = bekommen (gebumst).</p>${items||'<p class="muted">Noch keine Spieltage erfasst.</p>'}</details>`;
 }
 document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b)return;const d=b.dataset.bumsDay;location.hash='#accounting';setTimeout(()=>{const s=$('#accountingDay');if(s&&[...s.options].some(o=>o.value===d)){s.value=d;s.dispatchEvent(new Event('change',{bubbles:true}));}},150);});
+// Online-Seite (nur lesend, Kevin-Meldung ST 1 „bitte einmal öffnen“): Die gespeicherte BumsTabelle kommt vom PC und kann
+// älter sein als der heutige Rechenstand. Darum rechnet die Seite je abgeschlossenem Spieltag aus der exportierten Abrechnung
+// und den Haken dasselbe nach wie bumsSave am PC. Von Hand nachgetragene Spieltage bleiben unverändert.
+const bumsDerived=new Map();
+async function bumsStaticDerive(days){
+ const fin=historyData.filter(h=>h.status==='finished').map(h=>h.day);
+ await Promise.all(fin.filter(d=>!days[d]?.manual).map(async day=>{
+  if(!bumsDerived.has(day))bumsDerived.set(day,(async()=>{
+   const [d,c]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
+   if(!d?.ready||!d?.complete)return null;
+   const checks=c.checks||{},todos=(d.todos||[]).filter(t=>!checks[t.key]?.removed);
+   const progress={done:todos.filter(t=>t.check?.state==='done'||checks[t.key]?.done).length,total:todos.length,unclear:(d.autoEvents?.error?[]:(d.autoEvents?.unclear||[])).filter(u=>!checks[unclearKey(u)]?.target).length};
+   return {managers:bumsCounts(d,checks),progress};})().catch(()=>null));
+  const r=await bumsDerived.get(day);if(r)days[day]={...(days[day]||{}),...r,derived:true};}));
+}
 async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
+ if(window.KBL_STATIC)try{await bumsStaticDerive(days);}catch{}
  try{kblAccDayLabels(days);}catch{}
  try{showProfile();}catch{}try{renderPreview();}catch{}
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day);
