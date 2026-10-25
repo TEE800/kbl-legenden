@@ -1699,7 +1699,7 @@ window.kblCollapseView=view=>{
  const root=document.querySelector(`.kbl-view[data-view="${view}"]`);if(!root)return;
  root.querySelectorAll('details[open]:not(.kbl-keep-open)').forEach(d=>{d.open=false;});
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
- if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accRadarOpen=false;accLiveLoad();}
+ if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accRadarOpen=true;accLiveLoad();}
  if(view==='profiles')profOpen.clear();
  if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;bumsIntroPending=!bumsIntroSkipOnce;bumsIntroSkipOnce=false;setTimeout(kblBumsIntroTry,0);}
  else document.querySelector('.bums-intro')?.remove();
@@ -1837,7 +1837,7 @@ function renderPreview(){
 // BumsParade LIVE (Kevin-Wunsch): Während der Spieltag läuft, steht oben ohne „prüfen“, welche Strafen nach dem
 // aktuellen Stand fällig wären (/api/rule-live/:day, Server rechnet höchstens alle 5 Min. neu). Nur vorläufig, keine Haken,
 // nichts geht in die BumsTabelle. Eingeklappt (feste Regel), die Zahl der möglichen Strafen steht schon in der Kopfzeile.
-let accLive=null,accLiveOpen=false,accLiveBusy=false,accRadarOpen=false;
+let accLive=null,accLiveOpen=false,accLiveBusy=false,accRadarOpen=true,accRadarPlayers=null;
 async function accLiveLoad(){
  const el=$('#accLive');if(!el||accLiveBusy)return;
  let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
@@ -1869,11 +1869,14 @@ function accLiveRender(){
    (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${mgrName(g.name,'',mid)}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
    '<p class="muted tiny">Schnapszahlen (BD) werden erst nach dem jeweiligen Spielende geprüft, danach alle 30 Minuten (wegen Korrekturen). Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p>';
  }else body=`<p class="muted">${safe(d?.message||'')}</p>`;
- el.innerHTML=`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`+(a.state==='done'&&d?.live?accRadarHtml(d):'');
+ el.innerHTML=(a.state==='done'&&d?.live?accRadarHtml(d):'')+`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`;
+ // Spielerbilder und Vereine für die Drehtür-Kandidaten (wie im MVP-Tipp), einmal laden und neu zeichnen.
+ if(a.state==='done'&&d?.live&&!accRadarPlayers){accRadarPlayers=new Map();api('/api/mvp-tipps/players').then(r=>{accRadarPlayers=new Map((r.players||[]).map(p=>[String(p.id),p]));accLiveRender();}).catch(()=>{});}
  el.querySelector('details').addEventListener('toggle',e=>{accLiveOpen=e.target.open;});
  el.querySelector('.bradar')?.addEventListener('toggle',e=>{accRadarOpen=e.target.open;});
 }
-// Bums-Radar (Kevin-Wunsch): provokante Bildübersicht zum LIVE-Stand, wer gerade wie gebumst würde. Eingeklappt (feste Regel).
+// Bums-Radar (Kevin-Wunsch): provokante Bildübersicht zum LIVE-Stand, wer gerade wie gebumst würde. Steht ganz oben und ist
+// gleich offen (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel wie beim MVP-Tipp-Rennen: kbl-keep-open).
 // Nur Anzeige aus /api/rule-live; zählt nichts, geht nicht in die BumsTabelle.
 function accRadarHtml(d){
  const safe=x=>escapeHtml(String(x??'')),items=d.items||[],st=d.standings||[];
@@ -1886,11 +1889,16 @@ function accRadarHtml(d){
  const shot=it=>`<li><span class="bradar-stamp r-${safe(it.rule)}">${safe(it.rule)}</span><span class="bradar-shot">${it.playerName?`<b>${safe(it.playerName)}</b> `:''}<span class="muted">${safe(where(it))}</span></span></li>`;
  // Hauptduell der Drehtür: Spieltagsführender gegen Letzten.
  const give=items.filter(it=>it.rule==='DD'&&it.role==='give'),get=items.filter(it=>it.rule==='DD'&&it.role==='get');
- const duel=give.length&&get.length?`<div class="bradar-duel"><div class="bradar-side">${mgrFace(give[0].manager,'mgr-av-lg',give[0].managerId)}<b>${safe(give.map(g=>g.manager).join(' & '))}</b><span class="muted tiny">Platz 1</span></div><div class="bradar-arrow"><span>💥</span><small>Drehtür</small></div><div class="bradar-side">${mgrFace(get[0].manager,'mgr-av-lg',get[0].managerId)}<b>${safe(get.map(g=>g.manager).join(' & '))}</b><span class="muted tiny">Letzter</span></div><p class="bradar-cap">Der Erste muss dem Letzten einen seiner besten Spieler rüberschieben. Ganz schön demütigend, aber für wen eigentlich?</p></div>`:'';
+ // Drehtür (Kevin-Wunsch): in der Mitte eine sich drehende Drehtür, beim Abgebenden die drei Kandidaten als Männchen wie im MVP-Tipp.
+ const K=window.kblToon,info=id=>accRadarPlayers?.get(String(id));
+ const fig=c=>{const p=info(c.id),[shirt,trim]=K?K.clubColor(p?.team):['#555','#fff'],crest=K&&p?.teamImg?K.kbImg(p.teamImg):'',live=c.state==='live';
+  return `<div class="rd-fig toon-runner${live?' run':''}${crest?' has-crest':''}"><div class="toon-body">${K?K.toon({},shirt,trim,c.points<0?'sad':'happy',''):''}${K&&p?.img?`<img class="toon-face" src="${safe(K.headSrc(c.id))}" alt="" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`:''}${crest?`<img class="toon-crest" src="${safe(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`:''}</div>${live?'<span class="toon-ball">⚽</span>':''}<div class="rd-tag">${safe(c.name)}<b>${fmt(c.points)}</b></div></div>`;};
+ const door='<div class="rdoor" aria-hidden="true"><div class="rdoor-roof"></div><div class="rdoor-stage"><div class="rdoor-rot"><i></i><i></i><i></i><i></i></div></div><div class="rdoor-floor"></div><small>Drehtür</small></div>';
+ const duel=give.length&&get.length?`<div class="bradar-duel"><div class="bradar-side give">${mgrFace(give[0].manager,'mgr-av-lg',give[0].managerId)}<b>${safe(give.map(g=>g.manager).join(' & '))}</b><span class="muted tiny">Platz 1 · gibt einen ab</span>${(give[0].cands||[]).length?`<div class="rd-cands">${give[0].cands.map(fig).join('')}</div>`:''}</div>${door}<div class="bradar-side get">${mgrFace(get[0].manager,'mgr-av-lg',get[0].managerId)}<b>${safe(get.map(g=>g.manager).join(' & '))}</b><span class="muted tiny">Letzter · sucht sich einen aus</span></div></div>`:'';
  const cards=victims.map(v=>`<li class="bradar-card${v.list.length>=2?' hot':''}"><div class="bradar-head">${mgrFace(v.name,'mgr-av-lg',v.id)}<div><b>${safe(v.name)}</b><span class="bradar-verdict">${verdict(v.list.length)}</span></div><span class="bradar-count">${v.list.length}×</span></div><ul class="bradar-shots">${v.list.map(shot).join('')}</ul></li>`).join('');
  const safeOnes=st.filter(m=>!by.has(String(m.managerId)));
  const clean=safeOnes.length?`<div class="bradar-clean"><p><b>Noch ungebumst</b> <span class="muted tiny">· zittern bis zum Abpfiff</span></p><div class="bradar-faces">${safeOnes.map(m=>`<span title="${safe(m.manager)}">${mgrFace(m.manager,'',m.managerId)}<small>${safe(m.manager)}</small></span>`).join('')}</div></div>`:'';
- return `<details class="center-box acc-todo-box bradar"${accRadarOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>🎯 Bums-Radar · ${safe(sum)}</strong><span class="pill">wenn jetzt Abpfiff wäre</span></summary>${duel}${victims.length?`<ul class="bradar-grid">${cards}</ul>`:'<p>Gerade würde keiner gebumst. Langweilig. 😴</p>'}${clean}<p class="muted tiny">Nur ein Zwischenstand aus der LIVE-Liste darüber. Er zählt nicht für die BumsTabelle, und bis zum Abpfiff kann noch alles kippen.</p></details>`;
+ return `<details class="center-box acc-todo-box bradar kbl-keep-open"${accRadarOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>🎯 Bums-Radar · ${safe(sum)}</strong><span class="pill">wenn jetzt Abpfiff wäre</span></summary>${duel}${victims.length?`<ul class="bradar-grid">${cards}</ul>`:'<p>Gerade würde keiner gebumst. Langweilig. 😴</p>'}${clean}<p class="muted tiny">Nur ein Zwischenstand aus der LIVE-Liste darüber. Er zählt nicht für die BumsTabelle, und bis zum Abpfiff kann noch alles kippen.</p></details>`;
 }
 setInterval(()=>{if(!document.hidden&&accLive&&document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();},5*60e3);
 onConnected.push(()=>{if(document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();});
