@@ -2,7 +2,7 @@
 // Aktiv = ein Spiel hat vor hoechstens 3 Stunden angefangen oder beginnt in den naechsten 10 Minuten.
 // Danach (bis 30 Stunden nach dem letzten Anstoss) weiter aktiv, solange die Online-Daten des Spieltags noch auf dem Live-Stand sind
 // (Kickbase-Ranking il = true, Kickbase schliesst den Spieltag erst am Abend nach dem letzten Spiel ab, oder MVP-Tipp noch nicht
-// ausgewertet, oder die Abrechnung hat noch pendingCorrections: ST 7 schloss Kickbase um 18 Uhr, die Abrechnung stand online
+// ausgewertet, oder die Abrechnung hat noch pendingCorrections oder offene Aufgaben bis 3 Std. nach der Verkaufsfrist: ST 7 schloss Kickbase um 18 Uhr, die Abrechnung stand online
 // sonst bis 6:07 auf dem unkorrigierten Stand). Solange bleiben die LIVE-Anzeigen stehen (Kevin-Wunsch). In dieser Zeit nur jede Viertelstunde (Kickbase schonen).
 // Schreibt aktiv=true/false nach GITHUB_OUTPUT. Ist OpenLigaDB nicht erreichbar, wird sicherheitshalber abgerufen.
 import fs from 'node:fs';
@@ -16,9 +16,13 @@ try {
   if (!aktiv) {
     const started = matches.filter(m => Number.isFinite(kick(m)) && kick(m) <= now).sort((a, b) => kick(b) - kick(a));
     const last = started[0], day = last?.group?.groupOrderID;
-    if (last && day && now - kick(last) <= 30 * 3600 * 1000) {
-      const rk = read(`ranking_6422780_dayNumber_${day}.json`), mt = read(`mvp-tipps_${day}.json`), ac = read(`rule-accounting_${day}.json`);
-      const offen = [rk?.il === true && 'Ranking noch live', mt && mt.status !== 'finished' && 'MVP-Tipp noch nicht ausgewertet', ac?.pendingCorrections && 'Abrechnung noch mit unkorrigierten Punkten'].filter(Boolean);
+    const ac = day && read(`rule-accounting_${day}.json`);
+    // Verkaeufe und Empfaenger der BumsParade erkennt die Abrechnung aus dem Transfer-Verlauf. Bis 3 Std. nach der Verkaufsfrist
+    // (22 Uhr am Tag nach dem Spieltag) weiter abrufen, solange Aufgaben offen sind, sonst sah man sie online erst am naechsten Morgen.
+    const bumsOffen = ac?.ready && (ac.todos || []).some(t => ['open', 'progress'].includes(t.check?.state)) && now <= Date.parse(ac.saleDeadline) + 3 * 3600 * 1000;
+    if (last && day && (now - kick(last) <= 30 * 3600 * 1000 || bumsOffen)) {
+      const rk = read(`ranking_6422780_dayNumber_${day}.json`), mt = read(`mvp-tipps_${day}.json`);
+      const offen = [rk?.il === true && 'Ranking noch live', mt && mt.status !== 'finished' && 'MVP-Tipp noch nicht ausgewertet', ac?.pendingCorrections && 'Abrechnung noch mit unkorrigierten Punkten', bumsOffen && 'BumsParade-Aufgaben noch offen'].filter(Boolean);
       if (offen.length) { aktiv = !(now - Date.parse(read('_meta.json')?.exportedAt) < 14 * 60 * 1000); console.log(`Spieltag ${day} vorbei, Online-Daten noch nicht endgültig (${offen.join(', ')}).`); }
     }
   }
