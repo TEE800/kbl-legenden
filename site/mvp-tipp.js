@@ -208,7 +208,7 @@
   // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
   const ROW=88,TOP=104;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' leader':''}${o.crown?' champ':''}" style="left:${x}%;top:${TOP+row*ROW-60}px;z-index:${row+2}">
+   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' leader':''}${o.crown?' champ':''}${o.party?' tag-down':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
     ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}${o.ko?'<span class="toon-dizzy">💫</span>':''}
     <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.ko?' <span class="toon-ko">K.O.</span>':''}</div></div>`;};
   const figs=[];
@@ -226,12 +226,16 @@
   const right=best?groups.filter(g=>bestIds.has(String(g.t.playerId))).flatMap(g=>g.rs):[];
   const fans=right.filter(r=>!auto||leadIds.has(r.m.id)),losers=auto?right.filter(r=>!leadIds.has(r.m.id)):[];
   const wi=figs.findIndex(f=>f.crown);
-  // Eine Zeile unter dem Sieger: links die Weinenden, rechts (direkt unter ihm) die Tanzenden.
-  if(wi>=0&&(fans.length||losers.length))figs.splice(wi+1,0,{dance:true,pts:figs[wi].pts});
+  // Kevin-Wunsch: alle in der Zeile des Siegers, direkt links neben ihm die Tanzenden, daneben auf gleicher Höhe die Weinenden.
+  // Der Name des Siegers steht dann über der Krone (oben 24px mehr Platz), die der Tänzer unter den Füßen (Zeilen darunter rücken um PARTY nach unten).
+  const party=wi>=0&&(fans.length||losers.length),PARTY=12;
+  if(party)figs[wi].party=true;
+  const Y=row=>TOP+(party?24:0)+row*ROW+(party&&row>wi?PARTY:0);
   const face=window.kblMgrFace||(()=>'');
-  const dancers=(o,row)=>(losers.length?mourners(o,row):'')+(fans.length?`<div class="toon-dancers" style="right:calc(${(100-Number(pos(o.pts))).toFixed(1)}% - 36px);top:${TOP+row*ROW-60}px">${fans.map(r=>`<div class="toon-dancer"><div class="toon-dancer-body">${toon({},'#d4a017','#fff','wow','')}<span class="toon-dancer-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-dancer-name">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span></div>`).join('')}</div>`:'');
-  const mourners=(o,row)=>`<div class="toon-mourners" style="right:calc(${(100-Number(pos(o.pts))).toFixed(1)}% - 36px + ${fans.length?fans.length*52+10:-10}px);top:${TOP+row*ROW-80}px">${losers.map(r=>`<div class="toon-mourner"><div class="toon-mourner-body">${toon({},'#6b7280','#fff','sad','')}<span class="toon-mourner-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-tears">💧</span><span class="toon-mourner-name">${esc(r.m.name)}</span></div>`).join('')}</div>`;
-  const pitch=`<div class="toon-pitch" style="height:${TOP+(figs.length-1)*ROW+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.dance?dancers(o,row):o.mourn?mourners(o,row):runner(o,row)).join('')}</div>`;
+  const edge=o=>`${(100-Number(pos(o.pts))).toFixed(1)}%`,fansW=fans.length?fans.length*52-12+10:0;
+  const dancers=(o,row)=>(losers.length?mourners(o,row):'')+(fans.length?`<div class="toon-dancers" style="right:calc(${edge(o)} + 2px);top:${Y(row)-84}px">${fans.map(r=>`<div class="toon-dancer"><div class="toon-dancer-body">${toon({},'#d4a017','#fff','wow','')}<span class="toon-dancer-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-dancer-name">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span></div>`).join('')}</div>`:'');
+  const mourners=(o,row)=>`<div class="toon-mourners" style="right:calc(${edge(o)} + ${2+fansW}px);top:${Y(row)-74}px">${losers.map(r=>`<div class="toon-mourner"><div class="toon-mourner-body">${toon({},'#6b7280','#fff','sad','')}<span class="toon-mourner-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-tears">💧</span><span class="toon-mourner-name">${esc(r.m.name)}</span></div>`).join('')}</div>`;
+  const pitch=`<div class="toon-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>runner(o,row)+(o.party?dancers(o,row):'')).join('')}</div>`;
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&(!pool.length||pool.includes(g.t.team))),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
   const ghostLine=tops.length?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">Gerade bester getippter Spieler:</span> <b>${tops.map(g=>esc(g.t.player)).join(', ')}</b> <small class="muted">${esc([...new Set(tops.map(g=>g.t.team))].join(', '))}</small><span class="toon-pts">${fmt(top)}<small> Pkt.</small></span></div>`:'';

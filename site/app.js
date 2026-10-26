@@ -1224,6 +1224,7 @@ function centerTodoHtml(){
  const notes=[];
  if(a.probe)notes.push('PROBELAUF: Die heutigen Aufstellungen wurden als Startelf angenommen. Nur ein Test, Haken sind ausgeschaltet.');
  if(!d.complete)notes.push('Aufstellungen oder Spielerpunkte sind unvollständig, Drehtür und Magic Miyoshi fehlen noch.');
+ if(d.pendingCorrections){const pc=d.pendingCorrections;notes.push(`Noch nicht verbindlich: Kickbase hat die Punktkorrekturen bei ${pc.count} Spielern noch nicht übernommen (z. B. ${pc.examples.map(e=>`${e.playerName} ${e.performance} statt ${e.center}`).join(', ')}). Schnapszahlen, Drehtür und Magic Miyoshi können sich noch ändern. Erst wenn Kickbase den Spieltag abgeschlossen hat, wird abgerechnet und in die BumsTabelle übertragen.`);}
  if(d.dd?.tie)notes.push('Gleichstand bei der Drehtür, bitte von Hand entscheiden.');
  if(d.autoEvents?.error)notes.push('RK, BN und UM konnten nicht geprüft werden.');
  if(ae?.failures?.length)notes.push(`${ae.failures.length} Spieler konnten nicht gelesen werden; für sie fehlt die Erkennung von RK, BN und UM.`);
@@ -1415,7 +1416,7 @@ function kblAccDayLabels(days){
   o.textContent=`Spieltag ${n}${tag}`;}
 }
 function bumsSave(){
- const a=centerAccounting;if(a.probe||a.state!=='done'||!a.data?.ready||!a.data?.complete||bumsDays[a.day]?.manual)return;
+ const a=centerAccounting;if(a.probe||a.state!=='done'||!a.data?.ready||!a.data?.complete||a.data?.pendingCorrections||bumsDays[a.day]?.manual)return;
  const managers=bumsCounts(a.data,a.checks),todos=(a.data.todos||[]).filter(t=>!a.checks?.[t.key]?.removed);
  const progress={done:todos.filter(t=>t.check?.state==='done'||a.checks?.[t.key]?.done).length,total:todos.length,unclear:(a.data.autoEvents?.error?[]:(a.data.autoEvents?.unclear||[])).filter(u=>!a.checks?.[unclearKey(u)]?.target).length};
  const sig=a.day+JSON.stringify(managers)+JSON.stringify(progress);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
@@ -1498,7 +1499,7 @@ async function bumsStaticDerive(days){
  await Promise.all(fin.filter(d=>!days[d]?.manual).map(async day=>{
   if(!bumsDerived.has(day))bumsDerived.set(day,(async()=>{
    const [d,c]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
-   if(!d?.ready||!d?.complete)return null;
+   if(!d?.ready||!d?.complete||d?.pendingCorrections)return null;
    const checks=c.checks||{},todos=(d.todos||[]).filter(t=>!checks[t.key]?.removed);
    const progress={done:todos.filter(t=>t.check?.state==='done'||checks[t.key]?.done).length,total:todos.length,unclear:(d.autoEvents?.error?[]:(d.autoEvents?.unclear||[])).filter(u=>!checks[unclearKey(u)]?.target).length};
    return {managers:bumsCounts(d,checks),progress};})().catch(()=>null));
@@ -1554,7 +1555,7 @@ document.addEventListener('click',async e=>{
  let ok=0;const fail=[];
  for(const day of days){msg.textContent=`Prüfe Spieltag ${day} …`;
   try{const [d,c]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
-   if(!d.ready||!d.complete){fail.push(day);continue;}
+   if(!d.ready||!d.complete||d.pendingCorrections){fail.push(day);continue;}
    await api(`/api/bumsungen/${day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers:bumsCounts(d,c.checks||{})})});ok++;}
   catch(err){fail.push(day);}}
  await renderBumsTabelle();
