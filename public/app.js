@@ -1224,7 +1224,6 @@ function centerTodoHtml(){
  const notes=[];
  if(a.probe)notes.push('PROBELAUF: Die heutigen Aufstellungen wurden als Startelf angenommen. Nur ein Test, Haken sind ausgeschaltet.');
  if(!d.complete)notes.push('Aufstellungen oder Spielerpunkte sind unvollständig, Drehtür und Magic Miyoshi fehlen noch.');
- if(d.pendingCorrections){const pc=d.pendingCorrections;notes.push(`Noch nicht verbindlich: Kickbase hat die Punktkorrekturen bei ${pc.count} Spielern noch nicht übernommen (z. B. ${pc.examples.map(e=>`${e.playerName} ${e.performance} statt ${e.center}`).join(', ')}). Schnapszahlen, Drehtür und Magic Miyoshi können sich noch ändern. Erst wenn Kickbase den Spieltag abgeschlossen hat, wird abgerechnet und in die BumsTabelle übertragen.`);}
  if(d.dd?.tie)notes.push('Gleichstand bei der Drehtür, bitte von Hand entscheiden.');
  if(d.autoEvents?.error)notes.push('RK, BN und UM konnten nicht geprüft werden.');
  if(ae?.failures?.length)notes.push(`${ae.failures.length} Spieler konnten nicht gelesen werden; für sie fehlt die Erkennung von RK, BN und UM.`);
