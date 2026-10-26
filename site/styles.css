@@ -872,3 +872,4 @@ body.zer-on{overflow:hidden}
 @keyframes zerRoll{from{transform:translateY(60vh)}to{transform:translateY(0)}}
 @media(max-width:600px){.zer-stage{padding:22px 12px}.zer-bar .gold{min-width:0;flex:1}.zer-def-head{padding:12px;gap:12px}.mgr-av.zer-av{width:64px;height:64px;font-size:28px}.zer-akte-btn{width:100%}.zer-faces span{width:64px}.zer-sub{font-size:16px}}
 @media (prefers-reduced-motion:reduce){.zer-curtain,.zer-flip{transition:none}.zer-title h1,.zer-faces span,.zer-def-head.enter,.zer-stamp.hit,.zer-charge.rolling .zer-flip{animation:none}}
+.push-tip{margin:10px 0 4px;padding:8px 10px;border:1px solid var(--fame-line);background:var(--fame);border-radius:8px;font-size:13px;color:var(--text-2)}
