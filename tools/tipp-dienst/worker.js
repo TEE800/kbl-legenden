@@ -452,12 +452,51 @@ async function handleNutzung(req, env, cors, parts, body) {
   return json({ error: 'Nicht gefunden.' }, 404, cors);
 }
 
+// BumsParade-Haken von der Online-Seite (Kevin-Wunsch): nur mit Admin-Code. KV haken:<day> = { key: {done, target?, removed?, at} },
+// done:false bleibt als Eintrag stehen (zaehlt gegen einen aelteren Haken vom PC). Der GitHub-Export mischt alles nach "at" in
+// kbl-todo-checks.json, die Online-Seite mischt es beim Anzeigen sofort dazu.
+const HAKEN_KEY = /^[A-Z]{2,3}:\d{1,15}(:\d{1,12})?$/;
+async function adminTry(env, code) {
+  const fails = ((await env.TIPPS.get('fail:haken', 'json')) || []).filter(t => Date.now() - t < 15 * 60e3);
+  if (fails.length >= 5) return { ok: false, status: 429, error: 'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.' };
+  if (isAdmin(env, code)) return { ok: true };
+  fails.push(Date.now());
+  await env.TIPPS.put('fail:haken', JSON.stringify(fails), { expirationTtl: 16 * 60 });
+  return { ok: false, status: 403, error: 'Falscher Admin-Code.' };
+}
+async function handleHaken(req, env, cors, parts, body) {
+  if (!parts[1] && req.method === 'GET') {
+    const out = {}; let cursor;
+    do { const page = await env.TIPPS.list({ prefix: 'haken:', cursor }); for (const k of page.keys) out[k.name.slice(6)] = await env.TIPPS.get(k.name, 'json'); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+    return json({ days: out }, 200, cors);
+  }
+  if (parts[1] === 'login' && req.method === 'POST') {
+    const a = await adminTry(env, body.adminCode);
+    return a.ok ? json({ ok: true }, 200, cors) : json({ error: a.error }, a.status, cors);
+  }
+  if (!/^\d{1,2}$/.test(parts[1] || '') || Number(parts[1]) < 1 || Number(parts[1]) > 34) return json({ error: 'Ungültiger Spieltag.' }, 400, cors);
+  const day = Number(parts[1]);
+  if (req.method === 'GET') return json({ day, checks: (await env.TIPPS.get(`haken:${day}`, 'json')) || {} }, 200, cors);
+  if (req.method === 'POST') {
+    const { key, done, target, removed } = body;
+    if (!HAKEN_KEY.test(String(key || '')) || typeof done !== 'boolean' || (removed != null && typeof removed !== 'boolean')) return json({ error: 'Ungültige Angabe.' }, 400, cors);
+    if (target != null && (typeof target !== 'string' || !target.trim() || target.length > 60)) return json({ error: 'Ungültiger Manager.' }, 400, cors);
+    const a = await adminTry(env, body.adminCode); if (!a.ok) return json({ error: a.error }, a.status, cors);
+    const all = (await env.TIPPS.get(`haken:${day}`, 'json')) || {};
+    all[key] = { done, at: new Date().toISOString(), ...(done && target ? { target: target.trim() } : {}), ...(done && removed ? { removed: true } : {}) };
+    await env.TIPPS.put(`haken:${day}`, JSON.stringify(all));
+    return json({ ok: true, day, checks: all }, 200, cors);
+  }
+  return json({ error: 'Nicht gefunden.' }, 404, cors);
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
   if (parts[0] === '' || parts[0] === 'status') return json({ ok: true, dienst: 'KBL Legenden MVP-Tipp' }, 200, cors);
   if (parts[0] === 'push') return handlePush(req, env, cors, parts, body);
   if (parts[0] === 'nutzung') return handleNutzung(req, env, cors, parts, body);
+  if (parts[0] === 'haken') return handleHaken(req, env, cors, parts, body);
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {
