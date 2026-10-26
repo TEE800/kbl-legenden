@@ -1857,6 +1857,16 @@ async function accLiveLoad(){
  finally{accLiveBusy=false;}
  accLiveRender();
 }
+// Gegenseite zu UM (Kevin-Wunsch): Wer per UM einen Spieler bekommt, steht in der LIVE-Liste und im Bums-Radar auch selbst drin.
+// Beide Ansichten nutzen diese eine Liste, damit sie nie auseinanderlaufen.
+function accLiveWithRecv(items,standings){
+ const out=[...items];
+ for(const it of items){if(it.rule!=='UM'||!(it.to||[]).length)continue;
+  for(const nm of it.to){const m=(standings||[]).find(x=>x.manager===nm);
+   out.push({rule:'UM',role:'recv',managerId:m?String(m.managerId):'',manager:nm,playerId:it.playerId,playerName:it.playerName,from:it.manager,state:it.state,
+    text:`bekommt ${it.playerName} von ${it.manager} (Upamaguire)`});}}
+ return out;
+}
 function accLiveRender(){
  const el=$('#accLive');if(!el)return;const a=accLive;if(!a){el.innerHTML='';return;}
  const safe=x=>escapeHtml(String(x??'')),d=a.data;
@@ -1867,7 +1877,7 @@ function accLiveRender(){
  if(a.state==='loading')body='<p class="muted">Zwischenstand wird berechnet … Das kann beim ersten Öffnen etwas dauern.</p>';
  else if(a.state==='error')body=`<p class="error">BumsParade LIVE nicht abrufbar: ${safe(a.error)}</p>`;
  else if(d?.live){
-  const groups=new Map();for(const it of items){if(!groups.has(it.managerId))groups.set(it.managerId,{name:it.manager,list:[]});groups.get(it.managerId).list.push(it);}
+  const groups=new Map();for(const it of accLiveWithRecv(items,d.standings)){if(!groups.has(it.managerId))groups.set(it.managerId,{name:it.manager,list:[]});groups.get(it.managerId).list.push(it);}
   const place=new Map((d.standings||[]).map((m,i)=>[m.managerId,{i:i+1,pts:m.dayPoints}]));
   const sorted=[...groups.entries()].sort((x,y)=>(place.get(x[0])?.i??99)-(place.get(y[0])?.i??99));
   const when=d.updatedAt?new Date(d.updatedAt).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
@@ -1889,9 +1899,7 @@ function accLiveRender(){
 function accRadarHtml(d){
  const safe=x=>escapeHtml(String(x??'')),items=d.items||[],st=d.standings||[];
  const place=new Map(st.map((m,i)=>[String(m.managerId),i+1]));
- const by=new Map();for(const it of items){const k=String(it.managerId);if(!by.has(k))by.set(k,{id:k,name:it.manager,list:[]});by.get(k).list.push(it);}
- // Kevin-Wunsch: Wer per UM einen Spieler bekommt, steht auch in seiner eigenen Karte (Gegenseite).
- for(const it of items){if(it.rule!=='UM'||!(it.to||[]).length)continue;for(const nm of it.to){const m=st.find(x=>x.manager===nm);const k=m?String(m.managerId):'n:'+nm;if(!by.has(k))by.set(k,{id:m?k:'',name:nm,list:[]});by.get(k).list.push({rule:'UM',role:'recv',playerName:it.playerName,from:it.manager});}}
+ const by=new Map();for(const it of accLiveWithRecv(items,st)){const k=it.managerId?String(it.managerId):'n:'+it.manager;if(!by.has(k))by.set(k,{id:it.managerId?k:'',name:it.manager,list:[]});by.get(k).list.push(it);}
  const victims=[...by.values()].sort((a,b)=>b.list.length-a.list.length||(place.get(a.id)??99)-(place.get(b.id)??99));
  const sum=victims.length?`${victims.length} Manager im Visier`:'gerade keiner im Visier';
  const verdict=n=>n>=3?'Komplett zerlegt.':n===2?'Doppelt dran.':'Erwischt.';

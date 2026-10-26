@@ -1953,6 +1953,10 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const ranking=await get(`/v4/leagues/6422780/ranking?dayNumber=${day}`);
   if(st!=='live'&&ranking.il!==true)return ended();
   const closing=st!=='live';
+  // Kickbase hat die Spieltagspunkte schon ins Ranking geschrieben (mdp, an ST 7 am Morgen danach gesehen, il noch true):
+  // dann gelten wie in der echten BumsParade die Leistungsdaten (performance), nicht mehr playercenter. Sonst wichen
+  // Schnapszahlen, Drehtuer und Letzter von der Abrechnung ab (ST 7: Stammler9 467 statt 417, Omari 78 statt 66).
+  const settled=closing&&(ranking.us||[]).some(u=>Number(u.mdp));
   const users=(ranking.us||[]).filter(u=>validManager(u.i)&&String(u.n||'').toLowerCase()!=='t1000');
   const snaps=readSnapshots(),notes=[];
   const lineups=users.map(u=>{const lp=(u.lp||[]).filter(x=>x!=null).map(String),s=snaps[`${day}:${u.i}`],own=Array.isArray(s?.playerIds)?s.playerIds.map(String):[];
@@ -1964,9 +1968,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const ids=[...new Set(lineups.flatMap(m=>m.ids))],pts={},perf={};
   for(let i=0;i<ids.length;i+=5)await Promise.all(ids.slice(i,i+5).map(async id=>{
    // Spiel vorbei: Punkte nur alle 30 Min. neu (Kevin-Vorgabe: danach reichen groessere Abstaende, wegen Korrekturen).
-   const k=`${day}:${id}`,c=ruleLiveDone.get(k);
+   const k=`${day}:${id}:${settled?'p':'c'}`,c=ruleLiveDone.get(k);
    if(c&&Date.now()-c.at<30*60e3)pts[id]=c.value;
-   else{try{pts[id]=await dayPlayerPoints(token,id,day,false,get);}catch{pts[id]={points:null,state:'error'};}
+   else{try{pts[id]=await dayPlayerPoints(token,id,day,settled,get);}catch{pts[id]={points:null,state:'error'};}
     if(pts[id].state==='done')ruleLiveDone.set(k,{at:Date.now(),value:pts[id]});else ruleLiveDone.delete(k);}
    try{perf[id]=await get(`/v4/competitions/1/players/${id}/performance`);}catch{}
   }));
@@ -2035,7 +2039,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7};
   items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
-  const value={day,status:'live',live:true,...(closing?{closing:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
+  const value={day,status:'live',live:true,...(closing?{closing:true}:{}),...(settled?{settled:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
    standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
    items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,
    // Punkte aller Spieler mit beendetem Spiel: Push-Entwarnung, wenn eine gemeldete Schnapszahl korrigiert wird (worker.js).
