@@ -76,7 +76,7 @@ try {
 
   // Spieltage: im Live-Modus nur der laufende und was fehlt oder noch nicht fertig abgerechnet ist;
   // im Voll-Modus (taeglich) alle, weil Kickbase Punkte nachtraeglich korrigiert.
-  const unfinished = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).ready === false; } catch { return true; } };
+  const unfinished = u => { try { const j = JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')); return j.ready === false || !!j.pendingCorrections; } catch { return true; } };
   // Bankpunkte aus dem Live-Lauf einmal nach Spieltagsende endgueltig nachladen.
   const benchLive = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).status !== 'finished'; } catch { return true; } };
   // Ranking eines Spieltags, das noch waehrend des Spieltags gespeichert wurde (Kickbase: il = true), nach dem Abpfiff neu holen.
