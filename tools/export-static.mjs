@@ -76,7 +76,9 @@ try {
 
   // Spieltage: im Live-Modus nur der laufende und was fehlt oder noch nicht fertig abgerechnet ist;
   // im Voll-Modus (taeglich) alle, weil Kickbase Punkte nachtraeglich korrigiert.
-  const unfinished = u => { try { const j = JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')); return j.ready === false || !!j.pendingCorrections; } catch { return true; } };
+  const unfinished = u => { try { const j = JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')); return j.ready === false || !!j.pendingCorrections || bumsOffen(j); } catch { return true; } };
+  // Offene BumsParade-Aufgaben (Verkauf, Empfaenger aus dem Transfer-Verlauf) bis 3 Std. nach der Verkaufsfrist jedes Mal neu rechnen.
+  function bumsOffen(j) { return (j.todos || []).some(t => ['open', 'progress'].includes(t.check?.state)) && Date.now() <= Date.parse(j.saleDeadline) + 3 * 3600 * 1000; }
   // Bankpunkte aus dem Live-Lauf einmal nach Spieltagsende endgueltig nachladen.
   const benchLive = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).status !== 'finished'; } catch { return true; } };
   // Ranking eines Spieltags, das noch waehrend des Spieltags gespeichert wurde (Kickbase: il = true), nach dem Abpfiff neu holen.
