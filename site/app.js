@@ -1163,7 +1163,7 @@ function centerTodoHtml(){
  const mmNames=(lastDay?.list||[]).map(m=>m.name).filter(isEligibleManager).sort((x,y)=>x.localeCompare(y,'de'));
  const mmPick=t=>{const target=checks[t.key]?.target||'';return `<select class="center-pick" data-todo-target="${safe(t.key)}" aria-label="Wen hat ${safe(t.manager)} bestimmt?"${a.probe?' disabled':''}><option value="">Wen hat er bestimmt?</option>${mmNames.map(n=>`<option value="${safe(n)}" ${n===target?'selected':''}>${safe(n)}</option>`).join('')}</select>`;};
  // DD: welcher Spieler; RK, BN, AH, TL: an wen. Die Auswahl zählt bis in die BumsTabelle.
- const anyPick=t=>{if(window.KBL_STATIC)return '';const k=todoPick(t);if(k==='mm')return mmPick(t);if(!k)return '';const target=checks[t.key]?.target||'',need=todoNeedsPick(t);
+ const anyPick=t=>{if(ro)return '';const k=todoPick(t);if(k==='mm')return mmPick(t);if(!k)return '';const target=checks[t.key]?.target||'',need=todoNeedsPick(t);
   const autoNow=k==='dd'?(t.to||[])[0]?.playerName:(t.to||[]).length?t.to.map(r=>r.manager).join(', '):t.check?.state==='done'&&/Markt/.test(t.check?.note||'')?'an den Markt':'';
   const opts=k==='dd'?t.options.map(o=>o.name):[...(['AH','TL','UM'].includes(t.rule)?['Markt']:[]),...mmNames.filter(n=>n!==t.manager)];
   const q=k==='dd'?'Welchen Spieler hat der Letzte gewählt?':t.rule==='AH'?'Wer hat ihn gekauft?':'An wen ging er?';
@@ -1171,8 +1171,8 @@ function centerTodoHtml(){
   return `<select class="center-pick${need?'':' center-fix'}" data-todo-target="${safe(t.key)}"${need?' data-need="1"':''} aria-label="${safe(q)}"${a.probe?' disabled':''}><option value="">${safe(first)}</option>${opts.map(n=>`<option value="${safe(n)}" ${n===target?'selected':''}>${n==='Markt'?(t.rule==='AH'?'Kickbase / Markt':'an den Markt'):safe(n)}</option>`).join('')}</select>`;};
  const pickLabel=t=>{const g=checks[t.key]?.target;if(!g)return '';const k=todoPick(t);return k==='mm'?`hat ${g} bestimmt`:k==='dd'?`${g} an ${(t.to||[]).map(r=>r.manager).join(', ')||'den Letzten'}`:g==='Markt'?'an den Markt':`an ${g}`;};
  const gone=t=>!!checks[t.key]?.removed;
- // Online-Ansicht ist nur lesend: Haken, Auswahl und „Strafe entfernen“ nicht anbieten (sonst Fehlermeldung beim Antippen, Kevin).
- const ro=a.probe||!!window.KBL_STATIC;
+ // Online-Ansicht: Haken, Auswahl und „Strafe entfernen“ nur nach Admin-Anmeldung (Kevin), gespeichert im Tippdienst.
+ const ro=a.probe||(!!window.KBL_STATIC&&!window.kblHaken?.admin());
  // Verkaufszeitpunkt (Kevin-Wunsch): Frist 22:00 Uhr am Tag nach dem Spieltag; danach rot.
  const when=iso=>new Date(iso).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
  const dl=d.saleDeadline?` (Frist ${when(d.saleDeadline)} Uhr)`:'';
@@ -1233,8 +1233,18 @@ function centerTodoHtml(){
  const nTodo=rows.filter(r=>r.todo).length,nDone=rows.filter(r=>r.todo&&r.finished).length,nCheck=rows.filter(r=>r.unclear).length;
  const mvp=d.ah?.mvp?.players||[];
  const mvpLine=mvp.length&&!(d.ah?.affected||[]).length?`<p class="muted tiny">MVP des Spieltags: ${mvp.map(m=>`${safe(m.name)} (${fmt(m.points)} Pkt.)`).join(' · ')}, stand bei keinem in der Startelf.</p>`:'';
- return notes.map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+(rows.length?`<p class="center-progress"><b>${nDone} von ${nTodo}</b> erledigt${nCheck?` · <b>${nCheck}</b> bitte prüfen`:''} <button type="button" class="ghost" id="centerRecheck">↻ Neu prüfen</button></p><p class="muted tiny" style="margin:-4px 0 10px">Reihenfolge wie bei der Abrechnung: vom Spieltagssieger abwärts. Details zum Aufklappen.</p><ul class="center-groups">${groupHtml}</ul><p class="muted tiny">Die App prüft anhand der heutigen Kader, ob ein Spieler weg ist oder beim richtigen Manager steht. Was sie nicht sicher erkennt, kannst du von Hand abhaken. Die Haken gelten auf allen Geräten.</p>`:'<p>Keine Strafen fällig. 🎉</p>')+mvpLine;
+ return notes.map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+(rows.length?`<p class="center-progress"><b>${nDone} von ${nTodo}</b> erledigt${nCheck?` · <b>${nCheck}</b> bitte prüfen`:''} <button type="button" class="ghost" id="centerRecheck">↻ Neu prüfen</button>${hakenBar()}</p><p class="muted tiny" style="margin:-4px 0 10px">Reihenfolge wie bei der Abrechnung: vom Spieltagssieger abwärts. Details zum Aufklappen.</p><ul class="center-groups">${groupHtml}</ul><p class="muted tiny">Die App prüft anhand der heutigen Kader, ob ein Spieler weg ist oder beim richtigen Manager steht. Was sie nicht sicher erkennt, kannst du von Hand abhaken. Die Haken gelten auf allen Geräten.</p>`:'<p>Keine Strafen fällig. 🎉</p>')+mvpLine;
 }
+// Online: Admin-Anmeldung zum Abhaken (Admin-Code des Tippdienstes, wie beim MVP-Tipp).
+function hakenBar(){if(!window.KBL_STATIC||!window.kblHaken?.on||centerAccounting.probe)return '';
+ return window.kblHaken.admin()?` <button type="button" class="ghost" data-haken-logout title="Änderungen werden online gespeichert">🔓 Admin · abmelden</button>`:` <button type="button" class="ghost" data-haken-login>🔑 Bearbeiten (Admin)</button>`;}
+document.addEventListener('click',async e=>{
+ if(e.target.closest('[data-haken-logout]')){window.kblHaken.logout();renderAccTodo();return;}
+ if(!e.target.closest('[data-haken-login]'))return;
+ const code=prompt('Admin-Code (derselbe wie beim MVP-Tipp):');if(!code)return;
+ try{await window.kblHaken.login(code.trim());}catch(err){alert(err.message);return;}
+ renderAccTodo();
+});
 function renderAccTodo(){
  const el=$('#accTodo');if(!el)return;const a=centerAccounting;
  if(a.day==null){el.innerHTML='';return;}
@@ -1349,7 +1359,7 @@ document.addEventListener('change',async e=>{
  const pick=e.target.closest('select[data-todo-target]');
  if(pick&&centerAccounting.day&&!centerAccounting.probe){
   pick.disabled=true;const target=pick.value;
-  try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:pick.dataset.todoTarget,done:!!target,...(target?{target}:{})})});centerAccounting.checks=d.checks||{};}
+  try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:pick.dataset.todoTarget,done:!!target,...(target?{target}:{})})});centerAccounting.checks=d.checks||{};bumsDerived.delete(centerAccounting.day);}
   catch(err){alert('Auswahl nicht gespeichert: '+err.message);}
   renderAccTodo();return;
  }
@@ -1357,7 +1367,7 @@ document.addEventListener('change',async e=>{
  // Bei Regeln mit Auswahl (MM, DD, RK, BN, AH, TL) wird über die Auswahl abgehakt.
  if(box.closest('li')?.querySelector('select[data-todo-target][data-need]')&&box.checked){box.checked=false;box.closest('li').querySelector('select[data-need]').focus();return;}
  box.disabled=true;
- try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:box.dataset.todoKey,done:box.checked})});centerAccounting.checks=d.checks||{};}
+ try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:box.dataset.todoKey,done:box.checked})});centerAccounting.checks=d.checks||{};bumsDerived.delete(centerAccounting.day);}
  catch(err){box.checked=!box.checked;alert('Haken nicht gespeichert: '+err.message);}
  renderAccTodo();
 });
@@ -1367,7 +1377,7 @@ document.addEventListener('click',async e=>{
  const key=(rm||rs).dataset.todoRemove||(rs||rm).dataset.todoRestore;
  if(rm&&!confirm('Diese Strafe entfernen? Sie zählt dann nicht mehr, auch nicht in der BumsTabelle. Du kannst sie wiederherstellen.'))return;
  (rm||rs).disabled=true;
- try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rm?{key,done:true,removed:true}:{key,done:false})});centerAccounting.checks=d.checks||{};}
+ try{const d=await api(`/api/todo-checks/${centerAccounting.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rm?{key,done:true,removed:true}:{key,done:false})});centerAccounting.checks=d.checks||{};bumsDerived.delete(centerAccounting.day);}
  catch(err){alert('Nicht gespeichert: '+err.message);}
  renderAccTodo();
 });
