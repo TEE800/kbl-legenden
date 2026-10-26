@@ -1973,6 +1973,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
     if(pts[id].state==='done')ruleLiveDone.set(k,{at:Date.now(),value:pts[id]});else ruleLiveDone.delete(k);}
    try{perf[id]=await get(`/v4/competitions/1/players/${id}/performance`);}catch{}
   }));
+  // Alle Spiele vorbei (closing): nichts laeuft mehr. Spieler nur aus playercenter (z. B. Pejcinovic) gelten als beendet,
+  // Spieler ohne Punkte wurden nicht eingesetzt (Kevin: "1 im Spiel, 17 nicht angepfiffen" war nach Spielende unverstaendlich).
+  if(closing)for(const id of ids){if(pts[id]?.state==='live')pts[id]={...pts[id],state:'done'};else if(pts[id]?.state==='open')pts[id]={...pts[id],state:'unused'};}
   const roster=lineups.filter(m=>m.ids.length).map(m=>{
    const players=m.ids.filter(id=>Number.isFinite(pts[id]?.points)).map(id=>({playerId:id,playerName:pname(id),points:pts[id].points,state:pts[id].state}));
    return {...m,players,dayPoints:players.reduce((s,p)=>s+p.points,0)-100*Math.max(0,11-m.ids.length),
