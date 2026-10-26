@@ -244,6 +244,115 @@
   // Während des Spieltags gleich offen und ohne Erklärtext (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel: kbl-keep-open).
   return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Mit Krone: wer gerade nach der Tippregel vorne liegt. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wer gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
  }
+ // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
+ // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
+ // Korrekturen = Punkte ändern sich, obwohl das Spiel schon vorbei war; der letzte Stand nach Spieltagsende kommt aus den Leistungsdaten.
+ const zr={day:null,i:0,timer:null,speed:1,autoplay:false};
+ let zrGroups=null;
+ const zrWhen=s=>new Date(s).toLocaleString('de-DE',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}).replace(',','');
+ function zrFrames(d){
+  const tipped=new Map(d.managers.filter(m=>m.tip).map(m=>[String(m.tip.playerId),m.tip])),pool=poolOf(d);
+  return (d.verlauf||[]).map((f,i,all)=>{
+   const players={};for(const [id,[points,s]] of Object.entries(f.p||{}))players[id]={points,state:s==='d'?'done':s==='l'?'live':'open'};
+   // Wie auf dem Server (freshBest): getippte Spieler haben frischere Punkte als der Zwischenstand aller Spieler.
+   let best=f.mvp?{points:f.mvp.points,players:f.mvp.players.map(p=>({...p}))}:null;
+   for(const [id,x] of Object.entries(players)){const t=tipped.get(id);if(!t||(pool.length&&!pool.includes(t.team)))continue;
+    if(!best||x.points>best.points)best={points:x.points,players:[{id,name:t.player,team:t.team}]};
+    else if(x.points===best.points&&!best.players.some(p=>p.id===id))best.players.push({id,name:t.player,team:t.team});}
+   if(best&&f.mvp)best.players=best.players.filter(p=>f.mvp.players.some(m=>m.id===p.id)||players[p.id]?.points===best.points);
+   const prev=all[i-1],fixes=[];
+   if(prev)for(const [id,x] of Object.entries(players)){const o=prev.p?.[id];if(o&&o[1]==='d'&&o[0]!==x.points)fixes.push({id,from:o[0],to:x.points,name:tipped.get(id)?.player||id});}
+   const st=standings({...d,status:'live',result:null,tracking:{players,pool,mvp:best}});
+   return {at:f.at,fin:!!f.fin,players,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
+  });
+ }
+ function zrMoments(frames){
+  const out=[];let lastBest='',lastLead='';
+  frames.forEach((f,i)=>{
+   const b=(f.best?.players||[]).map(p=>p.id).sort().join(),l=f.lead.map(r=>r.m.id).sort().join();
+   const fx=f.fixes.map(x=>`${esc(x.name)} ${fmt(x.from)} → <b>${fmt(x.to)}</b>`).join(', ');
+   if(f.fin)out.push({i,ico:'🏁',fix:!!fx,txt:`Spieltag beendet, Wertung nach den Kickbase-Leistungsdaten${f.best?`: <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> mit ${fmt(f.best.points)}`:''}${fx?`<br><small>Geändert: ${fx}</small>`:''}`});
+   else if(fx)out.push({i,ico:'✏️',fix:true,txt:`Korrektur nach Abpfiff: ${fx}`});
+   if(b&&b!==lastBest&&!f.fin)out.push({i,ico:'👑',txt:`${f.best.players.map(p=>`<b>${esc(p.name)}</b>`).join(', ')} ${i?'übernimmt':'vorne'} mit ${fmt(f.best.points)} Punkten`});
+   if(l!==lastLead&&f.lead.length)out.push({i,ico:'🕺',txt:`Führend: ${f.lead.map(r=>`<b>${esc(r.m.name)}</b> (${esc(r.t.player)} ${fmt(r.t.points)})`).join(', ')}`});
+   lastBest=b;lastLead=l;
+  });
+  return out;
+ }
+ function zeitraffer(d,groups){
+  const frames=zrFrames(d);if(frames.length<2)return '';
+  const ghosts=[...new Map(frames.flatMap(f=>(f.best?.players||[]).filter(p=>!groups.some(g=>String(g.t.playerId)===p.id)).map(p=>[p.id,p]))).values()];
+  const moments=zrMoments(frames),n=frames.length;
+  return `<details class="acc-group zr" data-zr data-zr-ghosts="${esc(JSON.stringify(ghosts))}" style="margin-top:14px"><summary>🎬 Spieltag im Zeitraffer</summary><div class="acc-sub">
+   <div class="zr-hud"><div class="zr-clock" data-zr-clock></div><div class="zr-lead" data-zr-lead></div></div>
+   <div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div><div class="zr-flash" data-zr-flash hidden></div></div>
+   <div class="zr-ctrl"><button type="button" class="gold zr-play" data-zr-play aria-label="Abspielen">▶</button>
+    <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
+    <button type="button" class="ghost zr-speed" data-zr-speed>1×</button></div>
+   <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
+   <p class="muted tiny">Aus ${n} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
+  </div></details>`;
+ }
+ function zrMount(root,d,groups){
+  const box=root.querySelector('[data-zr]');if(!box)return;
+  const frames=zrFrames(d),n=frames.length,pool=poolOf(d),ghosts=JSON.parse(box.dataset.zrGhosts||'[]');
+  if(zr.day!==d.day){zr.day=d.day;zr.i=n-1;zrStop();}
+  zr.i=Math.min(zr.i,n-1);
+  const byId=new Map((players||[]).map(p=>[String(p.id),p]));
+  const final=frames[n-1].players;
+  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true,rs:[]})),
+   ...groups.map(g=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,rs:g.rs})).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9))];
+  const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
+  const pos=v=>(4+78*((v??0)-lo)/(hi-lo));
+  const ROW=78,TOP=96,Y=r=>TOP+r*ROW;
+  const pitch=box.querySelector('[data-zr-pitch]');
+  pitch.style.height=Y(rowsList.length-1)+40+'px';
+  pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
+   const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
+   return `<div class="toon-runner zr-runner${crest?' has-crest':''}${o.ghost?' leader zr-ghost':''}" data-zr-id="${esc(o.id)}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
+    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy',o.ghost?'★':'')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
+    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b><span class="zr-fix" data-zr-fix></span></div>
+    ${o.rs.length?`<div class="zr-fans">${o.rs.map(r=>`<span data-zr-m="${esc(r.m.id)}" title="${esc(r.m.name)} tippt ${esc(fmt(r.t.points))}">${(window.kblMgrFace||(()=>''))(r.m.name,'',r.m.id)}<small>${esc(fmt(r.t.points))}</small></span>`).join('')}</div>`:''}</div>`;}).join('');
+  const show=i=>{
+   zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
+   box.querySelector('[data-zr-seek]').value=String(i);
+   box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
+   box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:'<span class="muted">Noch kein Zwischenstand</span>';
+   pitch.querySelectorAll('[data-zr-id]').forEach(el=>{
+    const id=el.dataset.zrId,o=rowsList.find(x=>x.id===id),x=f.players[id],isBest=bestIds.has(id),pts=o.ghost?(isBest?f.best.points:null):x?.points??null;
+    const out=!isBest&&((pool.length&&!pool.includes(o.team))||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
+    const left=pos(pts);el.style.left=left.toFixed(1)+'%';
+    el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!!o.ghost&&!isBest);
+    el.classList.toggle('run',!out&&x?.state==='live');el.classList.toggle('idle',!o.ghost&&pts===null);el.classList.toggle('ko',out);
+    el.querySelector('[data-zr-pts]').textContent=pts===null?'–':fmt(pts);
+    const fx=f.fixes.find(z=>z.id===id),fe=el.querySelector('[data-zr-fix]');
+    fe.textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';el.classList.toggle('zr-fixed',!!fx);
+    el.querySelectorAll('[data-zr-m]').forEach(m=>m.classList.toggle('lead',leadIds.has(m.dataset.zrM)));
+   });
+   const fl=box.querySelector('[data-zr-flash]');
+   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b>`).join(', ')}`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
+   else fl.hidden=true;
+   box.querySelectorAll('[data-zr-go]').forEach(li=>li.classList.toggle('now',Number(li.dataset.zrGo)===i));
+  };
+  const btn=box.querySelector('[data-zr-play]');
+  const tick=()=>{if(zr.i>=n-1){zrStop();btn.textContent='▶';return;}show(zr.i+1);zr.timer=setTimeout(tick,(frames[zr.i].fixes.length?2600:1500)/zr.speed);};
+  btn.onclick=()=>{if(zr.timer){zrStop();btn.textContent='▶';return;}if(zr.i>=n-1)show(0);btn.textContent='⏸';zr.timer=setTimeout(tick,900/zr.speed);};
+  box.querySelector('[data-zr-seek]').oninput=e=>{zrStop();btn.textContent='▶';show(Number(e.target.value));};
+  box.querySelector('[data-zr-speed]').onclick=e=>{zr.speed=zr.speed===1?2:zr.speed===2?4:1;e.target.textContent=zr.speed+'×';};
+  box.querySelector('[data-zr-speed]').textContent=zr.speed+'×';
+  box.querySelectorAll('[data-zr-go]').forEach(li=>li.onclick=()=>{zrStop();btn.textContent='▶';show(Number(li.dataset.zrGo));});
+  // Beim Aufklappen von vorn abspielen; Wackelköpfe und Wappen brauchen die Spielerliste.
+  if(box.open)box.dataset.zrSkip='1';// beim Neuladen wieder aufgeklappt: nicht von vorn starten
+  box.ontoggle=()=>{if(box.dataset.zrSkip){delete box.dataset.zrSkip;return;}
+   if(!box.open){zrStop();btn.textContent='▶';return;}
+   if(!players){zr.autoplay=true;loadPlayers().then(()=>render()).catch(()=>{});return;}
+   if(!zr.timer&&zr.i===n-1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){show(0);btn.click();}};
+  show(zr.i);
+  if(zr.autoplay&&box.open&&!zr.timer){zr.autoplay=false;show(0);btn.click();return;}
+  // Lief die Animation beim Neuladen (alle 2 Min.), läuft sie im neuen Kasten weiter.
+  if(zr.timer){zrStop();if(box.open){btn.textContent='⏸';zr.timer=setTimeout(tick,1500/zr.speed);}}
+ }
+ function zrStop(){clearTimeout(zr.timer);zr.timer=null;}
  function top10(d,rows,pool,bestIds,fin){
   const t=d.tracking?.top10,list=t?.players||[];
   const fans=new Map();rows.forEach(r=>{const k=String(r.t.playerId);if(!fans.has(k))fans.set(k,[]);fans.get(k).push(r);});
@@ -279,6 +388,8 @@
   const played=groups.filter(g=>g.pts!==null).length;
   h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span><span><b>${played}</b> davon schon mit Punkten</span>${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
   h+=toonRace(live||!!d.closing,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready);
+  // Zeitraffer des Spieltags (Kevin-Wunsch), eingeklappt.
+  h+=zeitraffer(d,groups);zrGroups=groups;
   // Top 10 des Spieltags unter allen Spielern, die die Tippregel erlaubt (Kevin-Wunsch), eingeklappt.
   h+=top10(d,rows,pool,bestIds,fin);
   // Zahlenstrahl „Wer liegt mit der Zahl am nächsten?“ entfernt (Kevin-Wunsch).
@@ -329,6 +440,7 @@
   root.innerHTML=ruleBox(d)+deadline(d)+form(d)+result(d)+allTips(d)+(!d.reveal?table(d):'')+late(d);lateMsg='';
   root.querySelectorAll('details.acc-group>summary').forEach(x=>{if(wasOpen.has(x.textContent))x.parentElement.open=true;});
   const race=root.querySelector('details.toon-race');if(race&&raceShut)race.open=false;
+  if(zrGroups&&d.reveal)zrMount(root,d,zrGroups);zrGroups=null;
   if(race?.open&&!players)loadPlayers().then(()=>render()).catch(()=>{});
   if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
@@ -361,7 +473,7 @@
    if(API&&st!=='finished'){
     // Tipps live vom Tippdienst, Punkte der getippten Spieler aus dem Export (alle 5 Minuten während der Spiele).
     d=await get(tippUrl(`/api/mvp-tipps/${day}`));
-    if(d.reveal){const x=await get(`/api/mvp-tipps/${day}`).catch(()=>null);d.tracking=x?.tracking||null;}
+    if(d.reveal){const x=await get(`/api/mvp-tipps/${day}`).catch(()=>null);d.tracking=x?.tracking||null;d.verlauf=x?.verlauf||[];}
    }else{
     d=await get(`/api/mvp-tipps/${day}`);
     // Beendeter Spieltag online: gerade nachgetragene Tipps schon zeigen, bevor der nächste Export sie übernimmt.

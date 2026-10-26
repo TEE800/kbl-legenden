@@ -762,3 +762,38 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .nz-axis{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:4px}
 .nz-off{margin-top:14px}
 @media(max-width:560px){.nz-tile strong{font-size:20px}.nz-row{grid-template-columns:minmax(0,7.5em) 1fr auto auto;font-size:12px}}
+/* MVP-Tipp: Spieltag im Zeitraffer (Kevin-Wunsch), zrMount in mvp-tipp.js */
+.zr-hud{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;margin:2px 0 4px}
+.zr-clock b{font-size:20px;font-weight:900;color:var(--gold-strong)}.zr-clock small{color:var(--muted);margin-left:4px}
+.zr-lead{font-size:14px}.zr-sep{color:var(--dim)}
+.zr-pitch-wrap{position:relative}
+.zr-flash{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:60;max-width:92%;text-align:center;font-size:13px;font-weight:700;color:#111;background:#ffd54a;border:2px solid #111;border-radius:10px;padding:4px 10px;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.zr-flash.pop{animation:zrPop .5s cubic-bezier(.3,1.6,.6,1)}
+@keyframes zrPop{from{transform:translateX(-50%) scale(.4);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.zr-pitch .toon-crown,.zr-pitch .toon-ball,.zr-pitch .toon-dizzy{display:none}
+.zr-pitch .champ .toon-crown,.zr-pitch .run .toon-ball,.zr-pitch .ko .toon-dizzy{display:block}
+.zr-pitch .toon-dizzy{position:absolute;left:-14px;top:18px;font-size:14px}
+.zr-runner{transition:left 1.1s cubic-bezier(.3,1.3,.6,1)}
+.zr-runner.zr-ghost{opacity:.85;transition:left 1.1s cubic-bezier(.3,1.3,.6,1),opacity .5s}.zr-runner.zr-off{opacity:0}
+.zr-runner.zr-fixed .toon-tag{background:#c0392b;animation:zrPop .5s}
+.zr-fix{color:#ffd54a;font-weight:900}
+.zr-fans{position:absolute;top:44px;left:40px;display:flex;gap:3px;white-space:nowrap;z-index:3}
+.toon-runner.flip .zr-fans{left:auto;right:40px}
+.zr-fans span{display:inline-flex;align-items:center;gap:1px;font-size:9px;color:#fff;background:rgba(0,0,0,.45);border-radius:9px;padding:0 4px 0 0;transition:box-shadow .3s,background .3s}
+.zr-fans .mgr-av{margin-right:1px;top:0;width:16px;height:16px;font-size:9px}
+.zr-fans span.lead{background:var(--gold-dark,#8a6d1f);box-shadow:0 0 0 2px var(--gold),0 0 10px rgba(244,215,119,.8)}
+.zr-ctrl{display:flex;align-items:center;gap:10px;margin:4px 0 8px}
+.zr-play{min-width:44px;min-height:40px;font-size:18px;padding:4px 12px}
+.zr-speed{min-height:36px;padding:4px 10px}
+.zr-track{position:relative;flex:1;min-width:0}
+.zr-track input{width:100%;accent-color:var(--gold)}
+.zr-marks{position:absolute;left:8px;right:8px;top:-4px;height:6px;pointer-events:none}
+.zr-marks i{position:absolute;width:3px;height:8px;margin-left:-1px;border-radius:2px;background:var(--gold)}
+.zr-marks i.fix{background:#e74c3c}.zr-marks i.fin{background:#fff}
+.zr-moments{list-style:none;margin:6px 0;padding:0;display:grid;gap:2px;font-size:13px}
+.zr-moments li{display:grid;grid-template-columns:76px 20px 1fr;gap:6px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.zr-moments li:hover{background:var(--surface-2)}
+.zr-moments li.now{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--gold)}
+.zr-moments li.fix{color:#ffb4a8}
+.zr-t{color:var(--muted);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.zr-runner{transition:none}.zr-flash.pop{animation:none}}

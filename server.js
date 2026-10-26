@@ -1486,6 +1486,23 @@ async function tippTracking(token,day,tips,finished,kind,pool=[]){
  tippTrackCache.set(day,{at:Date.now(),key,value});
  return value;
 }
+// Zeitraffer im MVP-Tipp (Kevin-Wunsch): jeder neue Stand der getippten Spieler wird je Spieltag in kbl-mvp-verlauf.json angehaengt
+// (nur bei Aenderung, auch nach Spielende, so sieht man spaetere Kickbase-Korrekturen). Gehoert GitHub (Export alle 5 Min.), nie vom PC hochladen.
+// Bild je Stand: p = {Spieler-ID: [Punkte, Status d/l/o]}, mvp = Bester nach der Tippregel, fin = Wert nach Spieltagsende (Leistungsdaten).
+const VERLAUF_FILE=path.join(process.cwd(),'kbl-mvp-verlauf.json');
+function readVerlauf(){try{return JSON.parse(fs.readFileSync(VERLAUF_FILE,'utf8'));}catch{return {};}}
+function recordVerlauf(day,tracking,result,finished){
+ if(!tracking?.players)return;
+ const p={};for(const [id,x] of Object.entries(tracking.players))if(x&&x.points!==null&&x.points!==undefined)p[id]=[x.points,(x.state||'?')[0]];
+ if(!Object.keys(p).length)return;
+ const m=finished?result?.mvp:tracking.mvp;
+ const frame={at:tracking.updatedAt||new Date().toISOString(),p,...(m?.players?.length&&Number.isFinite(m.points)?{mvp:{points:m.points,players:m.players.map(({id,name,team})=>({id:String(id),name,team}))}}:{}),...(finished?{fin:true}:{})};
+ const all=readVerlauf(),list=(all[day]||(all[day]=[])),last=list[list.length-1];
+ const sig=f=>JSON.stringify([f.p,f.mvp?.points??null,(f.mvp?.players||[]).map(x=>x.id),!!f.fin]);
+ if(last&&(sig(last)===sig(frame)||Date.parse(frame.at)<=Date.parse(last.at)))return;
+ list.push(frame);
+ try{const tmp=VERLAUF_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all));fs.renameSync(tmp,VERLAUF_FILE);}catch{}
+}
 // Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
@@ -1652,8 +1669,10 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
   let tracking=null;
   if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule));}catch{}
+  if(tracking)recordVerlauf(day,tracking,result,st.status==='finished');
+  const verlauf=reveal?readVerlauf()[day]||[]:[];
   res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,korridor:TIPP_KORRIDOR,managers:list,
-   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking});
+   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking,verlauf});
  }catch(e){res.status(502).json({error:e.message});}
 });
 app.put('/api/mvp-tipps/:day',async(req,res)=>{
