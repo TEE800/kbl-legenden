@@ -64,9 +64,9 @@
   const el=document.getElementById('zeremonieBox');if(!el)return;
   const m=model();if(!m){el.innerHTML='';return;}
   const rows=m.defendants.map((x,i)=>`<li><span class="zer-row-name">${mgrName(x.name,'',x.id)}<span class="muted tiny">${x.charges.length} Anklagepunkt${x.charges.length===1?'':'e'}</span></span><span class="zer-row-rules">${x.charges.map(c=>`<span class="bums-rule bums-r-${safe(c.rule)}">${safe(c.rule)}</span>`).join('')}</span><button type="button" class="ghost" data-zer-akte="${i}">📜 Anklageschrift</button></li>`).join('');
-  el.innerHTML=`<details class="center-box acc-todo-box zer-box"${boxOpen?' open':''}><summary class="center-boxhead"><strong>🎺 Zeremonie · Spieltag ${m.day} · ${m.defendants.length} Angeklagte</strong><span class="pill">für Discord</span></summary>
+  el.innerHTML=`<details class="center-box acc-todo-box zer-box"${boxOpen?' open':''}><summary class="center-boxhead"><strong>🎺 BumsParade · Spieltag ${m.day} · ${m.defendants.length} Angeklagte</strong><span class="pill">für Discord</span></summary>
   <p class="muted" style="margin-top:0">Für den Montagabend: Bildschirm in Discord teilen und die Strafen einzeln vollstrecken. Mit Trommelwirbel, Drehtür und Abspann. Leertaste oder → geht weiter, Esc beendet.</p>
-  <p><button type="button" class="gold" data-zer-start>▶ Zeremonie starten</button> <button type="button" class="ghost" data-zer-alltext>📝 Alle Anklagen als Text kopieren</button></p>
+  <p><button type="button" class="gold" data-zer-start>▶ BumsParade starten</button> <button type="button" class="ghost" data-zer-alltext>📝 Alle Anklagen als Text kopieren</button></p>
   ${m.defendants.length?`<p class="muted tiny" style="margin:14px 0 6px"><b>Anklageschriften</b> · je Sünder ein Bild zum Posten in Discord</p><ul class="zer-rows">${rows}</ul>`:'<p>Keine Angeklagten. Die Parade fällt aus. 😴</p>'}</details>`;
   el.querySelector('details').addEventListener('toggle',e=>{boxOpen=e.target.open;});
  }
@@ -94,8 +94,8 @@
   m.defendants.forEach((x,i)=>{steps.push({kind:'def',i,shown:0});x.charges.forEach((c,j)=>steps.push({kind:'def',i,shown:j+1}));});
   steps.push({kind:'clean'},{kind:'end'});
   Z={m,steps,i:0,local:new Set(),mvpTipp:null};
-  const el=document.createElement('div');el.className='zer';el.setAttribute('role','dialog');el.setAttribute('aria-label','Zeremonie der BumsParade');
-  el.innerHTML=`<div class="zer-curtain l"></div><div class="zer-curtain r"></div><div class="zer-stage"></div><div class="zer-bar"><button type="button" class="ghost" data-zer="back" aria-label="Zurück">◀</button><span class="zer-prog"></span><button type="button" class="gold" data-zer="next"></button><button type="button" class="ghost" data-zer="mute" aria-label="Ton an oder aus"></button><button type="button" class="ghost" data-zer="close" aria-label="Zeremonie beenden">✕</button></div>`;
+  const el=document.createElement('div');el.className='zer';el.setAttribute('role','dialog');el.setAttribute('aria-label','BumsParade');
+  el.innerHTML=`<div class="zer-curtain l"></div><div class="zer-curtain r"></div><div class="zer-stage"></div><div class="zer-bar"><button type="button" class="ghost" data-zer="back" aria-label="Zurück">◀</button><span class="zer-prog"></span><button type="button" class="gold" data-zer="next"></button><button type="button" class="ghost" data-zer="mute" aria-label="Ton an oder aus"></button><button type="button" class="ghost" data-zer="close" aria-label="BumsParade beenden">✕</button></div>`;
   document.body.appendChild(el);document.body.classList.add('zer-on');Z.el=el;
   try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch{}
   api(`/api/mvp-tipps/${m.day}`).then(x=>{Z&&(Z.mvpTipp=x);if(Z?.steps[Z.i].kind==='end')draw();}).catch(()=>{});
