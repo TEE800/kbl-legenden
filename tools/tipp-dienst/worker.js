@@ -259,7 +259,7 @@ async function pushTick(env) {
       // a) BumsParade: eigene Aufgaben und was man bekommt (DD: Letzter sucht aus, UM: Empfaenger), ohne Erledigtes und schon Gemeldetes.
       if (open('acc')) {
         const acc = await freshSite(env, `rule-accounting_${d.day}.json`).catch(() => null);
-        if (acc?.ready && acc.complete) {
+        if (acc?.ready && acc.complete && !acc.pendingCorrections) {
           const per = new Map(), add = (mid, line) => { mid = String(mid); if (!per.has(mid)) per.set(mid, { give: [], get: [] }); per.get(mid)[line.get ? 'get' : 'give'].push(line.text); };
           const todo = new Map((acc.todos || []).map(t => [t.key, t]));
           for (const t of (acc.todos || [])) if (t.managerId && t.text && !t.check?.removed && t.check?.state !== 'done' && !S.st.sent[t.key]) add(t.managerId, { text: `${t.rule} · ${t.text}` });
