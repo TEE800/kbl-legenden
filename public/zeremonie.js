@@ -150,8 +150,8 @@
  async function execute(key){
   if(!Z)return;const c=Z.m.defendants.flatMap(x=>x.charges).find(c=>c.key===key);if(!c)return;
   Z.local.add(key);crash();
-  // Am PC wie der Haken in der BumsParade speichern; Auswahl-Regeln ohne Empfänger und die Online-Seite nur hier markieren.
-  if(!window.KBL_STATIC&&!c.needPick&&!c.done){
+  // Wie der Haken in der BumsParade speichern (online nur als angemeldeter Admin); Auswahl-Regeln ohne Empfänger nur hier markieren.
+  if((!window.KBL_STATIC||window.kblHaken?.admin())&&!c.needPick&&!c.done){
    try{const d=await api(`/api/todo-checks/${Z.m.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,done:true})});centerAccounting.checks=d.checks||{};renderAccTodo();}catch{}}
   const li=Z.el.querySelector(`[data-zer-exec="${CSS.escape(key)}"]`)?.closest('.zer-charge');
   if(li){li.classList.add('done');li.querySelector('.zer-ch-foot').innerHTML='<span class="zer-stamp hit">VOLLSTRECKT</span>';}

@@ -199,8 +199,8 @@
  async function poll(){
   const btn=$('#challengeRefresh'),msg=$('#challengeMessage');
   await load();
-  if(data?.running){btn.disabled=true;const p=data.running;msg.textContent=`Lade bei Kickbase: ${p.phase}${p.total?` (${p.done} von ${p.total})`:''} … Beim ersten Mal kann das einige Minuten dauern.`;setTimeout(poll,3000);}
-  else{btn.disabled=false;showResult(data?.lastResult);}
+  if(data?.running){if(btn)btn.disabled=true;const p=data.running;if(msg)msg.textContent=`Lade bei Kickbase: ${p.phase}${p.total?` (${p.done} von ${p.total})`:''} … Beim ersten Mal kann das einige Minuten dauern.`;setTimeout(poll,3000);}
+  else{if(btn)btn.disabled=false;showResult(data?.lastResult);}
  }
  async function refresh(){
   const btn=$('#challengeRefresh'),msg=$('#challengeMessage');

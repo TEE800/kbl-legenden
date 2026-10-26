@@ -58,6 +58,25 @@ try {
   if (login.status !== 200) throw new Error(`Kickbase-Login fehlgeschlagen (HTTP ${login.status}): ${JSON.stringify(login.body).slice(0, 300)}`);
   cookie = (login.headers.get('set-cookie') || '').split(';')[0];
 
+  // BumsParade-Haken, die der Admin online gesetzt hat (Tippdienst /haken), nach Zeitstempel in kbl-todo-checks.json mischen.
+  // Neuerer Eintrag gewinnt; done:false hebt einen aelteren Haken auf. Der Server liest die Datei bei jeder Anfrage neu.
+  if (TIPP_DIENST) {
+    try {
+      const r = await fetch(TIPP_DIENST + '/haken', { signal: AbortSignal.timeout(30000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const remote = (await r.json()).days || {}, file = path.join(ROOT, 'kbl-todo-checks.json');
+      let local = {}; try { local = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
+      let n = 0;
+      for (const [d, checks] of Object.entries(remote)) for (const [k, v] of Object.entries(checks || {})) {
+        const day = local[d] || (local[d] = {}), b = day[k];
+        if (!v?.at || (b?.at && b.at >= v.at)) continue;
+        if (v.done) { const { done, target, removed, at } = v; if (JSON.stringify(b) !== JSON.stringify(day[k] = { done, at, ...(target ? { target } : {}), ...(removed ? { removed: true } : {}) })) n++; }
+        else if (b) { delete day[k]; n++; }
+      }
+      if (n) fs.writeFileSync(file, JSON.stringify(local, null, 2));
+      console.log('BumsParade-Haken vom Tippdienst:', n, 'geaendert');
+    } catch (e) { failed.push(`Tippdienst /haken (${e.message})`); }
+  }
   const status = await save('/api/matchday-status');
   const days = (status?.days || []).filter(d => d.status === 'live' || d.status === 'finished').map(d => d.day);
   const live = (status?.days || []).find(d => d.status === 'live')?.day;
@@ -88,7 +107,7 @@ try {
     const urls = [`/api/ranking/${LEAGUE}?dayNumber=${d}`, `/api/rule-accounting/${d}`, `/api/points-overview/${d}`, `/api/todo-checks/${d}`,
       `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`, `/api/bench-points/${d}`];
     for (const u of urls) {
-      const needed = MODE === 'full' || d === live || !have(u) || (u.includes('/rule-accounting/') && unfinished(u)) || (u.includes('/bench-points/') && benchLive(u)) || (u.includes('/ranking/') && rankingLive(u));
+      const needed = MODE === 'full' || d === live || !have(u) || u.includes('/todo-checks/') || (u.includes('/rule-accounting/') && unfinished(u)) || (u.includes('/bench-points/') && benchLive(u)) || (u.includes('/ranking/') && rankingLive(u));
       if (needed) await save(u);
     }
   }
