@@ -1953,10 +1953,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const ranking=await get(`/v4/leagues/6422780/ranking?dayNumber=${day}`);
   if(st!=='live'&&ranking.il!==true)return ended();
   const closing=st!=='live';
-  // Kickbase hat die Spieltagspunkte schon ins Ranking geschrieben (mdp, an ST 7 am Morgen danach gesehen, il noch true):
-  // dann gelten wie in der echten BumsParade die Leistungsdaten (performance), nicht mehr playercenter. Sonst wichen
-  // Schnapszahlen, Drehtuer und Letzter von der Abrechnung ab (ST 7: Stammler9 467 statt 417, Omari 78 statt 66).
-  const settled=closing&&(ranking.us||[]).some(u=>Number(u.mdp));
+  // Nicht auf performance umstellen, sobald das Ranking mdp hat (an ST 7 versucht, Kevin: falsche BD). Bis Kickbase den
+  // Spieltag abschliesst, bleibt playercenter die Quelle; die Abweichungen zeigt die echte BumsParade als Warnung.
+  const settled=false;
   const users=(ranking.us||[]).filter(u=>validManager(u.i)&&String(u.n||'').toLowerCase()!=='t1000');
   const snaps=readSnapshots(),notes=[];
   const lineups=users.map(u=>{const lp=(u.lp||[]).filter(x=>x!=null).map(String),s=snaps[`${day}:${u.i}`],own=Array.isArray(s?.playerIds)?s.playerIds.map(String):[];
