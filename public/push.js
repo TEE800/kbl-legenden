@@ -8,6 +8,9 @@
  const ls={get(k){try{return JSON.parse(localStorage.getItem(k)||'null');}catch{return null;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ // Android: Andere Browser auf Chrome-Basis (z. B. Ecosia, Brave) nehmen das Abo an, stellen aber nichts zu (bei Kevin mit Ecosia gesehen).
+ const android=/Android/i.test(navigator.userAgent);
+ const ANDROID_TIP='<p class="push-tip">📱 Am Android-Handy bitte <b>Chrome</b> benutzen. Andere Browser wie Ecosia oder Brave zeigen die Nachrichten oft nicht an.</p>';
  const standalone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
  const supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
  const PREFS=[['bums','💥 Gebumst','Nach Spielende, je Spieler nur einmal. Nach der Abrechnung einmal deine Aufgaben und was du bekommst.'],
@@ -64,7 +67,7 @@
   try{info=info||await call('/push/info');}catch(e){body.innerHTML=`<p class="error">Push-Dienst nicht erreichbar: ${esc(e.message)}</p>`;return;}
   const sub=await currentSub(),saved=ls.get(LS),on=!!sub&&!!saved;
   const prefs=saved?.prefs||{bums:1,tipp:1,mvp:1,spieltag:1,arena:1};
-  body.innerHTML=`<p class="muted">${on?'Push ist auf diesem Gerät an. Du kannst die Auswahl hier ändern.':'Du bekommst eine Nachricht auf dieses Gerät, wenn etwas passiert. Jedes Gerät wird einzeln eingeschaltet.'}</p>
+  body.innerHTML=`<p class="muted">${on?'Push ist auf diesem Gerät an. Du kannst die Auswahl hier ändern.':'Du bekommst eine Nachricht auf dieses Gerät, wenn etwas passiert. Jedes Gerät wird einzeln eingeschaltet.'}</p>${android?ANDROID_TIP:''}
    <label class="acc-label push-who">Ich bin <select id="pushManager"><option value="">Manager wählen …</option>${info.managers.map(m=>`<option value="${esc(m.id)}"${String(saved?.managerId)===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
    <div class="push-prefs">${PREFS.map(([k,t,d])=>`<label class="push-pref"><input type="checkbox" data-pref="${k}"${prefs[k]?' checked':''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</div>
    <div class="push-actions"><button type="button" class="gold" id="pushSave">${on?'Speichern':'Einschalten'}</button>${on?'<button type="button" class="ghost" id="pushTest">Test-Nachricht</button><button type="button" class="ghost" id="pushOff">Ausschalten</button>':''}</div>
@@ -92,7 +95,7 @@
   }catch(e){msg(e.message||'Das hat nicht geklappt.','error');btn.disabled=false;}
  }
  async function test(){
-  try{const s=await currentSub();if(!s)throw new Error('Auf diesem Gerät ist Push nicht an.');await call('/push/test',{endpoint:s.endpoint});msg('Test-Nachricht geschickt. Sie kommt in wenigen Sekunden.','ok');}
+  try{const s=await currentSub();if(!s)throw new Error('Auf diesem Gerät ist Push nicht an.');await call('/push/test',{endpoint:s.endpoint});msg('Test-Nachricht geschickt. Sie kommt in wenigen Sekunden.'+(android?' Kommt nichts, bitte die Seite in Chrome öffnen.':''),'ok');}
   catch(e){msg(e.message,'error');}
  }
  async function off(){
