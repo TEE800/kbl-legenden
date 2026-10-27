@@ -60,7 +60,7 @@
   const R=data.rush;if(!R||!R.divisions?.length)return `<p class="muted">Noch keine Rush-Daten. ${window.KBL_STATIC?'Sobald der PC neue Challenges geladen hat, erscheinen hier die Divisionen der Legenden.':'Nach dem nächsten „Neue Challenges laden“ erscheinen hier die Divisionen der Legenden.'}</p>`;
   const div=new Map(R.divisions.map((d,i)=>[String(d.dvi),{...d,idx:i}]));
   // Exakte Werte aus den gesicherten Kickbase-Gesamtstaenden: seit Beginn der Aufzeichnung und Schnitt je abgeschlossener Woche.
-  const weeks=weekList().filter(w=>w.exact&&!w.open);
+  const weeks=weekList().filter(w=>!w.open),last=weeks.at(-1);
   const firstAt=Object.values(data.rushTotals||{}).map(h=>h[0]?.at).filter(Boolean).sort()[0]||null;
   const rows=Object.keys(data.managers||{}).map(id=>{
    const d=div.get(String(R.current?.[id]??'')),total=R.totals?.[id]??(id==='699062'?R.ownTotal:null);
@@ -71,38 +71,47 @@
    const h=data.rushHistory?.[id]||[],prev=h.length>1?div.get(String(h.at(-2).dvi)):null;
    const t0=data.rushTotals?.[id]?.[0]?.skp,since=total!=null&&t0!=null?total-t0:null;
    const wv=weeks.map(w=>w.rush[id]?.skp).filter(v=>v!=null),perWeek=wv.length?wv.reduce((x,y)=>x+y,0)/wv.length:null;
-   return {id,name:data.managers[id],d,prev,total,up,place,since,perWeek,weeks:wv.length};
+   return {id,name:data.managers[id],d,prev,total,up,place,since,perWeek,weeks:wv.length,lastWeek:last?.rush[id]?.skp??null};
   }).sort((a,b)=>(b.total??-1)-(a.total??-1)||(a.d?a.d.idx:999)-(b.d?b.d.idx:999));
   const body=rows.map((r,i)=>{
    const arrow=r.prev&&r.d&&r.prev.idx!==r.d.idx?(r.d.idx<r.prev.idx?` <span style="color:#7fd3a6" title="aufgestiegen aus ${esc(r.prev.dvn)}">▲</span>`:` <span style="color:#ed8b85" title="abgestiegen aus ${esc(r.prev.dvn)}">▼</span>`):'';
    const toUp=r.up&&r.total!=null?`<span title="bis ${esc(r.up.dvn)}">${fmt(r.up.bod-r.total)}</span>`:'–';
-   return `<tr><td>${r.total!=null?i+1+'.':'–'} ${mn(r.name,r.id)}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?`${esc(r.d.dvn)}${arrow}`:'<span class="muted">unbekannt</span>'}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
+   return `<tr><td>${r.total!=null?i+1+'.':'–'} ${mn(r.name,r.id)}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?`${esc(r.d.dvn)}${arrow}`:'<span class="muted">unbekannt</span>'}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.lastWeek!=null?fmt(r.lastWeek):'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
   }).join('');
   const since=firstAt?date(firstAt):null;
-  return `<div class="tablewrap"><table><thead><tr><th>MANAGER</th><th class="right">RUSH-PUNKTE</th><th>DIVISION</th><th class="right">BIS AUFSTIEG</th><th class="right">GESAMTPLATZ</th><th class="right">Ø PRO WOCHE</th></tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Rush-Punkte und Division kommen direkt von Kickbase (Social Hub, gefolgte Manager). „Bis Aufstieg“ = fehlende Punkte bis zur nächsten Division. „Gesamtplatz“ = Platz unter allen ${fmt(R.divisions.reduce((s,x)=>s+(x.uc||0),0))} Rush-Spielern: alle in höheren Divisionen liegen vorne, die genaue Stelle innerhalb der eigenen Division gibt Kickbase nicht heraus, darum der Bereich. „Ø pro Woche“ ist exakt aus den gesicherten Kickbase-Ständen (alle 3 Stunden, seit ${since||'jetzt'}) und zählt nur abgeschlossene Wochen ab Beginn der Aufzeichnung (${weeks.length?weeks.length+' bisher':'noch keine, die erste kommt nach Ende von Woche 22'}).</p>`;
+  return `<div class="tablewrap"><table><thead><tr><th>MANAGER</th><th class="right">RUSH-PUNKTE</th><th>DIVISION</th><th class="right">BIS AUFSTIEG</th><th class="right">GESAMTPLATZ</th><th class="right" title="${last?esc(last.name):''}">LETZTE WOCHE</th><th class="right">Ø PRO WOCHE</th></tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Rush-Punkte und Division kommen direkt von Kickbase (Social Hub, gefolgte Manager). „Bis Aufstieg“ = fehlende Punkte bis zur nächsten Division. „Gesamtplatz“ = Platz unter allen ${fmt(R.divisions.reduce((s,x)=>s+(x.uc||0),0))} Rush-Spielern: alle in höheren Divisionen liegen vorne, die genaue Stelle innerhalb der eigenen Division gibt Kickbase nicht heraus, darum der Bereich. „Letzte Woche“ und „Ø pro Woche“ sind exakt aus den gesicherten Kickbase-Ständen (seit ${since||'jetzt'}): Eine Woche endet Montagnacht, gezählt wird der Stand bis Dienstag 6 Uhr. Ø zählt nur abgeschlossene Wochen (${weeks.length?weeks.length+' bisher, zuletzt '+esc(last.name):'noch keine'}).</p>`;
  }
 
  // Punkteentwicklung wie unter "Tabelle & Spieltage", aber je Challenge (aelteste links). Nicht gespielt = 0 Punkte.
  const progSel=new Set();let progMode='rush',progInit=false,progCleared=false;
  const RUSH_MODES=['rush','rushDaily','rushRank','top','rushWeek'];
- // Rush-Punkte je Kickbase-Woche (wn). Exakt aus den gesicherten Kickbase-Gesamtstaenden: Stand vor der ersten Challenge der
- // naechsten Woche minus Stand vor der ersten Challenge dieser Woche. Geht nur, wenn an beiden Grenzen ein Ladelauf lag (rushRuns);
- // sonst Summe der einzeln bekannten Challenges (unvollstaendig, Name mit *). Datum = Ende der letzten Challenge.
+ // Rush-Woche endet Montagnacht (Kevin: Stand Montagabend). Grenze = Dienstag 6 Uhr (Berlin), damit die um Mitternacht
+ // abgerechneten Montags-Challenges noch zur alten Woche zaehlen.
+ function weekBounds(fromMs,toMs){
+  const f=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Berlin',weekday:'short',hour:'2-digit',hourCycle:'h23'});
+  const isB=t=>{const p=f.formatToParts(new Date(t));return p.find(x=>x.type==='weekday').value==='Tue'&&p.find(x=>x.type==='hour').value==='06';};
+  const H=3600e3,out=[];let t=Math.floor(fromMs/H)*H-8*24*H;
+  while(t<=toMs){if(isB(t)){out.push(t);t+=6*24*H;}else t+=H;}
+  return out;
+ }
+ // Rush-Punkte je Woche, exakt aus den gesicherten Kickbase-Gesamtstaenden (rushTotals): Stand an der Wochengrenze minus Stand
+ // an der vorigen. Stand an einer Grenze = letzter Ladelauf davor (hoechstens 24 Std.), sonst erster danach (hoechstens 18 Std.);
+ // sonst fehlt die Woche (nie raten). Laufende Woche = heutiger Stand minus Stand an der letzten Grenze.
  function weekList(){
-  const m=new Map();
-  for(const c of rushList()){if(c.wn==null)continue;const w=m.get(c.wn)||{name:`Woche ${c.wn}`,wn:c.wn,end:c.end,first:c.end,rush:{},n:0};w.n++;if(String(c.end)>String(w.end))w.end=c.end;if(String(c.end)<String(w.first))w.first=c.end;
-   for(const [id,r] of Object.entries(c.rush||{})){const t=w.rush[id]||(w.rush[id]={skp:0,top:null,n:0});t.n++;t.skp+=r.skp||0;}m.set(c.wn,w);}
-  const weeks=[...m.values()].sort((a,b)=>a.wn-b.wn),T=data.rushTotals||{},runs=data.rushRuns||[];
-  const at=(id,t)=>{let v=null;for(const e of T[id]||[]){if(String(e.at)<=String(t))v=e.skp;else break;}return v;};
-  const ran=(a,b)=>runs.some(r=>String(r)>=String(a)&&(b==null||String(r)<String(b)));
-  weeks.forEach((w,i)=>{
-   const prev=weeks[i-1],next=weeks[i+1];
-   if(prev&&ran(prev.end,w.first)&&(!next||ran(w.end,next.first))){
-    const ex={};
-    for(const id of Object.keys(T)){const a=at(id,w.first),b=next?at(id,next.first):(data.rush?.totals?.[id]??null);if(a!=null&&b!=null)ex[id]={skp:b-a,n:w.rush[id]?.n||0};}
-    w.rush=ex;w.exact=true;if(!next){w.open=true;w.name+=' (laufend)';}
-   }else w.name+='*';
-  });
+  const T=data.rushTotals||{},H=3600e3,now=Date.now();
+  const runs=[...new Set([...(data.rushRuns||[]),...Object.values(T).flatMap(h=>h.map(e=>e.at))].map(r=>Date.parse(r)).filter(Number.isFinite))].sort((a,b)=>a-b);
+  if(!runs.length)return [];
+  const bs=weekBounds(runs[0],now);
+  const runAt=b=>{const before=runs.filter(r=>r<=b).at(-1),after=runs.find(r=>r>b);return before!=null&&b-before<=24*H?before:after!=null&&after-b<=18*H?after:null;};
+  const val=(id,r)=>{let v=null;for(const e of T[id]||[]){if(Date.parse(e.at)<=r)v=e.skp;else break;}return v;};
+  const weeks=[];
+  for(let i=1;i<=bs.length;i++){
+   const open=i===bs.length,a=runAt(bs[i-1]),b=open?runs.at(-1):runAt(bs[i]);
+   if(a==null||b==null||b<a)continue;
+   const rush={};
+   for(const id of Object.keys(T)){const x=val(id,a),y=open?(data.rush?.totals?.[id]??val(id,b)):val(id,b);if(x!=null&&y!=null)rush[id]={skp:y-x};}
+   weeks.push({name:open?'Diese Woche (laufend)':`Woche bis ${date(new Date(bs[i]-24*H).toISOString())}`,end:new Date(open?now:bs[i]).toISOString(),rush,open});
+  }
   return weeks;
  }
  const progColors=['#f1c75c','#59b8e8','#ed8b85','#7fd3a6','#bb9af7','#e8a665','#75d5d1','#ed94c6','#a6c76a','#d0b8ff','#ffb4a0','#86b2ff','#c1db77','#d1a77b','#e0d9a0','#9ebdc8'];
@@ -161,7 +170,7 @@
   const over=labels.length?labels.at(-1).y-(H-bottom):0;if(over>0)labels.forEach(l=>l.y-=over);
   for(const l of labels){const max=narrow?10:16,shown=l.name.length>max?l.name.slice(0,max-1)+'…':l.name;svg+=`<line x1="${l.lx+6}" y1="${l.ty}" x2="${W-right+8}" y2="${l.y}" stroke="${l.color}" stroke-opacity=".5"/><text x="${W-right+12}" y="${l.y+4}" fill="${l.color}" font-size="${fs}" font-weight="700">${esc(shown)}</text>`;}
   svg+='</svg>';
-  const how={rush:'Rush-Punkte nach jeder Challenge (heutiger Kickbase-Stand, rückwärts um die Punkte der späteren Challenges verringert)',rushDaily:'Rush-Punkte je Challenge (Lücke = nicht gespielt)',rushWeek:'Rush-Punkte je Kickbase-Woche, exakt aus dem Kickbase-Gesamtstand (Stand Wochenende minus Stand Wochenanfang, alle Challenges inkl. Perfect Matchday). * = Woche vor Beginn der Aufzeichnung: nur Summe der einzeln bekannten Challenges, unvollständig',rushRank:'Platz unter den Legenden nach Rush-Punkten (Platz 1 oben)',top:'Top-Prozent je Challenge unter allen Kickbase-Teilnehmern (oben = besser, Lücke = nicht gespielt)',avg:'Durchschnittspunkte je gespielter Challenge, laufend nach jeder Challenge (fairer Vergleich unabhängig von der Anzahl)',gap:'Abstand zum Führenden der Challenge-Gesamtpunkte nach jeder Challenge (0 = vorne)',cumulative:'Kumulierte Challenge-Punkte nach jeder Challenge',daily:'Punkte je Challenge (Lücke = nicht gespielt)',rank:'Platz in der Challenge-Gesamtpunktzahl nach jeder Challenge (Platz 1 oben)'}[progMode];
+  const how={rush:'Rush-Punkte nach jeder Challenge (heutiger Kickbase-Stand, rückwärts um die Punkte der späteren Challenges verringert)',rushDaily:'Rush-Punkte je Challenge (Lücke = nicht gespielt)',rushWeek:'Rush-Punkte je Woche (endet Montagnacht), exakt aus dem Kickbase-Gesamtstand: Stand am Wochenende minus Stand am Wochenanfang, alle Challenges inkl. Perfect Matchday. Wochen vor Beginn der Aufzeichnung fehlen',rushRank:'Platz unter den Legenden nach Rush-Punkten (Platz 1 oben)',top:'Top-Prozent je Challenge unter allen Kickbase-Teilnehmern (oben = besser, Lücke = nicht gespielt)',avg:'Durchschnittspunkte je gespielter Challenge, laufend nach jeder Challenge (fairer Vergleich unabhängig von der Anzahl)',gap:'Abstand zum Führenden der Challenge-Gesamtpunkte nach jeder Challenge (0 = vorne)',cumulative:'Kumulierte Challenge-Punkte nach jeder Challenge',daily:'Punkte je Challenge (Lücke = nicht gespielt)',rank:'Platz in der Challenge-Gesamtpunktzahl nach jeder Challenge (Platz 1 oben)'}[progMode];
   const boxes=ids.map(id=>{const c=colorOf.get(id);return `<label style="border-color:${c||'#394c57'}"><input type="checkbox" data-ch-pick="${esc(id)}" ${c?'checked':''}><span style="color:${c||'#5d6f7b'}">●</span>${esc(name(id))}</label>`;}).join('');
   return `<div class="kbl-chart-tools"><label>Ansicht <select id="challengeProgMode">${modeOpts()}</select></label><div class="kbl-chart-buttons"><button type="button" class="ghost" data-ch-prog="top">Top 5</button><button type="button" class="ghost" data-ch-prog="all">Alle</button><button type="button" class="ghost" data-ch-prog="none">Keine</button></div></div><div class="kbl-chart-managers">${boxes}</div><div class="kbl-chart-area">${svg}<p class="muted tiny" style="margin-top:12px">${how}.${rushMode?'':' Nicht gespielte Challenges zählen als 0 Punkte.'} Graue Linien antippen oder oben anhaken, um sie hervorzuheben.</p></div>`;
  }
