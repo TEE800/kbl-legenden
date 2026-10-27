@@ -2654,6 +2654,31 @@ async function arenaAuto(){
   arenaMem=null;await arenaState({headers:{}},cur?[cur]:[]);}catch(e){arenaUploadState.error=e.message;}
 }
 setInterval(arenaAuto,15*60e3).unref();setTimeout(arenaAuto,60e3).unref();
+// Kevin-Wunsch: Auch die Challenge-/Rush-Daten schickt der PC selbst zu GitHub (GitHub darf sich nie mit T800 anmelden und laedt sie
+// darum nicht selbst). Gleicher Schluessel wie bei der Arena; nur wenn sich updatedAt geaendert hat, Pruefung alle 15 Min.
+const challengeUploadState={updatedAt:null,error:null,lastOk:null};
+async function challengeUpload(){
+ const gh=process.env.KBL_GITHUB_TOKEN;if(ON_GITHUB||!gh)return;
+ let raw;try{raw=fs.readFileSync(path.join(process.cwd(),'kbl-challenge-cache.json'),'utf8');}catch{return;}
+ let c;try{c=JSON.parse(raw);}catch{return;}
+ if(!c.updatedAt||c.updatedAt===challengeUploadState.updatedAt||c.running)return;
+ const url='https://api.github.com/repos/TEE800/kbl-legenden/contents/kbl-challenge-cache.json';
+ const h={Authorization:`Bearer ${gh}`,Accept:'application/vnd.github+json','User-Agent':'kbl-legenden-app'};
+ try{
+  const cur=await fetch(url+'?ref=main',{headers:{...h,Accept:'application/vnd.github.raw+json'},signal:AbortSignal.timeout(20000)});
+  const old=cur.ok?await cur.json().catch(()=>null):null;
+  // Nie einen aelteren Stand ueber einen neueren schreiben.
+  if(old?.updatedAt&&old.updatedAt>=c.updatedAt){challengeUploadState.updatedAt=c.updatedAt;return;}
+  const meta=await fetch(url+'?ref=main',{headers:h,signal:AbortSignal.timeout(15000)});
+  const sha=meta.ok?(await meta.json()).sha:undefined;
+  const r=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},signal:AbortSignal.timeout(30000),
+   body:JSON.stringify({message:'Challenge-Daten vom PC',branch:'main',content:Buffer.from(raw).toString('base64'),...(sha?{sha}:{})})});
+  if(!r.ok)throw new Error(`GitHub HTTP ${r.status}`);
+  challengeUploadState.updatedAt=c.updatedAt;challengeUploadState.error=null;challengeUploadState.lastOk=new Date().toISOString();
+  console.log('Challenge-Daten zu GitHub geschickt.');
+ }catch(e){challengeUploadState.error=e.message;}
+}
+setInterval(challengeUpload,15*60e3).unref();setTimeout(challengeUpload,90e3).unref();
 // Transferhistorie (Kevin-Wunsch, Reiter "Transfers"): Käufe und Verkäufe je Manager mit Preisen, Gewinn/Verlust je Spieler
 // (Verkaufspreis minus Kaufpreis) und Summen. Quelle: /managers/{id}/transfer (it[]: pi, pn, tid, tty 1 Kauf / 2 Verkauf,
 // othnm Gegenüber, ohne = Markt, trp Preis, dt) und der heutige Kader (prc Kaufpreis laut Kickbase, mv Marktwert, mvgl = mv - prc).
@@ -2784,6 +2809,7 @@ app.get('/api/transfers', async (req, res) => {
 });
 
 app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
+app.get('/api/challenge-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...challengeUploadState}));
 app.get('/api/arena',async(req,res)=>{
  try{
   const md=await loadMatchdays().catch(()=>null);
