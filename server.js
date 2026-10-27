@@ -65,7 +65,9 @@ const sessionValid = s => !!s && Date.now() - s.createdAt < SESSION_MAX_AGE_MS;
 function getToken(req) {
   const sid = parseCookies(req).kblsid;
   const session = sid ? sessions.get(sid) : null;
-  return sessionValid(session) ? session.token : null;
+  if (sessionValid(session)) return session.token;
+  // Vorschau: Gaeste melden sich nicht an (Kevin-Vorgabe), sie sehen alles ueber den Dienst-Login.
+  return PREVIEW ? (serviceToken && Date.now() - serviceTokenAt < 3 * 3600 * 1000 ? serviceToken : newestToken()) : null;
 }
 setInterval(() => { for (const [sid, s] of sessions) if (!sessionValid(s)) sessions.delete(sid); }, 30 * 60 * 1000).unref();
 
@@ -110,8 +112,10 @@ app.post('/api/login', async (req, res) => {
     const sid = crypto.randomUUID();
     const userId = String(login.u?.id ?? login.u?.i ?? '');
     const admin = userId === ADMIN_ID || (!!process.env.KBL_AUTO_EMAIL && String(email).trim().toLowerCase() === process.env.KBL_AUTO_EMAIL.trim().toLowerCase());
+    // Vorschau: Anmelden darf nur der Liga-Admin, alle anderen sehen die App ohne Anmeldung.
+    if (PREVIEW && !admin) return res.status(403).json({ error: 'In der Vorschau ist keine Anmeldung nötig. Anmelden kann sich nur der Liga-Admin.' });
     sessions.set(sid, { token: login.tkn, createdAt: Date.now(), admin, userId });
-    if (PREVIEW) console.log(`Vorschau: Anmeldung als ${admin ? 'Admin (darf ändern)' : 'Gast (nur ansehen)'}`);
+    if (PREVIEW) console.log('Vorschau: Anmeldung als Admin (darf ändern)');
     const secure = req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : '';
     res.setHeader('Set-Cookie', `kblsid=${encodeURIComponent(sid)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE_MS / 1000}${secure}`);
     res.json({ ok: true });
@@ -393,6 +397,8 @@ async function getChallengeToken() {
   challengeToken = login.tkn; challengeTokenAt = Date.now();
   return challengeToken;
 }
+// Vorschau: Dienst-Login frisch halten, damit Gaeste ohne Anmeldung alles sehen.
+if (PREVIEW) { const keep = () => getServiceToken().catch(e => console.log('Vorschau: Dienst-Login fehlgeschlagen:', e.message)); keep(); setInterval(keep, 30 * 60 * 1000).unref(); }
 function newestToken() {
   let best = null;
   for (const s of sessions.values()) if (sessionValid(s) && s.token && (!PREVIEW || s.admin) && (!best || s.createdAt > best.createdAt)) best = s;
