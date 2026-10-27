@@ -1021,7 +1021,9 @@ async function loadEventTypes(token) {
       const types = {};
       for (const t of (Array.isArray(data?.it) ? data.it : [])) if (Number.isFinite(Number(t.i))) types[Number(t.i)] = String(t.ti ?? '');
       if (Object.keys(types).length) {
-        eventTypesCache = { fetchedAt: new Date().toISOString(), lcud: data.lcud ?? null, types, raw: data };
+        // Bekannte Titel bleiben: Kickbase liefert sie je nach Konto/Sprache englisch oder deutsch, Statistik und
+        // Saison-Bestenliste ordnen aber über den Titel zu (STAT_CATS, englisch). Neue Nummern kommen dazu.
+        eventTypesCache = { fetchedAt: new Date().toISOString(), lcud: data.lcud ?? null, types: { ...types, ...(eventTypesCache?.types || {}) }, raw: data };
         const tmp = EVENT_TYPES_FILE + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(eventTypesCache, null, 2)); fs.renameSync(tmp, EVENT_TYPES_FILE);
       }
     } catch (err) { console.warn('Ereignisarten nicht ladbar:', err.message); }
@@ -1035,6 +1037,18 @@ app.get('/api/event-types', async (req, res) => {
   const types = await loadEventTypes(token);
   res.set('Cache-Control', 'no-store').json({ count: Object.keys(types).length, known: EVENT_ETI_LABELS, types });
 });
+// Gespeicherte Titel auf die festen (englischen) Titel aus kbl-event-types.json umstellen, falls ein Sammeln deutsche bekam.
+function canonEventTitles(rec) {
+  if (!eventTypesCache) try { eventTypesCache = JSON.parse(fs.readFileSync(EVENT_TYPES_FILE, 'utf8')); } catch {}
+  const kb = eventTypesCache?.types || {};
+  for (const t of rec?.types || []) {
+    const en = kb[t.eti];
+    if (!en || en === t.kickbaseTitle) continue;
+    t.kickbaseTitle = en;
+    if (t.labelSource === 'kickbase') t.label = germanEventTitle(en) || en;
+  }
+  return rec;
+}
 // Punkteuebersicht: jedes Sammeln wird je Spieltag in kbl-points-overview.json gespeichert (ueberschreibt den alten Stand dieses Spieltags).
 // Kickbase kann Punkte nachtraeglich korrigieren; der Stand gilt zum Zeitpunkt savedAt.
 const POINTS_OVERVIEW_FILE = path.join(process.cwd(), 'kbl-points-overview.json');
@@ -1049,14 +1063,14 @@ app.get('/api/points-overview/:day', (req, res) => {
   if (!getToken(req)) return res.status(401).json({ error: 'Nicht angemeldet.' });
   const day = validDay(req.params.day);
   if (!day) return res.status(400).json({ error: 'Ungültiger Spieltag.' });
-  const saved = loadPointsOverview()[day];
+  const saved = canonEventTitles(loadPointsOverview()[day]);
   res.set('Cache-Control', 'no-store').json(saved ? { saved: true, ...saved } : { saved: false, day });
 });
 // Saison-Bestenliste: alle gespeicherten Spieltage je Kickbase-Titel zusammengezaehlt.
 // Spieltage ohne allPlayers (vor dieser Version gesammelt) liefern nur ihre Top 10 und gelten als unvollstaendig.
 app.get('/api/points-season', (req, res) => {
   if (!getToken(req)) return res.status(401).json({ error: 'Nicht angemeldet.' });
-  const days = Object.values(loadPointsOverview()).sort((a, b) => a.day - b.day);
+  const days = Object.values(loadPointsOverview()).map(canonEventTitles).sort((a, b) => a.day - b.day);
   const players = {}, titles = {};
   days.forEach((d, k) => {
     for (const t of d.types || []) {
