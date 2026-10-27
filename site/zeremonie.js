@@ -97,7 +97,8 @@
   const el=document.createElement('div');el.className='zer';el.setAttribute('role','dialog');el.setAttribute('aria-label','BumsParade');
   el.innerHTML=`<div class="zer-curtain l"></div><div class="zer-curtain r"></div><div class="zer-stage"></div><div class="zer-bar"><button type="button" class="ghost" data-zer="back" aria-label="Zurück">◀</button><span class="zer-prog"></span><button type="button" class="gold" data-zer="next"></button><button type="button" class="ghost" data-zer="mute" aria-label="Ton an oder aus"></button><button type="button" class="ghost" data-zer="close" aria-label="BumsParade beenden">✕</button></div>`;
   document.body.appendChild(el);document.body.classList.add('zer-on');Z.el=el;
-  try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch{}
+  // Echtes Vollbild nur am PC: Auf dem Handy blendet der Browser sonst lange einen Hinweis über den Knöpfen ein (Kevin, Android).
+  if(matchMedia('(pointer:fine)').matches)try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch{}
   api(`/api/mvp-tipps/${m.day}`).then(x=>{Z&&(Z.mvpTipp=x);if(Z?.steps[Z.i].kind==='end')draw();}).catch(()=>{});
   draw();
  }
@@ -118,7 +119,7 @@
   const nx=steps[Z.i+1];
   next.textContent=!nx?'Vorhang zu ✕':nx.kind==='def'&&s.kind==='def'&&nx.i===s.i?'🥁 Nächster Anklagepunkt':nx.kind==='def'?(s.kind==='title'?'Die Parade beginnt ▶':'Nächster Angeklagter ▶'):nx.kind==='clean'?'Wer ist davongekommen? ▶':'Abspann ▶';
   if(s.kind==='title'){
-   st.innerHTML=`<div class="zer-title"><p class="zer-kicker">KBL Legenden präsentiert</p><h1>Die BumsParade</h1><p class="zer-sub">Spieltag ${m.day} · ${m.total} Strafe${m.total===1?'':'n'} · ${m.defendants.length} Angeklagte</p><div class="zer-faces">${m.defendants.map(x=>`<span>${mgrFace(x.name,'mgr-av-lg',x.id)}<small>${safe(x.name)}</small></span>`).join('')}</div><p class="zer-hint">Bitte erheben Sie sich. Das hohe Gericht der Legenden tagt.</p></div>`;
+   st.innerHTML=`<div class="zer-title"><p class="zer-kicker">KBL Legenden präsentiert</p><h1>Die BumsParade</h1><p class="zer-sub">Spieltag ${m.day} · ${m.total} Strafe${m.total===1?'':'n'} · ${m.defendants.length} Angeklagte</p><div class="zer-faces">${m.defendants.map(x=>`<span>${mgrFace(x.name,'mgr-av-lg',x.id)}<small>${safe(x.name)}</small></span>`).join('')}</div><p class="zer-hint">Bitte erheben Sie sich. Das hohe Gericht der Legenden tagt.</p><button type="button" class="gold zer-go" data-zer="next">▶ Die Parade beginnt</button></div>`;
   }else if(s.kind==='def'){
    const x=m.defendants[s.i],n=x.charges.length,fresh=s.shown>0&&steps[Z.i-1]?.i===s.i&&steps[Z.i-1].shown===s.shown-1&&Z.dir>0;
    st.innerHTML=`<div class="zer-def"><div class="zer-def-head${s.shown===0&&Z.dir>0?' enter':''}">${mgrFace(x.name,'zer-av',x.id)}<div><p class="zer-kicker">Angeklagter ${s.i+1} von ${m.defendants.length}</p><h2>${safe(x.name)}</h2><p class="muted">${x.place?`Platz ${x.place} am Spieltag`:''}${x.pts!=null?` · ${fmt(x.pts)} Punkte`:''} · ${n} Anklagepunkt${n===1?'':'e'}${s.shown===n?` · <b class="zer-verdict">${VERDICT(n)}</b>`:''}</p>${x.gifts.length?`<p class="zer-gifts">${x.gifts.map(safe).join('<br>')}</p>`:''}</div><button type="button" class="ghost zer-akte-btn" data-zer-akte="${s.i}">📜 Anklageschrift</button></div><ol class="zer-charges">${x.charges.map((c,j)=>j<s.shown?chargeHtml(c,j,n,fresh&&j===s.shown-1):`<li class="zer-charge zer-wait"><div class="zer-flip"><div class="zer-back"><span>Anklagepunkt ${j+1} von ${n}</span><b>?</b></div></div></li>`).join('')}</ol></div>`;

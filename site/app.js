@@ -1435,6 +1435,8 @@ function bumsSave(){
  const managers=bumsCounts(a.data,a.checks),todos=(a.data.todos||[]).filter(t=>!a.checks?.[t.key]?.removed);
  const progress={done:todos.filter(t=>t.check?.state==='done'||a.checks?.[t.key]?.done).length,total:todos.length,unclear:(a.data.autoEvents?.error?[]:(a.data.autoEvents?.unclear||[])).filter(u=>!a.checks?.[unclearKey(u)]?.target).length};
  const sig=a.day+JSON.stringify(managers)+JSON.stringify(progress);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
+ // Online (nur lesend): nichts speichern, aber Spieltag-Auswahl und BumsTabelle mit den neuen Haken neu rechnen (Kevin: stand „1 offen“ trotz 20 von 20).
+ if(window.KBL_STATIC){bumsDays[a.day]={...(bumsDays[a.day]||{}),managers,progress,derived:true};bumsDerived.delete(a.day);try{kblAccDayLabels(bumsDays);}catch{}try{renderBumsTabelle();}catch{}return;}
  api(`/api/bumsungen/${a.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({managers,progress})}).then(()=>renderBumsTabelle()).catch(()=>{});
 }
 // Weitere Kacheln der BumsTabelle (einklappbar, Stil wie Ruhm & Schande). Gleichstände werden gemeinsam genannt.
