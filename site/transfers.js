@@ -40,6 +40,15 @@
    <ol class="tr-rank">${rows.map((m,i)=>{const v=val(m,sortBy);return `<li title="${esc(`${m.name}: ${full(v)}`)}"><span class="tr-place">${i+1}.</span>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span>${bar(v)}<b class="tr-val ${cls(v)}">${money(v,true)}</b></li>`;}).join('')}</ol>
    ${ms.some(m=>m.error)?`<p class="error tiny">Das fehlt: Transfers von ${esc(ms.filter(m=>m.error).map(m=>m.name).join(', '))} (Kickbase hat nicht geantwortet).</p>`:''}</div>`;
  }
+ // Größter Einzel-Gewinn und -Verlust der Halbserie (Kevin-Wunsch): nur verkaufte Spieler mit Kaufpreis, Gleichstand = alle.
+ function records(ms){
+  const all=ms.filter(m=>!m.error).flatMap(m=>m.trades.filter(t=>t.status==='sold'&&t.diff!=null).map(t=>({...t,mgr:m})));
+  const card=(label,pick,c)=>{
+   const v=all.length?pick(...all.map(t=>t.diff)):null,hits=v==null||(c==='tr-pos'?v<=0:v>=0)?[]:all.filter(t=>t.diff===v);
+   return `<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${c}">${money(v,true)}</b>${hits.map(t=>`<div class="tr-record-who">${face(t.img,t.name)}<div><strong>${esc(t.name)}</strong><small class="tr-record-mgr">${face(t.mgr.img,t.mgr.name)}${esc(t.mgr.name)}</small><small>${money(t.buy?.price)} → ${money(t.sell?.price)}${t.sell?.at?' · '+esc(date(t.sell.at)):''}</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div>`;
+  };
+  return `<div class="tr-tiles tr-records">${card('Größter Gewinn der Saison',Math.max,'tr-pos')}${card('Größter Verlust der Saison',Math.min,'tr-neg')}</div>`;
+ }
  const side=(s,verb)=>s?`<span class="tr-price">${money(s.price)}</span><small>${s.at?esc(date(s.at))+' · ':''}${verb} ${esc(s.other||'Markt')}</small>`:'';
  function trade(t){
   let buy,sell,note='';
@@ -77,7 +86,7 @@
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
   const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
-  root.innerHTML=`${pick}${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
+  root.innerHTML=`${pick}${records(c.managers)}${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
  }
  async function load(){
   if(loading)return;loading=true;
