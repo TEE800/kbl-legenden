@@ -39,15 +39,18 @@
   for(const t of d.todos||[]){if(checks[t.key]?.removed||!isEligibleManager(t.manager))continue;
    const done=t.check?.state==='done'||!!checks[t.key]?.done;
    get(t.managerId,t.manager).charges.push({key:t.key,rule:t.rule,manager:t.manager,pts:t.rule==='BD'?((d.bd||[]).find(x=>same(x,t.managerId,t.key.split(':')[2]))?.points??null):null,text:t.text,proof:proof(t),recv:recv(t),done,auto:t.check?.state==='done',needPick:todoNeedsPick(t)&&!checks[t.key]?.target,options:t.rule==='DD'?(t.options||[]):[],player:todoPlayer(t)});
-   // Empfänger (UM, DD, RK, BN, AH, MM) als Geschenk beim anderen Manager; TL nur erste Ebene.
+   // Empfänger (UM, DD, RK, BN, AH, MM) sind auch gebumst und bekommen einen eigenen Anklagepunkt, genau wie in der BumsTabelle (bumsCounts); TL nur erste Ebene.
    if(t.rule==='TL')continue;
    const g=checks[t.key]?.target,k=todoPick(t);
-   if(t.rule==='MM'){if(g)get(null,g).gifts.push(`🎯 muss einen Spieler weniger aufstellen (von ${t.manager})`);continue;}
+   const inCharge=(name,id,text)=>{if(isEligibleManager(name))get(id,name).charges.push({key:`IN:${t.key}:${name}`,rule:t.rule,manager:name,in:true,src:t.key,text,proof:proof(t),recv:[],done,auto:t.check?.state==='done',needPick:false,options:[],player:null});};
+   if(t.rule==='MM'){if(g)inCharge(g,idOf(g),`Muss am nächsten Spieltag einen Spieler weniger aufstellen (von ${t.manager})`);continue;}
    let to=(t.to||[]).map(r=>({name:r.manager,id:r.managerId,player:k==='dd'&&g?g:r.playerName}));
    if(k==='to'&&g)to=g==='Markt'?[]:[{name:g,id:idOf(g),player:todoPlayer(t)}];
-   for(const r of to)if(isEligibleManager(r.name))get(r.id,r.name).gifts.push(`🎁 bekommt ${r.player||'einen Spieler'} von ${t.manager} (${t.rule})`);}
+   for(const r of to)inCharge(r.name,r.id,`Bekommt ${r.player||'einen Spieler'} von ${t.manager}`);}
   for(const u of ae?.unclear||[]){if(!isEligibleManager(u.manager))continue;const k=unclearKey(u),g=checks[k]?.target;
-   get(u.managerId,u.manager).charges.push({key:k,rule:u.rule,manager:u.manager,text:`${u.playerName||u.name||'Spieler'}: ${g?(g==='Entfällt'?'Regel entfällt':g==='Markt'?'an den Markt':'an '+g):'wird vom Gericht geprüft'}`,proof:u.reason||'',recv:[],done:!!g,auto:false,needPick:!g,options:[],player:u.playerName});}
+   if(g==='Entfällt')continue;
+   get(u.managerId,u.manager).charges.push({key:k,rule:u.rule,manager:u.manager,text:`${u.playerName||u.name||'Spieler'}: ${g?(g==='Markt'?'an den Markt':'an '+g):'wird vom Gericht geprüft'}`,proof:u.reason||'',recv:[],done:!!g,auto:false,needPick:!g,options:[],player:u.playerName});
+   if(g&&g!=='Markt'&&isEligibleManager(g))get(null,g).charges.push({key:`IN:${k}:${g}`,rule:u.rule,manager:g,in:true,src:k,text:`Bekommt ${u.playerName||'einen Spieler'} von ${u.manager}`,proof:u.reason||'',recv:[],done:true,auto:false,needPick:false,options:[],player:null});}
   // Reihenfolge wie bei der Abrechnung: vom Spieltagssieger abwärts, DD zuletzt.
   const ord=r=>r==='DD'?2:r==='TL'?1:0;
   const list=[...mgrs.values()].map(m=>({...m,charges:m.charges.sort((a,b)=>ord(a.rule)-ord(b.rule))})).sort((a,b)=>(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));
@@ -103,12 +106,12 @@
   draw();
  }
  function close(){if(!Z)return;Z.el.remove();Z=null;document.body.classList.remove('zer-on');try{if(document.fullscreenElement)document.exitFullscreen();}catch{}}
- function isDone(c){return c.done||Z.local.has(c.key);}
+ function isDone(c){return c.done||Z.local.has(c.key)||(c.src&&Z.local.has(c.src));}
  function chargeHtml(c,j,n,fresh){
   const done=isDone(c),door=c.rule==='DD'&&c.options.length;
   const slot=(o,k,len)=>{const a=len<=4?45+90*k:Math.round(360*k/len);return `<div class="rdoor-slot" style="--a:${a}deg"><div class="rdoor-bill"><div class="rdoor-face"><div class="zer-door-tag">${safe(o.name)}<b>${fmt(o.points)}</b></div></div></div></div>`;};
   const doorHtml=door?`<div class="rdoor has-cands zer-door" aria-hidden="true"><div class="rdoor-roof"></div><div class="rdoor-stage"><div class="rdoor-rot"><i></i><i></i><i></i><i></i>${c.options.map((o,k)=>slot(o,k,c.options.length)).join('')}</div></div><div class="rdoor-floor"></div><small>Dämonische Drehtür</small></div>`:'';
-  return `<li class="zer-charge${fresh?' fresh':''}${done?' done':''}" style="--c:${COLOR[c.rule]||'#ebc768'}"><div class="zer-flip"><div class="zer-back"><span>Anklagepunkt ${j+1} von ${n}</span><b>?</b></div><div class="zer-front"><div class="zer-ch-head"><span class="zer-ch-icon">${ICON[c.rule]||'⚖️'}</span><span class="zer-ch-rule">${safe(c.rule)} · ${safe(RULE[c.rule]||c.rule)}</span></div><p class="zer-ch-text">${safe(c.text)}</p>${c.proof?`<p class="zer-ch-proof">${safe(c.proof)}</p>`:''}${doorHtml}${c.recv.map(r=>`<p class="zer-ch-recv">${safe(r)}</p>`).join('')}<div class="zer-ch-foot">${done?`<span class="zer-stamp">VOLLSTRECKT</span>${c.auto?'<span class="muted tiny">die App hat es schon gesehen</span>':''}`:`<button type="button" class="gold zer-exec" data-zer-exec="${safe(c.key)}">Vollstreckt ✅</button>${c.needPick?'<span class="muted tiny">Empfänger danach in der BumsParade auswählen</span>':''}`}</div></div></div></li>`;
+  return `<li class="zer-charge${fresh?' fresh':''}${done?' done':''}" style="--c:${COLOR[c.rule]||'#ebc768'}"><div class="zer-flip"><div class="zer-back"><span>Anklagepunkt ${j+1} von ${n}</span><b>?</b></div><div class="zer-front"><div class="zer-ch-head"><span class="zer-ch-icon">${ICON[c.rule]||'⚖️'}</span><span class="zer-ch-rule">${safe(c.rule)} · ${safe(RULE[c.rule]||c.rule)}</span></div><p class="zer-ch-text">${safe(c.text)}</p>${c.proof?`<p class="zer-ch-proof">${safe(c.proof)}</p>`:''}${doorHtml}${c.recv.map(r=>`<p class="zer-ch-recv">${safe(r)}</p>`).join('')}<div class="zer-ch-foot">${done?`<span class="zer-stamp">VOLLSTRECKT</span>${c.auto?'<span class="muted tiny">die App hat es schon gesehen</span>':''}`:c.in?`<span class="muted tiny">wird mit der Abgabe vollstreckt</span>`:`<button type="button" class="gold zer-exec" data-zer-exec="${safe(c.key)}">Vollstreckt ✅</button>${c.needPick?'<span class="muted tiny">Empfänger danach in der BumsParade auswählen</span>':''}`}</div></div></div></li>`;
  }
  function draw(){
   if(!Z)return;const {m,steps}=Z,s=steps[Z.i],st=Z.el.querySelector('.zer-stage'),next=Z.el.querySelector('[data-zer="next"]');
@@ -200,7 +203,7 @@
   ctx.fillStyle='#728592';ctx.font=`24px ${sans}`;ctx.fillText('Vollstreckung: Montagabend, BumsParade auf Discord  🤡',W/2,H-70);
   return c;
  }
- const isDoneStatic=ch=>ch.done||(Z?.local.has(ch.key));
+ const isDoneStatic=ch=>ch.done||(Z?.local.has(ch.key))||(ch.src&&Z?.local.has(ch.src));
  function akteText(m,x){return `**📜 ANKLAGESCHRIFT · Spieltag ${m.day}**\nAngeklagt: **${x.name}**${x.place?` (Platz ${x.place}, ${fmt(x.pts)} Pkt.)`:''}\n${x.charges.map((c,i)=>`${i+1}. **${c.rule}** ${ICON[c.rule]||''} ${c.text}${c.proof?` (${c.proof})`:''}`).join('\n')}\n**Urteil: schuldig. ${VERDICT(x.charges.length)}**`;}
  async function copyText(t,btn){try{await navigator.clipboard.writeText(t);flash(btn,'✓ kopiert');}catch{prompt('Zum Kopieren markieren:',t);}}
  const flash=(btn,t)=>{if(!btn)return;const o=btn.textContent;btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1600);};
