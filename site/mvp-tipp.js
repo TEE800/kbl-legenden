@@ -247,7 +247,7 @@
  // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
  // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
  // Korrekturen = Punkte ändern sich, obwohl das Spiel schon vorbei war; der letzte Stand nach Spieltagsende kommt aus den Leistungsdaten.
- const zr={day:null,i:0,timer:null,speed:1,autoplay:false};
+ const zr={day:null,i:0,timer:null,speed:1,autoplay:false,full:false};
  let zrGroups=null;
  const zrWhen=s=>new Date(s).toLocaleString('de-DE',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}).replace(',','');
  function zrFrames(d){
@@ -287,11 +287,11 @@
   const ghosts=[...new Map(frames.flatMap(f=>(f.best?.players||[]).filter(p=>!groups.some(g=>String(g.t.playerId)===p.id)).map(p=>[p.id,p]))).values()];
   const moments=zrMoments(frames),n=frames.length;
   return `<details class="acc-group zr" data-zr data-zr-ghosts="${esc(JSON.stringify(ghosts))}" style="margin-top:14px"><summary>🎬 Spieltag im Zeitraffer</summary><div class="acc-sub">
-   <div class="zr-hud"><div class="zr-clock" data-zr-clock></div><div class="zr-lead" data-zr-lead></div></div>
+   <div class="zr-hud"><div class="zr-clock" data-zr-clock></div><div class="zr-lead" data-zr-lead></div><button type="button" class="ghost zr-close" data-zr-close aria-label="Vollbild schließen">✕</button></div>
    <div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div><div class="zr-flash" data-zr-flash hidden></div></div>
    <div class="zr-ctrl"><button type="button" class="gold zr-play" data-zr-play aria-label="Abspielen">▶</button>
     <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
-    <button type="button" class="ghost zr-speed" data-zr-speed>1×</button></div>
+    <button type="button" class="ghost zr-speed" data-zr-speed>1×</button><button type="button" class="ghost zr-fullbtn" data-zr-full aria-label="Vollbild">⛶</button></div>
    <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
    <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
@@ -299,7 +299,7 @@
  function zrMount(root,d,groups){
   const box=root.querySelector('[data-zr]');if(!box)return;
   const frames=zrFrames(d),n=frames.length,pool=poolOf(d),ghosts=JSON.parse(box.dataset.zrGhosts||'[]');
-  if(zr.day!==d.day){zr.day=d.day;zr.i=n-1;zrStop();}
+  if(zr.day!==d.day){zr.day=d.day;zr.i=n-1;zrStop();zr.full=false;document.body.classList.remove('zr-on');}
   zr.i=Math.min(zr.i,n-1);
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   const final=frames[n-1].players;
@@ -345,6 +345,22 @@
   box.querySelector('[data-zr-speed]').textContent=zr.speed+'×';
   box.querySelectorAll('[data-zr-go]').forEach(li=>li.onclick=()=>{zrStop();btn.textContent='▶';show(Number(li.dataset.zrGo));});
   // Beim Aufklappen von vorn abspielen; Wackelköpfe und Wappen brauchen die Spielerliste.
+  // Vollbild (Kevin-Wunsch): alle Spieler, Zeit und Steuerung auf einem Bildschirm; der Platz wird passend verkleinert.
+  // Am PC zusätzlich Browser-Vollbild, am Handy nur über die ganze Seite (wie in der BumsParade, kein Browser-Hinweis).
+  const pw=box.querySelector('.zr-pitch-wrap');
+  zr.fit=()=>{if(!box.isConnected)return;
+   if(!zr.full){pitch.style.transform='';pitch.style.width='';pw.style.height='';return;}
+   pitch.style.transform='';pitch.style.width='';
+   const h=pitch.offsetHeight,sc=Math.min(1,pw.clientHeight/h);
+   pitch.style.transformOrigin='0 0';pitch.style.width=(100/sc)+'%';pitch.style.transform=`scale(${sc})`;};
+  const setFull=on=>{zr.full=on;box.classList.toggle('zr-full',on);document.body.classList.toggle('zr-on',on);
+   if(on){box.open=true;if(matchMedia('(pointer:fine)').matches)try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch{}}
+   else try{if(document.fullscreenElement)document.exitFullscreen();}catch{}
+   requestAnimationFrame(zr.fit);};
+  zr.exit=()=>setFull(false);
+  box.querySelector('[data-zr-full]').onclick=()=>{setFull(true);if(!zr.timer){if(zr.i>=n-1)show(0);btn.click();}};
+  box.querySelector('[data-zr-close]').onclick=()=>setFull(false);
+  if(zr.full){box.classList.add('zr-full');document.body.classList.add('zr-on');requestAnimationFrame(zr.fit);}
   if(box.open)box.dataset.zrSkip='1';// beim Neuladen wieder aufgeklappt: nicht von vorn starten
   box.ontoggle=()=>{if(box.dataset.zrSkip){delete box.dataset.zrSkip;return;}
    if(!box.open){zrStop();btn.textContent='▶';return;}
@@ -356,6 +372,9 @@
   if(zr.timer){zrStop();if(box.open){btn.textContent='⏸';zr.timer=setTimeout(tick,1500/zr.speed);}}
  }
  function zrStop(){clearTimeout(zr.timer);zr.timer=null;}
+ addEventListener('resize',()=>zr.fit?.());
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&zr.full)zr.exit?.();});
+ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&zr.full&&matchMedia('(pointer:fine)').matches)zr.exit?.();});
  function top10(d,rows,pool,bestIds,fin){
   const t=d.tracking?.top10,list=t?.players||[];
   const fans=new Map();rows.forEach(r=>{const k=String(r.t.playerId);if(!fans.has(k))fans.set(k,[]);fans.get(k).push(r);});
