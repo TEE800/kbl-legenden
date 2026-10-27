@@ -247,7 +247,7 @@
  // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
  // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
  // Korrekturen = Punkte ändern sich, obwohl das Spiel schon vorbei war; der letzte Stand nach Spieltagsende kommt aus den Leistungsdaten.
- const zr={day:null,i:0,timer:null,speed:1,autoplay:false,full:false};
+ const zr={day:null,i:0,timer:null,speed:1,autoplay:false,full:false,video:false};
  let zrGroups=null;
  const zrWhen=s=>new Date(s).toLocaleString('de-DE',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}).replace(',','');
  function zrFrames(d){
@@ -291,7 +291,8 @@
    <div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div><div class="zr-flash" data-zr-flash hidden></div></div>
    <div class="zr-ctrl"><button type="button" class="gold zr-play" data-zr-play aria-label="Abspielen">▶</button>
     <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
-    <button type="button" class="ghost zr-speed" data-zr-speed>1×</button><button type="button" class="ghost zr-fullbtn" data-zr-full aria-label="Vollbild">⛶</button></div>
+    <button type="button" class="ghost zr-speed" data-zr-speed>1×</button></div>
+   <div class="zr-vid"><button type="button" class="gold zr-fullbtn" data-zr-full>⛶ Vollbild</button><button type="button" class="ghost" data-zr-video>⬇ Video herunterladen</button><span class="muted tiny" data-zr-vstat></span></div>
    <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
    <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
@@ -361,6 +362,17 @@
   box.querySelector('[data-zr-full]').onclick=()=>{setFull(true);if(!zr.timer){if(zr.i>=n-1)show(0);btn.click();}};
   box.querySelector('[data-zr-close]').onclick=()=>setFull(false);
   if(zr.full){box.classList.add('zr-full');document.body.classList.add('zr-on');requestAnimationFrame(zr.fit);}
+  const vb=box.querySelector('[data-zr-video]'),vs=box.querySelector('[data-zr-vstat]');
+  if(zr.video){vb.disabled=true;vs.textContent='Video wird aufgenommen …';}
+  vb.onclick=async()=>{if(zr.video)return;zr.video=true;vb.disabled=true;zrStop();btn.textContent='▶';
+   const stat=t=>{const el=document.querySelector('[data-zr-vstat]');if(el)el.textContent=t;};
+   try{const marks=zrMoments(frames).filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>({i:m.i,cls:m.ico==='🏁'?'fin':m.fix?'fix':'lead'}));
+    const {blob,ext}=await zrVideo({d,frames,rowsList,pos,pool,byId,marks},stat);
+    const name=`MVP-Zeitraffer-Spieltag-${d.day}.${ext}`,url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    stat(`Fertig: ${name} (${(blob.size/1e6).toFixed(1).replace('.',',')} MB).`);
+   }catch(e){stat('Video nicht möglich: '+e.message);}
+   finally{zr.video=false;const b=document.querySelector('[data-zr-video]');if(b)b.disabled=false;}};
   if(box.open)box.dataset.zrSkip='1';// beim Neuladen wieder aufgeklappt: nicht von vorn starten
   box.ontoggle=()=>{if(box.dataset.zrSkip){delete box.dataset.zrSkip;return;}
    if(!box.open){zrStop();btn.textContent='▶';return;}
@@ -370,6 +382,118 @@
   if(zr.autoplay&&box.open&&!zr.timer){zr.autoplay=false;show(0);btn.click();return;}
   // Lief die Animation beim Neuladen (alle 2 Min.), läuft sie im neuen Kasten weiter.
   if(zr.timer){zrStop();if(box.open){btn.textContent='⏸';zr.timer=setTimeout(tick,1500/zr.speed);}}
+ }
+ // Zeitraffer als Video herunterladen (Kevin-Wunsch): im Browser auf einer Leinwand (1080×1920, Hochformat fürs Handy)
+ // nachgezeichnet und mit MediaRecorder aufgenommen, MP4 wenn der Browser es kann, sonst WebM. Läuft in Echtzeit.
+ // Bilder von fremden Servern (Kickbase-CDN) nur, wenn sie CORS erlauben, sonst Anfangsbuchstabe bzw. gezeichnetes Gesicht.
+ async function zrVideo(o,onStat){
+  const {d,frames,rowsList,pos,pool,byId}=o,n=frames.length,W=1080,H=1920;
+  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
+  const mime=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
+  if(!mime)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
+  onStat('Bilder werden geladen …');
+  const load=src=>!src?Promise.resolve(null):new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;setTimeout(()=>r(null),8000);});
+  const faceSrc=m=>{const h=(window.kblMgrFace||(()=>''))(m.name,'',m.id),x=/src="([^"]+)"/.exec(h);return x?x[1].replace(/&amp;/g,'&'):'';};
+  const heads=new Map(),crests=new Map(),faces=new Map();
+  await Promise.all(rowsList.map(async r=>{heads.set(r.id,await load(headSrc(r.id)));crests.set(r.id,await load(kbImg(byId.get(r.id)?.teamImg)));
+   for(const x of r.rs)if(!faces.has(x.m.id))faces.set(x.m.id,await load(faceSrc(x.m)));}));
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+  // Ablauf: Start 1,5 s stehen, je Stand 1,2 s Bewegung und 0,8 s stehen (Korrekturen 2,4 s), am Ende 3 s.
+  const seg=[];let T=1.5;
+  for(let k=1;k<n;k++){const hold=frames[k].fixes.length?2.4:k===n-1?3:0.8;seg.push({k,t0:T,t1:T+1.2,t2:T+1.2+hold});T+=1.2+hold;}
+  const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+  const PX=40,PY=300,PW=W-80,PH=1360,rows=rowsList.length,RH=Math.min(150,PH/Math.max(rows,1)),S=RH/150;
+  const font=(sz,w=700)=>`${w} ${Math.round(sz)}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
+  const rr=(x,y,w,h,r)=>{c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();};
+  const fit=(t,max)=>{if(c.measureText(t).width<=max)return t;while(t.length>1&&c.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+  const ptsAt=(f,r)=>{const isBest=(f.best?.players||[]).some(p=>p.id===r.id);return r.ghost?(isBest?f.best.points:null):f.players[r.id]?.points??null;};
+  function figure(r,x,y,f,time,alphaGhost){
+   const x0=f.players[r.id],isBest=(f.best?.players||[]).some(p=>p.id===r.id),pts=ptsAt(f,r);
+   const ko=!isBest&&((pool.length&&!pool.includes(r.team))||(!!f.best&&x0?.state==='done'&&pts!==null&&pts<f.best.points));
+   const run=!ko&&x0?.state==='live',[shirt,trim]=clubColor(r.team),flip=(x-PX)/PW>.5;
+   c.save();c.globalAlpha=r.ghost?alphaGhost:ko?.45:1;c.translate(x,y);c.scale(S,S);
+   if(ko)c.rotate(flip?Math.PI/2:-Math.PI/2);
+   const bob=run?Math.sin(time*16)*3:isBest?Math.sin(time*8)*2:0,sw=run?Math.sin(time*16)*.5:0;
+   c.lineCap='round';c.strokeStyle='#f5c9a0';c.lineWidth=6;
+   [[-5,1],[5,-1]].forEach(([dx,dir])=>{c.save();c.translate(dx,-10);c.rotate(sw*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,26);c.stroke();c.restore();});
+   c.translate(0,bob);
+   const arm=isBest?Math.sin(time*14)*.7:-sw;
+   [[-15,-50,1],[15,-50,-1]].forEach(([dx,dy,dir])=>{c.save();c.translate(dx,dy);c.rotate((dir>0?.5:-.5)+arm*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,24);c.stroke();c.restore();});
+   c.fillStyle=trim;rr(-14,-16,28,12,3);c.fill();
+   c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2;c.beginPath();c.moveTo(-18,-56);c.quadraticCurveTo(0,-64,18,-56);c.lineTo(16,-14);c.lineTo(-16,-14);c.closePath();c.fill();c.stroke();
+   const cr=crests.get(r.id);if(cr)c.drawImage(cr,-9,-46,18,18);
+   const hd=heads.get(r.id);
+   if(hd){const h=96,w=Math.min(110,h*hd.width/hd.height);c.drawImage(hd,-w/2,-56-h+4,w,h);}
+   else{c.fillStyle='#f5c9a0';c.beginPath();c.arc(0,-82,22,0,7);c.fill();c.stroke();c.fillStyle='#111';c.beginPath();c.arc(-7,-84,3,0,7);c.arc(7,-84,3,0,7);c.fill();}
+   if(isBest){c.font='44px serif';c.textAlign='center';c.fillText('👑',0,-150);}
+   if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',18,6);}
+   c.restore();
+   return {pts,ko,isBest,flip};
+  }
+  function draw(time){
+   let k=0,p=1;for(const s of seg){if(time>=s.t0){k=s.k;p=Math.min(1,(time-s.t0)/1.2);}}
+   const f=frames[k],prev=frames[Math.max(0,k-1)],e=ease(p);
+   c.fillStyle='#081118';c.fillRect(0,0,W,H);
+   // Kopf: Titel, Uhrzeit, Krone und Führende
+   c.textAlign='left';c.fillStyle='#9db0bd';c.font=font(34,800);c.fillText(`MVP-TIPP · SPIELTAG ${d.day} · ZEITRAFFER`,PX,80);
+   c.fillStyle='#f4d777';c.font=font(80,900);c.fillText(zrWhen(f.at),PX,170);
+   const cw=c.measureText(zrWhen(f.at)).width;c.fillStyle='#9db0bd';c.font=font(36,600);
+   c.fillText(f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':`Stand ${k+1} von ${n}`,PX+cw+24,170);
+   c.fillStyle='#e9f0f4';c.font=font(40,700);
+   const lead=f.best?`👑 ${f.best.players.map(x=>x.name).join(', ')} ${fmt(f.best.points)}${f.lead.length?` · führend: ${f.lead.map(r=>r.m.name).join(', ')}`:f.ready?' · keiner vorne':''}`:f.start?'Alle starten bei 0':'Noch kein Zwischenstand';
+   c.fillText(fit(lead,PW),PX,240);
+   // Platz
+   c.save();rr(PX,PY,PW,PH,18);c.clip();
+   for(let i=0;i*60<PW;i++){c.fillStyle=i%2?'#348a40':'#2f7d3a';c.fillRect(PX+i*60,PY,60,PH);}
+   c.strokeStyle='rgba(255,255,255,.4)';c.lineWidth=3;c.beginPath();c.moveTo(PX+PW*.04,PY);c.lineTo(PX+PW*.04,PY+PH);c.moveTo(PX+PW/2,PY);c.lineTo(PX+PW/2,PY+PH);c.stroke();
+   c.beginPath();c.arc(PX+PW/2,PY+PH/2,90,0,7);c.stroke();
+   for(let y=0;y<PH;y+=16){c.fillStyle='#fff';c.fillRect(PX+PW-16+((y/16)%2?8:0),PY+y,8,8);c.fillStyle='#111';c.fillRect(PX+PW-16+((y/16)%2?0:8),PY+y,8,8);}
+   const leadIds=new Set(f.lead.map(r=>r.m.id));
+   rowsList.forEach((r,i)=>{
+    const a=ptsAt(prev,r),b=ptsAt(f,r),va=a??(r.ghost?b:0),vb=b??(r.ghost?a:0);
+    const v=(va??0)+((vb??0)-(va??0))*e,x=PX+PW*pos(v)/100,y=PY+(i+.5)*RH+RH*.38;
+    const pb=(prev.best?.players||[]).some(q=>q.id===r.id),fb=(f.best?.players||[]).some(q=>q.id===r.id);
+    const ga=r.ghost?(pb&&fb?1:fb?e:pb?1-e:0):1;if(r.ghost&&ga<=0.01)return;
+    const st=figure(r,x,y,f,time,ga*.9);
+    // Name und Punkte daneben, darunter die Tipper (Gold = führend)
+    c.save();c.globalAlpha=r.ghost?ga:st.ko?.6:1;c.font=font(30*S,800);
+    const fx=f.fixes.find(z=>z.id===r.id)&&p>=1;
+    const label=`${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
+    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-34*S-tw:x+34*S,ty=y-70*S;
+    c.fillStyle=fx?'#c0392b':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
+    c.fillStyle='#fff';c.textAlign='left';c.fillText(label,tx+10*S,ty+29*S);
+    let fxp=tx;const fs=30*S;
+    const chips=r.rs.map(x=>({m:x.m,t:fmt(x.t.points)}));c.font=font(22*S,700);
+    const cwid=chips.map(ch=>fs+8*S+c.measureText(ch.t).width+10*S);const total=cwid.reduce((s,w)=>s+w+6*S,0);
+    if(st.flip)fxp=tx+tw-total;
+    chips.forEach((ch,j)=>{const w=cwid[j],cy=ty+th+8*S,ld=leadIds.has(ch.m.id);
+     c.fillStyle=ld?'#b48633':'rgba(0,0,0,.5)';rr(fxp,cy,w,fs,fs/2);c.fill();if(ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
+     const im=faces.get(ch.m.id);c.save();c.beginPath();c.arc(fxp+fs/2,cy+fs/2,fs/2-2*S,0,7);c.clip();
+     if(im)c.drawImage(im,fxp,cy,fs,fs);else{c.fillStyle='#17242e';c.fillRect(fxp,cy,fs,fs);c.fillStyle='#9db0bd';c.font=font(18*S,800);c.textAlign='center';c.fillText((ch.m.name||'?')[0].toUpperCase(),fxp+fs/2,cy+fs*.68);}
+     c.restore();c.fillStyle='#fff';c.font=font(22*S,700);c.textAlign='left';c.fillText(ch.t,fxp+fs+6*S,cy+fs*.72);fxp+=w+6*S;});
+    c.restore();
+   });
+   c.restore();
+   // Korrektur-Hinweis
+   if(f.fixes.length&&p>=1){c.font=font(36,800);const t=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${z.name} ${fmt(z.from)} → ${fmt(z.to)}`).join(', ')}`;
+    const words=t.split(' '),lines=[];let l='';for(const w of words){const tt=l?l+' '+w:w;if(c.measureText(tt).width>PW-80){lines.push(l);l=w;}else l=tt;}lines.push(l);
+    const bh=lines.length*46+30;c.fillStyle='#ffd54a';c.strokeStyle='#111';c.lineWidth=4;rr(PX+20,PY+20,PW-40,bh,18);c.fill();c.stroke();
+    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>c.fillText(ln,W/2,PY+62+j*46));}
+   // Zeitleiste
+   const TY=1740,TX=PX+20,TW=PW-40,prog=n>1?(k-1+e)/(n-1):1,pr=Math.max(0,Math.min(1,k===0?0:prog));
+   c.fillStyle='#465864';rr(TX,TY,TW,12,6);c.fill();c.fillStyle='#ebc768';rr(TX,TY,TW*pr,12,6);c.fill();
+   o.marks.forEach(m=>{c.fillStyle=m.cls==='fix'?'#e74c3c':m.cls==='fin'?'#fff':'#ebc768';c.fillRect(TX+TW*m.i/(n-1)-3,TY-34,6,20);});
+   c.fillStyle='#ebc768';c.strokeStyle='#111';c.lineWidth=4;c.beginPath();c.arc(TX+TW*pr,TY+6,20,0,7);c.fill();c.stroke();
+   c.fillStyle='#728592';c.font=font(30,700);c.textAlign='center';c.fillText('KBL LEGENDEN',W/2,1860);
+  }
+  const stream=cv.captureStream(30),rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:6e6}),chunks=[];
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  const done=new Promise(r=>rec.onstop=r);
+  draw(0);rec.start(500);
+  const t0=performance.now();
+  await new Promise(res=>{const step=()=>{const t=(performance.now()-t0)/1000;draw(Math.min(t,T));onStat(`Video wird aufgenommen … ${Math.max(0,Math.ceil(T-t))} s (Seite bitte offen lassen)`);if(t>=T)return res();setTimeout(step,1000/30);};step();});
+  rec.stop();await done;stream.getTracks().forEach(t=>t.stop());
+  return {blob:new Blob(chunks,{type:mime.split(';')[0]}),ext:mime.includes('mp4')?'mp4':'webm'};
  }
  function zrStop(){clearTimeout(zr.timer);zr.timer=null;}
  addEventListener('resize',()=>zr.fit?.());
