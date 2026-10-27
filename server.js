@@ -2543,6 +2543,12 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
           const list=await salesList(String(t.managerId));if(!list)continue;
           const sale=list.filter(x=>String(x.pi)===String(pid)&&Number(x.tty)===2&&Date.parse(x.dt)>=win.end).sort((a,b)=>Date.parse(a.dt)-Date.parse(b.dt))[0];
           if(sale){t.soldAt=new Date(Date.parse(sale.dt)).toISOString();t.late=Date.parse(sale.dt)>saleDeadline;}
+          // Teamlimit: Kaeufer bzw. Markt aus demselben Verkauf (Kevin-Meldung Vandevoordt ST 7: verkauft, aber „automatisch: nicht erkannt“).
+          if(sale&&t.rule==='TL'&&t.check?.state==='done'&&!t.to?.length){
+            const b=sale.othnm?managers.find(m=>String(m.n)===String(sale.othnm)):null;
+            if(sale.othnm){t.to=[{managerId:b?String(b.i):null,manager:String(sale.othnm),playerName:sale.pn||playerNames.get(String(pid))||null}];t.check={state:'done',note:`laut Transfer-Verlauf an ${sale.othnm}`};}
+            else t.check={state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};
+          }
           else if(t.check?.state!=='done'&&Date.now()>saleDeadline)t.overdue=true;
         }
       }
