@@ -1151,7 +1151,7 @@ app.get('/api/playercenter-scan/:day', async (req, res) => {
       t.kickbaseTitle = kbTypes[t.eti] || null;
       if (!t.label && t.kickbaseTitle) { t.label = germanEventTitle(t.kickbaseTitle) || t.kickbaseTitle; t.labelSource = 'kickbase'; }
     }
-    const result = { day, savedAt: new Date().toISOString(), playersScanned: ids.length, playersWithEvents: withEvents, failedPlayers: failed, failedTeams: all.failedTeams, types: list,
+    const result = { day, savedAt: new Date().toISOString(), ...(req.query.final ? { final: true } : {}), playersScanned: ids.length, playersWithEvents: withEvents, failedPlayers: failed, failedTeams: all.failedTeams, types: list,
       players: Object.fromEntries([...seasonIds].map(id => { const i = all.players.get(id) || {}; return [id, [i.name || null, i.team || null]]; })) };
     try { const store = loadPointsOverview(); store[day] = result; savePointsOverview(store); } catch (err) { console.warn('Punkteübersicht nicht gespeichert:', err.message); }
     res.set('Cache-Control', 'no-store').json(result);
