@@ -252,7 +252,10 @@
  const zrWhen=s=>new Date(s).toLocaleString('de-DE',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'}).replace(',','');
  function zrFrames(d){
   const tipped=new Map(d.managers.filter(m=>m.tip).map(m=>[String(m.tip.playerId),m.tip])),pool=poolOf(d);
-  return (d.verlauf||[]).map((f,i,all)=>{
+  // Kevin: das Rennen beginnt beim Anpfiff bei 0, erst danach kommen die gespeicherten Stände.
+  const raw=d.verlauf||[],t0=d.deadline&&raw.length&&Date.parse(d.deadline)<Date.parse(raw[0].at)?d.deadline:null;
+  const start=t0?[{at:t0,start:true,players:Object.fromEntries([...tipped.keys()].map(id=>[id,{points:0,state:'open'}])),best:null,fixes:[],lead:[],ready:false}]:[];
+  return start.concat(raw.map((f,i,all)=>{
    const players={};for(const [id,[points,s]] of Object.entries(f.p||{}))players[id]={points,state:s==='d'?'done':s==='l'?'live':'open'};
    // Wie auf dem Server (freshBest): getippte Spieler haben frischere Punkte als der Zwischenstand aller Spieler.
    let best=f.mvp?{points:f.mvp.points,players:f.mvp.players.map(p=>({...p}))}:null;
@@ -264,7 +267,7 @@
    if(prev)for(const [id,x] of Object.entries(players)){const o=prev.p?.[id];if(o&&o[1]==='d'&&o[0]!==x.points)fixes.push({id,from:o[0],to:x.points,name:tipped.get(id)?.player||id});}
    const st=standings({...d,status:'live',result:null,tracking:{players,pool,mvp:best}});
    return {at:f.at,fin:!!f.fin,players,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
-  });
+  }));
  }
  function zrMoments(frames){
   const out=[];let lastBest='',lastLead='';
@@ -290,7 +293,7 @@
     <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
     <button type="button" class="ghost zr-speed" data-zr-speed>1×</button></div>
    <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
-   <p class="muted tiny">Aus ${n} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
+   <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
  }
  function zrMount(root,d,groups){
@@ -316,8 +319,8 @@
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
    box.querySelector('[data-zr-seek]').value=String(i);
-   box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
-   box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:'<span class="muted">Noch kein Zwischenstand</span>';
+   box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
+   box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:`<span class="muted">${f.start?'Alle starten bei 0':'Noch kein Zwischenstand'}</span>`;
    pitch.querySelectorAll('[data-zr-id]').forEach(el=>{
     const id=el.dataset.zrId,o=rowsList.find(x=>x.id===id),x=f.players[id],isBest=bestIds.has(id),pts=o.ghost?(isBest?f.best.points:null):x?.points??null;
     const out=!isBest&&((pool.length&&!pool.includes(o.team))||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
