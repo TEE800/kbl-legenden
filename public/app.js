@@ -919,6 +919,8 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
 (function(){
  const day=document.querySelector('#pointsDay'),btn=document.querySelector('#etiScan'),msg=document.querySelector('#etiScanMessage'),root=document.querySelector('#etiScanResults');
  if(!day||!btn||!root)return;
+ // Online sammelt der Export jeden abgeschlossenen Spieltag selbst; dort gibt es keinen Sammeln-Knopf.
+ if(window.KBL_STATIC){btn.hidden=true;const h=btn.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
  // Eigener Reiter „Punkteübersicht“; vorbelegt mit dem letzten beendeten Spieltag.
  day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
  let etiData=null,etiSort='count',etiFilter='';
@@ -1084,7 +1086,8 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  }
  async function loadSaved(){
   const want=day.value;
-  try{const d=await api(`/api/points-overview/${want}`);if(d.saved&&day.value===want&&!btn.disabled)showResult(d,true);}catch{}
+  try{const d=await api(`/api/points-overview/${want}`);if(d.saved&&day.value===want&&!btn.disabled)showResult(d,true);
+   else if(window.KBL_STATIC&&day.value===want){msg.style.color='';msg.textContent=`Spieltag ${want} ist noch nicht gesammelt. Das passiert automatisch, sobald Kickbase ihn abgeschlossen hat.`;}}catch{}
  }
  async function markSaved(){
   try{const d=await api('/api/points-overview');const have=new Set(d.days.map(x=>String(x.day)));

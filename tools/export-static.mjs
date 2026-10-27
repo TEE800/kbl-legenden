@@ -111,6 +111,20 @@ try {
       if (needed) await save(u);
     }
   }
+  // Punkteuebersicht (Einzelereignisse): jeden Spieltag einmal automatisch sammeln, sobald Kickbase ihn abgeschlossen hat
+  // (Ranking il false, keine offenen Korrekturen). Ca. 550 Abrufe, darum hoechstens ein Spieltag je Lauf;
+  // mit vielen Fehlabrufen (z. B. Bremse bei 429) im naechsten Lauf noch einmal.
+  try {
+    const store = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'kbl-points-overview.json'), 'utf8')); } catch { return {}; } })();
+    const accOk = d => { try { return !JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/rule-accounting/${d}`)), 'utf8')).pendingCorrections; } catch { return false; } };
+    const todo = days.filter(d => d !== live && (!store[d] || store[d].failedPlayers > 20) && !rankingLive(`/api/ranking/${LEAGUE}?dayNumber=${d}`) && accOk(d));
+    if (todo.length) {
+      const d = todo[todo.length - 1], r = await call(`/api/playercenter-scan/${d}?final=1`);
+      console.log('Einzelereignisse Spieltag', d, r.status, r.status === 200 ? `${r.body.playersScanned} Spieler, ${r.body.failedPlayers} Fehler` : JSON.stringify(r.body).slice(0, 200));
+      if (r.status === 200) for (const u of ['/api/points-overview', `/api/points-overview/${d}`, '/api/points-season']) await save(u);
+      else failed.push(`/api/playercenter-scan/${d} (${r.status})`);
+    }
+  } catch (e) { failed.push(`Einzelereignisse sammeln (${e.message})`); }
   // Spieltag gespielt, aber von Kickbase noch nicht abgeschlossen (Ranking il, meist bis zum Abend danach): LIVE-Anzeigen weiter
   // aktualisieren (Kevin-Wunsch). Der Server prueft il selbst und liefert sonst "beendet".
   const closing = !live && status?.lastFinishedDay;
