@@ -13,7 +13,8 @@ const KICKBASE_API = 'https://api.kickbase.com';
 const sessions = new Map();
 
 app.use(express.json({ limit: '32kb' }));
-app.use(express.static('public'));
+// no-cache: Browser fragt bei jedem Laden nach (ETag), damit nach einem Update nie ein altes styles.css zu neuem app.js passt.
+app.use(express.static('public', { setHeaders: res => res.set('Cache-Control', 'no-cache') }));
 
 // Vorschaumodus (KBL_VORSCHAU=1, gestartet ueber vorschau.bat mit Tunnel): Gaeste duerfen nur ansehen.
 // Speichern, Abhaken, Loeschen und die Werkzeuge (Scans) nur fuer den Admin (Manager-ID KBL_ADMIN_ID, Standard T800).
