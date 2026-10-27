@@ -60,7 +60,10 @@
   const R=data.rush;if(!R||!R.divisions?.length)return `<p class="muted">Noch keine Rush-Daten. ${window.KBL_STATIC?'Sobald der PC neue Challenges geladen hat, erscheinen hier die Divisionen der Legenden.':'Nach dem nächsten „Neue Challenges laden“ erscheinen hier die Divisionen der Legenden.'}</p>`;
   const div=new Map(R.divisions.map((d,i)=>[String(d.dvi),{...d,idx:i}]));
   // Exakte Werte aus den gesicherten Kickbase-Gesamtstaenden: seit Beginn der Aufzeichnung und Schnitt je abgeschlossener Woche.
-  const weeks=weekList().filter(w=>!w.open),last=weeks.at(-1);
+  const all=weekList(),weeks=all.filter(w=>!w.open),last=weeks.at(-1);
+  // Tabellenplatz zu Beginn der laufenden Woche (Stand Dienstag 6 Uhr), fuer den Pfeil in Spalte „± Platz“.
+  const cur=all.at(-1)?.open?all.at(-1):null,startRank=new Map();
+  if(cur){const s=Object.entries(cur.rush).filter(([id])=>data.managers?.[id]).sort((a,b)=>b[1].from-a[1].from);s.forEach(([id,r],k)=>startRank.set(id,k&&s[k-1][1].from===r.from?startRank.get(s[k-1][0]):k+1));}
   const firstAt=Object.values(data.rushTotals||{}).map(h=>h[0]?.at).filter(Boolean).sort()[0]||null;
   const rows=Object.keys(data.managers||{}).map(id=>{
    const d=div.get(String(R.current?.[id]??'')),total=R.totals?.[id]??(id==='699062'?R.ownTotal:null);
@@ -73,13 +76,16 @@
    const wv=weeks.map(w=>w.rush[id]?.skp).filter(v=>v!=null),perWeek=wv.length?wv.reduce((x,y)=>x+y,0)/wv.length:null;
    return {id,name:data.managers[id],d,prev,total,up,place,since,perWeek,weeks:wv.length,lastWeek:last?.rush[id]?.skp??null};
   }).sort((a,b)=>(b.total??-1)-(a.total??-1)||(a.d?a.d.idx:999)-(b.d?b.d.idx:999));
+  const rankOf=new Map(),ranked=rows.filter(r=>r.total!=null);ranked.forEach((r,k)=>rankOf.set(r.id,k&&ranked[k-1].total===r.total?rankOf.get(ranked[k-1].id):k+1));
   const body=rows.map((r,i)=>{
-   const arrow=r.prev&&r.d&&r.prev.idx!==r.d.idx?(r.d.idx<r.prev.idx?` <span style="color:#7fd3a6" title="aufgestiegen aus ${esc(r.prev.dvn)}">▲</span>`:` <span style="color:#ed8b85" title="abgestiegen aus ${esc(r.prev.dvn)}">▼</span>`):'';
+   const up=(t,n='')=>`<span style="color:#7fd3a6" title="${t}">▲${n}</span>`,down=(t,n='')=>`<span style="color:#ed8b85" title="${t}">▼${n}</span>`,same='<span class="muted">–</span>';
+   const divMove=r.prev&&r.d&&r.prev.idx!==r.d.idx?(r.d.idx<r.prev.idx?up(`aufgestiegen aus ${esc(r.prev.dvn)}`):down(`abgestiegen aus ${esc(r.prev.dvn)}`)):same;
+   const was=startRank.get(r.id),rank=rankOf.get(r.id),placeMove=r.total==null||was==null?same:was>rank?up(`seit Wochenbeginn von Platz ${was} auf ${rank}`,was-rank):was<rank?down(`seit Wochenbeginn von Platz ${was} auf ${rank}`,rank-was):same;
    const toUp=r.up&&r.total!=null?`<span title="bis ${esc(r.up.dvn)}">${fmt(r.up.bod-r.total)}</span>`:'–';
-   return `<tr><td>${r.total!=null?i+1+'.':'–'} ${mn(r.name,r.id)}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?`${esc(r.d.dvn)}${arrow}`:'<span class="muted">unbekannt</span>'}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.lastWeek!=null?fmt(r.lastWeek):'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
+   return `<tr><td>${r.total!=null?rankOf.get(r.id)+'.':'–'} ${mn(r.name,r.id)}</td><td style="text-align:center">${placeMove}</td><td class="right"><b>${r.total!=null?fmt(r.total):'–'}</b></td><td>${r.d?esc(r.d.dvn):'<span class="muted">unbekannt</span>'}</td><td style="text-align:center">${divMove}</td><td class="right">${toUp}</td><td class="right">${r.place?`${fmt(r.place.from)}–${fmt(r.place.to)}`:'–'}</td><td class="right">${r.lastWeek!=null?fmt(r.lastWeek):'–'}</td><td class="right">${r.perWeek!=null?`<span title="Schnitt aus ${r.weeks} abgeschlossenen Woche(n)">${fmt(Math.round(r.perWeek))}</span>`:'–'}</td></tr>`;
   }).join('');
   const since=firstAt?date(firstAt):null;
-  return `<div class="tablewrap"><table><thead><tr><th>MANAGER</th><th class="right">RUSH-PUNKTE</th><th>DIVISION</th><th class="right">BIS AUFSTIEG</th><th class="right">GESAMTPLATZ</th><th class="right" title="${last?esc(last.name):''}">LETZTE WOCHE</th><th class="right">Ø PRO WOCHE</th></tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Rush-Punkte und Division kommen direkt von Kickbase (Social Hub, gefolgte Manager). „Bis Aufstieg“ = fehlende Punkte bis zur nächsten Division. „Gesamtplatz“ = Platz unter allen ${fmt(R.divisions.reduce((s,x)=>s+(x.uc||0),0))} Rush-Spielern: alle in höheren Divisionen liegen vorne, die genaue Stelle innerhalb der eigenen Division gibt Kickbase nicht heraus, darum der Bereich. „Letzte Woche“ und „Ø pro Woche“ sind exakt aus den gesicherten Kickbase-Ständen (seit ${since||'jetzt'}): Eine Woche endet Montagnacht, gezählt wird der Stand bis Dienstag 6 Uhr. Ø zählt nur abgeschlossene Wochen (${weeks.length?weeks.length+' bisher, zuletzt '+esc(last.name):'noch keine'}).</p>`;
+  return `<div class="tablewrap"><table><thead><tr><th>MANAGER</th><th style="text-align:center" title="Veränderung des Platzes unter den Legenden seit Wochenbeginn (Dienstag 6 Uhr)">± PLATZ</th><th class="right">RUSH-PUNKTE</th><th>DIVISION</th><th style="text-align:center" title="Auf- oder Abstieg in eine andere Rush-Division">± DIV.</th><th class="right">BIS AUFSTIEG</th><th class="right">GESAMTPLATZ</th><th class="right" title="${last?esc(last.name):''}">LETZTE WOCHE</th><th class="right">Ø PRO WOCHE</th></tr></thead><tbody>${body}</tbody></table></div><p class="muted tiny">Rush-Punkte und Division kommen direkt von Kickbase (Social Hub, gefolgte Manager). „Bis Aufstieg“ = fehlende Punkte bis zur nächsten Division. „Gesamtplatz“ = Platz unter allen ${fmt(R.divisions.reduce((s,x)=>s+(x.uc||0),0))} Rush-Spielern: alle in höheren Divisionen liegen vorne, die genaue Stelle innerhalb der eigenen Division gibt Kickbase nicht heraus, darum der Bereich. „Letzte Woche“ und „Ø pro Woche“ sind exakt aus den gesicherten Kickbase-Ständen (seit ${since||'jetzt'}): Eine Woche endet Montagnacht, gezählt wird der Stand bis Dienstag 6 Uhr. Ø zählt nur abgeschlossene Wochen (${weeks.length?weeks.length+' bisher, zuletzt '+esc(last.name):'noch keine'}).</p>`;
  }
 
  // Punkteentwicklung wie unter "Tabelle & Spieltage", aber je Challenge (aelteste links). Nicht gespielt = 0 Punkte.
@@ -109,7 +115,7 @@
    const open=i===bs.length,a=runAt(bs[i-1]),b=open?runs.at(-1):runAt(bs[i]);
    if(a==null||b==null||b<a)continue;
    const rush={};
-   for(const id of Object.keys(T)){const x=val(id,a),y=open?(data.rush?.totals?.[id]??val(id,b)):val(id,b);if(x!=null&&y!=null)rush[id]={skp:y-x};}
+   for(const id of Object.keys(T)){const x=val(id,a),y=open?(data.rush?.totals?.[id]??val(id,b)):val(id,b);if(x!=null&&y!=null)rush[id]={skp:y-x,from:x};}
    weeks.push({name:open?'Diese Woche (laufend)':`Woche bis ${date(new Date(bs[i]-24*H).toISOString())}`,end:new Date(open?now:bs[i]).toISOString(),rush,open});
   }
   return weeks;
