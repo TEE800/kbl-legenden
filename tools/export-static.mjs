@@ -187,6 +187,20 @@ try {
     fs.writeFileSync(failFile, JSON.stringify(fehlt));
     console.log(`Koepfe: ${neu} neu, ${ohne} ohne erkennbaren Kopf`);
   } catch (e) { failed.push(`Koepfe (${e.message})`); }
+  // Manager-Profilbilder fuer das Zeitraffer-Video (MVP-Tipp): das Kickbase-CDN erlaubt kein CORS, darum als eigene Dateien
+  // unter site/faces/ (Dateiname = Name beim CDN, ein neues Profilbild bekommt dort einen neuen Namen).
+  try {
+    const FACES = path.join(SITE, 'faces'); fs.mkdirSync(FACES, { recursive: true });
+    const us = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8')).us || [];
+    let neu = 0;
+    for (const u of us) {
+      const m = /^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(u.uim || ''));
+      const f = m && path.join(FACES, m[2].replace(/\.(jpe|jpeg)$/i, '.jpg'));   // .jpe kennt nicht jeder Server als Bild
+      if (!m || fs.existsSync(f)) continue;
+      try { const r = await fetch('https://kickbase.b-cdn.net/' + m[1], { signal: AbortSignal.timeout(15000) }); if (r.ok) { fs.writeFileSync(f, Buffer.from(await r.arrayBuffer())); neu++; } } catch {}
+    }
+    console.log(`Manager-Bilder: ${neu} neu`);
+  } catch (e) { failed.push(`Manager-Bilder (${e.message})`); }
   // Challenges: im Voll-Lauf laedt der Server sie gleich beim Start nach (Konto aus KBL_CHALLENGE_*, siehe server.js); darauf warten.
   for (let i = 0; MODE === 'full' && i < 120; i++) { const c = await call('/api/challenges'); if (c.status !== 200 || !c.body.running) break; await sleep(5000); }
   await save('/api/challenges');

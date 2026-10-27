@@ -385,7 +385,7 @@
  }
  // Zeitraffer als Video herunterladen (Kevin-Wunsch): im Browser auf einer Leinwand (1080×1920, Hochformat fürs Handy)
  // nachgezeichnet und mit MediaRecorder aufgenommen, MP4 wenn der Browser es kann, sonst WebM. Läuft in Echtzeit.
- // Bilder von fremden Servern (Kickbase-CDN) nur, wenn sie CORS erlauben, sonst Anfangsbuchstabe bzw. gezeichnetes Gesicht.
+ // Bilder von fremden Servern (Kickbase-CDN) nur, wenn sie CORS erlauben; Manager-Bilder darum über den eigenen Server bzw. site/faces/.
  async function zrVideo(o,onStat){
   const {d,frames,rowsList,pos,pool,byId}=o,n=frames.length,W=1080,H=1920;
   if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
@@ -393,7 +393,9 @@
   if(!mime)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
   onStat('Bilder werden geladen …');
   const load=src=>!src?Promise.resolve(null):new Promise(r=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;setTimeout(()=>r(null),8000);});
-  const faceSrc=m=>{const h=(window.kblMgrFace||(()=>''))(m.name,'',m.id),x=/src="([^"]+)"/.exec(h);return x?x[1].replace(/&amp;/g,'&'):'';};
+  // Manager-Bilder: das Kickbase-CDN erlaubt kein CORS, darum online aus site/faces/ (Export), am PC über /api/mgr-img.
+  const faceSrc=m=>{const h=(window.kblMgrFace||(()=>''))(m.name,'',m.id),x=/src="([^"]+)"/.exec(h),u=x?x[1].replace(/&amp;/g,'&'):'',k=/kickbase\.b-cdn\.net\/(user\/([\w.-]+))$/.exec(u);
+   return !k?u:window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
   const heads=new Map(),crests=new Map(),faces=new Map();
   await Promise.all(rowsList.map(async r=>{heads.set(r.id,await load(headSrc(r.id)));crests.set(r.id,await load(kbImg(byId.get(r.id)?.teamImg)));
    for(const x of r.rs)if(!faces.has(x.m.id))faces.set(x.m.id,await load(faceSrc(x.m)));}));
