@@ -2509,7 +2509,13 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
       const hist=probe?null:await histOf(inc.recipientId);
       const gotAt=hist?Math.min(...hist.filter(t=>String(t.pi)===inc.playerId&&Number(t.tty)===1).map(t=>Date.parse(t.dt)).filter(Number.isFinite)):Infinity;
       const atDay=new Set(squadAtDay(inc.recipientId));
-      const laterBuy=mate=>Number.isFinite(gotAt)&&!atDay.has(String(mate))&&(()=>{const buys=hist.filter(t=>String(t.pi)===String(mate)&&Number(t.tty)===1).map(t=>Date.parse(t.dt));return buys.length>0&&buys.every(b=>b>gotAt);})();
+      // Nicht im Kader beim Erhalt: letzter Transfer davor war ein Verkauf, oder der erste ueberhaupt ist ein spaeterer Kauf
+      // (Kevin-Meldung Schwolow ST 2: im August gekauft und verkauft, erst im Oktober wieder gekauft).
+      const laterBuy=mate=>Number.isFinite(gotAt)&&!atDay.has(String(mate))&&(()=>{
+        const ev=hist.filter(t=>String(t.pi)===String(mate)&&[1,2].includes(Number(t.tty))).map(t=>({at:Date.parse(t.dt),tty:Number(t.tty)})).filter(e=>Number.isFinite(e.at)).sort((a,b)=>a.at-b.at);
+        if(!ev.length)return false;
+        const before=ev.filter(e=>e.at<=gotAt).at(-1);
+        return before?before.tty===2:ev[0].tty===1;})();
       for(const mate of matesOf(inc.recipientId,inc.playerId)){
         if(laterBuy(mate))continue;
         const key=`TL:${inc.recipientId}:${mate}`;if(seenTl.has(key))continue;seenTl.add(key);
