@@ -2548,18 +2548,28 @@ app.get('/api/rule-accounting/:day', async (req, res) => {
           else if(t.check?.state!=='done'&&Date.now()>saleDeadline)t.overdue=true;
           if(!sale)continue;
           const buyerName=sale.othnm?String(sale.othnm):null,buyer=buyerName?managers.find(m=>String(m.n)===buyerName):null;
-          // Teamlimit: Kaeufer bzw. Markt aus demselben Verkauf (Kevin-Meldung Vandevoordt ST 7: verkauft, aber „automatisch: nicht erkannt“).
-          if(t.rule==='TL'&&t.check?.state==='done'&&!t.to?.length){
-            if(buyerName){t.to=[{managerId:buyer?String(buyer.i):null,manager:buyerName,playerName:sale.pn||playerNames.get(String(pid))||null}];t.check={state:'done',note:`laut Transfer-Verlauf an ${buyerName}`};}
-            else t.check={state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};
+          // Pruefung am Verkauf selbst, nicht am heutigen Kader (Kevin-Meldungen Vandevoordt ST 7, Brackelmann ST 6, Nicolas und
+          // Musiala ST 4): Spieler koennen spaeter weiterverkauft oder zurueckgekauft sein. Nur ein Verkauf bis 14 Tage nach dem
+          // Spieltag zaehlt; von Hand gesetzte Haken (state manual) bleiben unberuehrt.
+          if(Date.parse(sale.dt)>win.end+14*864e5||t.check?.state==='manual')continue;
+          const viaLog=to=>`laut Transfer-Verlauf an ${to||'den Markt'}`;
+          if(t.rule==='TL'||t.rule==='AH'){
+            t.check={state:'done',note:buyerName?viaLog(buyerName):'laut Transfer-Verlauf an den Markt verkauft'};
+            if(buyerName&&String(buyer?.i)!==String(t.managerId))t.to=[{managerId:buyer?String(buyer.i):null,manager:buyerName,playerName:sale.pn||playerNames.get(String(pid))||null}];
+            else delete t.to;
           }
-          // UM: Empfaenger steht fest, gepreuft wird am Verkauf selbst, nicht am heutigen Kader (Kevin-Meldung Brackelmann ST 6:
-          // ging an Cello, ist dort aber inzwischen weiterverkauft, darum stand „bei keinem Manager“).
-          if(t.rule==='UM'&&t.check?.state!=='done'){
+          else if(t.rule==='BD'){
+            t.check=buyerName?{state:'unknown',note:`${viaLog(buyerName)} statt an den Markt`}:{state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};
+          }
+          else if(t.rule==='UM'&&t.check?.state!=='done'){
             const want=(t.to||[])[0]?.manager||null;
-            if(want&&buyerName===want)t.check={state:'done',note:`laut Transfer-Verlauf an ${want}`};
+            if(want&&buyerName===want)t.check={state:'done',note:viaLog(want)};
             else if(!want&&!buyerName)t.check={state:'done',note:'laut Transfer-Verlauf an den Markt verkauft'};
-            else t.check={state:'unknown',note:`laut Transfer-Verlauf an ${buyerName||'den Markt'}${want?` statt an ${want}`:' statt an den Markt'}`};
+            else t.check={state:'unknown',note:`${viaLog(buyerName)}${want?` statt an ${want}`:' statt an den Markt'}`};
+          }
+          else if((t.rule==='RK'||t.rule==='BN')&&t.check?.state!=='done'){
+            t.check=buyerName&&String(buyer?.i)!==String(t.managerId)?{state:'done',note:viaLog(buyerName)}:{state:'unknown',note:`${viaLog(buyerName)} statt an einen Mitmanager`};
+            if(buyerName&&buyer)t.to=[{managerId:String(buyer.i),manager:buyerName,playerName:playerNames.get(String(pid))||null}];
           }
         }
       }
