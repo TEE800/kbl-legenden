@@ -1,622 +1,622 @@
 {
-  "fetchedAt": "2026-10-20T17:20:56.306Z",
+  "fetchedAt": "2026-10-27T08:24:34.386Z",
   "lcud": "2026-08-10T14:40:33Z",
   "types": {
-    "45": "Cross",
-    "46": "Forward zone pass",
-    "47": "Accurate Keeper-Sweeper (GK)",
-    "48": "Accurate Throw (GK)",
-    "49": "Accurate long Ball",
-    "50": "Deadly Pass",
-    "52": "Aerial lost",
-    "79": "Aerial won",
-    "80": "Rebound Assist",
-    "81": "Rebound Assist",
-    "82": "Own Goal forced",
-    "83": "Deflected Assist",
-    "84": "Woodwork Assist",
-    "86": "Bonus: long range",
-    "87": "Penalty scored",
-    "88": "Penalty missed",
-    "89": "Penalty missed",
-    "90": "Penalty missed",
-    "91": "Post",
-    "92": "Left Post",
-    "93": "Right Post",
-    "94": "Back Pass Foul (GK)",
-    "96": "Big Chance Created",
-    "98": "Big Chance Created",
-    "99": "Big Chance Created",
-    "100": "Big Chance Created",
-    "101": "Big Chance Created",
-    "102": "Big Chance Created",
-    "103": "Big Chance missed",
-    "104": "Cross blocked",
-    "106": "Challenge lost",
-    "107": "Cleared on the Line",
-    "108": "Cross not claimed (GK)",
-    "109": "Dangerous play",
-    "110": "Dive Catch (GK)",
-    "111": "Dive Save (GK)",
-    "112": "Cross blocked and Possession",
-    "113": "Cleared",
-    "114": "Mistake before Goal",
-    "115": "Mistake before Shot",
-    "116": "Incorrect Throw-In",
+    "45": "Flanke",
+    "46": "Pass gegn. Hälfte",
+    "47": "Erfolgreiches Rauslaufen (TW)",
+    "48": "Erfolgreicher Abwurf (TW)",
+    "49": "Präziser langer Pass",
+    "50": "Pass des Todes",
+    "52": "Luftzweikampf verloren",
+    "79": "Luftzweikampf gewonnen",
+    "80": "Abgeprallte Torvorlage",
+    "81": "Geblockte Torvorlage",
+    "82": "Eigentor erzwungen",
+    "83": "Abgefälschte Torvorlage",
+    "84": "Aluminium-Assist",
+    "86": "Fernschusstor (Bonus)",
+    "87": "Elfmeter verwandelt",
+    "88": "Elfmeter verschossen",
+    "89": "Elfmeter verschossen",
+    "90": "Elfmeter verschossen",
+    "91": "Lattenkracher",
+    "92": "Pfostentreffer (links)",
+    "93": "Pfostentreffer (rechts)",
+    "94": "Rückpass Foul (TW)",
+    "96": "Großchance kreiert",
+    "98": "Großchance kreiert",
+    "99": "Großchance kreiert",
+    "100": "Großchance kreiert",
+    "101": "Großchance kreiert",
+    "102": "Großchance kreiert",
+    "103": "Großchance vergeben",
+    "104": "Flanke geblockt",
+    "106": "Ausgespielt worden",
+    "107": "Auf der Linie geklärt",
+    "108": "Flanke verpasst (TW)",
+    "109": "Gefährliches Spiel",
+    "110": "Ball gefangen (TW)",
+    "111": "Parade (TW)",
+    "112": "Ballbesitz nach geblockter Flanke",
+    "113": "Geklärt",
+    "114": "Fehler vor Gegentor",
+    "115": "Fehler vor Torschuss",
+    "116": "Falscher Einwurf",
     "117": "Foul",
-    "118": "Fouled last third",
-    "120": "Intentional Assist",
-    "121": "Cross Intercepted (GK)",
-    "122": "One-on-One",
-    "123": "Hand Ball",
-    "124": "Interception",
-    "125": "Ball intercepted",
-    "126": "Interception in Box",
-    "127": "Bonus: Last Man Tackle",
-    "130": "Overrun",
-    "131": "own goal",
-    "132": "Penalty conceded",
-    "133": "Penalty saved (GK)",
-    "134": "Penalty won",
-    "135": "Punched Ball (GK)",
-    "136": "Red Card",
-    "137": "Shot saved (GK)",
-    "138": "Distance Shot saved (GK)",
-    "139": "2nd Yellow",
-    "141": "6 Sec violation (GK)",
-    "142": "Standing saved (GK)",
-    "143": "Pass final Third",
-    "144": "Shot Assist",
-    "147": "Offside",
-    "148": "Offside",
-    "149": "Shot on goal",
-    "152": "Contest won",
-    "153": "Corner won",
-    "154": "Tackle won",
-    "155": "Yellow Card",
-    "156": "Starting 11",
-    "157": "Possession lost",
-    "159": "Team Goal",
-    "160": "Goal conceded",
-    "165": "Game Won",
-    "166": "Game Lost",
-    "167": "Played Minutes Bonus",
-    "168": "Team Goal",
-    "169": "Goal conceded",
-    "170": "Team Goal",
-    "171": "Goal conceded",
-    "173": "Goal (GK)",
-    "174": "Goal (Midfielder)",
-    "175": "Goal (Defender)",
-    "176": "Goal (Striker)",
-    "177": "Assist (GK)",
-    "178": "Assist (Defender)",
-    "179": "Assist (Midfielder)",
-    "180": "Assist (Striker)",
-    "181": "Goal Set up (GK)",
-    "182": "Goal Set up (Defender)",
-    "183": "Goal Set up (Midfielder)",
-    "184": "Goal Set up (Striker)",
-    "185": "Goal (Substitute)",
-    "186": "Assist (Substitute)",
-    "187": "Goal Set up (Substitute)",
-    "188": "Clean Sheet (GK)",
-    "189": "Clean Sheet (Defender)",
-    "190": "Clean Sheet (Midfielder)",
-    "191": "Clean Sheet (Striker)",
-    "194": "Big Chance saved (GK)",
-    "195": "Ball covered unchallenged (GK)",
-    "196": "Ball covered challenged (GK)",
-    "197": "Shot on Target (narrow miss)",
-    "199": "Shot on Goal (far away)",
-    "200": "Shot on Target (blocked)",
-    "203": "Penalty saved (penalty shoot-out)",
-    "204": "Penalty missed (penalty shoot-out)",
-    "205": "Penalty scored (penalty shoot-out)",
-    "206": "Shot blocked",
-    "207": "Shot blocked",
-    "208": "Shot blocked",
-    "209": "Penalty saved",
-    "1742": "Accurate Keeper-Sweeper (GK)",
-    "1743": "Accurate Throw (GK)",
-    "1744": "Accurate long Ball",
-    "1747": "Aerial lost",
-    "1748": "Aerial won",
-    "1749": "Rebound Assist",
-    "1750": "Rebound Assist",
-    "1751": "Own Goal forced",
+    "118": "Gefoult im letzten Drittel",
+    "120": "Absichtliche Vorlage (Bonus)",
+    "121": "Flanke abgefangen (TW)",
+    "122": "Eins-gegen-Eins",
+    "123": "Handspiel",
+    "124": "Pass gestört",
+    "125": "Ballgewinn",
+    "126": "Gegner gestört",
+    "127": "Zweikampf als letzter Mann (Bonus)",
+    "130": "Ball zu weit vorgelegt",
+    "131": "Eigentor",
+    "132": "Elfmeter verschuldet",
+    "133": "Elfmeter gehalten (TW)",
+    "134": "Elfmeter rausgeholt",
+    "135": "Faustabwehr (TW)",
+    "136": "Rote Karte",
+    "137": "Schuss gehalten (TW)",
+    "138": "Fernschuss gehalten (TW)",
+    "139": "Gelb-Rote-Karte",
+    "141": "Verstoß gegen 6-Sekunden-Regel (TW)",
+    "142": "Ball im Stand abgewehrt (TW)",
+    "143": "Pass vorderes Drittel",
+    "144": "Torschussvorlage",
+    "147": "Abseits",
+    "148": "Abseits",
+    "149": "Torschuss (aufs Tor)",
+    "152": "Gegner ausgedribbelt",
+    "153": "Ecke rausgeholt",
+    "154": "Gewonnener Zweikampf",
+    "155": "Gelbe Karte",
+    "156": "Startelf",
+    "157": "Ballverlust",
+    "159": "Teamtor",
+    "160": "Tor kassiert",
+    "165": "Spiel gewonnen",
+    "166": "Spiel verloren",
+    "167": "Minutenbonus",
+    "168": "Teamtor",
+    "169": "Tor kassiert",
+    "170": "Teamtor",
+    "171": "Tor kassiert",
+    "173": "Tor (TW)",
+    "174": "Tor (MF)",
+    "175": "Tor (ABW)",
+    "176": "Tor (ANG)",
+    "177": "Torvorlage (TW)",
+    "178": "Torvorlage (ABW)",
+    "179": "Torvorlage (MF)",
+    "180": "Torvorlage (ANG)",
+    "181": "Tor eingeleitet (TW)",
+    "182": "Tor eingeleitet (ABW)",
+    "183": "Tor eingeleitet (MF)",
+    "184": "Tor eingeleitet (ANG)",
+    "185": "Tor (Einwechselspieler)",
+    "186": "Torvorlage (Einwechselspieler)",
+    "187": "Tor eingeleitet (Einwechselspieler)",
+    "188": "Zu Null gespielt (TW)",
+    "189": "Zu Null gespielt (ABW)",
+    "190": "Zu Null gespielt (MF)",
+    "191": "Zu Null gespielt (ANG)",
+    "194": "Großchance vereitelt (TW)",
+    "195": "Ball weggeschnappt unchallenged (TW)",
+    "196": "Ball weggeschnappt challenged (TW)",
+    "197": "Torschuss (knapp vorbei)",
+    "199": "Torschuss (weit vorbei)",
+    "200": "Torschuss (geblockt)",
+    "203": "Elfmeter gehalten (Elfmeterschießen)",
+    "204": "Elfmeter verschossen (Elfmeterschießen)",
+    "205": "Elfmeter verwandelt (Elfmeterschießen)",
+    "206": "Schuss geblockt",
+    "207": "Schuss geblockt",
+    "208": "Schuss geblockt",
+    "209": "Elfmeter gehalten",
+    "1742": "Erfolgreiches Rauslaufen (TW)",
+    "1743": "Erfolgreicher Abwurf (TW)",
+    "1744": "Präziser langer Pass",
+    "1747": "Luftzweikampf verloren",
+    "1748": "Luftzweikampf gewonnen",
+    "1749": "Abgeprallte Torvorlage",
+    "1750": "Geblockte Torvorlage",
+    "1751": "Eigentor erzwungen",
     "1752": "Assist",
-    "1753": "Woodwork Assist",
-    "1755": "Penalty scored",
-    "1756": "Penalty missed",
-    "1759": "Post",
-    "1760": "Left Post",
-    "1761": "Right Post",
-    "1762": "Back Pass Foul (GK)",
-    "1772": "Challenge lost",
-    "1773": "Cleared on the Line",
-    "1775": "Dangerous play",
-    "1776": "Dive Catch (GK)",
-    "1777": "Dive Save (GK)",
-    "1779": "Cleared",
-    "1780": "Mistake before Goal",
-    "1781": "Mistake before Shot",
-    "1782": "Incorrect Play-In",
+    "1753": "Aluminium-Assist",
+    "1755": "Penalty verwandelt",
+    "1756": "Penalty verschossen",
+    "1759": "Lattenkracher",
+    "1760": "Pfostentreffer (links)",
+    "1761": "Pfostentreffer (rechts)",
+    "1762": "Rückpass Foul (TW)",
+    "1772": "Ausgedribbelt worden",
+    "1773": "Auf der Linie geklärt",
+    "1775": "Gefährliches Spiel",
+    "1776": "Ball gefangen (TW)",
+    "1777": "Parade (TW)",
+    "1779": "Geklärt",
+    "1780": "Fehler vor Gegentor",
+    "1781": "Fehler vor Torschuss",
+    "1782": "Falsches Einspielen",
     "1783": "Foul",
-    "1784": "Fouled last third",
-    "1788": "One-on-One",
-    "1789": "Hand Ball",
-    "1790": "Interception",
-    "1791": "Ball intercepted",
-    "1792": "Interception in Box",
-    "1794": "Shot blocked",
-    "1796": "own goal",
-    "1797": "Penalty conceded",
-    "1798": "Penalty saved (GK)",
-    "1799": "Penalty won",
-    "1800": "Punched Ball (GK)",
-    "1801": "Red Card",
-    "1802": "Shot saved (GK)",
-    "1803": "Shot saved (GK)",
-    "1805": "6 Sec violation (GK)",
-    "1806": "Standing saved (GK)",
-    "1807": "Pass final Third",
-    "1808": "Shot Assist",
-    "1810": "Offside",
-    "1811": "Offside",
-    "1812": "Shot on goal",
-    "1815": "Contest won",
-    "1816": "Corner won",
-    "1817": "Tackle won",
-    "1818": "Time penalty",
-    "1820": "Possession lost",
-    "1822": "Team Goal",
-    "1823": "Goal conceded",
+    "1784": "Gefoult im letzten Drittel",
+    "1788": "Eins-gegen-Eins",
+    "1789": "Handspiel",
+    "1790": "Pass gestört",
+    "1791": "Ballgewinn",
+    "1792": "Gegner gestört",
+    "1794": "Schuss geblockt",
+    "1796": "Eigentor",
+    "1797": "Penalty verschuldet",
+    "1798": "Penalty gehalten",
+    "1799": "Penalty rausgeholt",
+    "1800": "Faustabwehr (TW)",
+    "1801": "Rote Karte",
+    "1802": "Schuss gehalten (TW)",
+    "1803": "Schuss gehalten (TW)",
+    "1805": "Verstoß gegen 6-Sekunden-Regel (TW)",
+    "1806": "Ball im Stand abgewehrt (TW)",
+    "1807": "Pass vorderes Drittel",
+    "1808": "Torschussvorlage",
+    "1810": "Abseits",
+    "1811": "Abseits",
+    "1812": "Torschuss (aufs Tor)",
+    "1815": "Gegner ausgedribbelt",
+    "1816": "Ecke rausgeholt",
+    "1817": "Gewonnener Zweikampf",
+    "1818": "Zeitstrafe",
+    "1820": "Ballverlust",
+    "1822": "Teamtor",
+    "1823": "Tor kassiert",
     "1824": "Assist",
-    "1828": "Game Won",
-    "1829": "Game Lost",
-    "1830": "Played Minutes Bonus",
-    "1831": "Team Goal",
-    "1832": "Goal conceded",
-    "1833": "Team Goal",
-    "1834": "Goal conceded",
-    "1835": "Goal (GK)",
-    "1838": "Goal (Field player)",
-    "1850": "Clean Sheet (GK)",
-    "1851": "Clean Sheet (FP)",
-    "1856": "Ball covered challenged (GK)",
-    "1857": "Shot on Target (narrow miss)",
-    "1858": "Shot on Goal (far away)",
-    "1859": "Shot on Target (blocked)",
-    "1862": "Penalty saved (penalty shoot-out)",
-    "1863": "Penalty missed (penalty shoot-out)",
-    "1864": "Penalty scored (penalty shoot-out)",
-    "1868": "Penalty saved",
+    "1828": "Spiel gewonnen",
+    "1829": "Spiel verloren",
+    "1830": "Minutenbonus",
+    "1831": "Teamtor",
+    "1832": "Tor kassiert",
+    "1833": "Teamtor",
+    "1834": "Tor kassiert",
+    "1835": "Tor (TW)",
+    "1838": "Tor (Feldspieler)",
+    "1850": "Zu Null gespielt (TW)",
+    "1851": "Zu Null gespielt (FS)",
+    "1856": "Ball weggeschnappt challenged (TW)",
+    "1857": "Torschuss (knapp vorbei)",
+    "1858": "Torschuss (weit vorbei)",
+    "1859": "Torschuss (geblockt)",
+    "1862": "Penalty gehalten (Penalty shoot-out)",
+    "1863": "Penalty verschossen (Penalty shoot-out)",
+    "1864": "Penalty verwandelt (Penalty shoot-out)",
+    "1868": "Penalty gehalten",
     "2250": "Pass",
-    "2638": "Goal behind \"The Line\" (GK)",
-    "2639": "Goal behind \"The Line\" (field player)",
-    "2640": "Goal \"PlusOne\" (GK)",
-    "2641": "Goal \"PlusOne\" (field player)",
-    "2642": "Own goal \"PlusOne\"",
+    "2638": "Tor hinter \"The Line\" (TW)",
+    "2639": "Tor hinter \"The Line\" (FS)",
+    "2640": "Tor \"PlusOne\" (TW)",
+    "2641": "Tor \"PlusOne\" (FS)",
+    "2642": "Eigentor \"PlusOne\"",
     "2643": "Assist \"PlusOne\"",
-    "2644": "Penalty scored \"PlusOne\"",
-    "2645": "Penalty missed \"PlusOne\"",
-    "2646": "Penalty conceded \"PlusOne\"",
-    "2647": "Penalty saved \"PlusOne\"",
-    "2648": "Goal \"3 Play\"",
-    "2650": "Own goal \"3 Play\"",
+    "2644": "Penalty verwandelt \"PlusOne\"",
+    "2645": "Penalty verschossen \"PlusOne\"",
+    "2646": "Penalty verschuldet \"PlusOne\"",
+    "2647": "Penalty gehalten \"PlusOne\"",
+    "2648": "Tor \"3 Play\"",
+    "2650": "Eigentor \"3 Play\"",
     "2651": "Assist \"3 Play\"",
-    "2652": "Penalty scored \"3 Play\"",
-    "2653": "Penalty missed \"3 Play\"",
-    "2654": "Penalty conceded \"3 Play\"",
-    "2655": "Penalty saved \"3 Play\"",
-    "2783": "Red card \"Fairplay\"",
-    "2784": "Goal \"1-ON-1\"",
-    "2785": "Handball \"1-ON-1\"",
-    "2787": "Goal conceded",
-    "2788": "Team goal",
-    "2789": "Shot on target",
+    "2652": "Penalty verwandelt \"3 Play\"",
+    "2653": "Penalty verschossen \"3 Play\"",
+    "2654": "Penalty verschuldet \"3 Play\"",
+    "2655": "Penalty gehalten \"3 Play\"",
+    "2783": "rote Karte \"Faiplay\"",
+    "2784": "Tor \"1-ON-1\"",
+    "2785": "Handspiel \"1-ON-1\"",
+    "2787": "Tor kassiert",
+    "2788": "Teamtor",
+    "2789": "Torschuss (aufs Tor)",
     "2790": "Starting 6",
-    "2791": "Shot blocked",
-    "2792": "Shot Assist",
-    "2793": "Shot on goal",
-    "2794": "Shot on Target (narrow miss)",
-    "2795": "Shot on Goal (far away)",
-    "2796": "Shot on Target (blocked)",
-    "2797": "Cleared on the Line",
-    "2798": "Shot blocked",
-    "2799": "Shot Assist",
-    "2800": "Shot on goal",
-    "2801": "Shot on Target (narrow miss)",
-    "2802": "Shot on Goal (far away)",
-    "2803": "Shot on Target (blocked)",
-    "2804": "Shot blocked \"1-ON-1\"",
-    "2805": "Shot on goal \"1-ON-1\"",
-    "2806": "Shot on Target (narrow miss) \"1-ON-1\"",
-    "2807": "Shot on Goal (far away) \"1-ON-1\"",
-    "2808": "Shot on Target (blocked) \"1-ON-1\"",
-    "2809": "Post \"Plus One\"",
-    "2810": "Left Post \"Plus One\"",
-    "2811": "Right Post \"Plus One\"",
-    "2812": "Post \"3 Play\"",
-    "2813": "Left Post \"3 Play\"",
-    "2814": "Right Post \"3 Play\"",
-    "2815": "Post \"1-ON-1\"",
-    "2816": "Left Post \"1-ON-1\"",
-    "2817": "Right Post \"1-ON-1\"",
-    "2818": "Own Goal forced \"PlusOne\"",
-    "2819": "Woodwork Assist \"PlusOne\"",
-    "2820": "Mistake before Goal \"PlusOne\"",
-    "2821": "Mistake before Shot \"PlusOne\"",
-    "2822": "Own Goal forced \"3 Play\"",
-    "2823": "Woodwork Assist \"3 Play\"",
-    "2824": "Mistake before Goal \"3 Play\"",
-    "2825": "Mistake before Shot \"3 Play\"",
-    "3336": "Cross",
-    "3337": "Forward zone pass",
-    "3338": "Accurate Keeper-Sweeper (GK)",
-    "3339": "Accurate Throw (GK)",
-    "3340": "Accurate long Ball",
-    "3341": "Deadly Pass",
-    "3343": "Aerial lost",
-    "3344": "Aerial won",
-    "3345": "Rebound Assist",
-    "3346": "Rebound Assist",
-    "3347": "Own Goal forced",
-    "3348": "Deflected Assist",
-    "3349": "Woodwork Assist",
-    "3350": "Bonus: long range",
-    "3351": "Penalty scored",
-    "3352": "Penalty missed",
-    "3353": "Penalty missed",
-    "3354": "Penalty missed",
-    "3355": "Post",
-    "3356": "Left Post",
-    "3357": "Right Post",
-    "3358": "Back Pass Foul (GK)",
-    "3360": "Big Chance Created",
-    "3361": "Big Chance Created",
-    "3362": "Big Chance Created",
-    "3363": "Big Chance Created",
-    "3364": "Big Chance Created",
-    "3365": "Big Chance Created",
-    "3366": "Big Chance missed",
-    "3367": "Cross blocked",
-    "3368": "Challenge lost",
-    "3369": "Cleared on the Line",
-    "3370": "Cross not claimed (GK)",
-    "3371": "Dangerous play",
-    "3372": "Dive Catch (GK)",
-    "3373": "Dive Save (GK)",
-    "3374": "Cross blocked and Possession",
-    "3376": "Mistake before Goal",
-    "3377": "Mistake before Shot",
-    "3378": "Incorrect Throw-In",
+    "2791": "Schuss geblockt \"Plus One\"",
+    "2792": "Torschussvorlage \"Plus One\"",
+    "2793": "Torschuss (aufs Tor) \"Plus One\"",
+    "2794": "Torschuss (knapp vorbei) \"Plus One\"",
+    "2795": "Torschuss (weit vorbei) \"Plus One\"",
+    "2796": "Torschuss (geblockt) \"Plus One\"",
+    "2797": "Auf der Linie geklärt \"3 Play\"",
+    "2798": "Schuss geblockt \"3 Play\"",
+    "2799": "Torschussvorlage \"3 Play\"",
+    "2800": "Torschuss (aufs Tor) \"3 Play\"",
+    "2801": "Torschuss (knapp vorbei) \"3 Play\"",
+    "2802": "Torschuss (weit vorbei) \"3 Play\"",
+    "2803": "Torschuss (geblockt) \"3 Play\"",
+    "2804": "Schuss geblockt \"1-ON-1\"",
+    "2805": "Torschuss (aufs Tor) \"1-ON-1\"",
+    "2806": "Torschuss (knapp vorbei) \"1-ON-1\"",
+    "2807": "Torschuss (weit vorbei) \"1-ON-1\"",
+    "2808": "Torschuss (geblockt) \"1-ON-1\"",
+    "2809": "Lattenkracher \"Plus One\"",
+    "2810": "Pfostentreffer (links) \"Plus One\"",
+    "2811": "Pfostentreffer (rechts) \"Plus One\"",
+    "2812": "Lattenkracher \"3 Play\"",
+    "2813": "Pfostentreffer (links) \"3 Play\"",
+    "2814": "Pfostentreffer (rechts) \"3 Play\"",
+    "2815": "Lattenkracher \"1-ON-1\"",
+    "2816": "Pfostentreffer (links) \"1-ON-1\"",
+    "2817": "Pfostentreffer (rechts) \"1-ON-1\"",
+    "2818": "Eigentor erzwungen \"PlusOne\"",
+    "2819": "Aluminium-Assist \"PlusOne\"",
+    "2820": "Fehler vor Gegentor \"PlusOne\"",
+    "2821": "Fehler vor Torschuss \"PlusOne\"",
+    "2822": "Eigentor erzwungen \"3 Play\"",
+    "2823": "Aluminium-Assist \"3 Play\"",
+    "2824": "Fehler vor Gegentor \"3 Play\"",
+    "2825": "Fehler vor Torschuss \"3 Play\"",
+    "3336": "Flanke",
+    "3337": "Pass gegn. Hälfte",
+    "3338": "Erfolgreiches Rauslaufen",
+    "3339": "Erfolgreicher Abwurf",
+    "3340": "Präziser langer Pass",
+    "3341": "Pass des Todes",
+    "3343": "Luftzweikampf verloren",
+    "3344": "Luftzweikampf gewonnen",
+    "3345": "Abgeprallte Torvorlage",
+    "3346": "Geblockte Torvorlage",
+    "3347": "Eigentor erzwungen",
+    "3348": "Abgefälschte Torvorlage",
+    "3349": "Aluminium-Assist",
+    "3350": "Fernschusstor (Bonus)",
+    "3351": "Elfmeter verwandelt",
+    "3352": "Elfmeter verschossen",
+    "3353": "Elfmeter verschossen",
+    "3354": "Elfmeter verschossen",
+    "3355": "Lattenkracher",
+    "3356": "Pfostentreffer (links)",
+    "3357": "Pfostentreffer (rechts)",
+    "3358": "Rückpass Foul (TW)",
+    "3360": "Großchance kreiert",
+    "3361": "Großchance kreiert",
+    "3362": "Großchance kreiert",
+    "3363": "Großchance kreiert",
+    "3364": "Großchance kreiert",
+    "3365": "Großchance kreiert",
+    "3366": "Großchance vergeben",
+    "3367": "Flanke geblockt",
+    "3368": "Ausgespielt worden",
+    "3369": "Auf der Linie geklärt",
+    "3370": "Flanke verpasst (TW)",
+    "3371": "Gefährliches Spiel",
+    "3372": "Ball gefangen (TW)",
+    "3373": "Parade (TW)",
+    "3374": "Ballbesitz nach geblockter Flanke",
+    "3376": "Fehler vor Gegentor",
+    "3377": "Fehler vor Torschuss",
+    "3378": "Falscher Einwurf",
     "3379": "Foul",
-    "3380": "Fouled last third",
-    "3382": "Intentional Assist",
-    "3383": "Cross Intercepted (GK)",
-    "3384": "One-on-One",
-    "3385": "Hand Ball",
-    "3386": "Interception (outside the box)",
-    "3387": "Ball intercepted",
-    "3388": "Interception (in the box)",
-    "3389": "Bonus: Last Man Tackle",
-    "3391": "Overrun",
-    "3392": "own goal",
-    "3393": "Penalty conceded",
-    "3394": "Penalty saved (GK)",
-    "3395": "Penalty won",
-    "3396": "Punched Ball (GK)",
-    "3397": "Red Card",
-    "3398": "Shot saved (GK)",
-    "3399": "Distance Shot saved (GK)",
-    "3400": "2nd Yellow",
-    "3401": "6 Sec violation (GK)",
-    "3402": "Standing saved (GK)",
-    "3403": "Pass final Third",
-    "3404": "Shot Assist",
-    "3406": "Offside",
-    "3407": "Offside",
-    "3408": "Shot on goal",
-    "3411": "Contest won",
-    "3412": "Corner won",
-    "3413": "Tackle won",
-    "3414": "Yellow Card",
-    "3415": "Starting 11",
-    "3416": "Possession lost",
-    "3418": "Team Goal",
-    "3419": "Goal conceded",
-    "3424": "Game Won",
-    "3425": "Game Lost",
-    "3426": "Played Minutes Bonus",
-    "3427": "Team Goal",
-    "3428": "Goal conceded",
-    "3429": "Team Goal",
-    "3430": "Goal conceded",
-    "3431": "Goal (GK)",
-    "3432": "Goal (Midfielder)",
-    "3433": "Goal (Defender)",
-    "3434": "Goal (Striker)",
-    "3435": "Assist (GK)",
-    "3436": "Assist (Defender)",
-    "3437": "Assist (Midfielder)",
-    "3438": "Assist (Striker)",
-    "3439": "Secondary Assist (GK)",
-    "3440": "Secondary Assist (Defender)",
-    "3441": "Secondary Assist (Midfielder)",
-    "3442": "Secondary Assist (Striker)",
-    "3443": "Goal (Substitute)",
-    "3444": "Assist (Substitute)",
-    "3445": "Secondary Assist (Substitute)",
-    "3446": "Clean Sheet (GK)",
-    "3447": "Clean Sheet (Defender)",
-    "3448": "Clean Sheet (Midfielder)",
-    "3449": "Clean Sheet (Striker)",
-    "3450": "Big Chance saved (GK)",
-    "3451": "Ball covered unchallenged (GK)",
-    "3452": "Ball covered challenged (GK)",
-    "3453": "Shot on Target (narrow miss)",
-    "3454": "Shot on Goal (far away)",
-    "3455": "Shot on Target (blocked)",
-    "3458": "Penalty saved (penalty shoot-out)",
-    "3459": "Penalty missed (penalty shoot-out)",
-    "3460": "Penalty scored (penalty shoot-out)",
-    "3461": "Shot blocked",
-    "3462": "Shot blocked",
-    "3463": "Shot blocked",
-    "3591": "Cleared (in the box)",
-    "3592": "Cleared (outside the box)",
-    "3593": "subbed on",
-    "3849": "Accurate Keeper-Sweeper (GK)",
-    "3850": "Accurate Throw (GK)",
-    "3851": "Accurate long Ball",
-    "3853": "Aerial lost",
-    "3854": "Aerial won",
-    "3855": "Rebound Assist",
-    "3856": "Rebound Assist",
-    "3857": "Own Goal forced",
+    "3380": "Gefoult im letzten Drittel",
+    "3382": "Absichtliche Vorlage (Bonus)",
+    "3383": "Flanke abgefangen (TW)",
+    "3384": "Eins-gegen-Eins",
+    "3385": "Handspiel",
+    "3386": "Pass abgefangen",
+    "3387": "Ballgewinn",
+    "3388": "Pass abgefangen (im 16er)",
+    "3389": "Zweikampf als letzter Mann (Bonus)",
+    "3391": "Ball zu weit vorgelegt",
+    "3392": "Eigentor",
+    "3393": "Elfmeter verschuldet",
+    "3394": "Elfmeter gehalten (TW)",
+    "3395": "Elfmeter rausgeholt",
+    "3396": "Faustabwehr (TW)",
+    "3397": "Rote Karte",
+    "3398": "Schuss gehalten (TW)",
+    "3399": "Fernschuss gehalten (TW)",
+    "3400": "Gelb-Rote-Karte",
+    "3401": "Verstoß gegen 6-Sekunden-Regel (TW)",
+    "3402": "Ball im Stand abgewehrt",
+    "3403": "Pass vorderes Drittel",
+    "3404": "Torschussvorlage",
+    "3406": "Abseits",
+    "3407": "Abseits",
+    "3408": "Torschuss (aufs Tor)",
+    "3411": "Gegner ausgedribbelt",
+    "3412": "Ecke rausgeholt",
+    "3413": "Gewonnener Zweikampf",
+    "3414": "Gelbe Karte",
+    "3415": "Startelf",
+    "3416": "Ballverlust",
+    "3418": "Teamtor",
+    "3419": "Tor kassiert",
+    "3424": "Spiel gewonnen",
+    "3425": "Spiel verloren",
+    "3426": "Minutenbonus",
+    "3427": "Teamtor",
+    "3428": "Tor kassiert",
+    "3429": "Teamtor",
+    "3430": "Tor kassiert",
+    "3431": "Tor (TW)",
+    "3432": "Tor (MF)",
+    "3433": "Tor (ABW)",
+    "3434": "Tor (ANG)",
+    "3435": "Torvorlage (TW)",
+    "3436": "Torvorlage (ABW)",
+    "3437": "Torvorlage (MF)",
+    "3438": "Torvorlage (ANG)",
+    "3439": "Tor eingeleitet (TW)",
+    "3440": "Tor eingeleitet (ABW)",
+    "3441": "Tor eingeleitet (MF)",
+    "3442": "Tor eingeleitet (ANG)",
+    "3443": "Tor (Einwechselspieler)",
+    "3444": "Torvorlage (Einwechselspieler)",
+    "3445": "Tor eingeleitet (Einwechselspieler)",
+    "3446": "Zu Null gespielt (TW)",
+    "3447": "Zu Null gespielt (ABW)",
+    "3448": "Zu Null gespielt (MF)",
+    "3449": "Zu Null gespielt (ANG)",
+    "3450": "Großchance vereitelt (TW)",
+    "3451": "Ball weggeschnappt unchallenged (TW)",
+    "3452": "Ball weggeschnappt challenged (TW)",
+    "3453": "Torschuss (knapp vorbei)",
+    "3454": "Torschuss (weit vorbei)",
+    "3455": "Torschuss (geblockt)",
+    "3458": "Elfmeter gehalten (Elfmeterschießen)",
+    "3459": "Elfmeter verschossen (Elfmeterschießen)",
+    "3460": "Elfmeter verwandelt (Elfmeterschießen)",
+    "3461": "Schuss geblockt",
+    "3462": "Schuss geblockt",
+    "3463": "Schuss geblockt",
+    "3591": "Geklärt (im 16er)",
+    "3592": "Geklärt (außerhalb 16er)",
+    "3593": "Eingewechselt",
+    "3849": "Erfolgreiches Rauslaufen (TW)",
+    "3850": "Erfolgreicher Abwurf (TW)",
+    "3851": "Präziser langer Pass",
+    "3853": "Luftzweikampf verloren",
+    "3854": "Luftzweikampf gewonnen",
+    "3855": "Abgeprallte Torvorlage",
+    "3856": "Geblockte Torvorlage",
+    "3857": "Eigentor erzwungen",
     "3858": "Assist",
-    "3859": "Woodwork Assist",
-    "3860": "Penalty scored",
-    "3861": "Penalty missed",
-    "3862": "Post",
-    "3863": "Left Post",
-    "3864": "Right Post",
-    "3865": "Back Pass Foul (GK)",
-    "3866": "Challenge lost",
-    "3867": "Cleared on the Line",
-    "3868": "Dangerous play",
-    "3869": "Dive Catch (GK)",
-    "3870": "Dive Save (GK)",
-    "3871": "Cleared",
-    "3872": "Mistake before Goal",
-    "3873": "Mistake before Shot",
-    "3874": "Incorrect Play-In",
+    "3859": "Aluminium-Assist",
+    "3860": "Penalty verwandelt",
+    "3861": "Penalty verschossen",
+    "3862": "Lattenkracher",
+    "3863": "Pfostentreffer (links)",
+    "3864": "Pfostentreffer (rechts)",
+    "3865": "Rückpass Foul (TW)",
+    "3866": "Ausgedribbelt worden",
+    "3867": "Auf der Linie geklärt",
+    "3868": "Gefährliches Spiel",
+    "3869": "Ball gefangen (TW)",
+    "3870": "Parade (TW)",
+    "3871": "Geklärt",
+    "3872": "Fehler vor Gegentor",
+    "3873": "Fehler vor Torschuss",
+    "3874": "Falsches Einspielen",
     "3875": "Foul",
-    "3876": "Fouled last third",
-    "3878": "One-on-One",
-    "3879": "Hand Ball",
-    "3880": "Interception",
-    "3881": "Ball intercepted",
-    "3882": "Interception in Box",
-    "3883": "Shot blocked",
-    "3884": "own goal",
-    "3885": "Penalty conceded",
-    "3886": "Penalty saved (GK)",
-    "3887": "Penalty won",
-    "3888": "Punched Ball (GK)",
-    "3889": "Red Card",
-    "3890": "Shot saved (GK)",
-    "3891": "Shot saved (GK)",
-    "3892": "6 Sec violation (GK)",
-    "3893": "Standing saved (GK)",
-    "3894": "Pass final Third",
-    "3895": "Shot Assist",
-    "3897": "Offside",
-    "3898": "Offside",
-    "3899": "Shot on goal",
-    "3902": "Contest won",
-    "3903": "Corner won",
-    "3904": "Tackle won",
-    "3905": "Time penalty",
-    "3906": "Possession lost",
-    "3908": "Team Goal",
-    "3909": "Goal conceded",
+    "3876": "Gefoult im letzten Drittel",
+    "3878": "Eins-gegen-Eins",
+    "3879": "Handspiel",
+    "3880": "Pass gestört",
+    "3881": "Ballgewinn",
+    "3882": "Gegner gestört",
+    "3883": "Schuss geblockt",
+    "3884": "Eigentor",
+    "3885": "Penalty verschuldet",
+    "3886": "Penalty gehalten",
+    "3887": "Penalty rausgeholt",
+    "3888": "Faustabwehr (TW)",
+    "3889": "Rote Karte",
+    "3890": "Schuss gehalten (TW)",
+    "3891": "Schuss gehalten (TW)",
+    "3892": "Verstoß gegen 6-Sekunden-Regel (TW)",
+    "3893": "Ball im Stand abgewehrt (TW)",
+    "3894": "Pass vorderes Drittel",
+    "3895": "Torschussvorlage",
+    "3897": "Abseits",
+    "3898": "Abseits",
+    "3899": "Torschuss (aufs Tor)",
+    "3902": "Gegner ausgedribbelt",
+    "3903": "Ecke rausgeholt",
+    "3904": "Gewonnener Zweikampf",
+    "3905": "Zeitstrafe",
+    "3906": "Ballverlust",
+    "3908": "Teamtor",
+    "3909": "Tor kassiert",
     "3910": "Assist",
-    "3913": "Game Won",
-    "3914": "Game Lost",
-    "3915": "Played Minutes Bonus",
-    "3916": "Team Goal",
-    "3917": "Goal conceded",
-    "3918": "Team Goal",
-    "3919": "Goal conceded",
-    "3920": "Goal (GK)",
-    "3921": "Goal (Field player)",
-    "3922": "Clean Sheet (GK)",
-    "3923": "Clean Sheet (FP)",
-    "3924": "Ball covered challenged (GK)",
-    "3925": "Shot on Target (narrow miss)",
-    "3926": "Shot on Goal (far away)",
-    "3927": "Shot on Target (blocked)",
-    "3930": "Penalty saved (penalty shoot-out)",
-    "3931": "Penalty missed (penalty shoot-out)",
-    "3932": "Penalty scored (penalty shoot-out)",
-    "3933": "Penalty saved",
+    "3913": "Spiel gewonnen",
+    "3914": "Spiel verloren",
+    "3915": "Minutenbonus",
+    "3916": "Teamtor",
+    "3917": "Tor kassiert",
+    "3918": "Teamtor",
+    "3919": "Tor kassiert",
+    "3920": "Tor (TW)",
+    "3921": "Tor (Feldspieler)",
+    "3922": "Zu Null gespielt (TW)",
+    "3923": "Zu Null gespielt (FS)",
+    "3924": "Ball weggeschnappt challenged (TW)",
+    "3925": "Torschuss (knapp vorbei)",
+    "3926": "Torschuss (weit vorbei)",
+    "3927": "Torschuss (geblockt)",
+    "3930": "Penalty gehalten (Penalty shoot-out)",
+    "3931": "Penalty verschossen (Penalty shoot-out)",
+    "3932": "Penalty verwandelt (Penalty shoot-out)",
+    "3933": "Penalty gehalten",
     "3934": "Pass",
-    "3940": "Goal behind \"The Line\" (GK)",
-    "3941": "Goal behind \"The Line\" (field player)",
-    "3942": "Goal \"PlusOne\" (GK)",
-    "3943": "Goal \"PlusOne\" (field player)",
-    "3944": "Own goal \"PlusOne\"",
+    "3940": "Tor hinter \"The Line\" (TW)",
+    "3941": "Tor hinter \"The Line\" (FS)",
+    "3942": "Tor \"PlusOne\" (TW)",
+    "3943": "Tor \"PlusOne\" (FS)",
+    "3944": "Eigentor \"PlusOne\"",
     "3945": "Assist \"PlusOne\"",
-    "3946": "Penalty scored \"PlusOne\"",
-    "3947": "Penalty missed \"PlusOne\"",
-    "3948": "Penalty conceded \"PlusOne\"",
-    "3949": "Penalty saved \"PlusOne\"",
-    "3950": "Goal \"3 Play\"",
-    "3951": "Own goal \"3 Play\"",
+    "3946": "Penalty verwandelt \"PlusOne\"",
+    "3947": "Penalty verschossen \"PlusOne\"",
+    "3948": "Penalty verschuldet \"PlusOne\"",
+    "3949": "Penalty gehalten \"PlusOne\"",
+    "3950": "Tor \"3 Play\"",
+    "3951": "Eigentor \"3 Play\"",
     "3952": "Assist \"3 Play\"",
-    "3953": "Penalty scored \"3 Play\"",
-    "3954": "Penalty missed \"3 Play\"",
-    "3955": "Penalty conceded \"3 Play\"",
-    "3956": "Penalty saved \"3 Play\"",
-    "3957": "Red card \"Fairplay\"",
-    "3958": "Goal \"1-ON-1\"",
-    "3959": "Handball \"1-ON-1\"",
-    "3961": "Goal conceded",
-    "3962": "Team goal",
-    "3963": "Shot on target",
+    "3953": "Penalty verwandelt \"3 Play\"",
+    "3954": "Penalty verschossen \"3 Play\"",
+    "3955": "Penalty verschuldet \"3 Play\"",
+    "3956": "Penalty gehalten \"3 Play\"",
+    "3957": "rote Karte \"Faiplay\"",
+    "3958": "Tor \"1-ON-1\"",
+    "3959": "Handspiel \"1-ON-1\"",
+    "3961": "Tor kassiert",
+    "3962": "Teamtor",
+    "3963": "Torschuss (aufs Tor)",
     "3964": "Starting 6",
-    "3965": "Shot blocked",
-    "3966": "Shot Assist",
-    "3967": "Shot on goal",
-    "3968": "Shot on Target (narrow miss)",
-    "3969": "Shot on Goal (far away)",
-    "3970": "Shot on Target (blocked)",
-    "3971": "Cleared off the Line  \"1-on-1\"",
-    "3972": "Shot blocked",
-    "3973": "Shot Assist",
-    "3974": "Shot on goal",
-    "3975": "Shot on Target (narrow miss)",
-    "3976": "Shot on Goal (far away)",
-    "3977": "Shot on Target (blocked)",
-    "3978": "Shot blocked \"1-ON-1\"",
-    "3979": "Shot on goal \"1-ON-1\"",
-    "3980": "Shot on Target (narrow miss) \"1-ON-1\"",
-    "3981": "Shot on Goal (far away) \"1-ON-1\"",
-    "3982": "Shot on Target (blocked) \"1-ON-1\"",
-    "3983": "Post \"Plus One\"",
-    "3984": "Left Post \"Plus One\"",
-    "3985": "Right Post \"Plus One\"",
-    "3986": "Post \"3 Play\"",
-    "3987": "Left Post \"3 Play\"",
-    "3988": "Right Post \"3 Play\"",
-    "3989": "Post \"1-ON-1\"",
-    "3990": "Left Post \"1-ON-1\"",
-    "3991": "Right Post \"1-ON-1\"",
-    "3992": "Own Goal forced \"PlusOne\"",
-    "3993": "Woodwork Assist \"PlusOne\"",
-    "3994": "Mistake before Goal \"PlusOne\"",
-    "3995": "Mistake before Shot \"PlusOne\"",
-    "3996": "Own Goal forced \"3 Play\"",
-    "3997": "Woodwork Assist \"3 Play\"",
-    "3998": "Mistake before Goal \"3 Play\"",
-    "3999": "Mistake before Shot \"3 Play\"",
-    "4000": "Cross",
-    "4003": "Forward zone pass",
-    "4006": "Accurate Keeper-Sweeper (GK)",
-    "4009": "Accurate Throw (GK)",
-    "4012": "Accurate long Ball",
-    "4015": "Deadly Pass",
-    "4021": "Aerial lost",
-    "4024": "Aerial won",
-    "4027": "Rebound Assist",
-    "4030": "Rebound Assist",
-    "4033": "Own Goal forced",
-    "4036": "Deflected Assist",
-    "4039": "Woodwork Assist",
-    "4042": "Bonus: long range",
-    "4045": "Penalty scored",
-    "4048": "Penalty missed",
-    "4051": "Penalty missed",
-    "4054": "Penalty missed",
-    "4057": "Post",
-    "4060": "Left Post",
-    "4063": "Right Post",
-    "4066": "Back Pass Foul (GK)",
-    "4072": "Big Chance Created",
-    "4075": "Big Chance Created",
-    "4078": "Big Chance Created",
-    "4081": "Big Chance Created",
-    "4084": "Big Chance Created",
-    "4087": "Big Chance Created",
-    "4090": "Big Chance missed",
-    "4093": "Cross blocked",
-    "4096": "Challenge lost",
-    "4099": "Cleared on the Line",
-    "4102": "Cross not claimed (GK)",
-    "4105": "Dangerous play",
-    "4108": "Dive Catch (GK)",
-    "4111": "Dive Save (GK)",
-    "4114": "Cross blocked and Possession",
-    "4120": "Mistake before Goal",
-    "4123": "Mistake before Shot",
-    "4126": "Incorrect Throw-In",
+    "3965": "Schuss geblockt \"Plus One\"",
+    "3966": "Torschussvorlage \"Plus One\"",
+    "3967": "Torschuss (aufs Tor) \"Plus One\"",
+    "3968": "Torschuss (knapp vorbei) \"Plus One\"",
+    "3969": "Torschuss (weit vorbei) \"Plus One\"",
+    "3970": "Torschuss (geblockt) \"Plus One\"",
+    "3971": "Auf der Linie geklärt \"1-on-1\"",
+    "3972": "Schuss geblockt \"3 Play\"",
+    "3973": "Torschussvorlage \"3 Play\"",
+    "3974": "Torschuss (aufs Tor) \"3 Play\"",
+    "3975": "Torschuss (knapp vorbei) \"3 Play\"",
+    "3976": "Torschuss (weit vorbei) \"3 Play\"",
+    "3977": "Torschuss (geblockt) \"3 Play\"",
+    "3978": "Schuss geblockt \"1-ON-1\"",
+    "3979": "Torschuss (aufs Tor) \"1-ON-1\"",
+    "3980": "Torschuss (knapp vorbei) \"1-ON-1\"",
+    "3981": "Torschuss (weit vorbei) \"1-ON-1\"",
+    "3982": "Torschuss (geblockt) \"1-ON-1\"",
+    "3983": "Lattenkracher \"Plus One\"",
+    "3984": "Pfostentreffer (links) \"Plus One\"",
+    "3985": "Pfostentreffer (rechts) \"Plus One\"",
+    "3986": "Lattenkracher \"3 Play\"",
+    "3987": "Pfostentreffer (links) \"3 Play\"",
+    "3988": "Pfostentreffer (rechts) \"3 Play\"",
+    "3989": "Lattenkracher \"1-ON-1\"",
+    "3990": "Pfostentreffer (links) \"1-ON-1\"",
+    "3991": "Pfostentreffer (rechts) \"1-ON-1\"",
+    "3992": "Eigentor erzwungen \"PlusOne\"",
+    "3993": "Aluminium-Assist \"PlusOne\"",
+    "3994": "Fehler vor Gegentor \"PlusOne\"",
+    "3995": "Fehler vor Torschuss \"PlusOne\"",
+    "3996": "Eigentor erzwungen \"3 Play\"",
+    "3997": "Aluminium-Assist \"3 Play\"",
+    "3998": "Fehler vor Gegentor \"3 Play\"",
+    "3999": "Fehler vor Torschuss \"3 Play\"",
+    "4000": "Flanke",
+    "4003": "Pass gegn. Hälfte",
+    "4006": "Erfolgreiches Rauslaufen",
+    "4009": "Erfolgreicher Abwurf",
+    "4012": "Präziser langer Pass",
+    "4015": "Pass des Todes",
+    "4021": "Luftzweikampf verloren",
+    "4024": "Luftzweikampf gewonnen",
+    "4027": "Abgeprallte Torvorlage",
+    "4030": "Geblockte Torvorlage",
+    "4033": "Eigentor erzwungen",
+    "4036": "Abgefälschte Torvorlage",
+    "4039": "Aluminium-Assist",
+    "4042": "Fernschusstor (Bonus)",
+    "4045": "Elfmeter verwandelt",
+    "4048": "Elfmeter verschossen",
+    "4051": "Elfmeter verschossen",
+    "4054": "Elfmeter verschossen",
+    "4057": "Lattenkracher",
+    "4060": "Pfostentreffer (links)",
+    "4063": "Pfostentreffer (rechts)",
+    "4066": "Rückpass Foul (TW)",
+    "4072": "Großchance kreiert",
+    "4075": "Großchance kreiert",
+    "4078": "Großchance kreiert",
+    "4081": "Großchance kreiert",
+    "4084": "Großchance kreiert",
+    "4087": "Großchance kreiert",
+    "4090": "Großchance vergeben",
+    "4093": "Flanke geblockt",
+    "4096": "Ausgespielt worden",
+    "4099": "Auf der Linie geklärt",
+    "4102": "Flanke verpasst (TW)",
+    "4105": "Gefährliches Spiel",
+    "4108": "Ball gefangen (TW)",
+    "4111": "Parade (TW)",
+    "4114": "Ballbesitz nach geblockter Flanke",
+    "4120": "Fehler vor Gegentor",
+    "4123": "Fehler vor Torschuss",
+    "4126": "Falscher Einwurf",
     "4129": "Foul",
-    "4132": "Fouled last third",
-    "4138": "Intentional Assist",
-    "4141": "Cross Intercepted (GK)",
-    "4144": "One-on-One",
-    "4147": "Hand Ball",
-    "4150": "Interception (outside the box)",
-    "4153": "Ball intercepted",
-    "4156": "Interception (in the box)",
-    "4159": "Bonus: Last Man Tackle",
-    "4165": "Overrun",
-    "4168": "own goal",
-    "4171": "Penalty conceded",
-    "4174": "Penalty saved (GK)",
-    "4177": "Penalty won",
-    "4180": "Punched Ball (GK)",
-    "4183": "Red Card",
-    "4186": "Shot saved (GK)",
-    "4189": "Distance Shot saved (GK)",
-    "4192": "2nd Yellow",
-    "4195": "6 Sec violation (GK)",
-    "4198": "Standing saved (GK)",
-    "4201": "Pass final Third",
-    "4204": "Shot Assist",
-    "4210": "Offside",
-    "4213": "Offside",
-    "4216": "Shot on goal",
-    "4225": "Contest won",
-    "4228": "Corner won",
-    "4231": "Tackle won",
-    "4234": "Yellow Card",
-    "4237": "Starting 11",
-    "4240": "Possession lost",
-    "4246": "Team Goal",
-    "4249": "Goal conceded",
-    "4264": "Game Won",
-    "4267": "Game Lost",
-    "4270": "Played Minutes Bonus",
-    "4273": "Team Goal",
-    "4276": "Goal conceded",
-    "4279": "Team Goal",
-    "4282": "Goal conceded",
-    "4285": "Goal (GK)",
-    "4288": "Goal (Midfielder)",
-    "4291": "Goal (Defender)",
-    "4294": "Goal (Striker)",
-    "4297": "Assist (GK)",
-    "4300": "Assist (Defender)",
-    "4303": "Assist (Midfielder)",
-    "4306": "Assist (Striker)",
-    "4309": "Secondary Assist (GK)",
-    "4312": "Secondary Assist (Defender)",
-    "4315": "Secondary Assist (Midfielder)",
-    "4318": "Secondary Assist (Striker)",
-    "4330": "Clean Sheet (GK)",
-    "4333": "Clean Sheet (Defender)",
-    "4336": "Clean Sheet (Midfielder)",
-    "4339": "Clean Sheet (Striker)",
-    "4342": "Big Chance saved (GK)",
-    "4345": "Ball covered unchallenged (GK)",
-    "4348": "Ball covered challenged (GK)",
-    "4351": "Shot on Target (narrow miss)",
-    "4354": "Shot on Goal (far away)",
-    "4357": "Shot on Target (blocked)",
-    "4366": "Penalty saved (penalty shoot-out)",
-    "4369": "Penalty missed (penalty shoot-out)",
-    "4372": "Penalty scored (penalty shoot-out)",
-    "4375": "Shot blocked",
-    "4378": "Shot blocked",
-    "4381": "Shot blocked",
-    "4387": "Cleared (in the box)",
-    "4390": "Cleared (outside the box)",
-    "4393": "subbed on",
-    "4765": "Fouled in the opponent's half",
+    "4132": "Gefoult im letzten Drittel",
+    "4138": "Absichtliche Vorlage (Bonus)",
+    "4141": "Flanke abgefangen (TW)",
+    "4144": "Eins-gegen-Eins",
+    "4147": "Handspiel",
+    "4150": "Pass abgefangen",
+    "4153": "Ballgewinn",
+    "4156": "Pass abgefangen (im 16er)",
+    "4159": "Zweikampf als letzter Mann (Bonus)",
+    "4165": "Ball zu weit vorgelegt",
+    "4168": "Eigentor",
+    "4171": "Elfmeter verschuldet",
+    "4174": "Elfmeter gehalten (TW)",
+    "4177": "Elfmeter rausgeholt",
+    "4180": "Faustabwehr (TW)",
+    "4183": "Rote Karte",
+    "4186": "Schuss gehalten (TW)",
+    "4189": "Fernschuss gehalten (TW)",
+    "4192": "Gelb-Rote-Karte",
+    "4195": "Verstoß gegen 6-Sekunden-Regel (TW)",
+    "4198": "Ball im Stand abgewehrt",
+    "4201": "Pass vorderes Drittel",
+    "4204": "Torschussvorlage",
+    "4210": "Abseits",
+    "4213": "Abseits",
+    "4216": "Torschuss (aufs Tor)",
+    "4225": "Gegner ausgedribbelt",
+    "4228": "Ecke rausgeholt",
+    "4231": "Gewonnener Zweikampf",
+    "4234": "Gelbe Karte",
+    "4237": "Startelf",
+    "4240": "Ballverlust",
+    "4246": "Teamtor",
+    "4249": "Tor kassiert",
+    "4264": "Spiel gewonnen",
+    "4267": "Spiel verloren",
+    "4270": "Minutenbonus",
+    "4273": "Teamtor",
+    "4276": "Tor kassiert",
+    "4279": "Teamtor",
+    "4282": "Tor kassiert",
+    "4285": "Tor (TW)",
+    "4288": "Tor (MF)",
+    "4291": "Tor (ABW)",
+    "4294": "Tor (ANG)",
+    "4297": "Torvorlage (TW)",
+    "4300": "Torvorlage (ABW)",
+    "4303": "Torvorlage (MF)",
+    "4306": "Torvorlage (ANG)",
+    "4309": "Tor eingeleitet (TW)",
+    "4312": "Tor eingeleitet (ABW)",
+    "4315": "Tor eingeleitet (MF)",
+    "4318": "Tor eingeleitet (ANG)",
+    "4330": "Zu Null gespielt (TW)",
+    "4333": "Zu Null gespielt (ABW)",
+    "4336": "Zu Null gespielt (MF)",
+    "4339": "Zu Null gespielt (ANG)",
+    "4342": "Großchance vereitelt (TW)",
+    "4345": "Ball weggeschnappt unchallenged (TW)",
+    "4348": "Ball weggeschnappt challenged (TW)",
+    "4351": "Torschuss (knapp vorbei)",
+    "4354": "Torschuss (weit vorbei)",
+    "4357": "Torschuss (geblockt)",
+    "4366": "Elfmeter gehalten (Elfmeterschießen)",
+    "4369": "Elfmeter verschossen (Elfmeterschießen)",
+    "4372": "Elfmeter verwandelt (Elfmeterschießen)",
+    "4375": "Schuss geblockt",
+    "4378": "Schuss geblockt",
+    "4381": "Schuss geblockt",
+    "4387": "Geklärt (im 16er)",
+    "4390": "Geklärt (außerhalb 16er)",
+    "4393": "Eingewechselt",
+    "4765": "Gefoult in gegenerischer Hälfte",
     "-1": "Eingewechselt",
     "-2": "Ausgewechselt",
     "-8": "Von Anfang an gespielt",
@@ -629,167 +629,167 @@
     "it": [
       {
         "i": 45,
-        "ti": "Cross"
+        "ti": "Flanke"
       },
       {
         "i": 46,
-        "ti": "Forward zone pass"
+        "ti": "Pass gegn. Hälfte"
       },
       {
         "i": 47,
-        "ti": "Accurate Keeper-Sweeper (GK)"
+        "ti": "Erfolgreiches Rauslaufen (TW)"
       },
       {
         "i": 48,
-        "ti": "Accurate Throw (GK)"
+        "ti": "Erfolgreicher Abwurf (TW)"
       },
       {
         "i": 49,
-        "ti": "Accurate long Ball"
+        "ti": "Präziser langer Pass"
       },
       {
         "i": 50,
-        "ti": "Deadly Pass"
+        "ti": "Pass des Todes"
       },
       {
         "i": 52,
-        "ti": "Aerial lost"
+        "ti": "Luftzweikampf verloren"
       },
       {
         "i": 79,
-        "ti": "Aerial won"
+        "ti": "Luftzweikampf gewonnen"
       },
       {
         "i": 80,
-        "ti": "Rebound Assist"
+        "ti": "Abgeprallte Torvorlage"
       },
       {
         "i": 81,
-        "ti": "Rebound Assist"
+        "ti": "Geblockte Torvorlage"
       },
       {
         "i": 82,
-        "ti": "Own Goal forced"
+        "ti": "Eigentor erzwungen"
       },
       {
         "i": 83,
-        "ti": "Deflected Assist"
+        "ti": "Abgefälschte Torvorlage"
       },
       {
         "i": 84,
-        "ti": "Woodwork Assist"
+        "ti": "Aluminium-Assist"
       },
       {
         "i": 86,
-        "ti": "Bonus: long range"
+        "ti": "Fernschusstor (Bonus)"
       },
       {
         "i": 87,
-        "ti": "Penalty scored"
+        "ti": "Elfmeter verwandelt"
       },
       {
         "i": 88,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 89,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 90,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 91,
-        "ti": "Post"
+        "ti": "Lattenkracher"
       },
       {
         "i": 92,
-        "ti": "Left Post"
+        "ti": "Pfostentreffer (links)"
       },
       {
         "i": 93,
-        "ti": "Right Post"
+        "ti": "Pfostentreffer (rechts)"
       },
       {
         "i": 94,
-        "ti": "Back Pass Foul (GK)"
+        "ti": "Rückpass Foul (TW)"
       },
       {
         "i": 96,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 98,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 99,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 100,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 101,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 102,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 103,
-        "ti": "Big Chance missed"
+        "ti": "Großchance vergeben"
       },
       {
         "i": 104,
-        "ti": "Cross blocked"
+        "ti": "Flanke geblockt"
       },
       {
         "i": 106,
-        "ti": "Challenge lost"
+        "ti": "Ausgespielt worden"
       },
       {
         "i": 107,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt"
       },
       {
         "i": 108,
-        "ti": "Cross not claimed (GK)"
+        "ti": "Flanke verpasst (TW)"
       },
       {
         "i": 109,
-        "ti": "Dangerous play"
+        "ti": "Gefährliches Spiel"
       },
       {
         "i": 110,
-        "ti": "Dive Catch (GK)"
+        "ti": "Ball gefangen (TW)"
       },
       {
         "i": 111,
-        "ti": "Dive Save (GK)"
+        "ti": "Parade (TW)"
       },
       {
         "i": 112,
-        "ti": "Cross blocked and Possession"
+        "ti": "Ballbesitz nach geblockter Flanke"
       },
       {
         "i": 113,
-        "ti": "Cleared"
+        "ti": "Geklärt"
       },
       {
         "i": 114,
-        "ti": "Mistake before Goal"
+        "ti": "Fehler vor Gegentor"
       },
       {
         "i": 115,
-        "ti": "Mistake before Shot"
+        "ti": "Fehler vor Torschuss"
       },
       {
         "i": 116,
-        "ti": "Incorrect Throw-In"
+        "ti": "Falscher Einwurf"
       },
       {
         "i": 117,
@@ -797,399 +797,399 @@
       },
       {
         "i": 118,
-        "ti": "Fouled last third"
+        "ti": "Gefoult im letzten Drittel"
       },
       {
         "i": 120,
-        "ti": "Intentional Assist"
+        "ti": "Absichtliche Vorlage (Bonus)"
       },
       {
         "i": 121,
-        "ti": "Cross Intercepted (GK)"
+        "ti": "Flanke abgefangen (TW)"
       },
       {
         "i": 122,
-        "ti": "One-on-One"
+        "ti": "Eins-gegen-Eins"
       },
       {
         "i": 123,
-        "ti": "Hand Ball"
+        "ti": "Handspiel"
       },
       {
         "i": 124,
-        "ti": "Interception"
+        "ti": "Pass gestört"
       },
       {
         "i": 125,
-        "ti": "Ball intercepted"
+        "ti": "Ballgewinn"
       },
       {
         "i": 126,
-        "ti": "Interception in Box"
+        "ti": "Gegner gestört"
       },
       {
         "i": 127,
-        "ti": "Bonus: Last Man Tackle"
+        "ti": "Zweikampf als letzter Mann (Bonus)"
       },
       {
         "i": 130,
-        "ti": "Overrun"
+        "ti": "Ball zu weit vorgelegt"
       },
       {
         "i": 131,
-        "ti": "own goal"
+        "ti": "Eigentor"
       },
       {
         "i": 132,
-        "ti": "Penalty conceded"
+        "ti": "Elfmeter verschuldet"
       },
       {
         "i": 133,
-        "ti": "Penalty saved (GK)"
+        "ti": "Elfmeter gehalten (TW)"
       },
       {
         "i": 134,
-        "ti": "Penalty won"
+        "ti": "Elfmeter rausgeholt"
       },
       {
         "i": 135,
-        "ti": "Punched Ball (GK)"
+        "ti": "Faustabwehr (TW)"
       },
       {
         "i": 136,
-        "ti": "Red Card"
+        "ti": "Rote Karte"
       },
       {
         "i": 137,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 138,
-        "ti": "Distance Shot saved (GK)"
+        "ti": "Fernschuss gehalten (TW)"
       },
       {
         "i": 139,
-        "ti": "2nd Yellow"
+        "ti": "Gelb-Rote-Karte"
       },
       {
         "i": 141,
-        "ti": "6 Sec violation (GK)"
+        "ti": "Verstoß gegen 6-Sekunden-Regel (TW)"
       },
       {
         "i": 142,
-        "ti": "Standing saved (GK)"
+        "ti": "Ball im Stand abgewehrt (TW)"
       },
       {
         "i": 143,
-        "ti": "Pass final Third"
+        "ti": "Pass vorderes Drittel"
       },
       {
         "i": 144,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage"
       },
       {
         "i": 147,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 148,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 149,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 152,
-        "ti": "Contest won"
+        "ti": "Gegner ausgedribbelt"
       },
       {
         "i": 153,
-        "ti": "Corner won"
+        "ti": "Ecke rausgeholt"
       },
       {
         "i": 154,
-        "ti": "Tackle won"
+        "ti": "Gewonnener Zweikampf"
       },
       {
         "i": 155,
-        "ti": "Yellow Card"
+        "ti": "Gelbe Karte"
       },
       {
         "i": 156,
-        "ti": "Starting 11"
+        "ti": "Startelf"
       },
       {
         "i": 157,
-        "ti": "Possession lost"
+        "ti": "Ballverlust"
       },
       {
         "i": 159,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 160,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 165,
-        "ti": "Game Won"
+        "ti": "Spiel gewonnen"
       },
       {
         "i": 166,
-        "ti": "Game Lost"
+        "ti": "Spiel verloren"
       },
       {
         "i": 167,
-        "ti": "Played Minutes Bonus"
+        "ti": "Minutenbonus"
       },
       {
         "i": 168,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 169,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 170,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 171,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 173,
-        "ti": "Goal (GK)"
+        "ti": "Tor (TW)"
       },
       {
         "i": 174,
-        "ti": "Goal (Midfielder)"
+        "ti": "Tor (MF)"
       },
       {
         "i": 175,
-        "ti": "Goal (Defender)"
+        "ti": "Tor (ABW)"
       },
       {
         "i": 176,
-        "ti": "Goal (Striker)"
+        "ti": "Tor (ANG)"
       },
       {
         "i": 177,
-        "ti": "Assist (GK)"
+        "ti": "Torvorlage (TW)"
       },
       {
         "i": 178,
-        "ti": "Assist (Defender)"
+        "ti": "Torvorlage (ABW)"
       },
       {
         "i": 179,
-        "ti": "Assist (Midfielder)"
+        "ti": "Torvorlage (MF)"
       },
       {
         "i": 180,
-        "ti": "Assist (Striker)"
+        "ti": "Torvorlage (ANG)"
       },
       {
         "i": 181,
-        "ti": "Goal Set up (GK)"
+        "ti": "Tor eingeleitet (TW)"
       },
       {
         "i": 182,
-        "ti": "Goal Set up (Defender)"
+        "ti": "Tor eingeleitet (ABW)"
       },
       {
         "i": 183,
-        "ti": "Goal Set up (Midfielder)"
+        "ti": "Tor eingeleitet (MF)"
       },
       {
         "i": 184,
-        "ti": "Goal Set up (Striker)"
+        "ti": "Tor eingeleitet (ANG)"
       },
       {
         "i": 185,
-        "ti": "Goal (Substitute)"
+        "ti": "Tor (Einwechselspieler)"
       },
       {
         "i": 186,
-        "ti": "Assist (Substitute)"
+        "ti": "Torvorlage (Einwechselspieler)"
       },
       {
         "i": 187,
-        "ti": "Goal Set up (Substitute)"
+        "ti": "Tor eingeleitet (Einwechselspieler)"
       },
       {
         "i": 188,
-        "ti": "Clean Sheet (GK)"
+        "ti": "Zu Null gespielt (TW)"
       },
       {
         "i": 189,
-        "ti": "Clean Sheet (Defender)"
+        "ti": "Zu Null gespielt (ABW)"
       },
       {
         "i": 190,
-        "ti": "Clean Sheet (Midfielder)"
+        "ti": "Zu Null gespielt (MF)"
       },
       {
         "i": 191,
-        "ti": "Clean Sheet (Striker)"
+        "ti": "Zu Null gespielt (ANG)"
       },
       {
         "i": 194,
-        "ti": "Big Chance saved (GK)"
+        "ti": "Großchance vereitelt (TW)"
       },
       {
         "i": 195,
-        "ti": "Ball covered unchallenged (GK)"
+        "ti": "Ball weggeschnappt unchallenged (TW)"
       },
       {
         "i": 196,
-        "ti": "Ball covered challenged (GK)"
+        "ti": "Ball weggeschnappt challenged (TW)"
       },
       {
         "i": 197,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei)"
       },
       {
         "i": 199,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei)"
       },
       {
         "i": 200,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt)"
       },
       {
         "i": 203,
-        "ti": "Penalty saved (penalty shoot-out)"
+        "ti": "Elfmeter gehalten (Elfmeterschießen)"
       },
       {
         "i": 204,
-        "ti": "Penalty missed (penalty shoot-out)"
+        "ti": "Elfmeter verschossen (Elfmeterschießen)"
       },
       {
         "i": 205,
-        "ti": "Penalty scored (penalty shoot-out)"
+        "ti": "Elfmeter verwandelt (Elfmeterschießen)"
       },
       {
         "i": 206,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 207,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 208,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 209,
-        "ti": "Penalty saved"
+        "ti": "Elfmeter gehalten"
       },
       {
         "i": 1755,
-        "ti": "Penalty scored"
+        "ti": "Penalty verwandelt"
       },
       {
         "i": 1756,
-        "ti": "Penalty missed"
+        "ti": "Penalty verschossen"
       },
       {
         "i": 1798,
-        "ti": "Penalty saved (GK)"
+        "ti": "Penalty gehalten"
       },
       {
         "i": 1810,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 1811,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 1822,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 1823,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 1828,
-        "ti": "Game Won"
+        "ti": "Spiel gewonnen"
       },
       {
         "i": 1829,
-        "ti": "Game Lost"
+        "ti": "Spiel verloren"
       },
       {
         "i": 1830,
-        "ti": "Played Minutes Bonus"
+        "ti": "Minutenbonus"
       },
       {
         "i": 1831,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 1832,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 1833,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 1834,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 1835,
-        "ti": "Goal (GK)"
+        "ti": "Tor (TW)"
       },
       {
         "i": 1838,
-        "ti": "Goal (Field player)"
+        "ti": "Tor (Feldspieler)"
       },
       {
         "i": 1850,
-        "ti": "Clean Sheet (GK)"
+        "ti": "Zu Null gespielt (TW)"
       },
       {
         "i": 1851,
-        "ti": "Clean Sheet (FP)"
+        "ti": "Zu Null gespielt (FS)"
       },
       {
         "i": 1856,
-        "ti": "Ball covered challenged (GK)"
+        "ti": "Ball weggeschnappt challenged (TW)"
       },
       {
         "i": 1862,
-        "ti": "Penalty saved (penalty shoot-out)"
+        "ti": "Penalty gehalten (Penalty shoot-out)"
       },
       {
         "i": 1863,
-        "ti": "Penalty missed (penalty shoot-out)"
+        "ti": "Penalty verschossen (Penalty shoot-out)"
       },
       {
         "i": 1864,
-        "ti": "Penalty scored (penalty shoot-out)"
+        "ti": "Penalty verwandelt (Penalty shoot-out)"
       },
       {
         "i": 1868,
-        "ti": "Penalty saved"
+        "ti": "Penalty gehalten"
       },
       {
         "i": 2640,
-        "ti": "Goal \"PlusOne\" (GK)"
+        "ti": "Tor \"PlusOne\" (TW)"
       },
       {
         "i": 2641,
-        "ti": "Goal \"PlusOne\" (field player)"
+        "ti": "Tor \"PlusOne\" (FS)"
       },
       {
         "i": 2642,
-        "ti": "Own goal \"PlusOne\""
+        "ti": "Eigentor \"PlusOne\""
       },
       {
         "i": 2643,
@@ -1197,27 +1197,27 @@
       },
       {
         "i": 2644,
-        "ti": "Penalty scored \"PlusOne\""
+        "ti": "Penalty verwandelt \"PlusOne\""
       },
       {
         "i": 2645,
-        "ti": "Penalty missed \"PlusOne\""
+        "ti": "Penalty verschossen \"PlusOne\""
       },
       {
         "i": 2646,
-        "ti": "Penalty conceded \"PlusOne\""
+        "ti": "Penalty verschuldet \"PlusOne\""
       },
       {
         "i": 2647,
-        "ti": "Penalty saved \"PlusOne\""
+        "ti": "Penalty gehalten \"PlusOne\""
       },
       {
         "i": 2648,
-        "ti": "Goal \"3 Play\""
+        "ti": "Tor \"3 Play\""
       },
       {
         "i": 2650,
-        "ti": "Own goal \"3 Play\""
+        "ti": "Eigentor \"3 Play\""
       },
       {
         "i": 2651,
@@ -1225,31 +1225,31 @@
       },
       {
         "i": 2652,
-        "ti": "Penalty scored \"3 Play\""
+        "ti": "Penalty verwandelt \"3 Play\""
       },
       {
         "i": 2653,
-        "ti": "Penalty missed \"3 Play\""
+        "ti": "Penalty verschossen \"3 Play\""
       },
       {
         "i": 2654,
-        "ti": "Penalty conceded \"3 Play\""
+        "ti": "Penalty verschuldet \"3 Play\""
       },
       {
         "i": 2655,
-        "ti": "Penalty saved \"3 Play\""
+        "ti": "Penalty gehalten \"3 Play\""
       },
       {
         "i": 2783,
-        "ti": "Red card \"Fairplay\""
+        "ti": "rote Karte \"Faiplay\""
       },
       {
         "i": 2784,
-        "ti": "Goal \"1-ON-1\""
+        "ti": "Tor \"1-ON-1\""
       },
       {
         "i": 2785,
-        "ti": "Handball \"1-ON-1\""
+        "ti": "Handspiel \"1-ON-1\""
       },
       {
         "i": 2790,
@@ -1257,163 +1257,163 @@
       },
       {
         "i": 3336,
-        "ti": "Cross"
+        "ti": "Flanke"
       },
       {
         "i": 3337,
-        "ti": "Forward zone pass"
+        "ti": "Pass gegn. Hälfte"
       },
       {
         "i": 3338,
-        "ti": "Accurate Keeper-Sweeper (GK)"
+        "ti": "Erfolgreiches Rauslaufen"
       },
       {
         "i": 3339,
-        "ti": "Accurate Throw (GK)"
+        "ti": "Erfolgreicher Abwurf"
       },
       {
         "i": 3340,
-        "ti": "Accurate long Ball"
+        "ti": "Präziser langer Pass"
       },
       {
         "i": 3341,
-        "ti": "Deadly Pass"
+        "ti": "Pass des Todes"
       },
       {
         "i": 3343,
-        "ti": "Aerial lost"
+        "ti": "Luftzweikampf verloren"
       },
       {
         "i": 3344,
-        "ti": "Aerial won"
+        "ti": "Luftzweikampf gewonnen"
       },
       {
         "i": 3345,
-        "ti": "Rebound Assist"
+        "ti": "Abgeprallte Torvorlage"
       },
       {
         "i": 3346,
-        "ti": "Rebound Assist"
+        "ti": "Geblockte Torvorlage"
       },
       {
         "i": 3347,
-        "ti": "Own Goal forced"
+        "ti": "Eigentor erzwungen"
       },
       {
         "i": 3348,
-        "ti": "Deflected Assist"
+        "ti": "Abgefälschte Torvorlage"
       },
       {
         "i": 3349,
-        "ti": "Woodwork Assist"
+        "ti": "Aluminium-Assist"
       },
       {
         "i": 3350,
-        "ti": "Bonus: long range"
+        "ti": "Fernschusstor (Bonus)"
       },
       {
         "i": 3351,
-        "ti": "Penalty scored"
+        "ti": "Elfmeter verwandelt"
       },
       {
         "i": 3352,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 3353,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 3354,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 3355,
-        "ti": "Post"
+        "ti": "Lattenkracher"
       },
       {
         "i": 3356,
-        "ti": "Left Post"
+        "ti": "Pfostentreffer (links)"
       },
       {
         "i": 3357,
-        "ti": "Right Post"
+        "ti": "Pfostentreffer (rechts)"
       },
       {
         "i": 3358,
-        "ti": "Back Pass Foul (GK)"
+        "ti": "Rückpass Foul (TW)"
       },
       {
         "i": 3360,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3361,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3362,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3363,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3364,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3365,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 3366,
-        "ti": "Big Chance missed"
+        "ti": "Großchance vergeben"
       },
       {
         "i": 3367,
-        "ti": "Cross blocked"
+        "ti": "Flanke geblockt"
       },
       {
         "i": 3368,
-        "ti": "Challenge lost"
+        "ti": "Ausgespielt worden"
       },
       {
         "i": 3369,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt"
       },
       {
         "i": 3370,
-        "ti": "Cross not claimed (GK)"
+        "ti": "Flanke verpasst (TW)"
       },
       {
         "i": 3371,
-        "ti": "Dangerous play"
+        "ti": "Gefährliches Spiel"
       },
       {
         "i": 3372,
-        "ti": "Dive Catch (GK)"
+        "ti": "Ball gefangen (TW)"
       },
       {
         "i": 3373,
-        "ti": "Dive Save (GK)"
+        "ti": "Parade (TW)"
       },
       {
         "i": 3374,
-        "ti": "Cross blocked and Possession"
+        "ti": "Ballbesitz nach geblockter Flanke"
       },
       {
         "i": 3376,
-        "ti": "Mistake before Goal"
+        "ti": "Fehler vor Gegentor"
       },
       {
         "i": 3377,
-        "ti": "Mistake before Shot"
+        "ti": "Fehler vor Torschuss"
       },
       {
         "i": 3378,
-        "ti": "Incorrect Throw-In"
+        "ti": "Falscher Einwurf"
       },
       {
         "i": 3379,
@@ -1421,407 +1421,407 @@
       },
       {
         "i": 3380,
-        "ti": "Fouled last third"
+        "ti": "Gefoult im letzten Drittel"
       },
       {
         "i": 3382,
-        "ti": "Intentional Assist"
+        "ti": "Absichtliche Vorlage (Bonus)"
       },
       {
         "i": 3383,
-        "ti": "Cross Intercepted (GK)"
+        "ti": "Flanke abgefangen (TW)"
       },
       {
         "i": 3384,
-        "ti": "One-on-One"
+        "ti": "Eins-gegen-Eins"
       },
       {
         "i": 3385,
-        "ti": "Hand Ball"
+        "ti": "Handspiel"
       },
       {
         "i": 3386,
-        "ti": "Interception (outside the box)"
+        "ti": "Pass abgefangen"
       },
       {
         "i": 3387,
-        "ti": "Ball intercepted"
+        "ti": "Ballgewinn"
       },
       {
         "i": 3388,
-        "ti": "Interception (in the box)"
+        "ti": "Pass abgefangen (im 16er)"
       },
       {
         "i": 3389,
-        "ti": "Bonus: Last Man Tackle"
+        "ti": "Zweikampf als letzter Mann (Bonus)"
       },
       {
         "i": 3391,
-        "ti": "Overrun"
+        "ti": "Ball zu weit vorgelegt"
       },
       {
         "i": 3392,
-        "ti": "own goal"
+        "ti": "Eigentor"
       },
       {
         "i": 3393,
-        "ti": "Penalty conceded"
+        "ti": "Elfmeter verschuldet"
       },
       {
         "i": 3394,
-        "ti": "Penalty saved (GK)"
+        "ti": "Elfmeter gehalten (TW)"
       },
       {
         "i": 3395,
-        "ti": "Penalty won"
+        "ti": "Elfmeter rausgeholt"
       },
       {
         "i": 3396,
-        "ti": "Punched Ball (GK)"
+        "ti": "Faustabwehr (TW)"
       },
       {
         "i": 3397,
-        "ti": "Red Card"
+        "ti": "Rote Karte"
       },
       {
         "i": 3398,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 3399,
-        "ti": "Distance Shot saved (GK)"
+        "ti": "Fernschuss gehalten (TW)"
       },
       {
         "i": 3400,
-        "ti": "2nd Yellow"
+        "ti": "Gelb-Rote-Karte"
       },
       {
         "i": 3401,
-        "ti": "6 Sec violation (GK)"
+        "ti": "Verstoß gegen 6-Sekunden-Regel (TW)"
       },
       {
         "i": 3402,
-        "ti": "Standing saved (GK)"
+        "ti": "Ball im Stand abgewehrt"
       },
       {
         "i": 3403,
-        "ti": "Pass final Third"
+        "ti": "Pass vorderes Drittel"
       },
       {
         "i": 3404,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage"
       },
       {
         "i": 3406,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 3407,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 3408,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 3411,
-        "ti": "Contest won"
+        "ti": "Gegner ausgedribbelt"
       },
       {
         "i": 3412,
-        "ti": "Corner won"
+        "ti": "Ecke rausgeholt"
       },
       {
         "i": 3413,
-        "ti": "Tackle won"
+        "ti": "Gewonnener Zweikampf"
       },
       {
         "i": 3414,
-        "ti": "Yellow Card"
+        "ti": "Gelbe Karte"
       },
       {
         "i": 3415,
-        "ti": "Starting 11"
+        "ti": "Startelf"
       },
       {
         "i": 3416,
-        "ti": "Possession lost"
+        "ti": "Ballverlust"
       },
       {
         "i": 3418,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3419,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3424,
-        "ti": "Game Won"
+        "ti": "Spiel gewonnen"
       },
       {
         "i": 3425,
-        "ti": "Game Lost"
+        "ti": "Spiel verloren"
       },
       {
         "i": 3426,
-        "ti": "Played Minutes Bonus"
+        "ti": "Minutenbonus"
       },
       {
         "i": 3427,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3428,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3429,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3430,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3431,
-        "ti": "Goal (GK)"
+        "ti": "Tor (TW)"
       },
       {
         "i": 3432,
-        "ti": "Goal (Midfielder)"
+        "ti": "Tor (MF)"
       },
       {
         "i": 3433,
-        "ti": "Goal (Defender)"
+        "ti": "Tor (ABW)"
       },
       {
         "i": 3434,
-        "ti": "Goal (Striker)"
+        "ti": "Tor (ANG)"
       },
       {
         "i": 3435,
-        "ti": "Assist (GK)"
+        "ti": "Torvorlage (TW)"
       },
       {
         "i": 3436,
-        "ti": "Assist (Defender)"
+        "ti": "Torvorlage (ABW)"
       },
       {
         "i": 3437,
-        "ti": "Assist (Midfielder)"
+        "ti": "Torvorlage (MF)"
       },
       {
         "i": 3438,
-        "ti": "Assist (Striker)"
+        "ti": "Torvorlage (ANG)"
       },
       {
         "i": 3439,
-        "ti": "Secondary Assist (GK)"
+        "ti": "Tor eingeleitet (TW)"
       },
       {
         "i": 3440,
-        "ti": "Secondary Assist (Defender)"
+        "ti": "Tor eingeleitet (ABW)"
       },
       {
         "i": 3441,
-        "ti": "Secondary Assist (Midfielder)"
+        "ti": "Tor eingeleitet (MF)"
       },
       {
         "i": 3442,
-        "ti": "Secondary Assist (Striker)"
+        "ti": "Tor eingeleitet (ANG)"
       },
       {
         "i": 3443,
-        "ti": "Goal (Substitute)"
+        "ti": "Tor (Einwechselspieler)"
       },
       {
         "i": 3444,
-        "ti": "Assist (Substitute)"
+        "ti": "Torvorlage (Einwechselspieler)"
       },
       {
         "i": 3445,
-        "ti": "Secondary Assist (Substitute)"
+        "ti": "Tor eingeleitet (Einwechselspieler)"
       },
       {
         "i": 3446,
-        "ti": "Clean Sheet (GK)"
+        "ti": "Zu Null gespielt (TW)"
       },
       {
         "i": 3447,
-        "ti": "Clean Sheet (Defender)"
+        "ti": "Zu Null gespielt (ABW)"
       },
       {
         "i": 3448,
-        "ti": "Clean Sheet (Midfielder)"
+        "ti": "Zu Null gespielt (MF)"
       },
       {
         "i": 3449,
-        "ti": "Clean Sheet (Striker)"
+        "ti": "Zu Null gespielt (ANG)"
       },
       {
         "i": 3450,
-        "ti": "Big Chance saved (GK)"
+        "ti": "Großchance vereitelt (TW)"
       },
       {
         "i": 3451,
-        "ti": "Ball covered unchallenged (GK)"
+        "ti": "Ball weggeschnappt unchallenged (TW)"
       },
       {
         "i": 3452,
-        "ti": "Ball covered challenged (GK)"
+        "ti": "Ball weggeschnappt challenged (TW)"
       },
       {
         "i": 3453,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei)"
       },
       {
         "i": 3454,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei)"
       },
       {
         "i": 3455,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt)"
       },
       {
         "i": 3458,
-        "ti": "Penalty saved (penalty shoot-out)"
+        "ti": "Elfmeter gehalten (Elfmeterschießen)"
       },
       {
         "i": 3459,
-        "ti": "Penalty missed (penalty shoot-out)"
+        "ti": "Elfmeter verschossen (Elfmeterschießen)"
       },
       {
         "i": 3460,
-        "ti": "Penalty scored (penalty shoot-out)"
+        "ti": "Elfmeter verwandelt (Elfmeterschießen)"
       },
       {
         "i": 3461,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 3462,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 3463,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 3591,
-        "ti": "Cleared (in the box)"
+        "ti": "Geklärt (im 16er)"
       },
       {
         "i": 3592,
-        "ti": "Cleared (outside the box)"
+        "ti": "Geklärt (außerhalb 16er)"
       },
       {
         "i": 3593,
-        "ti": "subbed on"
+        "ti": "Eingewechselt"
       },
       {
         "i": 3860,
-        "ti": "Penalty scored"
+        "ti": "Penalty verwandelt"
       },
       {
         "i": 3861,
-        "ti": "Penalty missed"
+        "ti": "Penalty verschossen"
       },
       {
         "i": 3886,
-        "ti": "Penalty saved (GK)"
+        "ti": "Penalty gehalten"
       },
       {
         "i": 3897,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 3898,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 3908,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3909,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3913,
-        "ti": "Game Won"
+        "ti": "Spiel gewonnen"
       },
       {
         "i": 3914,
-        "ti": "Game Lost"
+        "ti": "Spiel verloren"
       },
       {
         "i": 3915,
-        "ti": "Played Minutes Bonus"
+        "ti": "Minutenbonus"
       },
       {
         "i": 3916,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3917,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3918,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3919,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3920,
-        "ti": "Goal (GK)"
+        "ti": "Tor (TW)"
       },
       {
         "i": 3921,
-        "ti": "Goal (Field player)"
+        "ti": "Tor (Feldspieler)"
       },
       {
         "i": 3922,
-        "ti": "Clean Sheet (GK)"
+        "ti": "Zu Null gespielt (TW)"
       },
       {
         "i": 3923,
-        "ti": "Clean Sheet (FP)"
+        "ti": "Zu Null gespielt (FS)"
       },
       {
         "i": 3924,
-        "ti": "Ball covered challenged (GK)"
+        "ti": "Ball weggeschnappt challenged (TW)"
       },
       {
         "i": 3930,
-        "ti": "Penalty saved (penalty shoot-out)"
+        "ti": "Penalty gehalten (Penalty shoot-out)"
       },
       {
         "i": 3931,
-        "ti": "Penalty missed (penalty shoot-out)"
+        "ti": "Penalty verschossen (Penalty shoot-out)"
       },
       {
         "i": 3932,
-        "ti": "Penalty scored (penalty shoot-out)"
+        "ti": "Penalty verwandelt (Penalty shoot-out)"
       },
       {
         "i": 3933,
-        "ti": "Penalty saved"
+        "ti": "Penalty gehalten"
       },
       {
         "i": 3942,
-        "ti": "Goal \"PlusOne\" (GK)"
+        "ti": "Tor \"PlusOne\" (TW)"
       },
       {
         "i": 3943,
-        "ti": "Goal \"PlusOne\" (field player)"
+        "ti": "Tor \"PlusOne\" (FS)"
       },
       {
         "i": 3944,
-        "ti": "Own goal \"PlusOne\""
+        "ti": "Eigentor \"PlusOne\""
       },
       {
         "i": 3945,
@@ -1829,27 +1829,27 @@
       },
       {
         "i": 3946,
-        "ti": "Penalty scored \"PlusOne\""
+        "ti": "Penalty verwandelt \"PlusOne\""
       },
       {
         "i": 3947,
-        "ti": "Penalty missed \"PlusOne\""
+        "ti": "Penalty verschossen \"PlusOne\""
       },
       {
         "i": 3948,
-        "ti": "Penalty conceded \"PlusOne\""
+        "ti": "Penalty verschuldet \"PlusOne\""
       },
       {
         "i": 3949,
-        "ti": "Penalty saved \"PlusOne\""
+        "ti": "Penalty gehalten \"PlusOne\""
       },
       {
         "i": 3950,
-        "ti": "Goal \"3 Play\""
+        "ti": "Tor \"3 Play\""
       },
       {
         "i": 3951,
-        "ti": "Own goal \"3 Play\""
+        "ti": "Eigentor \"3 Play\""
       },
       {
         "i": 3952,
@@ -1857,31 +1857,31 @@
       },
       {
         "i": 3953,
-        "ti": "Penalty scored \"3 Play\""
+        "ti": "Penalty verwandelt \"3 Play\""
       },
       {
         "i": 3954,
-        "ti": "Penalty missed \"3 Play\""
+        "ti": "Penalty verschossen \"3 Play\""
       },
       {
         "i": 3955,
-        "ti": "Penalty conceded \"3 Play\""
+        "ti": "Penalty verschuldet \"3 Play\""
       },
       {
         "i": 3956,
-        "ti": "Penalty saved \"3 Play\""
+        "ti": "Penalty gehalten \"3 Play\""
       },
       {
         "i": 3957,
-        "ti": "Red card \"Fairplay\""
+        "ti": "rote Karte \"Faiplay\""
       },
       {
         "i": 3958,
-        "ti": "Goal \"1-ON-1\""
+        "ti": "Tor \"1-ON-1\""
       },
       {
         "i": 3959,
-        "ti": "Handball \"1-ON-1\""
+        "ti": "Handspiel \"1-ON-1\""
       },
       {
         "i": 3964,
@@ -1889,163 +1889,163 @@
       },
       {
         "i": 4000,
-        "ti": "Cross"
+        "ti": "Flanke"
       },
       {
         "i": 4003,
-        "ti": "Forward zone pass"
+        "ti": "Pass gegn. Hälfte"
       },
       {
         "i": 4006,
-        "ti": "Accurate Keeper-Sweeper (GK)"
+        "ti": "Erfolgreiches Rauslaufen"
       },
       {
         "i": 4009,
-        "ti": "Accurate Throw (GK)"
+        "ti": "Erfolgreicher Abwurf"
       },
       {
         "i": 4012,
-        "ti": "Accurate long Ball"
+        "ti": "Präziser langer Pass"
       },
       {
         "i": 4015,
-        "ti": "Deadly Pass"
+        "ti": "Pass des Todes"
       },
       {
         "i": 4021,
-        "ti": "Aerial lost"
+        "ti": "Luftzweikampf verloren"
       },
       {
         "i": 4024,
-        "ti": "Aerial won"
+        "ti": "Luftzweikampf gewonnen"
       },
       {
         "i": 4027,
-        "ti": "Rebound Assist"
+        "ti": "Abgeprallte Torvorlage"
       },
       {
         "i": 4030,
-        "ti": "Rebound Assist"
+        "ti": "Geblockte Torvorlage"
       },
       {
         "i": 4033,
-        "ti": "Own Goal forced"
+        "ti": "Eigentor erzwungen"
       },
       {
         "i": 4036,
-        "ti": "Deflected Assist"
+        "ti": "Abgefälschte Torvorlage"
       },
       {
         "i": 4039,
-        "ti": "Woodwork Assist"
+        "ti": "Aluminium-Assist"
       },
       {
         "i": 4042,
-        "ti": "Bonus: long range"
+        "ti": "Fernschusstor (Bonus)"
       },
       {
         "i": 4045,
-        "ti": "Penalty scored"
+        "ti": "Elfmeter verwandelt"
       },
       {
         "i": 4048,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 4051,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 4054,
-        "ti": "Penalty missed"
+        "ti": "Elfmeter verschossen"
       },
       {
         "i": 4057,
-        "ti": "Post"
+        "ti": "Lattenkracher"
       },
       {
         "i": 4060,
-        "ti": "Left Post"
+        "ti": "Pfostentreffer (links)"
       },
       {
         "i": 4063,
-        "ti": "Right Post"
+        "ti": "Pfostentreffer (rechts)"
       },
       {
         "i": 4066,
-        "ti": "Back Pass Foul (GK)"
+        "ti": "Rückpass Foul (TW)"
       },
       {
         "i": 4072,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4075,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4078,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4081,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4084,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4087,
-        "ti": "Big Chance Created"
+        "ti": "Großchance kreiert"
       },
       {
         "i": 4090,
-        "ti": "Big Chance missed"
+        "ti": "Großchance vergeben"
       },
       {
         "i": 4093,
-        "ti": "Cross blocked"
+        "ti": "Flanke geblockt"
       },
       {
         "i": 4096,
-        "ti": "Challenge lost"
+        "ti": "Ausgespielt worden"
       },
       {
         "i": 4099,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt"
       },
       {
         "i": 4102,
-        "ti": "Cross not claimed (GK)"
+        "ti": "Flanke verpasst (TW)"
       },
       {
         "i": 4105,
-        "ti": "Dangerous play"
+        "ti": "Gefährliches Spiel"
       },
       {
         "i": 4108,
-        "ti": "Dive Catch (GK)"
+        "ti": "Ball gefangen (TW)"
       },
       {
         "i": 4111,
-        "ti": "Dive Save (GK)"
+        "ti": "Parade (TW)"
       },
       {
         "i": 4114,
-        "ti": "Cross blocked and Possession"
+        "ti": "Ballbesitz nach geblockter Flanke"
       },
       {
         "i": 4120,
-        "ti": "Mistake before Goal"
+        "ti": "Fehler vor Gegentor"
       },
       {
         "i": 4123,
-        "ti": "Mistake before Shot"
+        "ti": "Fehler vor Torschuss"
       },
       {
         "i": 4126,
-        "ti": "Incorrect Throw-In"
+        "ti": "Falscher Einwurf"
       },
       {
         "i": 4129,
@@ -2053,367 +2053,367 @@
       },
       {
         "i": 4132,
-        "ti": "Fouled last third"
+        "ti": "Gefoult im letzten Drittel"
       },
       {
         "i": 4138,
-        "ti": "Intentional Assist"
+        "ti": "Absichtliche Vorlage (Bonus)"
       },
       {
         "i": 4141,
-        "ti": "Cross Intercepted (GK)"
+        "ti": "Flanke abgefangen (TW)"
       },
       {
         "i": 4144,
-        "ti": "One-on-One"
+        "ti": "Eins-gegen-Eins"
       },
       {
         "i": 4147,
-        "ti": "Hand Ball"
+        "ti": "Handspiel"
       },
       {
         "i": 4150,
-        "ti": "Interception (outside the box)"
+        "ti": "Pass abgefangen"
       },
       {
         "i": 4153,
-        "ti": "Ball intercepted"
+        "ti": "Ballgewinn"
       },
       {
         "i": 4156,
-        "ti": "Interception (in the box)"
+        "ti": "Pass abgefangen (im 16er)"
       },
       {
         "i": 4159,
-        "ti": "Bonus: Last Man Tackle"
+        "ti": "Zweikampf als letzter Mann (Bonus)"
       },
       {
         "i": 4165,
-        "ti": "Overrun"
+        "ti": "Ball zu weit vorgelegt"
       },
       {
         "i": 4168,
-        "ti": "own goal"
+        "ti": "Eigentor"
       },
       {
         "i": 4171,
-        "ti": "Penalty conceded"
+        "ti": "Elfmeter verschuldet"
       },
       {
         "i": 4174,
-        "ti": "Penalty saved (GK)"
+        "ti": "Elfmeter gehalten (TW)"
       },
       {
         "i": 4177,
-        "ti": "Penalty won"
+        "ti": "Elfmeter rausgeholt"
       },
       {
         "i": 4180,
-        "ti": "Punched Ball (GK)"
+        "ti": "Faustabwehr (TW)"
       },
       {
         "i": 4183,
-        "ti": "Red Card"
+        "ti": "Rote Karte"
       },
       {
         "i": 4186,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 4189,
-        "ti": "Distance Shot saved (GK)"
+        "ti": "Fernschuss gehalten (TW)"
       },
       {
         "i": 4192,
-        "ti": "2nd Yellow"
+        "ti": "Gelb-Rote-Karte"
       },
       {
         "i": 4195,
-        "ti": "6 Sec violation (GK)"
+        "ti": "Verstoß gegen 6-Sekunden-Regel (TW)"
       },
       {
         "i": 4198,
-        "ti": "Standing saved (GK)"
+        "ti": "Ball im Stand abgewehrt"
       },
       {
         "i": 4201,
-        "ti": "Pass final Third"
+        "ti": "Pass vorderes Drittel"
       },
       {
         "i": 4204,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage"
       },
       {
         "i": 4210,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 4213,
-        "ti": "Offside"
+        "ti": "Abseits"
       },
       {
         "i": 4216,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 4225,
-        "ti": "Contest won"
+        "ti": "Gegner ausgedribbelt"
       },
       {
         "i": 4228,
-        "ti": "Corner won"
+        "ti": "Ecke rausgeholt"
       },
       {
         "i": 4231,
-        "ti": "Tackle won"
+        "ti": "Gewonnener Zweikampf"
       },
       {
         "i": 4234,
-        "ti": "Yellow Card"
+        "ti": "Gelbe Karte"
       },
       {
         "i": 4237,
-        "ti": "Starting 11"
+        "ti": "Startelf"
       },
       {
         "i": 4240,
-        "ti": "Possession lost"
+        "ti": "Ballverlust"
       },
       {
         "i": 4246,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 4249,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 4264,
-        "ti": "Game Won"
+        "ti": "Spiel gewonnen"
       },
       {
         "i": 4267,
-        "ti": "Game Lost"
+        "ti": "Spiel verloren"
       },
       {
         "i": 4270,
-        "ti": "Played Minutes Bonus"
+        "ti": "Minutenbonus"
       },
       {
         "i": 4273,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 4276,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 4279,
-        "ti": "Team Goal"
+        "ti": "Teamtor"
       },
       {
         "i": 4282,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 4285,
-        "ti": "Goal (GK)"
+        "ti": "Tor (TW)"
       },
       {
         "i": 4288,
-        "ti": "Goal (Midfielder)"
+        "ti": "Tor (MF)"
       },
       {
         "i": 4291,
-        "ti": "Goal (Defender)"
+        "ti": "Tor (ABW)"
       },
       {
         "i": 4294,
-        "ti": "Goal (Striker)"
+        "ti": "Tor (ANG)"
       },
       {
         "i": 4297,
-        "ti": "Assist (GK)"
+        "ti": "Torvorlage (TW)"
       },
       {
         "i": 4300,
-        "ti": "Assist (Defender)"
+        "ti": "Torvorlage (ABW)"
       },
       {
         "i": 4303,
-        "ti": "Assist (Midfielder)"
+        "ti": "Torvorlage (MF)"
       },
       {
         "i": 4306,
-        "ti": "Assist (Striker)"
+        "ti": "Torvorlage (ANG)"
       },
       {
         "i": 4309,
-        "ti": "Secondary Assist (GK)"
+        "ti": "Tor eingeleitet (TW)"
       },
       {
         "i": 4312,
-        "ti": "Secondary Assist (Defender)"
+        "ti": "Tor eingeleitet (ABW)"
       },
       {
         "i": 4315,
-        "ti": "Secondary Assist (Midfielder)"
+        "ti": "Tor eingeleitet (MF)"
       },
       {
         "i": 4318,
-        "ti": "Secondary Assist (Striker)"
+        "ti": "Tor eingeleitet (ANG)"
       },
       {
         "i": 4330,
-        "ti": "Clean Sheet (GK)"
+        "ti": "Zu Null gespielt (TW)"
       },
       {
         "i": 4333,
-        "ti": "Clean Sheet (Defender)"
+        "ti": "Zu Null gespielt (ABW)"
       },
       {
         "i": 4336,
-        "ti": "Clean Sheet (Midfielder)"
+        "ti": "Zu Null gespielt (MF)"
       },
       {
         "i": 4339,
-        "ti": "Clean Sheet (Striker)"
+        "ti": "Zu Null gespielt (ANG)"
       },
       {
         "i": 4342,
-        "ti": "Big Chance saved (GK)"
+        "ti": "Großchance vereitelt (TW)"
       },
       {
         "i": 4345,
-        "ti": "Ball covered unchallenged (GK)"
+        "ti": "Ball weggeschnappt unchallenged (TW)"
       },
       {
         "i": 4348,
-        "ti": "Ball covered challenged (GK)"
+        "ti": "Ball weggeschnappt challenged (TW)"
       },
       {
         "i": 4351,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei)"
       },
       {
         "i": 4354,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei)"
       },
       {
         "i": 4357,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt)"
       },
       {
         "i": 4366,
-        "ti": "Penalty saved (penalty shoot-out)"
+        "ti": "Elfmeter gehalten (Elfmeterschießen)"
       },
       {
         "i": 4369,
-        "ti": "Penalty missed (penalty shoot-out)"
+        "ti": "Elfmeter verschossen (Elfmeterschießen)"
       },
       {
         "i": 4372,
-        "ti": "Penalty scored (penalty shoot-out)"
+        "ti": "Elfmeter verwandelt (Elfmeterschießen)"
       },
       {
         "i": 4375,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 4378,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 4381,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 4387,
-        "ti": "Cleared (in the box)"
+        "ti": "Geklärt (im 16er)"
       },
       {
         "i": 4390,
-        "ti": "Cleared (outside the box)"
+        "ti": "Geklärt (außerhalb 16er)"
       },
       {
         "i": 4393,
-        "ti": "subbed on"
+        "ti": "Eingewechselt"
       },
       {
         "i": 4765,
-        "ti": "Fouled in the opponent's half"
+        "ti": "Gefoult in gegenerischer Hälfte"
       },
       {
         "i": 2789,
-        "ti": "Shot on target"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 3963,
-        "ti": "Shot on target"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 2638,
-        "ti": "Goal behind \"The Line\" (GK)"
+        "ti": "Tor hinter \"The Line\" (TW)"
       },
       {
         "i": 3940,
-        "ti": "Goal behind \"The Line\" (GK)"
+        "ti": "Tor hinter \"The Line\" (TW)"
       },
       {
         "i": 2639,
-        "ti": "Goal behind \"The Line\" (field player)"
+        "ti": "Tor hinter \"The Line\" (FS)"
       },
       {
         "i": 3941,
-        "ti": "Goal behind \"The Line\" (field player)"
+        "ti": "Tor hinter \"The Line\" (FS)"
       },
       {
         "i": 2787,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 3961,
-        "ti": "Goal conceded"
+        "ti": "Tor kassiert"
       },
       {
         "i": 2788,
-        "ti": "Team goal"
+        "ti": "Teamtor"
       },
       {
         "i": 3962,
-        "ti": "Team goal"
+        "ti": "Teamtor"
       },
       {
         "i": 1742,
-        "ti": "Accurate Keeper-Sweeper (GK)"
+        "ti": "Erfolgreiches Rauslaufen (TW)"
       },
       {
         "i": 1743,
-        "ti": "Accurate Throw (GK)"
+        "ti": "Erfolgreicher Abwurf (TW)"
       },
       {
         "i": 1744,
-        "ti": "Accurate long Ball"
+        "ti": "Präziser langer Pass"
       },
       {
         "i": 1747,
-        "ti": "Aerial lost"
+        "ti": "Luftzweikampf verloren"
       },
       {
         "i": 1748,
-        "ti": "Aerial won"
+        "ti": "Luftzweikampf gewonnen"
       },
       {
         "i": 1749,
-        "ti": "Rebound Assist"
+        "ti": "Abgeprallte Torvorlage"
       },
       {
         "i": 1750,
-        "ti": "Rebound Assist"
+        "ti": "Geblockte Torvorlage"
       },
       {
         "i": 1751,
-        "ti": "Own Goal forced"
+        "ti": "Eigentor erzwungen"
       },
       {
         "i": 1752,
@@ -2421,59 +2421,59 @@
       },
       {
         "i": 1753,
-        "ti": "Woodwork Assist"
+        "ti": "Aluminium-Assist"
       },
       {
         "i": 1759,
-        "ti": "Post"
+        "ti": "Lattenkracher"
       },
       {
         "i": 1760,
-        "ti": "Left Post"
+        "ti": "Pfostentreffer (links)"
       },
       {
         "i": 1761,
-        "ti": "Right Post"
+        "ti": "Pfostentreffer (rechts)"
       },
       {
         "i": 1762,
-        "ti": "Back Pass Foul (GK)"
+        "ti": "Rückpass Foul (TW)"
       },
       {
         "i": 1772,
-        "ti": "Challenge lost"
+        "ti": "Ausgedribbelt worden"
       },
       {
         "i": 1773,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt"
       },
       {
         "i": 1775,
-        "ti": "Dangerous play"
+        "ti": "Gefährliches Spiel"
       },
       {
         "i": 1776,
-        "ti": "Dive Catch (GK)"
+        "ti": "Ball gefangen (TW)"
       },
       {
         "i": 1777,
-        "ti": "Dive Save (GK)"
+        "ti": "Parade (TW)"
       },
       {
         "i": 1779,
-        "ti": "Cleared"
+        "ti": "Geklärt"
       },
       {
         "i": 1780,
-        "ti": "Mistake before Goal"
+        "ti": "Fehler vor Gegentor"
       },
       {
         "i": 1781,
-        "ti": "Mistake before Shot"
+        "ti": "Fehler vor Torschuss"
       },
       {
         "i": 1782,
-        "ti": "Incorrect Play-In"
+        "ti": "Falsches Einspielen"
       },
       {
         "i": 1783,
@@ -2481,99 +2481,99 @@
       },
       {
         "i": 1784,
-        "ti": "Fouled last third"
+        "ti": "Gefoult im letzten Drittel"
       },
       {
         "i": 1788,
-        "ti": "One-on-One"
+        "ti": "Eins-gegen-Eins"
       },
       {
         "i": 1789,
-        "ti": "Hand Ball"
+        "ti": "Handspiel"
       },
       {
         "i": 1790,
-        "ti": "Interception"
+        "ti": "Pass gestört"
       },
       {
         "i": 1791,
-        "ti": "Ball intercepted"
+        "ti": "Ballgewinn"
       },
       {
         "i": 1792,
-        "ti": "Interception in Box"
+        "ti": "Gegner gestört"
       },
       {
         "i": 1794,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 1796,
-        "ti": "own goal"
+        "ti": "Eigentor"
       },
       {
         "i": 1797,
-        "ti": "Penalty conceded"
+        "ti": "Penalty verschuldet"
       },
       {
         "i": 1799,
-        "ti": "Penalty won"
+        "ti": "Penalty rausgeholt"
       },
       {
         "i": 1800,
-        "ti": "Punched Ball (GK)"
+        "ti": "Faustabwehr (TW)"
       },
       {
         "i": 1801,
-        "ti": "Red Card"
+        "ti": "Rote Karte"
       },
       {
         "i": 1802,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 1803,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 1805,
-        "ti": "6 Sec violation (GK)"
+        "ti": "Verstoß gegen 6-Sekunden-Regel (TW)"
       },
       {
         "i": 1806,
-        "ti": "Standing saved (GK)"
+        "ti": "Ball im Stand abgewehrt (TW)"
       },
       {
         "i": 1807,
-        "ti": "Pass final Third"
+        "ti": "Pass vorderes Drittel"
       },
       {
         "i": 1808,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage"
       },
       {
         "i": 1812,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 1815,
-        "ti": "Contest won"
+        "ti": "Gegner ausgedribbelt"
       },
       {
         "i": 1816,
-        "ti": "Corner won"
+        "ti": "Ecke rausgeholt"
       },
       {
         "i": 1817,
-        "ti": "Tackle won"
+        "ti": "Gewonnener Zweikampf"
       },
       {
         "i": 1818,
-        "ti": "Time penalty"
+        "ti": "Zeitstrafe"
       },
       {
         "i": 1820,
-        "ti": "Possession lost"
+        "ti": "Ballverlust"
       },
       {
         "i": 1824,
@@ -2581,15 +2581,15 @@
       },
       {
         "i": 1857,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei)"
       },
       {
         "i": 1858,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei)"
       },
       {
         "i": 1859,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt)"
       },
       {
         "i": 2250,
@@ -2597,175 +2597,175 @@
       },
       {
         "i": 2791,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt \"Plus One\""
       },
       {
         "i": 2792,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage \"Plus One\""
       },
       {
         "i": 2793,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor) \"Plus One\""
       },
       {
         "i": 2794,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei) \"Plus One\""
       },
       {
         "i": 2795,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei) \"Plus One\""
       },
       {
         "i": 2796,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt) \"Plus One\""
       },
       {
         "i": 2797,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt \"3 Play\""
       },
       {
         "i": 2798,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt \"3 Play\""
       },
       {
         "i": 2799,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage \"3 Play\""
       },
       {
         "i": 2800,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor) \"3 Play\""
       },
       {
         "i": 2801,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei) \"3 Play\""
       },
       {
         "i": 2802,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei) \"3 Play\""
       },
       {
         "i": 2803,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt) \"3 Play\""
       },
       {
         "i": 2804,
-        "ti": "Shot blocked \"1-ON-1\""
+        "ti": "Schuss geblockt \"1-ON-1\""
       },
       {
         "i": 2805,
-        "ti": "Shot on goal \"1-ON-1\""
+        "ti": "Torschuss (aufs Tor) \"1-ON-1\""
       },
       {
         "i": 2806,
-        "ti": "Shot on Target (narrow miss) \"1-ON-1\""
+        "ti": "Torschuss (knapp vorbei) \"1-ON-1\""
       },
       {
         "i": 2807,
-        "ti": "Shot on Goal (far away) \"1-ON-1\""
+        "ti": "Torschuss (weit vorbei) \"1-ON-1\""
       },
       {
         "i": 2808,
-        "ti": "Shot on Target (blocked) \"1-ON-1\""
+        "ti": "Torschuss (geblockt) \"1-ON-1\""
       },
       {
         "i": 2809,
-        "ti": "Post \"Plus One\""
+        "ti": "Lattenkracher \"Plus One\""
       },
       {
         "i": 2810,
-        "ti": "Left Post \"Plus One\""
+        "ti": "Pfostentreffer (links) \"Plus One\""
       },
       {
         "i": 2811,
-        "ti": "Right Post \"Plus One\""
+        "ti": "Pfostentreffer (rechts) \"Plus One\""
       },
       {
         "i": 2812,
-        "ti": "Post \"3 Play\""
+        "ti": "Lattenkracher \"3 Play\""
       },
       {
         "i": 2813,
-        "ti": "Left Post \"3 Play\""
+        "ti": "Pfostentreffer (links) \"3 Play\""
       },
       {
         "i": 2814,
-        "ti": "Right Post \"3 Play\""
+        "ti": "Pfostentreffer (rechts) \"3 Play\""
       },
       {
         "i": 2815,
-        "ti": "Post \"1-ON-1\""
+        "ti": "Lattenkracher \"1-ON-1\""
       },
       {
         "i": 2816,
-        "ti": "Left Post \"1-ON-1\""
+        "ti": "Pfostentreffer (links) \"1-ON-1\""
       },
       {
         "i": 2817,
-        "ti": "Right Post \"1-ON-1\""
+        "ti": "Pfostentreffer (rechts) \"1-ON-1\""
       },
       {
         "i": 2818,
-        "ti": "Own Goal forced \"PlusOne\""
+        "ti": "Eigentor erzwungen \"PlusOne\""
       },
       {
         "i": 2819,
-        "ti": "Woodwork Assist \"PlusOne\""
+        "ti": "Aluminium-Assist \"PlusOne\""
       },
       {
         "i": 2820,
-        "ti": "Mistake before Goal \"PlusOne\""
+        "ti": "Fehler vor Gegentor \"PlusOne\""
       },
       {
         "i": 2821,
-        "ti": "Mistake before Shot \"PlusOne\""
+        "ti": "Fehler vor Torschuss \"PlusOne\""
       },
       {
         "i": 2822,
-        "ti": "Own Goal forced \"3 Play\""
+        "ti": "Eigentor erzwungen \"3 Play\""
       },
       {
         "i": 2823,
-        "ti": "Woodwork Assist \"3 Play\""
+        "ti": "Aluminium-Assist \"3 Play\""
       },
       {
         "i": 2824,
-        "ti": "Mistake before Goal \"3 Play\""
+        "ti": "Fehler vor Gegentor \"3 Play\""
       },
       {
         "i": 2825,
-        "ti": "Mistake before Shot \"3 Play\""
+        "ti": "Fehler vor Torschuss \"3 Play\""
       },
       {
         "i": 3849,
-        "ti": "Accurate Keeper-Sweeper (GK)"
+        "ti": "Erfolgreiches Rauslaufen (TW)"
       },
       {
         "i": 3850,
-        "ti": "Accurate Throw (GK)"
+        "ti": "Erfolgreicher Abwurf (TW)"
       },
       {
         "i": 3851,
-        "ti": "Accurate long Ball"
+        "ti": "Präziser langer Pass"
       },
       {
         "i": 3853,
-        "ti": "Aerial lost"
+        "ti": "Luftzweikampf verloren"
       },
       {
         "i": 3854,
-        "ti": "Aerial won"
+        "ti": "Luftzweikampf gewonnen"
       },
       {
         "i": 3855,
-        "ti": "Rebound Assist"
+        "ti": "Abgeprallte Torvorlage"
       },
       {
         "i": 3856,
-        "ti": "Rebound Assist"
+        "ti": "Geblockte Torvorlage"
       },
       {
         "i": 3857,
-        "ti": "Own Goal forced"
+        "ti": "Eigentor erzwungen"
       },
       {
         "i": 3858,
@@ -2773,59 +2773,59 @@
       },
       {
         "i": 3859,
-        "ti": "Woodwork Assist"
+        "ti": "Aluminium-Assist"
       },
       {
         "i": 3862,
-        "ti": "Post"
+        "ti": "Lattenkracher"
       },
       {
         "i": 3863,
-        "ti": "Left Post"
+        "ti": "Pfostentreffer (links)"
       },
       {
         "i": 3864,
-        "ti": "Right Post"
+        "ti": "Pfostentreffer (rechts)"
       },
       {
         "i": 3865,
-        "ti": "Back Pass Foul (GK)"
+        "ti": "Rückpass Foul (TW)"
       },
       {
         "i": 3866,
-        "ti": "Challenge lost"
+        "ti": "Ausgedribbelt worden"
       },
       {
         "i": 3867,
-        "ti": "Cleared on the Line"
+        "ti": "Auf der Linie geklärt"
       },
       {
         "i": 3868,
-        "ti": "Dangerous play"
+        "ti": "Gefährliches Spiel"
       },
       {
         "i": 3869,
-        "ti": "Dive Catch (GK)"
+        "ti": "Ball gefangen (TW)"
       },
       {
         "i": 3870,
-        "ti": "Dive Save (GK)"
+        "ti": "Parade (TW)"
       },
       {
         "i": 3871,
-        "ti": "Cleared"
+        "ti": "Geklärt"
       },
       {
         "i": 3872,
-        "ti": "Mistake before Goal"
+        "ti": "Fehler vor Gegentor"
       },
       {
         "i": 3873,
-        "ti": "Mistake before Shot"
+        "ti": "Fehler vor Torschuss"
       },
       {
         "i": 3874,
-        "ti": "Incorrect Play-In"
+        "ti": "Falsches Einspielen"
       },
       {
         "i": 3875,
@@ -2833,99 +2833,99 @@
       },
       {
         "i": 3876,
-        "ti": "Fouled last third"
+        "ti": "Gefoult im letzten Drittel"
       },
       {
         "i": 3878,
-        "ti": "One-on-One"
+        "ti": "Eins-gegen-Eins"
       },
       {
         "i": 3879,
-        "ti": "Hand Ball"
+        "ti": "Handspiel"
       },
       {
         "i": 3880,
-        "ti": "Interception"
+        "ti": "Pass gestört"
       },
       {
         "i": 3881,
-        "ti": "Ball intercepted"
+        "ti": "Ballgewinn"
       },
       {
         "i": 3882,
-        "ti": "Interception in Box"
+        "ti": "Gegner gestört"
       },
       {
         "i": 3883,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt"
       },
       {
         "i": 3884,
-        "ti": "own goal"
+        "ti": "Eigentor"
       },
       {
         "i": 3885,
-        "ti": "Penalty conceded"
+        "ti": "Penalty verschuldet"
       },
       {
         "i": 3887,
-        "ti": "Penalty won"
+        "ti": "Penalty rausgeholt"
       },
       {
         "i": 3888,
-        "ti": "Punched Ball (GK)"
+        "ti": "Faustabwehr (TW)"
       },
       {
         "i": 3889,
-        "ti": "Red Card"
+        "ti": "Rote Karte"
       },
       {
         "i": 3890,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 3891,
-        "ti": "Shot saved (GK)"
+        "ti": "Schuss gehalten (TW)"
       },
       {
         "i": 3892,
-        "ti": "6 Sec violation (GK)"
+        "ti": "Verstoß gegen 6-Sekunden-Regel (TW)"
       },
       {
         "i": 3893,
-        "ti": "Standing saved (GK)"
+        "ti": "Ball im Stand abgewehrt (TW)"
       },
       {
         "i": 3894,
-        "ti": "Pass final Third"
+        "ti": "Pass vorderes Drittel"
       },
       {
         "i": 3895,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage"
       },
       {
         "i": 3899,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor)"
       },
       {
         "i": 3902,
-        "ti": "Contest won"
+        "ti": "Gegner ausgedribbelt"
       },
       {
         "i": 3903,
-        "ti": "Corner won"
+        "ti": "Ecke rausgeholt"
       },
       {
         "i": 3904,
-        "ti": "Tackle won"
+        "ti": "Gewonnener Zweikampf"
       },
       {
         "i": 3905,
-        "ti": "Time penalty"
+        "ti": "Zeitstrafe"
       },
       {
         "i": 3906,
-        "ti": "Possession lost"
+        "ti": "Ballverlust"
       },
       {
         "i": 3910,
@@ -2933,15 +2933,15 @@
       },
       {
         "i": 3925,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei)"
       },
       {
         "i": 3926,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei)"
       },
       {
         "i": 3927,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt)"
       },
       {
         "i": 3934,
@@ -2949,143 +2949,143 @@
       },
       {
         "i": 3965,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt \"Plus One\""
       },
       {
         "i": 3966,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage \"Plus One\""
       },
       {
         "i": 3967,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor) \"Plus One\""
       },
       {
         "i": 3968,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei) \"Plus One\""
       },
       {
         "i": 3969,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei) \"Plus One\""
       },
       {
         "i": 3970,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt) \"Plus One\""
       },
       {
         "i": 3971,
-        "ti": "Cleared off the Line  \"1-on-1\""
+        "ti": "Auf der Linie geklärt \"1-on-1\""
       },
       {
         "i": 3972,
-        "ti": "Shot blocked"
+        "ti": "Schuss geblockt \"3 Play\""
       },
       {
         "i": 3973,
-        "ti": "Shot Assist"
+        "ti": "Torschussvorlage \"3 Play\""
       },
       {
         "i": 3974,
-        "ti": "Shot on goal"
+        "ti": "Torschuss (aufs Tor) \"3 Play\""
       },
       {
         "i": 3975,
-        "ti": "Shot on Target (narrow miss)"
+        "ti": "Torschuss (knapp vorbei) \"3 Play\""
       },
       {
         "i": 3976,
-        "ti": "Shot on Goal (far away)"
+        "ti": "Torschuss (weit vorbei) \"3 Play\""
       },
       {
         "i": 3977,
-        "ti": "Shot on Target (blocked)"
+        "ti": "Torschuss (geblockt) \"3 Play\""
       },
       {
         "i": 3978,
-        "ti": "Shot blocked \"1-ON-1\""
+        "ti": "Schuss geblockt \"1-ON-1\""
       },
       {
         "i": 3979,
-        "ti": "Shot on goal \"1-ON-1\""
+        "ti": "Torschuss (aufs Tor) \"1-ON-1\""
       },
       {
         "i": 3980,
-        "ti": "Shot on Target (narrow miss) \"1-ON-1\""
+        "ti": "Torschuss (knapp vorbei) \"1-ON-1\""
       },
       {
         "i": 3981,
-        "ti": "Shot on Goal (far away) \"1-ON-1\""
+        "ti": "Torschuss (weit vorbei) \"1-ON-1\""
       },
       {
         "i": 3982,
-        "ti": "Shot on Target (blocked) \"1-ON-1\""
+        "ti": "Torschuss (geblockt) \"1-ON-1\""
       },
       {
         "i": 3983,
-        "ti": "Post \"Plus One\""
+        "ti": "Lattenkracher \"Plus One\""
       },
       {
         "i": 3984,
-        "ti": "Left Post \"Plus One\""
+        "ti": "Pfostentreffer (links) \"Plus One\""
       },
       {
         "i": 3985,
-        "ti": "Right Post \"Plus One\""
+        "ti": "Pfostentreffer (rechts) \"Plus One\""
       },
       {
         "i": 3986,
-        "ti": "Post \"3 Play\""
+        "ti": "Lattenkracher \"3 Play\""
       },
       {
         "i": 3987,
-        "ti": "Left Post \"3 Play\""
+        "ti": "Pfostentreffer (links) \"3 Play\""
       },
       {
         "i": 3988,
-        "ti": "Right Post \"3 Play\""
+        "ti": "Pfostentreffer (rechts) \"3 Play\""
       },
       {
         "i": 3989,
-        "ti": "Post \"1-ON-1\""
+        "ti": "Lattenkracher \"1-ON-1\""
       },
       {
         "i": 3990,
-        "ti": "Left Post \"1-ON-1\""
+        "ti": "Pfostentreffer (links) \"1-ON-1\""
       },
       {
         "i": 3991,
-        "ti": "Right Post \"1-ON-1\""
+        "ti": "Pfostentreffer (rechts) \"1-ON-1\""
       },
       {
         "i": 3992,
-        "ti": "Own Goal forced \"PlusOne\""
+        "ti": "Eigentor erzwungen \"PlusOne\""
       },
       {
         "i": 3993,
-        "ti": "Woodwork Assist \"PlusOne\""
+        "ti": "Aluminium-Assist \"PlusOne\""
       },
       {
         "i": 3994,
-        "ti": "Mistake before Goal \"PlusOne\""
+        "ti": "Fehler vor Gegentor \"PlusOne\""
       },
       {
         "i": 3995,
-        "ti": "Mistake before Shot \"PlusOne\""
+        "ti": "Fehler vor Torschuss \"PlusOne\""
       },
       {
         "i": 3996,
-        "ti": "Own Goal forced \"3 Play\""
+        "ti": "Eigentor erzwungen \"3 Play\""
       },
       {
         "i": 3997,
-        "ti": "Woodwork Assist \"3 Play\""
+        "ti": "Aluminium-Assist \"3 Play\""
       },
       {
         "i": 3998,
-        "ti": "Mistake before Goal \"3 Play\""
+        "ti": "Fehler vor Gegentor \"3 Play\""
       },
       {
         "i": 3999,
-        "ti": "Mistake before Shot \"3 Play\""
+        "ti": "Fehler vor Torschuss \"3 Play\""
       },
       {
         "i": -1,
@@ -3113,13 +3113,13 @@
       }
     ],
     "dds": {
-      "1": "Assist by {assistBy}",
-      "2": "Forced by {forcedBy}",
-      "3": "Goal by {goalBy}",
+      "1": "Assist von {assistBy}",
+      "2": "Erzwungen von {forcedBy}",
+      "3": "Tor von {goalBy}",
       "4": "-",
-      "5": "Suspended for next match day",
-      "6": "Suspended for next match day",
-      "7": "Missed by {missedBy}",
+      "5": "Gesperrt für nächsten Spieltag",
+      "6": "Gesperrt für nächsten Spieltag",
+      "7": "Verschossen von {missedBy}",
       "20": "Missed by {missedBy}",
       "100": "-"
     }
