@@ -561,6 +561,10 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .tr-tile{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:3px;min-width:0}
 .tr-tile span{color:var(--muted);font-size:12px}.tr-tile b{font-size:17px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
 .tr-tile small{color:var(--dim);font-size:11px}
+.tr-records{grid-template-columns:1fr 1fr;margin:0 0 14px}.tr-record b{font-size:20px}
+.tr-record-who{display:flex;align-items:center;gap:8px;min-width:0;margin-top:4px}.tr-record-who>div{display:grid;min-width:0}
+.tr-record-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tr-record-who>.tr-face{width:36px;height:36px}
+.tr-record-mgr{display:flex;align-items:center;gap:4px;min-width:0}.tr-record-mgr .tr-face{width:16px;height:16px}
 .tr-trades{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .tr-trade{display:grid;grid-template-columns:minmax(140px,1.3fr) 1fr 1fr 100px;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px}
 .tr-trade.held{border-style:dashed}
