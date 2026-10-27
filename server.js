@@ -1862,6 +1862,8 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
   }
   // UM: verursachter Elfmeter durch Foul (Gegner hat "Elfmeter herausgeholt" bis 5 Min. daneben: Kickbase stempelt
   // Foul und Pfiff nach VAR-Pruefung unterschiedlich, Tapsoba ST 7: 4171 in der 78., Asllani 4177 in der 75. Min.)
+  // 6 bis 15 Min. daneben: "bitte pruefen". Weiter weg ist es ein anderer Elfmeter (Kevin-Meldung Matsima ST 6:
+  // verursacht in der 3., Futkeu holte erst in der 96. einen heraus), dann zaehlt es wie Handspiel.
   for (const { lp, center, info } of infos) {
     for (const minute of info.penCaused) {
       const own = String(center?.tid ?? ''), t1 = String(center?.t1 ?? ''), t2 = String(center?.t2 ?? '');
@@ -1875,7 +1877,7 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
         await Promise.all(opp.slice(i, i + 5).map(async ([id, p]) => {
           try {
             const c = await getCenter(id);
-            for (const e of netEvents(c)) if (e.eti === ETI_PEN_WON && e.net > 0) (Math.abs(e.minute - minute) <= 5 ? hits : other).push({ playerId: id, name: p.name, minute: e.minute });
+            for (const e of netEvents(c)) if (e.eti === ETI_PEN_WON && e.net > 0) { const d = Math.abs(e.minute - minute); if (d <= 5) hits.push({ playerId: id, name: p.name, minute: e.minute }); else if (d <= 15) other.push({ playerId: id, name: p.name, minute: e.minute }); }
           } catch { oppFailed++; }
         }));
       }
