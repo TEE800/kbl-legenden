@@ -790,8 +790,15 @@ button.center-undo{align-self:flex-start;width:auto;padding:2px 8px;font-size:11
 .zr-play{min-width:44px;min-height:40px;font-size:18px;padding:4px 12px}
 .zr-speed{min-height:36px;padding:4px 10px}
 .zr-track{position:relative;flex:1;min-width:0}
-.zr-track input{width:100%;accent-color:var(--gold)}
-.zr-marks{position:absolute;left:8px;right:8px;top:-4px;height:6px;pointer-events:none}
+.zr-track{padding-top:8px}
+/* Eigener Regler mit fester Knopfgröße (22px), damit die Striche genau über den erreichbaren Stellen liegen (Kevin: letzter Strich = Endstand). */
+.zr-track input{display:block;width:100%;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;min-height:0;height:22px;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.zr-track input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--gold) calc(11px + (100% - 22px)*var(--f,0)),var(--line-strong) 0)}
+.zr-track input::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;margin-top:-8px;border-radius:50%;background:var(--gold);border:2px solid #111;box-sizing:border-box}
+.zr-track input::-moz-range-track{height:6px;border-radius:3px;background:var(--line-strong)}
+.zr-track input::-moz-range-progress{height:6px;border-radius:3px;background:var(--gold)}
+.zr-track input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--gold);border:2px solid #111;box-sizing:border-box}
+.zr-marks{position:absolute;left:11px;right:11px;top:0;height:8px;pointer-events:none}
 .zr-marks i{position:absolute;width:3px;height:8px;margin-left:-1px;border-radius:2px;background:var(--gold)}
 .zr-marks i.fix{background:#e74c3c}.zr-marks i.fin{background:#fff}
 .zr-moments{list-style:none;margin:6px 0;padding:0;display:grid;gap:2px;font-size:13px}

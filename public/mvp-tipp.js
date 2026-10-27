@@ -318,7 +318,7 @@
     ${o.rs.length?`<div class="zr-fans">${o.rs.map(r=>`<span data-zr-m="${esc(r.m.id)}" title="${esc(r.m.name)} tippt ${esc(fmt(r.t.points))}">${(window.kblMgrFace||(()=>''))(r.m.name,'',r.m.id)}<small>${esc(fmt(r.t.points))}</small></span>`).join('')}</div>`:''}</div>`;}).join('');
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
-   box.querySelector('[data-zr-seek]').value=String(i);
+   const sk=box.querySelector('[data-zr-seek]');sk.value=String(i);sk.style.setProperty('--f',String(n>1?i/(n-1):0));
    box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
    box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:`<span class="muted">${f.start?'Alle starten bei 0':'Noch kein Zwischenstand'}</span>`;
    pitch.querySelectorAll('[data-zr-id]').forEach(el=>{
