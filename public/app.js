@@ -1081,7 +1081,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  function showResult(d,fromStore){
   const warn=[d.failedPlayers?`${d.failedPlayers} Spieler nicht abrufbar`:'',(d.failedTeams&&d.failedTeams.length)?`Vereine nicht lesbar: ${d.failedTeams.join(', ')}`:''].filter(Boolean).join(' · ');
   msg.style.color=warn?'#f1a5aa':'';
-  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore?' „Einzelereignisse sammeln“ holt den neuesten Stand.':''}`;
+  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ holt den neuesten Stand.':''}`;
   etiData=d.types;renderEti();
  }
  async function loadSaved(){
