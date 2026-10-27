@@ -1653,6 +1653,16 @@ app.get('/api/mvp-tipps/head/:id',async(req,res)=>{
   res.set({'Content-Type':'image/png','Cache-Control':'public, max-age=86400','X-Head-Version':String(HEAD_VERSION)}).send(v);}
  catch{res.status(502).end();}
 });
+// Manager-Profilbild über den eigenen Server (für das Zeitraffer-Video: das Kickbase-CDN erlaubt kein CORS, Bilder fremder Server darf die Leinwand nicht aufnehmen).
+const mgrImgCache=new Map();
+app.get('/api/mgr-img',async(req,res)=>{
+ const p=String(req.query.p||'');if(!/^user\/[\w.-]{1,80}$/.test(p))return res.status(400).end();
+ try{let v=mgrImgCache.get(p);
+  if(!v){const r=await fetch('https://kickbase.b-cdn.net/'+p,{signal:AbortSignal.timeout(15000)});if(!r.ok)return res.status(404).end();
+   v={type:r.headers.get('content-type')||'image/jpeg',buf:Buffer.from(await r.arrayBuffer())};if(mgrImgCache.size>200)mgrImgCache.clear();mgrImgCache.set(p,v);}
+  res.set({'Content-Type':v.type,'Cache-Control':'public, max-age=86400'}).send(v.buf);}
+ catch{res.status(502).end();}
+});
 app.get('/api/mvp-tipps/players',async(req,res)=>{
  const token=await tippToken(req);if(!token)return res.status(503).json({error:'Kein Kickbase-Zugang auf dem Server.'});
  try{const all=await loadAllPlayers(token);
