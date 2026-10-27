@@ -28,7 +28,8 @@ const mgrInitial=n=>escapeHtml((String(n??'').trim()[0]||'?').toUpperCase());
 function mgrFaceInner(name,id){
  const k=id!=null&&KBL_MGR_IMG.has('#'+id)?'#'+id:mgrKey(name);if(!KBL_MGR_IMG.has(k))return null;
  const src=KBL_MGR_IMG.get(k);
- return src?`<img src="${escapeHtml(src)}" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('mgr-av-txt');this.replaceWith(${escapeHtml(JSON.stringify(String(name??'').trim()[0]?.toUpperCase()||'?'))})">`:mgrInitial(name);
+ // width/height: Notgroesse, falls styles.css fehlt oder veraltet ist (sonst erscheint das Profilbild riesig); die CSS-Regeln gehen vor.
+ return src?`<img src="${escapeHtml(src)}" alt="" width="24" height="24" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('mgr-av-txt');this.replaceWith(${escapeHtml(JSON.stringify(String(name??'').trim()[0]?.toUpperCase()||'?'))})">`:mgrInitial(name);
 }
 function mgrFace(name,cls='',id=null){
  const inner=mgrFaceInner(name,id),txt=inner!=null&&!inner.startsWith('<img');
