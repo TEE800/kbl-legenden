@@ -901,3 +901,6 @@ body.zr-on .mobilenav{display:none}
 .zr.zr-full .zr-pitch{margin:0}
 .zr.zr-full .zr-ctrl{margin:8px 0 0}
 @media (max-width:600px){.zr.zr-full .zr-hud{flex-wrap:wrap}.zr.zr-full .zr-close{position:absolute;right:10px;top:calc(8px + env(safe-area-inset-top))}}
+.zr-vid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px 0 8px}
+.zr-vid button{min-height:36px;padding:6px 12px}
+.zr.zr-full .zr-vid{display:none}
