@@ -1551,8 +1551,12 @@ async function renderBumsTabelle(){
  const RN={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
  const chips=r=>Object.entries(r).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="${escapeHtml(RN[k]||k)}: zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('');
  const top=rows.length?rows[0].count:0,rankOf=r=>1+rows.filter(x=>x.count>r.count).length;
- const hit=rows.filter(r=>r.count>0),clean=rows.filter(r=>r.count===0);
- bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count,rules:r.rules,out:r.out,in:r.in})),clean:clean.map(r=>r.name),half:from===1?'Hinrunde':'Rückrunde',RN};
+ const hit=rows.filter(r=>r.count>0);
+ // Weiße Weste (Kevin-Vorgabe): Spieltage ohne Bumsung je Manager, nicht die ganze Halbserie.
+ for(const r of rows)r.clean=inHalf.filter(d=>r.per[d]===0).length;
+ const wwMax=Math.max(0,...rows.map(r=>r.clean)),wwTop=wwMax?rows.filter(r=>r.clean===wwMax):[];
+ const wwRows=rows.filter(r=>r.clean>0).sort((a,b)=>b.clean-a.clean||a.name.localeCompare(b.name,'de'));
+ bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count,rules:r.rules,out:r.out,in:r.in})),clean:wwTop.map(r=>r.name),cleanN:wwMax,half:from===1?'Hinrunde':'Rückrunde',RN};
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
@@ -1565,9 +1569,9 @@ async function renderBumsTabelle(){
  const perDay=r=>inHalf.length>1?`<div class="bums-perday">${inHalf.map(d=>`<span${r.per[d]?'':' class="zero"'}>ST ${d}: ${r.per[d]??0}</span>`).join('')}</div>`:'';
  const list=hit.map(r=>`<div class="bums-row${rankOf(r)===1?' first':''}" data-bums-name="${escapeHtml(r.name)}"><span class="bums-rank">${rankOf(r)}</span><div class="bums-who"><b>${mgrLink(r.name)}</b><div class="bums-rules">${chips(r.rules)}</div>${perDay(r)}</div><div class="bums-bar"><i style="width:${top?Math.round(r.count/top*100):0}%"></i></div><span class="bums-num">${r.count}</span>${dirLine(r)}</div>`).join('');
  const legend=Object.keys(ruleTot).sort((a,b)=>ruleTot[b]-ruleTot[a]).map(k=>`<span><span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="Zur Regel">${escapeHtml(k)}</span> ${escapeHtml(RN[k]||k)} <span class="muted">${ruleTot[k]}×</span></span>`).join('');
- el.innerHTML=(hit.length?`<div class="bums-stats"><div><small>Bumsungen gesamt</small><strong>${total}</strong></div><div><small>Häufigste Regel</small><strong>${topRule?escapeHtml(RN[topRule[0]]||topRule[0]):'–'}</strong><span class="muted tiny">${topRule?topRule[1]+'×':''}</span></div><div><small>Weiße Weste</small><strong>${clean.length}</strong><span class="muted tiny">Manager ohne Bumsung</span></div></div>`+
+ el.innerHTML=(hit.length?`<div class="bums-stats"><div><small>Bumsungen gesamt</small><strong>${total}</strong></div><div><small>Häufigste Regel</small><strong>${topRule?escapeHtml(RN[topRule[0]]||topRule[0]):'–'}</strong><span class="muted tiny">${topRule?topRule[1]+'×':''}</span></div><div><small>Meiste Weiße Westen</small><strong>${wwTop.length?wwTop.map(r=>escapeHtml(r.name)).join(', '):'–'}</strong><span class="muted tiny">${wwMax?`${wwMax} von ${inHalf.length} Spieltagen ohne Bumsung`:'noch keine'}</span></div></div>`+
   `<details class="hall-section prof-sec bums-statsbox" id="bumsTab"${bumsTabOpen?' open':''}><summary><h4>📋 TABELLE</h4></summary><div class="bums-podium">${podium}</div><div class="bums-list">${list}</div>`+
-  (clean.length?`<p class="bums-clean"><b>😇 Weiße Weste:</b> ${clean.map(r=>escapeHtml(r.name)).join(', ')}</p>`:'')+
+  (wwRows.length?`<p class="bums-clean"><b>😇 Weiße Westen</b> <span class="muted tiny">(Spieltage ohne Bumsung)</span>: ${wwRows.map(r=>`${escapeHtml(r.name)} ${r.clean}`).join(', ')}</p>`:'')+
   `<div class="bums-legend">${legend}</div></details>${bumsDaysHtml(days,inHalf,RN)}${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
   `<p class="muted tiny">${inHalf.some(d=>days[d].manual)?`Von Hand nachgetragen: ST ${inHalf.filter(d=>days[d].manual).join(', ')}. `:''}${from===1?'Hinrunde':'Rückrunde'} · ${inHalf.length} von ${finished.filter(d=>d>=from&&d<=to).length} abgeschlossenen Spieltagen erfasst. Übernommen wird automatisch, sobald ein Spieltag in der BumsParade vollständig geprüft ist. Vorläufig: Ändert sich dort etwas, zieht die Tabelle nach.</p>`+
   (missing.length?`<p><button type="button" class="ghost" id="bumsFill">Fehlende Spieltage nachholen (ST ${missing.join(', ')})</button> <span class="muted tiny" id="bumsFillMsg"></span></p>`:'');
@@ -1652,7 +1656,7 @@ function kblBumsIntroTry(){
  if(!bumsIntroData.hit.length||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
  kblBumsIntro(bumsIntroData);
 }
-function kblBumsIntro({hit,clean,half,RN}){
+function kblBumsIntro({hit,clean,cleanN,half,RN}){
  document.querySelector('.bums-intro')?.remove();
  // Einzelne Statistiken: je Regel der Spitzenreiter (häufigste Regeln zuerst, max. 4), meiste abgegeben/bekommen, zum Schluss der Bumskönig.
  const best=f=>{const m=Math.max(0,...hit.map(f));return m?{n:m,who:hit.filter(r=>f(r)===m).map(r=>r.name)}:null;};
@@ -1699,7 +1703,7 @@ function kblBumsIntro({hit,clean,half,RN}){
  timers.push(setTimeout(()=>{if(done)return;
   const k=document.createElement('div');k.className='bums-intro-king';
   k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
-   (clean.length?`<div class="bums-intro-clean">😇 Weiße Weste: ${clean.map(n=>mgrName(n)).join(', ')}</div>`:'');
+   (clean.length?`<div class="bums-intro-clean">😇 Meiste Weiße Westen: ${clean.map(n=>mgrName(n)).join(', ')} · ${cleanN} Spieltag${cleanN===1?'':'e'} ohne Bumsung</div>`:'');
   ov.appendChild(k);
   k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
   k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
