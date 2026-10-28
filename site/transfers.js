@@ -49,11 +49,11 @@
   };
   return `<div class="tr-tiles tr-records">${card('Größter Gewinn der Saison',Math.max,'tr-pos')}${card('Größter Verlust der Saison',Math.min,'tr-neg')}</div>`;
  }
- // Transfer-Pech-Radar (Kevin-Wunsch): verkauft und gleich am nächsten Spieltag gepunktet. Daten von /api/transfer-pech,
+ // Pechradar (Kevin-Wunsch): verkauft und gleich am nächsten Spieltag gepunktet. Daten von /api/transfer-pech,
  // nur die laufende Halbserie (Leistungsdaten der laufenden Bundesliga-Saison). Startet eingeklappt (feste Regel).
  function pechRadar(){
   if(!pech||!cur()?.current)return '';
-  if(pech.error)return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Transfer-Pech-Radar</span><span class="tr-pill error">fehlt</span></summary><div class="acc-sub"><p class="error">Das fehlt: ${esc(pech.error)}</p></div></details>`;
+  if(pech.error)return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Pechradar</span><span class="tr-pill error">fehlt</span></summary><div class="acc-sub"><p class="error">Das fehlt: ${esc(pech.error)}</p></div></details>`;
   const hits=(pech.items||[]).filter(x=>x.points>=pech.min);
   const before=h=>h<48?`${h} Std.`:`${Math.round(h/24)} Tage`;
   const byMgr=new Map();for(const x of hits){const m=byMgr.get(x.seller.id)||{...x.seller,n:0,pts:0};m.n++;m.pts+=x.points;byMgr.set(x.seller.id,m);}
@@ -66,7 +66,7 @@
    <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.diff!=null?` · <span class="${cls(x.diff)}">${money(x.diff,true)}</span>`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
    ${x.buyerStarted?`<small class="tr-pech-buyer">🍀 ${esc(x.buyer)} hatte ihn gleich in der Startelf</small>`:''}</div><b class="tr-pech-pts">${x.points}</b></li>`;
   const notes=[pech.missing?`${pech.missing} Verkäufe ohne Punkte in den Leistungsdaten`:'',pech.failedPlayers?`Leistungsdaten von ${pech.failedPlayers} Spielern`:'',pech.failedManagers?.length?`Transfers von ${pech.failedManagers.join(', ')}`:''].filter(Boolean);
-  return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Transfer-Pech-Radar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
+  return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Pechradar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
    <p class="muted tiny">Verkauft und gleich am nächsten Spieltag mindestens ${pech.min} Punkte geholt. Die BumsKI zählt nur abgeschlossene Spieltage; wer den Spieler vor dem Anpfiff zurückgekauft hat, ist raus.</p>
    ${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
    ${notes.length?`<p class="error tiny">Das fehlt: ${esc(notes.join('; '))}.</p>`:''}</div></details>`;
