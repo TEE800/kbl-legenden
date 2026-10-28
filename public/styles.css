@@ -1012,3 +1012,7 @@ body.zr-on .mobilenav{display:none}
 .ber-pruef li{margin:3px 0}
 .ber-pruef li.bad,.ber-warn{color:var(--shame-text)}
 .mvp-result{margin:14px 0 6px;gap:6px}
+/* Baby-Wappen (Kevin-Wunsch): auf der Brust unter dem Kinn wie beim Spieler-Männchen, 90° nach rechts gedreht, kein Trikotstreifen darunter */
+.stk-swad{height:20px;bottom:-6px}
+.stk-crest{left:12px;bottom:-5px;width:13px;height:13px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
+.stk-bhead{z-index:2}
