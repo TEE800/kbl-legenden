@@ -43,7 +43,9 @@ function mgrName(name,cls='',id=null){
 function fillMgrFaces(root=document){
  for(const el of root.querySelectorAll('.mgr-av[data-mgr]:empty')){const inner=mgrFaceInner(el.dataset.mgr,el.dataset.mgrId);if(inner==null)continue;el.innerHTML=inner;if(!inner.startsWith('<img'))el.classList.add('mgr-av-txt');}
 }
-window.kblMgrFace=mgrFace;window.kblMgrName=mgrName;window.kblFillMgrFaces=fillMgrFaces;
+// Manager mit seinem Profil verlinken (Kevin-Wunsch): Klick öffnet „Managerprofile“ mit diesem Manager. html = Inhalt (Standard: Logo plus Name).
+function mgrLink(name,html=mgrName(name)){return `<a class="mgr-link" href="#profiles" data-goto-profile="${escapeHtml(name??'')}">${html}</a>`;}
+window.kblMgrFace=mgrFace;window.kblMgrName=mgrName;window.kblMgrLink=mgrLink;window.kblFillMgrFaces=fillMgrFaces;
 // Abgelaufene Sitzung (z. B. nach einem Server-Neustart): Anmeldemaske wieder zeigen statt Fehlern in jedem Reiter.
 async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(r.status===401&&!String(url).startsWith('/api/login')){try{setConnected(false);}catch{}throw Error('Bitte neu anmelden (Sitzung abgelaufen).');}if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 function setConnected(on){$('#status').textContent=on?'● Kickbase verbunden':'Nicht verbunden';$('#status').classList.toggle('ok',on);$('#loginCard').classList.toggle('hidden',on);$('#leagueCard').classList.add('hidden');if(!on)$('#dashboard').classList.add('hidden')}
@@ -215,7 +217,7 @@ function renderHall(){
  const card=r=>{
   const winnerNames=[...new Set(r.winners.map(w=>w.name))];
   const shown=winnerNames.length>3?winnerNames.slice(0,2):winnerNames;
-  const nm=n=>mgrName(n);
+  const nm=n=>mgrLink(n);
   const names=shown.map(nm).join(' · ')+(winnerNames.length>3?` <details class="hall-more"><summary>+ ${winnerNames.length-2} weitere</summary>${winnerNames.slice(2).map(nm).join(' · ')}</details>`:'');
   const best=r.winners[0];
   const value=best?`${fmt(r.value(best))}${r.unit}`:'–';
@@ -363,6 +365,12 @@ function showProfile(){
 }
 $('#profileSelect').addEventListener('change',showProfile);
 $('#compareSelect').addEventListener('change',()=>{if($('#compareSelect').value!=='')profOpen.add(DUEL_SEC);showProfile();});
+// Verlinkte Manager (mgrLink): Profil wählen, dann über die Adresse #profiles den Reiter öffnen (index.html, hashchange).
+document.addEventListener('click',e=>{const a=e.target.closest('[data-goto-profile]');if(!a)return;e.preventDefault();
+ const i=currentManagers.findIndex(m=>m.name===a.dataset.gotoProfile);
+ if(i>=0){$('#profileSelect').value=String(i);showProfile();}
+ if(location.hash==='#profiles')window.scrollTo({top:0,behavior:'instant'});else location.hash='#profiles';
+});
 $('#ranking').addEventListener('click',e=>{const b=e.target.closest('[data-profile]');if(!b)return;$('#profileSelect').value=b.dataset.profile;showProfile();$('#profiles').scrollIntoView({behavior:'smooth'});});
 // Historische Rankingwerte sind kumuliert. Spieltagspunkte = Differenz zum Vortag.
 // Nur beendete Bundesliga-Spieltage zählen für offizielle Spieltagssiege.
@@ -469,7 +477,7 @@ function renderLeagueAnalysis(){
  const avgAll=rows.reduce((s,r)=>s+r.avg,0)/rows.length;
  const card=(label,value,sub)=>`<div style="background:#17232c;border:1px solid #34424c;border-radius:10px;padding:16px;min-width:0"><small style="color:#9eafbc">${label}</small><div style="font-size:clamp(16px,4.6vw,24px);font-weight:800;color:#e9c878;margin:8px 0;overflow-wrap:anywhere">${value}</div><small style="color:#a6b7c4">${sub}</small></div>`;
  const esc=x=>escapeHtml(String(x)).replace(/_/g,'_<wbr>');
- const nm=x=>mgrName(x);
+ const nm=x=>mgrLink(x);
  const short=list=>list.length>2?`${list.slice(0,2).map(nm).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(nm).join(', ')}</details>`:list.map(nm).join(', ');
  const pick=(list,val,dir=1)=>{const v=dir>0?Math.max(...list.map(val)):Math.min(...list.map(val));return {v,who:list.filter(x=>val(x)===v)};};
  // Je Spieltag: Ligaschnitt und Abstand Sieger zu Zweitem.
@@ -491,8 +499,8 @@ function renderLeagueAnalysis(){
   bestDay&&worstDay?card('STÄRKSTER SPIELTAG',stDays(bestDay.who),`${fmt(bestDay.v)} Ø Punkte der Liga · schwächster: ${stDays(worstDay.who)} (${fmt(worstDay.v)} Ø)`):''}${
   (()=>{const rm=window.kblRankMoves;if(!rm)return '';return card('GRÖSSTE AUFHOLJAGD',rm.climbers.length?rm.climbers.map(r=>nm(r.name)).join(', '):'–',rm.climbers.length?rm.moves(rm.climbers,r=>`von Platz ${r.lowest} auf Platz ${r.now} (+${r.climb})`):'Noch niemand hat sich nach vorne gekämpft')+
    card('TIEFSTER FALL',rm.fallers.length?rm.fallers.map(r=>nm(r.name)).join(', '):'–',rm.fallers.length?rm.moves(rm.fallers,r=>`von Platz ${r.highest} auf Platz ${r.now} (−${r.fall})`):'Noch niemand ist abgerutscht');})()}${
-  bigWin?card('DEUTLICHSTER SIEG',short([...new Set(bigWin.who.map(x=>x.winner))]),`+${fmt(bigWin.v)} vor ${bigWin.who.length===1?esc(bigWin.who[0].second)+' · ST '+bigWin.who[0].day:'dem Zweiten · '+stDays(bigWin.who)}`):''}${
-  tight?card('KNAPPSTER SIEG',short([...new Set(tight.who.map(x=>x.winner))]),`+${fmt(tight.v)} vor ${tight.who.length===1?esc(tight.who[0].second)+' · ST '+tight.who[0].day:'dem Zweiten · '+stDays(tight.who)}`):''}</div>`;
+  bigWin?card('DEUTLICHSTER SIEG',short([...new Set(bigWin.who.map(x=>x.winner))]),`+${fmt(bigWin.v)} vor ${bigWin.who.length===1?mgrLink(bigWin.who[0].second,esc(bigWin.who[0].second))+' · ST '+bigWin.who[0].day:'dem Zweiten · '+stDays(bigWin.who)}`):''}${
+  tight?card('KNAPPSTER SIEG',short([...new Set(tight.who.map(x=>x.winner))]),`+${fmt(tight.v)} vor ${tight.who.length===1?mgrLink(tight.who[0].second,esc(tight.who[0].second))+' · ST '+tight.who[0].day:'dem Zweiten · '+stDays(tight.who)}`):''}</div>`;
  const pill=document.querySelector('#stats .sectionhead .pill');if(pill)pill.textContent=`${days.length} abgeschlossene Spieltage · ${rows.length} Manager`;
 }
 
@@ -656,7 +664,7 @@ function renderRankHistory(){
  const top=(key)=>{const max=Math.max(0,...rows.map(r=>r[key]));return max>0?rows.filter(r=>r[key]===max):[];};
  const nameList=list=>list.map(r=>escapeHtml(r.name)).join(', ');
  // Bei Gleichstand eigene Plätze je Manager zeigen, sonst ist die Angabe irreführend.
- const moves=(list,text)=>list.length===1?text(list[0]):list.map(r=>`<b>${escapeHtml(r.name)}:</b> ${text(r)}`).join('<br>');
+ const moves=(list,text)=>list.length===1?text(list[0]):list.map(r=>`${mgrLink(r.name,`<b>${escapeHtml(r.name)}:</b>`)} ${text(r)}`).join('<br>');
  const card=(label,value,sub)=>`<div><small>${label}</small><strong>${value}</strong><span>${sub}</span></div>`;
  const climbers=top('climb'),fallers=top('fall'),leaders=top('leads');
  window.kblRankMoves={climbers,fallers,moves,nameList};
@@ -1268,13 +1276,13 @@ let accTodoOpen=false;
 function centerExtraCards(finished,card){
  const last=finished.at(-1),prev=finished.at(-2);if(!last)return '';
  const esc=x=>escapeHtml(String(x)).replace(/_/g,'_<wbr>');
- const nm=x=>mgrName(x);
+ const nm=x=>mgrLink(x);
  const short=list=>list.length>2?`${list.slice(0,2).map(nm).join(', ')} <details class="hall-more"><summary>+ ${list.length-2} weitere</summary>${list.slice(2).map(nm).join(', ')}</details>`:list.map(nm).join(', ');
  const scored=last.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)).sort((a,b)=>b.dayPoints-a.dayPoints);
  if(!scored.length)return '';
  const best=scored[0].dayPoints,winners=scored.filter(m=>m.dayPoints===best),rest=scored.filter(m=>m.dayPoints<best);
  const lead=winners.length>1?card('VORSPRUNG DES SIEGERS','Gleichstand',`${winners.length} Sieger mit ${fmt(best)} Punkten`)
-  :rest.length?card('VORSPRUNG DES SIEGERS',`+${fmt(best-rest[0].dayPoints)}`,`vor ${esc(rest[0].name)} (${fmt(rest[0].dayPoints)})`):'';
+  :rest.length?card('VORSPRUNG DES SIEGERS',`+${fmt(best-rest[0].dayPoints)}`,`vor ${mgrLink(rest[0].name,esc(rest[0].name))} (${fmt(rest[0].dayPoints)})`):'';
  const pointsOf=(h,n)=>h.list.find(m=>m.name===n)?.dayPoints??null;
  const earlier=finished.slice(0,-1);
  const records=scored.filter(m=>{const old=earlier.map(h=>pointsOf(h,m.name)).filter(x=>x!==null);return old.length&&m.dayPoints>Math.max(...old);});
@@ -1312,7 +1320,7 @@ function benchCard(day,card){
  if(b.wait)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','…','Bankpunkte werden geladen');
  if(b.msg)return card('🤡 VOLLPFOSTEN DES SPIELTAGS','–',escapeHtml(b.msg));
  const best=b.list[0].bench.filter(p=>p.points!=null).slice(0,3).map(p=>`${escapeHtml(p.name||'Spieler '+p.id)} ${fmt(p.points)}`).join(', ');
- return card('🤡 VOLLPFOSTEN DES SPIELTAGS',b.list.map(m=>mgrName(m.name)).join(', '),`${fmt(b.top)} Punkte auf der Bank gelassen${best&&b.list.length===1?` · ${best}`:''}`);
+ return card('🤡 VOLLPFOSTEN DES SPIELTAGS',b.list.map(m=>mgrLink(m.name)).join(', '),`${fmt(b.top)} Punkte auf der Bank gelassen${best&&b.list.length===1?` · ${best}`:''}`);
 }
 function historyLiveInner(day){
  const leader=liveRanking(day)?.[0];
@@ -1323,7 +1331,7 @@ function renderCenter(){
  const finished=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
  if(!finished.length){el.innerHTML='<p class="muted">Noch kein Spieltag abgeschlossen.</p>';return;}
  const card=(label,value,sub)=>`<div><small>${label}</small><strong>${value}</strong><span>${sub}</span></div>`;
- const names=list=>list.map(m=>mgrName(m.name)).join(', ');
+ const names=list=>list.map(m=>mgrLink(m.name)).join(', ');
  let html='';
  // Kein LIVE-Kasten hier (Kevin-Wunsch): Der laufende Spieltag steht oben in der Kategorie „Spieltag“, hier nur Abgeschlossenes.
  const last=finished.at(-1);
@@ -1350,7 +1358,7 @@ function renderCenter(){
   html+=`<div class="rank-cards">${
    card('SPIELTAGSSIEGER',winners.length?names(winners):'–',best===null?'':`${fmt(best)} Punkte`)}${
    card('LETZTER',losers.length?names(losers):'–',worst===null?'':`${fmt(worst)} Punkte${avg!==null?` · Schnitt ${fmt(Math.round(avg))}`:''}`)}${
-   card('TABELLENFÜHRER',leaders.length?leaders.map(n=>mgrName(n)).join(', '):'–',leaderScore==null?'':`${fmt(leaderScore)} Punkte${second?` · ${fmt(leaderScore-second.score)} vor ${escapeHtml(second.name)}`:''}`)}${
+   card('TABELLENFÜHRER',leaders.length?leaders.map(n=>mgrLink(n)).join(', '):'–',leaderScore==null?'':`${fmt(leaderScore)} Punkte${second?` · ${fmt(leaderScore-second.score)} vor ${mgrLink(second.name,escapeHtml(second.name))}`:''}`)}${
    moveCard}${benchCard(last.day,card)}${centerExtraCards(finished,card)}</div>`;
 
  }
@@ -1806,7 +1814,7 @@ function pvLiveHtml(day){
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
  if(!days.length)return [];
- const b=n=>`<b>${escapeHtml(n)}</b>`,f=v=>fmt(Math.round(v));
+ const b=n=>mgrLink(n,`<b>${escapeHtml(n)}</b>`),l=n=>mgrLink(n,escapeHtml(n)),f=v=>fmt(Math.round(v));
  const series=new Map();
  for(const h of days)for(const m of h.list)if(m.dayPoints!==null&&isEligibleManager(m.name)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push(m.dayPoints);}
  const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
@@ -1815,7 +1823,7 @@ function pvQuestions(){
  // Tabelle nach dem letzten Spieltag
  const table=last.list.filter(m=>isEligibleManager(m.name)&&m.score!==null).slice().sort((x,y)=>y.score-x.score);
  if(table.length>1){const [a,c]=table,gap=a.score-c.score;
-  q('👑 THRON',`Wackelt der Thron von ${b(a.name)}?`,gap===0?`Punktgleich mit ${escapeHtml(c.name)}. Wer zuckt zuerst?`:gap<250?`Nur ${f(gap)} Punkte vor ${escapeHtml(c.name)}. Ein schwacher Spieltag reicht.`:`${f(gap)} Punkte vor ${escapeHtml(c.name)}. Kommt da überhaupt noch wer ran?`);}
+  q('👑 THRON',`Wackelt der Thron von ${b(a.name)}?`,gap===0?`Punktgleich mit ${l(c.name)}. Wer zuckt zuerst?`:gap<250?`Nur ${f(gap)} Punkte vor ${l(c.name)}. Ein schwacher Spieltag reicht.`:`${f(gap)} Punkte vor ${l(c.name)}. Kommt da überhaupt noch wer ran?`);}
  // Formkurve: letzte 3 Spieltage gegen den eigenen Schnitt
  const form=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const l=p.slice(-3);return {n,last:avg(l),all:avg(p),d:avg(l)-avg(p)};});
  const hot=form.slice().sort((x,y)=>y.d-x.d)[0],cold=form.slice().sort((x,y)=>x.d-y.d)[0];
@@ -1839,14 +1847,14 @@ function pvQuestions(){
   if(losers.length===1)q('🥄 LETZTER',`Holt sich ${b(losers[0].name)} wieder den Holzlöffel ab?`,`Spieltag ${last.day}: ${f(worst)} Punkte. Immerhin gab es per Drehtür ein Geschenk vom Sieger.`);
  }
  const lan=table.at(-1),above=table.at(-2);
- if(lan&&above&&lan!==table[0])q('🏮 ROTE LATERNE',`Gibt ${b(lan.name)} die rote Laterne endlich ab?`,`${f(above.score-lan.score)} Punkte hinter ${escapeHtml(above.name)}`);
+ if(lan&&above&&lan!==table[0])q('🏮 ROTE LATERNE',`Gibt ${b(lan.name)} die rote Laterne endlich ab?`,`${f(above.score-lan.score)} Punkte hinter ${l(above.name)}`);
  // Bester Schnitt ohne Spieltagssieg
  const wins=new Map();for(const h of days){const s=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));if(!s.length)continue;const mx=Math.max(...s.map(m=>m.dayPoints));s.filter(m=>m.dayPoints===mx).forEach(m=>wins.set(m.name,1));}
  const winless=[...series].filter(([n,p])=>!wins.has(n)&&p.length>=3).map(([n,p])=>({n,a:avg(p),g:p.length})).sort((x,y)=>y.a-x.a)[0];
  if(winless)q('⏳ SIEGLOS',`Wann gewinnt ${b(winless.n)} endlich mal einen Spieltag?`,`Ø ${f(winless.a)} Punkte, aber kein Spieltagssieg in ${winless.g} Spieltagen`);
  // Noch ungebumst
  const clean=bums.filter(x=>x.c===0);
- if(clean.length&&bums.length)q('😇 UNGEBUMST',clean.length<=2?`Bleibt ${clean.map(x=>b(x.n)).join(' und ')} weiter ungebumst?`:`${clean.length} Manager sind noch ungebumst. Wen erwischt es zuerst?`,clean.length<=2?'Bisher keine einzige Bumsung in der Halbserie':clean.map(x=>escapeHtml(x.n)).join(', '));
+ if(clean.length&&bums.length)q('😇 UNGEBUMST',clean.length<=2?`Bleibt ${clean.map(x=>b(x.n)).join(' und ')} weiter ungebumst?`:`${clean.length} Manager sind noch ungebumst. Wen erwischt es zuerst?`,clean.length<=2?'Bisher keine einzige Bumsung in der Halbserie':clean.map(x=>l(x.n)).join(', '));
  // Größte Schwankung
  const wild=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const a=avg(p);return {n,sd:Math.sqrt(avg(p.map(x=>(x-a)**2))),lo:Math.min(...p),hi:Math.max(...p)};}).sort((x,y)=>y.sd-x.sd)[0];
  if(wild)q('🎲 WUNDERTÜTE',`Top oder Flop: Welcher ${b(wild.n)} kommt diesmal?`,`Bisher zwischen ${f(wild.lo)} und ${f(wild.hi)} Punkten alles dabei`);
