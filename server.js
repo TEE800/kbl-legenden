@@ -1868,13 +1868,13 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
     const bn = [];
     if (info.ownGoal) bn.push('Eigentor');
     if (info.penMissed.length) bn.push(`Elfmeter verschossen (${info.penMissed.join(', ')}. Min.)`);
-    if (bn.length) actions.push({ ...base(lp), rule: 'BN', reason: bn.join(' + '), action: 'An einen beliebigen Manager abgeben; Empfänger stellt ihn am nächsten Spieltag auf' });
+    if (bn.length) actions.push({ ...base(lp), rule: 'BN', reason: bn.join(' + '), action: 'An einen beliebigen Mitmanager abgeben' });
     // RK: Rot, Gelb-Rot oder 5. Gelbe Karte
     const rk = [];
     if (info.red) rk.push('Rote Karte');
     if (info.yellowRed) rk.push('Gelb-Rote Karte');
     if (info.yellowBan) rk.push(`${info.yellowBan}. Gelbe Karte der Saison`);
-    if (rk.length) actions.push({ ...base(lp), rule: 'RK', reason: rk.join(' + '), action: 'An einen beliebigen Mitmanager abgeben; Empfänger stellt ihn am nächsten Spieltag auf' });
+    if (rk.length) actions.push({ ...base(lp), rule: 'RK', reason: rk.join(' + '), action: 'An einen beliebigen Mitmanager abgeben' });
   }
   // UM: verursachter Elfmeter durch Foul (Gegner hat "Elfmeter herausgeholt" bis 5 Min. daneben: Kickbase stempelt
   // Foul und Pfiff nach VAR-Pruefung unterschiedlich, Tapsoba ST 7: 4171 in der 78., Asllani 4177 in der 75. Min.)
@@ -1903,7 +1903,7 @@ async function detectAutoEvents({ token, day, lineupPlayers, ownerOf, getCenter:
         else if (owner && String(owner.managerId) === String(lp.managerId)) unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter per Foul verursacht (${label}); gefoulter Spieler ${fouled.name} steht im selben Kader. Sonderfall, bitte entscheiden` });
         else actions.push({ ...base(lp), rule: 'UM', reason: `Elfmeter per Foul verursacht (${label}), gefoult wurde ${fouled.name}`,
           recipient: owner ? owner.manager : 'Markt', recipientId: owner ? String(owner.managerId) : null, recipientKind: owner ? 'manager' : 'markt',
-          action: owner ? `An ${owner.manager} abgeben; Empfänger stellt ihn am nächsten Spieltag auf` : 'Niemand hat den gefoulten Spieler: an den Markt verkaufen' });
+          action: owner ? `An ${owner.manager} abgeben` : 'Niemand hat den gefoulten Spieler: an den Markt verkaufen' });
       } else if (!hits.length && !oppFailed && !other.length) { /* Handspiel: zaehlt nicht fuer UM */ }
       else if (!hits.length && !oppFailed) unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}); beim Gegner "Elfmeter herausgeholt" nur zu anderer Zeit: ${other.map(o => `${o.name} ${o.minute}. Min.`).join(', ')}. Bitte prüfen` });
       else unclear.push({ ...base(lp), rule: 'UM', reason: `Elfmeter verursacht (${label}): ${oppFailed ? 'Gegnerdaten nicht vollständig lesbar' : hits.length + ' mögliche gefoulte Spieler'}, bitte prüfen` });
