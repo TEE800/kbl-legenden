@@ -904,6 +904,51 @@ body.zr-on .mobilenav{display:none}
 .zr-vid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px 0 8px}
 .zr-vid button{min-height:36px;padding:6px 12px}
 .zr.zr-full .zr-vid{display:none}
+/* MVP-Tipp-Rennen: Manager als Strichmännchen mit ihrem getippten Spieler als Baby im Arm (Kevin-Wunsch) */
+.stk{position:absolute;width:48px;margin-left:-8px;transition:left 1.2s cubic-bezier(.3,1.4,.6,1)}
+.stk-body{position:relative;width:48px;height:60px;transform-origin:18px 56px}
+.stk-fig{width:48px;height:60px;display:block;overflow:visible}
+.stk-line,.stk-leg{stroke:#111;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;fill:none;filter:drop-shadow(0 0 1px rgba(255,255,255,.8))}
+.stk-headc{fill:#fff;stroke:#111;stroke-width:2}
+.stk-face{position:absolute;left:5px;top:-3px;width:26px;height:26px;z-index:2}
+.stk-face .mgr-av{display:flex;width:26px;height:26px;margin:0;top:0;box-shadow:0 0 0 2px #111;font-size:11px;background:#fff;color:#111}
+.stk.lead .stk-face .mgr-av{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(244,215,119,.9)}
+.stk-up{display:none}.stk.champ .stk-up{display:inline}.stk.champ .stk-hold{display:none}
+.stk-baby{position:absolute;left:23px;top:19px;width:26px;height:16px;z-index:3;transform-origin:13px 10px}
+.stk-swad{position:absolute;left:0;bottom:0;width:26px;height:14px;overflow:visible}
+.stk-bhead{position:absolute;left:11px;bottom:6px;height:28px;width:auto;max-width:32px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.stk.has-bhead .stk-bface{display:none}
+.stk-crest{position:absolute;left:3px;bottom:2px;width:9px;height:9px;object-fit:contain}
+.stk-crown{display:none;position:absolute;left:14px;top:-34px;font-size:14px;transform:rotate(12deg);z-index:2}
+.stk:not(.has-bhead) .stk-crown{top:-12px}
+.stk.best .stk-crown{display:block}
+.stk-tear{display:none;position:absolute;left:6px;top:14px;font-size:13px;z-index:5;animation:stkTear 1s ease-in infinite}
+.stk.mourn .stk-tear{display:block}
+.stk .toon-ball,.stk .toon-dizzy{display:none}
+.stk.run .toon-ball{display:block;right:-6px}.stk.ko .toon-dizzy{display:block;left:-14px;top:24px;bottom:auto}
+.stk-tag{position:absolute;top:24px;left:52px;z-index:4;white-space:nowrap;font-size:10px;font-weight:600;color:#fff;background:rgba(0,0,0,.6);border-radius:6px;padding:1px 6px}
+.stk-tag b{color:var(--gold)}.stk-tag .stk-mn{color:#fff;font-weight:800}.stk-tag small{color:#cfd8de;font-size:9px}
+.stk.flip .stk-tag{left:auto;right:42px}
+.stk.lead .stk-tag{background:#8a6d1f;box-shadow:0 0 0 1px var(--gold)}
+.stk.me .stk-tag .stk-mn{text-decoration:underline}
+.stk-leg{transform-origin:18px 39px}.stk-leg.l{transform:rotate(22deg)}.stk-leg.r{transform:rotate(-22deg)}
+.stk.run .stk-leg.l{transform-origin:18px 39px;animation:toonSwing .38s ease-in-out infinite alternate}
+.stk.run .stk-leg.r{transform-origin:18px 39px;animation:toonSwing .38s ease-in-out infinite alternate-reverse}
+.stk.run .stk-body{animation:toonBob .19s ease-in-out infinite alternate}
+.stk.idle .stk-baby{animation:stkRock 1.6s ease-in-out infinite alternate}
+.stk.champ .stk-baby{animation:stkLift .35s ease-in-out infinite alternate}
+.stk.champ .stk-body{animation:toonShimmy .44s ease-in-out infinite alternate}
+.stk.mourn .stk-body{transform:rotate(-8deg) translateY(2px)}
+.stk.fall .stk-body,.stk.ko .stk-body{transform-origin:24px 36px}.stk.fall .stk-body{transform:rotate(-80deg)}
+.stk.ko{opacity:.45}.stk.ko .stk-body{transform:rotate(-90deg);filter:saturate(.6) brightness(.9)}
+.stk.ko.flip .stk-tag,.stk.fall.flip .stk-tag{right:54px}
+@keyframes stkRock{from{transform:rotate(-10deg)}to{transform:rotate(10deg)}}
+@keyframes stkLift{from{transform:translate(-18px,-37px)}to{transform:translate(-18px,-42px)}}
+@keyframes stkTear{0%{transform:translateY(0);opacity:1}70%{opacity:1}100%{transform:translateY(12px);opacity:0}}
+.stk.champ .stk-baby{transform:translate(-18px,-37px)}
+.zr-pitch .stk.zr-fixed .stk-tag{background:#c0392b;animation:zrPop .5s}
+@media (prefers-reduced-motion:reduce){.stk,.stk *{animation:none!important;transition:none!important}}
+@media (max-width:600px){.stk-tag{font-size:9px;padding:1px 4px;white-space:normal;width:max-content;max-width:150px;line-height:1.2}.stk-tag small{font-size:8px;white-space:nowrap}.stk-tag .stk-mn{display:block}}
 
 /* Spieltagsbericht auf der Startseite (public/bericht.js) */
 #bericht[hidden]{display:none!important}
