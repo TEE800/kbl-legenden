@@ -522,6 +522,42 @@ async function handleBericht(req, env, cors, parts, body) {
   await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
 }
 
+// Reaktionen auf den Spieltagsbericht (Kevin-Wunsch 28.10.): Jeder Besucher kann unter jedem Abschnitt (Einleitung = 0,
+// dann je Zwischenüberschrift 1, 2, …) mit Emojis reagieren, je Emoji und Abschnitt einmal pro Gerät (Gerätenummer kbl-vid wie bei
+// der Nutzung, keine Anmeldung). KV reakt:<day>:<vid>, die Auswahl steht in den Metadaten ({r: {Abschnitt: "Emoji-Nummern"}}),
+// darum reicht zum Zählen ein list() ohne einzelne Abrufe. Nur für freigegebene Berichte.
+const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺'];
+const REAKT_VID = /^[a-z0-9]{8,32}$/;
+async function reaktState(env, day, vid, own) {
+  const counts = {}; let mine = {}, cursor;
+  const add = r => { for (const [sec, ix] of Object.entries(r || {})) for (const c of String(ix)) { const e = REAKT_EMOJI[Number(c)]; if (e) { counts[sec] ??= {}; counts[sec][e] = (counts[sec][e] || 0) + 1; } } };
+  do {
+    const page = await env.TIPPS.list({ prefix: `reakt:${day}:`, cursor });
+    for (const k of page.keys) { const v = k.name.slice(`reakt:${day}:`.length); if (v === vid) { if (!own) mine = k.metadata?.r || {}; continue; } add(k.metadata?.r); }
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  if (own) mine = own; // list() ist erst nach bis zu 60 s aktuell, die eigene Auswahl darum direkt nehmen
+  add(mine);
+  const out = {}; for (const [sec, ix] of Object.entries(mine)) out[sec] = [...String(ix)].map(c => REAKT_EMOJI[Number(c)]).filter(Boolean);
+  return { day, emojis: REAKT_EMOJI, counts, mine: out };
+}
+async function handleReaktion(req, env, cors, parts, body, url) {
+  if (!/^\d{1,2}$/.test(parts[1] || '') || Number(parts[1]) < 1 || Number(parts[1]) > 34) return json({ error: 'Ungültiger Spieltag.' }, 400, cors);
+  const day = Number(parts[1]);
+  if (req.method === 'GET') { const vid = url.searchParams.get('vid') || ''; return json(await reaktState(env, day, REAKT_VID.test(vid) ? vid : '', null), 200, cors); }
+  if (req.method !== 'POST') return json({ error: 'Nicht gefunden.' }, 404, cors);
+  const vid = String(body.vid || ''), sec = String(Number(body.sec)), ix = REAKT_EMOJI.indexOf(String(body.emoji || ''));
+  if (!REAKT_VID.test(vid) || !/^\d{1,2}$/.test(sec) || Number(sec) > 40 || body.sec == null || ix < 0) return json({ error: 'Ungültige Angabe.' }, 400, cors);
+  if ((await env.TIPPS.get(`bericht:${day}`, 'json'))?.status !== 'frei') return json({ error: 'Dieser Bericht ist nicht veröffentlicht.' }, 409, cors);
+  const key = `reakt:${day}:${vid}`, old = (await env.TIPPS.getWithMetadata(key)).metadata?.r || {};
+  const r = { ...old }, cur = String(r[sec] || ''), c = String(ix);
+  r[sec] = cur.includes(c) ? cur.replace(c, '') : [...cur + c].sort().join('');
+  if (!r[sec]) delete r[sec];
+  if (Object.keys(r).length) await env.TIPPS.put(key, '1', { metadata: { r }, expirationTtl: 400 * 86400 });
+  else await env.TIPPS.delete(key);
+  return json({ ok: true, ...(await reaktState(env, day, vid, r)) }, 200, cors);
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
@@ -530,6 +566,7 @@ async function handle(req, env, cors) {
   if (parts[0] === 'nutzung') return handleNutzung(req, env, cors, parts, body);
   if (parts[0] === 'haken') return handleHaken(req, env, cors, parts, body);
   if (parts[0] === 'bericht') return handleBericht(req, env, cors, parts, body);
+  if (parts[0] === 'reaktion') return handleReaktion(req, env, cors, parts, body, url);
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {

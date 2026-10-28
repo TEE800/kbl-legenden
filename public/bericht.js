@@ -81,6 +81,48 @@
   const pr=admin&&draft?pruefHtml(sel):'';
   box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
   fitHeads();
+  if(!draft)reactMount(sel.day);
+ }
+ // Emoji-Reaktionen je Abschnitt (Kevin-Wunsch 28.10.): Einleitung = Abschnitt 0, jede Zwischenüberschrift beginnt den nächsten.
+ // Nur online mit Tippdienst und nur bei veröffentlichten Berichten. Je Emoji und Abschnitt einmal pro Gerät (kbl-vid wie nutzung.js),
+ // nochmal tippen nimmt die Reaktion zurück. Gezählt wird im Tippdienst (/reaktion/:day), alle sehen dieselben Zahlen.
+ const VID='kbl-vid';
+ const vid=()=>{let v='';try{v=localStorage.getItem(VID)||'';}catch{}if(!/^[a-z0-9]{8,32}$/.test(v)){v=Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>b.toString(36).padStart(2,'0')).join('').slice(0,16);try{localStorage.setItem(VID,v);}catch{}}return v;};
+ let rx=null;
+ function reactBars(day){
+  const body=$('berichtContent')?.querySelector('.ber-body');if(!body)return [];
+  const bars=[];let sec=0,has=false;
+  const close=after=>{if(!has)return;const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec;after.after(d);bars.push(d);};
+  let last=null;
+  for(const el of [...body.children]){
+   if(el.classList.contains('ber-h')){if(last)close(last);sec++;has=true;last=el;continue;}
+   if(el.classList.contains('ber-hr'))continue;
+   has=true;last=el;
+  }
+  if(last)close(last);
+  return bars;
+ }
+ function reactPaint(){
+  if(!rx||rx.day!==sel?.day)return;
+  for(const d of $('berichtContent').querySelectorAll('.ber-react')){
+   const c=rx.counts[d.dataset.sec]||{},mine=new Set(rx.mine[d.dataset.sec]||[]);
+   d.innerHTML=rx.emojis.map(e=>{const n=c[e]||0,on=mine.has(e);return `<button type="button" class="ber-rx${on?' on':''}${n?' has':''}" data-rx="${e}" aria-pressed="${on}" title="${on?'Reaktion zurücknehmen':'Reagieren'}">${e}${n?`<span>${n}</span>`:''}</button>`;}).join('');
+  }
+ }
+ async function reactMount(day){
+  if(!API||!reactBars(day).length)return;
+  if(rx?.day===day){reactPaint();}
+  try{const r=await fetch(`${API}/reaktion/${day}?vid=${vid()}`,{cache:'no-store'});if(!r.ok)throw 0;const d=await r.json();if(!Array.isArray(d.emojis))throw 0;rx=d;reactPaint();}
+  catch{if(rx?.day!==day)for(const d of $('berichtContent').querySelectorAll('.ber-react'))d.remove();}
+ }
+ async function reactToggle(btn){
+  const d=btn.closest('.ber-react'),sec=d.dataset.sec,e=btn.dataset.rx;if(!rx||!sel)return;
+  // Sofort anzeigen, dann mit dem Stand des Tippdienstes überschreiben.
+  const mine=new Set(rx.mine[sec]||[]),c=rx.counts[sec]||(rx.counts[sec]={}),on=mine.has(e);
+  on?mine.delete(e):mine.add(e);c[e]=Math.max(0,(c[e]||0)+(on?-1:1));rx.mine[sec]=[...mine];reactPaint();
+  try{const r=await fetch(`${API}/reaktion/${sel.day}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({vid:vid(),sec:Number(sec),emoji:e}),cache:'no-store'});const j=await r.json().catch(()=>({}));if(r.ok&&j.emojis){rx=j;}else throw 0;}
+  catch{on?mine.add(e):mine.delete(e);c[e]=Math.max(0,(c[e]||0)+(on?1:-1));rx.mine[sec]=[...mine];}
+  reactPaint();
  }
  // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): nur zu lange einzeln so weit verkleinern, dass sie passen (min. 11 px, dann Umbruch).
  // Der Bereich startet eingeklappt (Breite 0), darum beim Aufklappen und bei Größenänderung neu über den ResizeObserver.
@@ -95,6 +137,7 @@
  }
  if(window.ResizeObserver&&$('berichtContent')){let lastW=-1;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;fitHeads();}}).observe($('berichtContent'));}
  sec.addEventListener('click',async e=>{
+  const x=e.target.closest('[data-rx]');if(x){reactToggle(x);return;}
   const b=e.target.closest('[data-ber]');if(!b||!sel)return;const act=b.dataset.ber;
   if(act==='edit'){editing=true;msg='';render();return;}
   if(act==='abbrechen'){editing=false;msg='';render();return;}
