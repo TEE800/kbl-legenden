@@ -90,7 +90,7 @@
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die BumsKI${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':d.status==='finished'?'':`<small class="muted mvp-wertung">So wertet die BumsKI${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -674,7 +674,7 @@
   const {rows}=standings(d),pool=poolOf(d),tipOf=id=>rows.find(x=>x.m.id===id);
   const tipTxt=x=>x?` mit ${esc(x.t.player)} <small class="muted">${esc(x.t.team)}</small> (getippt ${fmt(x.t.points)}${x.pts===null?'':`, hatte ${fmt(x.pts)}`})`:'';
   let h='<div class="mvp-lead mvp-result"><div class="eyebrow">ERGEBNIS SPIELTAG '+d.day+'</div>';
-  if(r.mvp?.players?.length)h+=`<div>🏆 ${pool.length?'Bester der genannten Vereine':condsOf(d).length?'Bester laut Tippregel':'MVP des Spieltags'}: ${r.mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(r.mvp.points)}</b> Punkten</div>`;
+  if(r.mvp?.players?.length)h+=`<div>🏆 ${pool.length||condsOf(d).length?'Spieler':'MVP des Spieltags'}: ${r.mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(r.mvp.points)}</b> Punkten</div>`;
   if(r.rows?.length){
    const win=d.managers.filter(m=>r.winners.includes(m.id)),chk=r.status==='ok'?'':' (bitte prüfen)';
    const best=(r.best?.managers||[]).map(id=>d.managers.find(m=>m.id===id)).filter(Boolean);
