@@ -36,7 +36,7 @@
   const rows=[...ok].sort((a,b)=>val(b,sortBy)-val(a,sortBy));
   const max=Math.max(1,...rows.map(m=>Math.abs(val(m,sortBy)||0)));
   const bar=v=>{const w=Math.abs(v||0)/max*50;return `<span class="tr-bar"><i class="${v<0?'neg':'pos'}" style="${v<0?`right:50%`:`left:50%`};width:${w.toFixed(1)}%"></i></span>`;};
-  return `<div class="tr-league"><h4 class="tr-h" style="margin-top:4px">Gewinn/Verlust im Vergleich</h4><div class="tr-sorts" role="group" aria-label="Sortieren nach">${Object.entries(SORTS).filter(([k])=>cur()?.current||k==='realized').map(([k,[t]])=>`<button type="button" class="tr-sort${k===sortBy?' active':''}" data-tr-sort="${k}" aria-pressed="${k===sortBy}">${esc(t)}</button>`).join('')}</div>
+  return `<div class="tr-league"><div class="tr-sorts" role="group" aria-label="Sortieren nach">${Object.entries(SORTS).filter(([k])=>cur()?.current||k==='realized').map(([k,[t]])=>`<button type="button" class="tr-sort${k===sortBy?' active':''}" data-tr-sort="${k}" aria-pressed="${k===sortBy}">${esc(t)}</button>`).join('')}</div>
    <ol class="tr-rank">${rows.map((m,i)=>{const v=val(m,sortBy);return `<li title="${esc(`${m.name}: ${full(v)}`)}"><span class="tr-place">${i+1}.</span>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span>${bar(v)}<b class="tr-val ${cls(v)}">${money(v,true)}</b></li>`;}).join('')}</ol>
    ${ms.some(m=>m.error)?`<p class="error tiny">Das fehlt: Transfers von ${esc(ms.filter(m=>m.error).map(m=>m.name).join(', '))} (Kickbase hat nicht geantwortet).</p>`:''}</div>`;
  }
@@ -63,7 +63,7 @@
    <div class="tr-tile tr-record"><span>Größtes Pech</span>${top.length?`<b class="tr-neg">${top[0].points} Punkte</b>${top.map(x=>`<div class="tr-record-who">${face(x.img,x.name)}<div><strong>${esc(x.name)}</strong><small class="tr-record-mgr">${face(x.seller.img,x.seller.name)}${esc(x.seller.name)}</small><small>verkauft ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div>
    <div class="tr-tile tr-record"><span>Pech-König</span>${kings.length?`<b class="tr-neg">${kings[0].n}× Pech</b>${kings.map(m=>`<div class="tr-record-who">${face(m.img,m.name)}<div><strong>${esc(m.name)}</strong><small>${m.pts} Punkte verschenkt</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div></div>`;
   const row=(x,i)=>`<li class="tr-pech-row"><span class="tr-place">${i+1}.</span>${face(x.img,x.name)}<div class="tr-pech-txt"><b>${esc(x.name)}</b>
-   <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.price!=null?` · ${money(x.price)}`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
+   <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.diff!=null?` · <span class="${cls(x.diff)}">${money(x.diff,true)}</span>`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
    ${x.buyerStarted?`<small class="tr-pech-buyer">🍀 ${esc(x.buyer)} hatte ihn gleich in der Startelf</small>`:''}</div><b class="tr-pech-pts">${x.points}</b></li>`;
   const notes=[pech.missing?`${pech.missing} Verkäufe ohne Punkte in den Leistungsdaten`:'',pech.failedPlayers?`Leistungsdaten von ${pech.failedPlayers} Spielern`:'',pech.failedManagers?.length?`Transfers von ${pech.failedManagers.join(', ')}`:''].filter(Boolean);
   return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Transfer-Pech-Radar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
@@ -108,7 +108,7 @@
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
   const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
-  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div>${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
+  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div><details class="acc-group tr-pech"><summary><span class="tr-mname">Gewinn/Verlust im Vergleich</span></summary><div class="acc-sub">${league(c.managers)}</div></details><details class="acc-group tr-pech"><summary><span class="tr-mname">Transfers je Manager</span><span class="tr-pill">${c.managers.length}</span></summary><div class="acc-sub"><div class="tr-managers">${c.managers.map(manager).join('')}</div></div></details>`;
  }
  async function load(){
   if(loading)return;loading=true;
