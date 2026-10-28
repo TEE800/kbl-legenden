@@ -272,12 +272,12 @@ function profileFormTiles(name,tile){
  const avgs=[...new Set(days.flatMap(h=>h.list.map(m=>m.name)))].filter(isEligibleManager).map(nm=>{const p=days.map(h=>h.list.find(m=>m.name===nm)?.dayPoints).filter(x=>x!=null);return p.length?{nm,avg:p.reduce((s,x)=>s+x,0)/p.length}:null;}).filter(Boolean);
  const avgRank=1+avgs.filter(x=>x.avg>own).length;
  return [
-  tile('PODESTPLÄTZE',fmt(mine.filter(x=>x.better<3).length),'Unter den besten drei im Spieltag'),
-  tile('ÜBER DEM LIGASCHNITT',`${mine.filter(x=>x.points>x.avg).length} von ${mine.length}`,'Spieltagen'),
-  tile('AKTUELLE FORM',fmt(Math.round(form)),`Ø der letzten ${n} Spieltage · ${fd>0?'+':''}${fmt(fd)} zum eigenen Schnitt`),
-  tile('BESTER TABELLENPLATZ',bestRank?`#${bestRank}`:'–',bestRankDay?`nach Spieltag ${bestRankDay.day} · aktuell #${ranks.at(-1).rank}`:''),
-  tile('SCHNITT-RANG',`#${avgRank}`,`von ${avgs.length} Managern nach Ø Punkten`),
-  tile('Ø RÜCKSTAND AUF DEN SIEGER',fmt(Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length)),'Punkte pro Spieltag')];
+  tile('PODESTPLÄTZE',fmt(mine.filter(x=>x.better<3).length),'Unter den besten drei im Spieltag',mine.filter(x=>x.better<3).length,'hi'),
+  tile('ÜBER DEM LIGASCHNITT',`${mine.filter(x=>x.points>x.avg).length} von ${mine.length}`,'Spieltagen',mine.filter(x=>x.points>x.avg).length,'hi'),
+  tile('AKTUELLE FORM',fmt(Math.round(form)),`Ø der letzten ${n} Spieltage · ${fd>0?'+':''}${fmt(fd)} zum eigenen Schnitt`,Math.round(form),'hi'),
+  tile('BESTER TABELLENPLATZ',bestRank?`#${bestRank}`:'–',bestRankDay?`nach Spieltag ${bestRankDay.day} · aktuell #${ranks.at(-1).rank}`:'',bestRank,'lo'),
+  tile('SCHNITT-RANG',`#${avgRank}`,`von ${avgs.length} Managern nach Ø Punkten`,avgRank,'lo'),
+  tile('Ø RÜCKSTAND AUF DEN SIEGER',fmt(Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length)),'Punkte pro Spieltag',Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length),'lo')];
 }
 // Ligaschnitt wie in der Halbserien-Analyse: Schnitt der Manager-Durchschnitte, nur abgeschlossene Spieltage.
 function leagueAvgNote(){
@@ -288,7 +288,8 @@ function leagueAvgNote(){
 // Gegenstück zu „Über dem Ligaschnitt“: Spieltage unter dem Schnitt aller Manager dieses Spieltags.
 function profileBelowAvgTile(name,tile){
  const games=historyData.filter(h=>h.status==='finished').map(h=>{const sc=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));const me=sc.find(m=>m.name===name);return me?{points:me.dayPoints,avg:sc.reduce((s,m)=>s+m.dayPoints,0)/sc.length}:null;}).filter(Boolean);
- return games.length?[tile('UNTER DEM LIGASCHNITT',`${games.filter(x=>x.points<x.avg).length} von ${games.length}`,'Spieltagen')]:[];
+ const n=games.filter(x=>x.points<x.avg).length;
+ return games.length?[tile('UNTER DEM LIGASCHNITT',`${n} von ${games.length}`,'Spieltagen',n,'lo')]:[];
 }
 // Bumsungen eines Managers in der laufenden Halbserie, aus der BumsTabelle (null = noch nicht geladen).
 function bumsOf(name){
@@ -298,29 +299,14 @@ function bumsOf(name){
  for(const d of keys)if(d>=from&&d<=to)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)n+=v.count;
  return n;
 }
-// Direktduell im Managerprofil: Bilanz, Werte nebeneinander, Punkteverlauf.
+// Direktduell im Managerprofil: Bilanz und Punkteverlauf (die Werte stehen verglichen in den Kacheln darüber).
 const DUEL_SEC='⚔️ DIREKTDUELL';
-function duelHtml(a,b,bm){
+function duelHtml(a,b){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((x,y)=>x.day-y.day);
  const rows=days.map(h=>{const pa=h.list.find(m=>m.name===a)?.dayPoints,pb=h.list.find(m=>m.name===b)?.dayPoints;return pa!=null&&pb!=null?{day:h.day,pa,pb}:null;}).filter(Boolean);
  const open=profOpen.has(DUEL_SEC)?' open':'';
  if(!rows.length)return `<details class="hall-section prof-sec" data-sec="${DUEL_SEC}"${open}><summary><h4>${DUEL_SEC}</h4></summary><p class="muted">Noch keine gemeinsamen abgeschlossenen Spieltage.</p></details>`;
  const wa=rows.filter(r=>r.pa>r.pb).length,wb=rows.filter(r=>r.pb>r.pa).length,dr=rows.length-wa-wb;
- const sa=managerSeasonStats(a),sb=managerSeasonStats(b);
- const form=n=>{const p=days.map(h=>h.list.find(m=>m.name===n)?.dayPoints).filter(x=>x!=null).slice(-3);return p.length?p.reduce((s,x)=>s+x,0)/p.length:null;};
- const ma=currentManagers.find(m=>m.name===a),bA=bumsOf(a),bB=bumsOf(b);
- // [Bezeichnung, Wert A, Wert B, höher besser?, Anzeige]
- const lines=[
-  ['Platz',ma?.pos,bm?.pos,false,v=>v==null?'–':'#'+fmt(v)],
-  ['Punkte gesamt',ma?.score,bm?.score,true,fmt],
-  ['Ø Punkte / Spieltag',sa.avg,sb.avg,true,v=>fmt(v==null?null:Math.round(v))],
-  ['Bester Spieltag',sa.best?.points,sb.best?.points,true,fmt],
-  ['Schwächster Spieltag',sa.worst?.points,sb.worst?.points,true,fmt],
-  ['Spieltagssiege',sa.wins,sb.wins,true,fmt],
-  ['Form (Ø letzte 3)',form(a),form(b),true,v=>fmt(v==null?null:Math.round(v))],
-  ['Bumsungen',bA,bB,false,v=>v==null?'–':fmt(v)]];
- const cell=(v,o,hi,f)=>`<td class="${v!=null&&o!=null&&v!==o&&(hi?v>o:v<o)?'duel-win':''}">${f(v)}</td>`;
- const table=`<table class="duel-table"><thead><tr><th>${mgrName(a)}</th><th></th><th>${mgrName(b)}</th></tr></thead><tbody>${lines.map(([l,va,vb,hi,f])=>`<tr>${cell(va,vb,hi,f)}<th>${l}</th>${cell(vb,va,hi,f)}</tr>`).join('')}</tbody></table>`;
  // Punkte je Spieltag als kleines Liniendiagramm.
  const W=900,H=260,L=44,R=12,T=14,B=30,vals=rows.flatMap(r=>[r.pa,r.pb]);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=50;hi+=50;}
  const pad=(hi-lo)*.1;lo=Math.floor((lo-pad)/50)*50;const step=Math.max(50,Math.ceil((hi+pad-lo)/4/50)*50);hi=lo+4*step;
@@ -332,36 +318,61 @@ function duelHtml(a,b,bm){
  return `<details class="hall-section prof-sec" data-sec="${DUEL_SEC}"${open}><summary><h4>${DUEL_SEC}</h4></summary>
  <div class="duel-score"><div class="duel-side"><b>${escapeHtml(a)}</b></div><div class="duel-num"><span class="${wa>wb?'duel-win':''}">${wa}</span> : <span class="${wb>wa?'duel-win':''}">${wb}</span></div><div class="duel-side right"><b>${escapeHtml(b)}</b></div></div>
  <p class="muted tiny" style="text-align:center;margin:4px 0 14px">Spieltage mit mehr Punkten${dr?` · ${dr}× unentschieden`:''} · ${rows.length} gemeinsame Spieltage${lead?` · ${escapeHtml(lead)} führt`:''}</p>
- ${table}<div class="duel-legend"><span><i style="background:#ebc768"></i>${escapeHtml(a)}</span><span><i style="background:#6fd6d6"></i>${escapeHtml(b)}</span></div>${svg}</details>`;
+ <div class="duel-legend"><span><i style="background:#ebc768"></i>${escapeHtml(a)}</span><span><i style="background:#6fd6d6"></i>${escapeHtml(b)}</span></div>${svg}</details>`;
 }
 const profOpen=new Set();
 document.addEventListener('toggle',e=>{const d=e.target;if(d.classList?.contains('prof-sec')){if(d.open)profOpen.add(d.dataset.sec);else profOpen.delete(d.dataset.sec);}},true);
+// Vergleich in einer Kachel: je Manager eine Zeile (Profilbild, Wert, eigener Zusatz); der bessere Wert leuchtet, der andere tritt zurück.
+// better: 'hi' = mehr ist besser, 'lo' = weniger ist besser, null = keine Wertung.
+function profCmpRows(na,nb,ta,tb,better){
+ const win=(x,y)=>better&&x?.raw!=null&&y?.raw!=null&&x.raw!==y.raw?(better==='hi'?x.raw>y.raw:x.raw<y.raw):null;
+ const shared=ta?.detail&&ta.detail===tb?.detail;
+ const row=(nm,x,y,side)=>{const w=win(x,y);return `<div class="pcmp-row pcmp-${side}${w===false?' pcmp-lose':''}">${mgrFace(nm)}<b>${x?.value??'–'}</b>${!shared&&x?.detail?`<span>${x.detail}</span>`:''}</div>`;};
+ return row(na,ta,tb,'a')+row(nb,tb,ta,'b')+(shared?`<div class="hall-desc">${ta.detail}</div>`:'');
+}
 function profileSeasonHtml(name,other){
  const s=managerSeasonStats(name);
  if(!s.games)return '<div class="profilecompare">Saisonstatistiken werden automatisch geladen oder sind noch nicht verfügbar.</div>';
- // Gleiche Optik wie Ruhm & Schande in der Übersicht.
- const tile=(label,value,detail='')=>`<article class="hall-card __type__"><div class="hall-title">${label}</div><div class="hall-value">${value}</div>${detail?`<div class="hall-desc">${detail}</div>`:''}</article>`;
+ // Kachel als Daten (raw/better für den Vergleich); gleiche Optik wie Ruhm & Schande in der Übersicht.
+ const tile=(label,value,detail='',raw=null,better=null)=>({label,value,detail,raw,better});
+ const lists=n=>{const s=managerSeasonStats(n);return {
+  shame:[
+   tile('TOTALAUSFALL',fmt(s.worst?.points),s.worst?`Spieltag ${s.worst.day}`:'',s.worst?.points,'hi'),
+   tile('KELLERKIND · LETZTE PLÄTZE',fmt(s.last),'',s.last,'lo'),
+   tile('GRÖSSTE KLATSCHE',s.humiliation?`${fmt(s.humiliation.deficit)} Pkt.`:'–',s.humiliation?`Rückstand auf den Spieltagssieger · Spieltag ${s.humiliation.day}`:'',s.humiliation?.deficit,'lo'),
+   tile('EWIGER ZWEITER',fmt(s.second),'Zweite Plätze'),
+   tile('SIEGLOSE SERIE',fmt(s.longest),'Spieltage in Folge',s.longest,'lo'),
+   tile('ROTE LATERNE',fmt(s.lantern),'Letzter der Gesamtwertung',s.lantern,'lo'),
+   ...profileBelowAvgTile(n,tile)],
+  fame:[
+   tile('SPIELTAGSSIEGE',fmt(s.wins),'',s.wins,'hi'),tile('Ø PUNKTE / SPIELTAG',fmt(s.avg),leagueAvgNote(),s.avg,'hi'),
+   tile('BESTER SPIELTAG',fmt(s.best?.points),s.best?`Spieltag ${s.best.day}`:'',s.best?.points,'hi')],
+  form:profileFormTiles(n,tile)};};
+ const la=lists(name),lb=other?lists(other.name):null;
+ const card=(t,b,type)=>`<article class="hall-card ${type}${lb?' pcmp':''}"><div class="hall-title">${t.label}</div>${lb?profCmpRows(name,other.name,t,b,t.better):`<div class="hall-value">${t.value}</div>${t.detail?`<div class="hall-desc">${t.detail}</div>`:''}`}</article>`;
  // Einklappbar (feste Regel: beim Öffnen des Reiters zu); beim Wechsel des Managers bleibt offen, was offen war.
- const section=(title,items,type='fame')=>`<details class="hall-section prof-sec" data-sec="${title}"${profOpen.has(title)?' open':''}><summary><h4>${title}</h4></summary><div class="hall-grid">${items.join('').replaceAll('__type__',type)}</div></details>`;
+ const section=(title,key,type='fame')=>{const A=la[key],B=lb?.[key]||[];const base=A.length?A:B;
+  return `<details class="hall-section prof-sec" data-sec="${title}"${profOpen.has(title)?' open':''}><summary><h4>${title}</h4></summary><div class="hall-grid">${base.map(t=>card(A.find(x=>x.label===t.label)||{...t,value:'–',detail:'',raw:null},B.find(x=>x.label===t.label),type)).join('')}</div></details>`;};
  return `<div style="grid-column:1/-1;min-width:0;width:100%;margin-top:20px;border-top:1px solid #4b463b;padding-top:12px"><div style="opacity:.75;font-size:12px">SAISONSTATISTIK · ${s.games} AUSGEWERTETE SPIELTAGE · NUR ABGESCHLOSSEN</div>`+
- section('💀 HALL OF SHAME',[
-  tile('TOTALAUSFALL',fmt(s.worst?.points),s.worst?`Spieltag ${s.worst.day}`:''),
-  tile('KELLERKIND · LETZTE PLÄTZE',fmt(s.last)),
-  tile('GRÖSSTE KLATSCHE',s.humiliation?`${fmt(s.humiliation.deficit)} Pkt.`:'–',s.humiliation?`Rückstand auf den Spieltagssieger · Spieltag ${s.humiliation.day}`:''),
-  tile('EWIGER ZWEITER',fmt(s.second),'Zweite Plätze'),
-  tile('SIEGLOSE SERIE',fmt(s.longest),'Spieltage in Folge'),
-  tile('ROTE LATERNE',fmt(s.lantern),'Letzter der Gesamtwertung'),
-  ...profileBelowAvgTile(name,tile)],'shame')+
- section('🏆 RUHMESHALLE',[
-  tile('SPIELTAGSSIEGE',fmt(s.wins)),tile('Ø PUNKTE / SPIELTAG',fmt(s.avg),leagueAvgNote()),
-  tile('BESTER SPIELTAG',fmt(s.best?.points),s.best?`Spieltag ${s.best.day}`:'')])+
- section('📈 FORM & KONSTANZ',profileFormTiles(name,tile))+(other?duelHtml(name,other.name,other):'')+'</div>';
+ section('💀 HALL OF SHAME','shame','shame')+section('🏆 RUHMESHALLE','fame')+section('📈 FORM & KONSTANZ','form')+(other?duelHtml(name,other.name):'')+'</div>';
 }
 function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
- const diff=other&&m.score!=null&&other.score!=null?m.score-other.score:null;
- $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${mgrName(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
+ const bm=bumsOf(m.name),bums=`<span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span>`;
+ if(!other){
+  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${profileSeasonHtml(m.name,null)}`;
+  return;
+ }
+ // Vergleich: beide Manager in jeder Kachel, Abstand in Punkten beim Verfolger.
+ const v=(value,raw,detail='')=>({value,raw,detail}),diff=m.score!=null&&other.score!=null?m.score-other.score:null;
+ const gap=d=>d==null||d>=0?'':`${fmt(-d)} zurück`;
+ const rows=(a,b,better)=>profCmpRows(m.name,other.name,a,b,better);
+ $('#profileDetails').innerHTML=`<div class="profiletitle pcmp-title"><span class="pcmp-a">${mgrName(m.name)}</span><span class="pcmp-vs">vs</span><span class="pcmp-b">${mgrName(other.name)}</span></div>`+
+  `<div class="profiletile pcmp"><small>PLATZIERUNG</small>${rows(v('#'+fmt(m.pos),m.pos),v('#'+fmt(other.pos),other.pos),'lo')}</div>`+
+  `<div class="profiletile pcmp"><small>PUNKTE</small>${rows(v(fmt(m.score),m.score,gap(diff)),v(fmt(other.score),other.score,gap(diff==null?null:-diff)),'hi')}</div>`+
+  `<div class="profiletile pcmp bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small>${rows(v(bm??'–',bm),v(bumsOf(other.name)??'–',bumsOf(other.name)),'lo')}${bums}</div>`+
+  profileSeasonHtml(m.name,other);
 }
 $('#profileSelect').addEventListener('change',showProfile);
 $('#compareSelect').addEventListener('change',()=>{if($('#compareSelect').value!=='')profOpen.add(DUEL_SEC);showProfile();});
