@@ -522,8 +522,8 @@ async function handleBericht(req, env, cors, parts, body) {
   await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
 }
 
-// Reaktionen auf den Spieltagsbericht (Kevin-Wunsch 28.10.): Jeder Besucher kann unter jedem Abschnitt (Einleitung = 0,
-// dann je Zwischenüberschrift 1, 2, …) mit Emojis reagieren, je Emoji und Abschnitt einmal pro Gerät (Gerätenummer kbl-vid wie bei
+// Reaktionen auf den Spieltagsbericht (Kevin-Wunsch 28.10.): Jeder Besucher kann unter jedem Absatz (durchgezählt ab 0,
+// Überschriften zählen nicht) mit Emojis reagieren, je Emoji und Absatz einmal pro Gerät (Gerätenummer kbl-vid wie bei
 // der Nutzung, keine Anmeldung). KV reakt:<day>:<vid>, die Auswahl steht in den Metadaten ({r: {Abschnitt: "Emoji-Nummern"}}),
 // darum reicht zum Zählen ein list() ohne einzelne Abrufe. Nur für freigegebene Berichte.
 const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺', '💀', '🤮', '👎', '👀', '⛺', '💦', '🍆']; // nur hinten anhängen, die Nummern stehen in KV (je Emoji ein Zeichen, Basis 36)
@@ -547,7 +547,7 @@ async function handleReaktion(req, env, cors, parts, body, url) {
   if (req.method === 'GET') { const vid = url.searchParams.get('vid') || ''; return json(await reaktState(env, day, REAKT_VID.test(vid) ? vid : '', null), 200, cors); }
   if (req.method !== 'POST') return json({ error: 'Nicht gefunden.' }, 404, cors);
   const vid = String(body.vid || ''), sec = String(Number(body.sec)), ix = REAKT_EMOJI.indexOf(String(body.emoji || ''));
-  if (!REAKT_VID.test(vid) || !/^\d{1,2}$/.test(sec) || Number(sec) > 40 || body.sec == null || ix < 0) return json({ error: 'Ungültige Angabe.' }, 400, cors);
+  if (!REAKT_VID.test(vid) || !/^\d{1,2}$/.test(sec) || Number(sec) > 99 || body.sec == null || ix < 0) return json({ error: 'Ungültige Angabe.' }, 400, cors);
   if ((await env.TIPPS.get(`bericht:${day}`, 'json'))?.status !== 'frei') return json({ error: 'Dieser Bericht ist nicht veröffentlicht.' }, 409, cors);
   const key = `reakt:${day}:${vid}`, old = (await env.TIPPS.getWithMetadata(key)).metadata?.r || {};
   const r = { ...old }, cur = String(r[sec] || ''), c = ix.toString(36);
