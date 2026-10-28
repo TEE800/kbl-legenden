@@ -36,7 +36,7 @@
   const rows=[...ok].sort((a,b)=>val(b,sortBy)-val(a,sortBy));
   const max=Math.max(1,...rows.map(m=>Math.abs(val(m,sortBy)||0)));
   const bar=v=>{const w=Math.abs(v||0)/max*50;return `<span class="tr-bar"><i class="${v<0?'neg':'pos'}" style="${v<0?`right:50%`:`left:50%`};width:${w.toFixed(1)}%"></i></span>`;};
-  return `<div class="tr-league"><h4 class="tr-h" style="margin-top:4px">Gewinn/Verlust im Vergleich</h4><div class="tr-sorts" role="group" aria-label="Sortieren nach">${Object.entries(SORTS).filter(([k])=>cur()?.current||k==='realized').map(([k,[t]])=>`<button type="button" class="tr-sort${k===sortBy?' active':''}" data-tr-sort="${k}" aria-pressed="${k===sortBy}">${esc(t)}</button>`).join('')}</div>
+  return `<div class="tr-league"><div class="tr-sorts" role="group" aria-label="Sortieren nach">${Object.entries(SORTS).filter(([k])=>cur()?.current||k==='realized').map(([k,[t]])=>`<button type="button" class="tr-sort${k===sortBy?' active':''}" data-tr-sort="${k}" aria-pressed="${k===sortBy}">${esc(t)}</button>`).join('')}</div>
    <ol class="tr-rank">${rows.map((m,i)=>{const v=val(m,sortBy);return `<li title="${esc(`${m.name}: ${full(v)}`)}"><span class="tr-place">${i+1}.</span>${face(m.img,m.name)}<span class="tr-mname">${esc(m.name)}</span>${bar(v)}<b class="tr-val ${cls(v)}">${money(v,true)}</b></li>`;}).join('')}</ol>
    ${ms.some(m=>m.error)?`<p class="error tiny">Das fehlt: Transfers von ${esc(ms.filter(m=>m.error).map(m=>m.name).join(', '))} (Kickbase hat nicht geantwortet).</p>`:''}</div>`;
  }
@@ -108,7 +108,7 @@
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
   const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
-  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div>${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
+  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div><details class="acc-group tr-pech"><summary><span class="tr-mname">Gewinn/Verlust im Vergleich</span></summary><div class="acc-sub">${league(c.managers)}</div></details><details class="acc-group tr-pech"><summary><span class="tr-mname">Transfers je Manager</span><span class="tr-pill">${c.managers.length}</span></summary><div class="acc-sub"><div class="tr-managers">${c.managers.map(manager).join('')}</div></div></details>`;
  }
  async function load(){
   if(loading)return;loading=true;
