@@ -490,6 +490,38 @@ async function handleHaken(req, env, cors, parts, body) {
   return json({ error: 'Nicht gefunden.' }, 404, cors);
 }
 
+// Spieltagsbericht (Kevin-Wunsch 28.10.): Claude schreibt auf GitHub einen Entwurf (mit Admin-Code, Geheimnis KBL_ADMIN_CODE),
+// der Admin liest, ändert und gibt ihn in der App frei. KV bericht:<day> = {day, title, text, model, vorgaben, createdAt, status: entwurf|frei, editedAt?, approvedAt?}.
+// Öffentlich (GET /bericht) gibt es nur freigegebene Berichte; Entwürfe nur mit Admin-Code (POST /bericht/admin).
+async function berichtList(env, onlyFree) {
+  const out = []; let cursor;
+  do { const page = await env.TIPPS.list({ prefix: 'bericht:', cursor }); for (const k of page.keys) { const b = await env.TIPPS.get(k.name, 'json'); if (b && (!onlyFree || b.status === 'frei')) out.push(b); } cursor = page.list_complete ? null : page.cursor; } while (cursor);
+  return out.sort((a, b) => b.day - a.day);
+}
+async function handleBericht(req, env, cors, parts, body) {
+  if (!parts[1] && req.method === 'GET') return json({ berichte: await berichtList(env, true) }, 200, cors);
+  const a = await adminTry(env, body.adminCode); if (!a.ok) return json({ error: a.error }, a.status, cors);
+  if (parts[1] === 'admin' && req.method === 'POST') return json({ berichte: await berichtList(env, false) }, 200, cors);
+  if (!/^\d{1,2}$/.test(parts[1] || '') || Number(parts[1]) < 1 || Number(parts[1]) > 34 || req.method !== 'POST') return json({ error: 'Ungültiger Spieltag.' }, 400, cors);
+  const day = Number(parts[1]), key = `bericht:${day}`, old = await env.TIPPS.get(key, 'json');
+  const text = typeof body.text === 'string' ? body.text.slice(0, 30000) : null, title = typeof body.title === 'string' ? body.title.trim().slice(0, 200) : null;
+  const now = new Date().toISOString();
+  if (parts[2] === 'entwurf') { // von GitHub: neuer Entwurf, ein freigegebener Bericht wird nie überschrieben
+    if (old?.status === 'frei') return json({ ok: true, skipped: 'schon freigegeben', bericht: old }, 200, cors);
+    if (!text) return json({ error: 'Text fehlt.' }, 400, cors);
+    const b = { day, title: title || `Spieltag ${day}`, text, model: String(body.model || '').slice(0, 60), vorgaben: Number(body.vorgaben) || 1, createdAt: body.createdAt || now, status: 'entwurf' };
+    await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
+  }
+  if (!old) return json({ error: 'Kein Bericht zu diesem Spieltag.' }, 404, cors);
+  const action = String(body.action || 'speichern');
+  const b = { ...old, ...(text != null ? { text } : {}), ...(title ? { title } : {}) };
+  if (text != null || title) b.editedAt = now;
+  if (action === 'freigeben') { b.status = 'frei'; b.approvedAt = now; }
+  else if (action === 'zurueckziehen') { b.status = 'entwurf'; delete b.approvedAt; }
+  else if (action !== 'speichern') return json({ error: 'Unbekannte Aktion.' }, 400, cors);
+  await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
@@ -497,6 +529,7 @@ async function handle(req, env, cors) {
   if (parts[0] === 'push') return handlePush(req, env, cors, parts, body);
   if (parts[0] === 'nutzung') return handleNutzung(req, env, cors, parts, body);
   if (parts[0] === 'haken') return handleHaken(req, env, cors, parts, body);
+  if (parts[0] === 'bericht') return handleBericht(req, env, cors, parts, body);
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {
