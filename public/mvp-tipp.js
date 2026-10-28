@@ -307,7 +307,7 @@
   const tipped=new Map(d.managers.filter(m=>m.tip).map(m=>[String(m.tip.playerId),m.tip])),pool=poolOf(d);
   // Kevin: das Rennen beginnt beim Anpfiff bei 0, erst danach kommen die gespeicherten Stände.
   const raw=d.verlauf||[],t0=d.deadline&&raw.length&&Date.parse(d.deadline)<Date.parse(raw[0].at)?d.deadline:null;
-  const start=t0?[{at:t0,start:true,players:Object.fromEntries([...tipped.keys()].map(id=>[id,{points:0,state:'open'}])),best:null,fixes:[],lead:[],ready:false}]:[];
+  const start=t0?[{at:t0,start:true,players:Object.fromEntries([...tipped.keys()].map(id=>[id,{points:0,state:'open'}])),others:{},best:null,fixes:[],lead:[],ready:false}]:[];
   return start.concat(raw.map((f,i,all)=>{
    const players={};for(const [id,[points,s]] of Object.entries(f.p||{}))players[id]={points,state:s==='d'?'done':s==='l'?'live':'open'};
    // Wie auf dem Server (freshBest): getippte Spieler haben frischere Punkte als der Zwischenstand aller Spieler.
@@ -319,7 +319,9 @@
    const prev=all[i-1],fixes=[];
    if(prev)for(const [id,x] of Object.entries(players)){const o=prev.p?.[id];if(o&&o[1]==='d'&&o[0]!==x.points)fixes.push({id,from:o[0],to:x.points,name:tipped.get(id)?.player||id});}
    const st=standings({...d,status:'live',result:null,tracking:{players,pool,mvp:best}});
-   return {at:f.at,fin:!!f.fin,players,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
+   // t = Top 10 laut Tippregel (seit 28.10. gespeichert): Punkte des späteren MVP, auch wenn ihn keiner getippt hat.
+   const others={};for(const [id,v] of Object.entries(f.t||{}))others[id]=v[0];
+   return {at:f.at,fin:!!f.fin,players,others,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
   }));
  }
  // Kevin-Wunsch: Punkteänderungen untereinander, je Spieler eine Zeile mit der Differenz.
@@ -367,10 +369,16 @@
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   const final=frames[n-1].players;
   // Je Manager eine Zeile mit seinem Tipp als Baby (wie im Rennen), oben der Beste, wenn ihn keiner getippt hat.
-  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true})),
+  // Kevin: Der spätere Regel-MVP (Bester am Ende, keiner getippt) läuft von Anfang an mit; andere Beste ohne Tipper nur, solange sie vorn sind.
+  const finIds=new Set((frames[n-1].best?.players||[]).map(p=>p.id));
+  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true,always:finIds.has(p.id)})),
    ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
   const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
   const pos=v=>(4+72*((v??0)-lo)/(hi-lo));
+  // Kevin: Männchen nach Punkten sortiert. Maßstab je Stand (Bester ganz vorn), sonst stehen am Anfang alle dicht an der Startlinie
+  // und müssten zum Packen auch vor Stärkere rücken.
+  const fScale=frames.map(f=>{const v=[...Object.values(f.players).map(x=>x.points),f.best?.points??0,...rowsList.filter(o=>o.always).map(o=>f.others?.[o.id])].filter(x=>x!=null);return [Math.min(0,...v),Math.max(1,...v)];});
+  const posF=(i,v)=>{const [a,b]=fScale[i];return 4+72*((v??0)-a)/(b-a);};
   // Vollbild (Kevin-Wunsch: ein Feld, halb so viele Zeilen, dafür große Figuren): Wer weniger Punkte hat, fällt in derselben Zeile
   // hinter die Stärkeren zurück, notfalls weiter links als seine Punkte, damit sich Figur und Name nicht überdecken.
   // LW = Breite des Platzes in px, 0 = normale Ansicht (je Manager eine Zeile); ROWS = Zeilen im Vollbild (halb so viele, auf schmalen Bildschirmen mehr).
@@ -388,27 +396,34 @@
   const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
   const flMin=`calc(${maxFix+1}*1.4em + 12px)`;box.querySelector('[data-zr-flash]').style.minHeight=flMin;
   const isBestIn=(f,o)=>(f.best?.players||[]).some(p=>p.id===o.id);
-  const ptsOf=(f,o)=>o.ghost?(isBestIn(f,o)?f.best.points:null):f.players[o.id]?.points??null;
+  // Punkte des späteren MVP je Stand: aus den Top 10 oder als Bester; dazwischen unbekannt (steht dann beim letzten bekannten Wert, ohne Zahl).
+  const ghostPts=new Map(rowsList.filter(o=>o.always).map(o=>{let last=0;return [o.id,frames.map(f=>{
+   const v=f.start?0:f.others?.[o.id]??(isBestIn(f,o)?f.best.points:undefined);if(v!==undefined)last=v;return {v:last,known:v!==undefined};})];}));
+  const fIdx=new Map(frames.map((f,i)=>[f,i]));
+  const visIn=(f,o)=>!o.ghost||o.always||isBestIn(f,o);
+  const ptsOf=(f,o)=>o.always?ghostPts.get(o.id)[fIdx.get(f)].v:o.ghost?(isBestIn(f,o)?f.best.points:null):f.players[o.id]?.points??null;
   // Zeilen packen: von den meisten Punkten abwärts in die oberste Zeile, in der Figur samt Namensschild an ihren Punkten Platz hat;
   // passt es nirgends, in die Zeile, in der man am wenigsten weit hinter den Vordermann zurückfallen muss. Ist links kein Platz mehr
   // (alle gleich auf, z. B. beim Anpfiff), stellt er sich rechts daneben. ok = false: Es passt nicht ohne Überdecken.
   const packRows=(f,lw,rows)=>{
    const span=(x,r)=>{const e=ext[r]?.[x/lw>.5?1:0]||[-15,285];return [x+e[0],x+e[1]];},x0=.04*lw,G=12;
-   const items=rowsList.map((o,r)=>{if(o.ghost&&!isBestIn(f,o))return null;const p=ptsOf(f,o);return {r,v:p??-1e9,x:pos(p)/100*lw};})
+   const fi=fIdx.get(f),items=rowsList.map((o,r)=>{if(!visIn(f,o))return null;const p=ptsOf(f,o);return {r,v:p??-1e9,x:posF(fi,p)/100*lw};})
     .filter(Boolean).sort((a,b)=>b.v-a.v||a.r-b.r);
    const L=Array.from({length:rows},()=>[]),row=rowsList.map((o,r)=>r%rows),xs=rowsList.map(()=>x0);let ok=true;
    const free=(k,iv)=>L[k].every(([a,b])=>iv[1]+G<=a+.5||iv[0]>=b+G-.5);
-   for(const it of items){let best=null;
+   // Niemand steht vor (rechts von) einem mit mehr Punkten, auch nicht in einer anderen Zeile; Gleichstände dürfen nebeneinander.
+   const placed=[];
+   for(const it of items){let best=null;const cap=Math.min(lw,...placed.filter(q=>q.v>it.v).map(q=>q.x-2));it.x=Math.min(it.x,cap);
     for(let k=0;k<rows;k++){
-     if(free(k,span(it.x,it.r))){best={k,x:it.x,d:0};break;}
+     if(it.x>=x0&&free(k,span(it.x,it.r))){best={k,x:it.x,d:0};break;}
      // zurückfallen: links an den am weitesten links stehenden dieser Zeile anschließen (beide Ausrichtungen probieren)
      const m=Math.min(...L[k].map(([a])=>a))-G,c=ext[it.r].map(e=>Math.min(it.x,m-e[1])).filter(c=>c>=x0&&span(c,it.r)[1]<=m&&free(k,span(c,it.r)));
      if(c.length){const x=Math.max(...c);if(!best||it.x-x<best.d)best={k,x,d:it.x-x};continue;}
      // daneben: rechts an den am weitesten rechts stehenden anschließen
-     const e=Math.max(...L[k].map(([,b])=>b))+G,c2=ext[it.r].map(z=>e-z[0]).filter(c=>span(c,it.r)[0]>=e&&span(c,it.r)[1]<=lw);
+     const e=Math.max(...L[k].map(([,b])=>b))+G,c2=ext[it.r].map(z=>e-z[0]).filter(c=>c<=cap&&span(c,it.r)[0]>=e&&span(c,it.r)[1]<=lw);
      if(c2.length){const x=Math.min(...c2),d=1e6+x;if(!best||d<best.d)best={k,x,d};}}
     if(!best){ok=false;best={k:0,x:x0};}
-    L[best.k].push(span(best.x,it.r));row[it.r]=best.k;xs[it.r]=best.x;}
+    L[best.k].push(span(best.x,it.r));row[it.r]=best.k;xs[it.r]=best.x;placed.push({v:it.v,x:best.x});}
    return {row,x:xs.map(x=>x/lw*100),ok};};
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
@@ -419,11 +434,11 @@
    pitch.querySelectorAll('[data-zr-i]').forEach(el=>{
     const o=rowsList[Number(el.dataset.zrI)],id=o.id,x=f.players[id],isBest=bestIds.has(id),pts=ptsOf(f,o);
     const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
-    const r=Number(el.dataset.zrI),left=pk?pk.x[r]:pos(pts),row=pk?pk.row[r]:r;el.style.left=left.toFixed(2)+'%';
+    const r=Number(el.dataset.zrI),left=pk?pk.x[r]:posF(i,pts),row=pk?pk.row[r]:r;el.style.left=left.toFixed(2)+'%';
     el.style.top=Y(row)-60+'px';el.style.zIndex=row+2;
-    el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!!o.ghost&&!isBest);
+    el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!visIn(f,o));
     el.classList.toggle('run',!out&&x?.state==='live');el.classList.toggle('idle',!o.ghost&&pts===null);el.classList.toggle('ko',out);
-    el.querySelector('[data-zr-pts]').textContent=pts===null?'–':fmt(pts);
+    el.querySelector('[data-zr-pts]').textContent=pts===null||(o.always&&!ghostPts.get(id)[i].known)?'–':fmt(pts);
     const fx=f.fixes.find(z=>z.id===id),fe=el.querySelector('[data-zr-fix]');
     fe.textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';el.classList.toggle('zr-fixed',!!fx);
     // Manager: Krone aufs Baby, Führende nach der Wertung stemmen es hoch, mit richtigem Spieler und anderer Zahl wird geweint.
@@ -721,9 +736,10 @@
   let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
   const played=groups.filter(g=>g.pts!==null).length;
   h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span>${fin?'':`<span><b>${played}</b> davon schon mit Punkten</span>`}${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
-  h+=toonRace(live||!!d.closing,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready);
-  // Zeitraffer des Spieltags (Kevin-Wunsch), eingeklappt.
-  h+=zeitraffer(d,groups);zrGroups=groups;
+  // Zeitraffer des Spieltags (Kevin-Wunsch), eingeklappt. Ist der Spieltag abgeschlossen, zeigt er alles, das Rennen entfällt dann (Kevin: doppelt).
+  const zrHtml=zeitraffer(d,groups);
+  if(!(fin&&!d.closing&&zrHtml))h+=toonRace(live||!!d.closing,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready);
+  h+=zrHtml;zrGroups=groups;
   // Top 10 des Spieltags unter allen Spielern, die die Tippregel erlaubt (Kevin-Wunsch), eingeklappt.
   h+=top10(d,rows,pool,bestIds,fin);
   // Zahlenstrahl „Wer liegt mit der Zahl am nächsten?“ entfernt (Kevin-Wunsch).

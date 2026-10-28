@@ -1602,9 +1602,11 @@ function recordVerlauf(day,tracking,result,finished){
  const p={};for(const [id,x] of Object.entries(tracking.players))if(x&&x.points!==null&&x.points!==undefined)p[id]=[x.points,(x.state||'?')[0]];
  if(!Object.keys(p).length)return;
  const m=finished?result?.mvp:tracking.mvp;
- const frame={at:tracking.updatedAt||new Date().toISOString(),p,...(m?.players?.length&&Number.isFinite(m.points)?{mvp:{points:m.points,players:m.players.map(({id,name,team})=>({id:String(id),name,team}))}}:{}),...(finished?{fin:true}:{})};
+ // t = Top 10 laut Tippregel ohne die getippten Spieler (Kevin: der spaetere MVP soll im Zeitraffer von Anfang an mitlaufen).
+ const t={};for(const x of tracking.top10?.players||[])if(!(String(x.id) in p)&&Number.isFinite(x.points))t[String(x.id)]=[x.points];
+ const frame={at:tracking.updatedAt||new Date().toISOString(),p,...(Object.keys(t).length?{t}:{}),...(m?.players?.length&&Number.isFinite(m.points)?{mvp:{points:m.points,players:m.players.map(({id,name,team})=>({id:String(id),name,team}))}}:{}),...(finished?{fin:true}:{})};
  const all=readVerlauf(),list=(all[day]||(all[day]=[])),last=list[list.length-1];
- const sig=f=>JSON.stringify([f.p,f.mvp?.points??null,(f.mvp?.players||[]).map(x=>x.id),!!f.fin]);
+ const sig=f=>JSON.stringify([f.p,f.t||null,f.mvp?.points??null,(f.mvp?.players||[]).map(x=>x.id),!!f.fin]);
  if(last&&(sig(last)===sig(frame)||Date.parse(frame.at)<=Date.parse(last.at)))return;
  list.push(frame);
  try{const tmp=VERLAUF_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all));fs.renameSync(tmp,VERLAUF_FILE);}catch{}
