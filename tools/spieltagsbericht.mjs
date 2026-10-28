@@ -2,10 +2,10 @@
 // provokanten Bericht mit Sticheleien, gestützt auf Statistiken, die hier fest ausgerechnet werden.
 // Grundsatz „nie raten“: Claude bekommt nur geprüfte Zahlen (FAKTEN) und darf keine eigenen ausrechnen oder erfinden.
 //
-// Läuft auf GitHub nach dem Export (seite.yml), liest site/data/ und speichert in kbl-berichte.json (gehört GitHub).
-// Schreibt bei jedem Lauf site/data/berichte.json für die Startseite (public/bericht.js).
+// Läuft auf GitHub nach dem Export (seite.yml), liest site/data/. Der Bericht ist zuerst ein Entwurf im Tippdienst und wird erst
+// nach Kevins Freigabe in der App veröffentlicht (kbl-berichte.json, site/data/berichte.json für public/bericht.js).
 // Ohne Geheimnis ANTHROPIC_API_KEY wird nichts erzeugt, nur die gespeicherten Berichte veröffentlicht.
-// Je Spieltag genau ein Aufruf (ca. 2 Cent). Neu schreiben lassen: KBL_BERICHT_NEU=<Spieltag> (Workflow „Run workflow“).
+// Je Spieltag genau ein Aufruf (ca. 5 bis 10 Cent). Neu schreiben lassen: KBL_BERICHT_NEU=<Spieltag> (Workflow „Run workflow“).
 // Nur ausrechnen und anzeigen, ohne API: node tools/spieltagsbericht.mjs --fakten <Spieltag>
 import fs from 'node:fs';
 import path from 'node:path';
@@ -249,13 +249,28 @@ async function askClaude(f) {
 }
 
 // ---- Ablauf ----
-const store = readStore(); store.berichte ||= {};
+// Freigabe (Kevin-Wunsch 28.10.): Claude schreibt nur einen ENTWURF. Der liegt privat im Tippdienst (KV bericht:<day>, nur mit
+// Admin-Code lesbar), Kevin liest, ändert und gibt ihn in der App frei. Veröffentlicht (kbl-berichte.json, site/data/berichte.json)
+// wird nur, was im Tippdienst den Status „frei“ hat. Braucht Repository-Variable KBL_TIPP_DIENST und Geheimnis KBL_ADMIN_CODE.
+const API = String(process.env.KBL_TIPP_DIENST || '').replace(/\/+$/, ''), CODE = process.env.KBL_ADMIN_CODE || '';
+const post = async (p, body) => { const r = await fetch(API + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, adminCode: CODE }), signal: AbortSignal.timeout(20000) }); const d = await r.json().catch(() => ({})); if (!r.ok) throw Error(`Tippdienst ${r.status}: ${d.error || 'Fehler'}`); return d; };
+const store = readStore(); store.berichte ||= {}; store.entwuerfe ||= {};
 const arg = process.argv.indexOf('--fakten');
 await loadHaken(Math.max(1, ...((read('matchday-status.json')?.days || []).filter(d => d.status === 'finished').map(d => d.day))));
 if (arg > 0) { console.log(JSON.stringify(facts(Number(process.argv[arg + 1])), null, 1)); process.exit(0); }
 let stand = '';
 const say = m => { stand = m; console.log(m); };
 try {
+  // 1) Alte, nie freigegebene Berichte (vor der Freigabe-Regel) als Entwurf in den Tippdienst verschieben.
+  for (const [d, b] of Object.entries(store.berichte)) {
+    if (b.status === 'frei') continue;
+    if (API && CODE && (b.vorgaben || 1) >= VORGABEN) { try { await post(`/bericht/${d}/entwurf`, b); store.entwuerfe[d] = { vorgaben: b.vorgaben, createdAt: b.createdAt }; } catch (e) { console.log('Entwurf verschieben:', e.message); } }
+    delete store.berichte[d];
+  }
+  // 2) Freigegebene Berichte vom Tippdienst holen (öffentlich lesbar).
+  let dienstOk = false;
+  if (API) { try { const r = await fetch(`${API}/bericht`, { signal: AbortSignal.timeout(20000) }); if (r.ok) { dienstOk = true; const list = (await r.json()).berichte || []; store.berichte = Object.fromEntries(list.filter(b => b.status === 'frei').map(b => [b.day, b])); } } catch (e) { console.log('Freigegebene Berichte nicht abrufbar:', e.message); } }
+  // 3) Neuen Entwurf schreiben lassen, wenn nötig.
   const status = read('matchday-status.json');
   const finished = (status?.days || []).filter(d => d.status === 'finished').map(d => d.day);
   const neu = Number(process.env.KBL_BERICHT_NEU) || null;
@@ -264,19 +279,27 @@ try {
   const rk = day ? read(`ranking_${LEAGUE}_dayNumber_${day}.json`) : null, mt = day ? read(`mvp-tipps_${day}.json`) : null;
   const S = day ? settlement(day) : null;
   const ready = day && rk && rk.il === false && S?.settled && (!mt || mt.status === 'finished');
+  const hasDraft = (store.entwuerfe[day]?.vorgaben || 0) >= VORGABEN;
   if (!day) say('Spieltagsbericht: noch kein Spieltag abgeschlossen.');
-  else if (store.berichte[day] && (store.berichte[day].vorgaben || 1) >= VORGABEN && neu !== day) say(`Spieltagsbericht ${day} liegt schon vor.`);
+  else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} ist freigegeben.`);
+  else if (hasDraft && neu !== day) say(`Spieltagsbericht ${day}: Entwurf liegt vor und wartet auf Freigabe in der App.`);
   else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
   else if (!process.env.ANTHROPIC_API_KEY) say(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
+  else if (API && CODE && !dienstOk) say(`Spieltagsbericht ${day}: Tippdienst kennt /bericht noch nicht (worker.js bei Cloudflare aktualisieren) oder ist nicht erreichbar. Kein Claude-Aufruf.`);
+  else if (!API || !CODE) say(`Spieltagsbericht ${day}: ${!API ? 'Tippdienst (KBL_TIPP_DIENST)' : 'Geheimnis KBL_ADMIN_CODE'} fehlt, der Entwurf hätte keinen privaten Platz. Wird übersprungen.`);
   else {
     const f = facts(day);
     const { text, usage, model } = await askClaude(f);
     const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim();
-    store.berichte[day] = { day, title, text, model, vorgaben: VORGABEN, createdAt: new Date().toISOString(), usage };
-    fs.writeFileSync(STORE, JSON.stringify(store, null, 1));
-    say(`Spieltagsbericht ${day} geschrieben: „${title}“ (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''})`);
+    const createdAt = new Date().toISOString();
+    const r = await post(`/bericht/${day}/entwurf`, { title, text, model, vorgaben: VORGABEN, createdAt });
+    store.entwuerfe[day] = { vorgaben: VORGABEN, createdAt };
+    say(r.skipped ? `Spieltagsbericht ${day}: schon freigegeben, neuer Entwurf verworfen.` : `Spieltagsbericht ${day}: Entwurf geschrieben, wartet auf Freigabe (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''}).`);
   }
 } catch (e) { say(`Spieltagsbericht fehlgeschlagen: ${e.message}`); }
 // Letzter Stand in der Datei (wird mit committet), damit man ohne Zugriff auf die Actions-Protokolle sieht, was los ist.
-if (stand && store.stand !== stand) { store.stand = stand; fs.writeFileSync(STORE, JSON.stringify(store, null, 1)); }
+store.stand = stand || store.stand;
+const next = JSON.stringify(store, null, 1);
+let prev = ''; try { prev = fs.readFileSync(STORE, 'utf8'); } catch {}
+if (next !== prev) fs.writeFileSync(STORE, next);
 publish(store);

@@ -992,3 +992,10 @@ body.zr-on .mobilenav{display:none}
 @keyframes stkLift{from{transform:translate(-22px,-56px)}to{transform:translate(-22px,-61px)}}
 .stk.ko.flip .stk-tag{right:84px}
 .stk-tear{left:0;top:16px}
+.ber-admin{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px;padding:10px 12px;border:1px dashed var(--gold-dark);border-radius:8px;background:var(--surface-2)}
+.ber-badge{font-size:12px;font-weight:700;color:var(--gold)}
+.ber-badge.ber-ok{color:var(--ok)}
+.ber-btns{display:flex;flex-wrap:wrap;gap:8px}
+.ber-lbl{display:grid;gap:6px;color:var(--muted);font-size:12px;margin:0 0 12px}
+.ber-lbl input,.ber-lbl textarea{width:100%;font-size:15px}
+.ber-lbl textarea{min-height:320px;line-height:1.5;resize:vertical}
