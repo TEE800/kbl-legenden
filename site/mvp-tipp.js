@@ -255,7 +255,7 @@
   const [shirt,trim]=clubColor(o.team),face=window.kblMgrFace?window.kblMgrFace(o.mname,'',o.mid):'';
   return `<div class="stk${o.cls||''}"${o.attr||''} style="left:${o.x}%;top:${o.top}px;z-index:${o.z}">
    <div class="stk-body">${STK_FIG}<span class="stk-face">${face||`<span class="mgr-av mgr-av-txt">${esc(String(o.mname||'?')[0].toUpperCase())}</span>`}</span><span class="stk-tear">💧</span>
-    <div class="stk-baby"><span class="stk-crown">👑</span><svg class="stk-swad" viewBox="0 0 26 14" aria-hidden="true"><path d="M1 8 Q1 2 9 2 L19 2 Q25 4 24 9 Q23 13 14 13 L6 13 Q1 12 1 8Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/><path d="M8 2.5 L8 12.5" stroke="${trim}" stroke-width="2"/><g class="stk-bface"><circle cx="20" cy="4" r="5" fill="#f8d4b4" stroke="#111" stroke-width="1"/><path d="M17.5 3.5 q1 1 2 0 M20.5 3.5 q1 1 2 0" stroke="#111" stroke-width=".7" fill="none"/><circle cx="20" cy="6.6" r="1.1" fill="#ff8fb1"/></g></svg>${toonPhoto(o.crest,'stk-crest',o.team)}<img class="stk-bhead" src="${esc(headSrc(o.pid))}" alt="${esc(o.pname)}" onload="this.closest('.stk')?.classList.add('has-bhead')" onerror="this.remove()"></div></div>
+    <div class="stk-baby"><span class="stk-crown">👑</span><svg class="stk-swad" viewBox="0 0 26 14" preserveAspectRatio="none" aria-hidden="true"><path d="M1 8 Q1 2 9 2 L19 2 Q25 4 24 9 Q23 13 14 13 L6 13 Q1 12 1 8Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/><path d="M4.5 3.5 L4.5 12" stroke="${trim}" stroke-width="2"/><g class="stk-bface"><circle cx="20" cy="4" r="5" fill="#f8d4b4" stroke="#111" stroke-width="1"/><path d="M17.5 3.5 q1 1 2 0 M20.5 3.5 q1 1 2 0" stroke="#111" stroke-width=".7" fill="none"/><circle cx="20" cy="6.6" r="1.1" fill="#ff8fb1"/></g></svg>${toonPhoto(o.crest,'stk-crest',o.team)}<img class="stk-bhead" src="${esc(headSrc(o.pid))}" alt="${esc(o.pname)}" onload="this.closest('.stk')?.classList.add('has-bhead')" onerror="this.remove()"></div></div>
    <span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span><div class="stk-tag">${o.tag}</div></div>`;
  }
  function toonRace(live,groups,leadIds,bestIds,me,best,pool,auto=false){
@@ -546,8 +546,9 @@
    // Baby: Decke im Vereinstrikot, darauf der Kopf des Spielers
    c.save();c.translate(bx,by);c.rotate(rock);
    c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2.5;c.beginPath();c.ellipse(0,0,26,13,0,0,7);c.fill();c.stroke();
-   c.fillStyle=trim;c.fillRect(-12,-12,5,24);
-   const cr=crests.get(r.id);if(cr)c.drawImage(cr,-4,-7,14,14);
+   c.fillStyle=trim;c.fillRect(-21,-8,4,16);
+   // Wappen auf der Brust unter dem Kinn, 90° nach rechts gedreht (Kevin-Wunsch, wie im Rennen)
+   const cr=crests.get(r.id);if(cr){c.save();c.translate(11,2);c.rotate(Math.PI/2);c.drawImage(cr,-10,-10,20,20);c.restore();}
    const hd=heads.get(r.id);
    if(hd){const h=70,w=Math.min(82,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
    else{c.fillStyle='#f8d4b4';c.beginPath();c.arc(24,-16,12,0,7);c.fill();c.lineWidth=2;c.stroke();c.fillStyle='#ff8fb1';c.beginPath();c.arc(24,-10,2.5,0,7);c.fill();}
