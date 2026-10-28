@@ -353,6 +353,12 @@
    <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
  }
+ // Sichtbarer Bereich der Seite: unter fester Kopfzeile/Hinweisleiste, über der Handy-Navigation.
+ function zrScreen(){
+  const fixed=e=>e&&!e.hidden&&/sticky|fixed/.test(getComputedStyle(e).position)&&getComputedStyle(e).display!=='none';
+  const top=Math.max(0,...[...document.querySelectorAll('.topbar,.push-hint')].filter(fixed).map(e=>e.getBoundingClientRect().bottom));
+  const nav=document.querySelector('.mobilenav');return [top,fixed(nav)?nav.getBoundingClientRect().top:innerHeight];
+ }
  function zrMount(root,d,groups){
   const box=root.querySelector('[data-zr]');if(!box)return;
   const frames=zrFrames(d),n=frames.length,pool=poolOf(d),ghosts=JSON.parse(box.dataset.zrGhosts||'[]');
@@ -434,7 +440,7 @@
   const btn=box.querySelector('[data-zr-play]');
   // Kevin-Wunsch: Kommt beim Abspielen eine Korrektur, scrollt die Seite so, dass der Korrekturkasten und darunter der obere Rasen zu sehen sind.
   const reveal=()=>{if(zr.full)return;const fl=box.querySelector('[data-zr-flash]');if(!fl||fl.hidden)return;
-   const top=Math.max(0,...[...document.querySelectorAll('.topbar,.push-hint')].filter(e=>!e.hidden&&/sticky|fixed/.test(getComputedStyle(e).position)).map(e=>e.getBoundingClientRect().bottom)),r=fl.getBoundingClientRect();
+   const top=zrScreen()[0],r=fl.getBoundingClientRect();
    if(r.top>=top&&r.bottom<=innerHeight*0.45)return;
    scrollTo({top:scrollY+r.top-top-8,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});};
   const tick=()=>{if(zr.i>=n-1){zrStop();btn.textContent='▶';return;}show(zr.i+1);if(frames[zr.i].fixes.length&&!frames[zr.i-1]?.fixes.length)reveal();zr.timer=setTimeout(tick,(frames[zr.i].fixes.length?2600:1500)/zr.speed);};
@@ -453,12 +459,18 @@
   const fl=box.querySelector('[data-zr-flash]');
   zr.fit=()=>{if(!box.isConnected)return;
    pitch.style.transform='';pitch.style.width='';
-   if(!zr.full){fl.style.minHeight=flMin;box.classList.remove('zr-narrow');if(LW){LW=0;ROW=ROW0;TOP=150;pitch.style.height=Y(N-1)+40+'px';show(zr.i);}return;}
-   // Korrekturkasten im Vollbild nebeneinander statt untereinander, Höhe nach der längsten Korrektur fest, damit nichts springt.
+   if(!box.open){fl.style.minHeight=flMin;box.classList.remove('zr-narrow','zr-fit');pw.style.height='';if(LW){LW=0;ROW=ROW0;TOP=150;pitch.style.height=Y(N-1)+40+'px';show(zr.i);}return;}
+   box.classList.add('zr-fit');
+   // Korrekturkasten nebeneinander statt untereinander, Höhe nach der längsten Korrektur fest, damit nichts springt.
    if(maxFix){const big=frames.reduce((a,f)=>f.fixes.length>a.fixes.length?f:a);fl.style.minHeight='';fl.classList.remove('empty','pop');
     fl.innerHTML=`<div>✏️ ${big.fin?"Endwert nach Spieltagsende":"Kickbase-Korrektur"}:</div><div class="zr-fixes">${zrFixLines(big.fixes)}</div>`;fl.style.minHeight=fl.offsetHeight+'px';}
    // Maßstab: so wenige Zeilen wie möglich (mindestens halb so viele wie Manager) füllen die Höhe, ohne dass sich in einem Stand etwas überdeckt
    // (gleich für den ganzen Spieltag, damit nichts springt).
+   // Aufgeklappt (Kevin-Wunsch): Feld mit allen Managern, Korrekturen und Abspielleiste passen zusammen auf den Bildschirm
+   // (zwischen Kopfzeile und Handy-Navigation); im Vollbild füllt das Feld den Rest des Bildschirms.
+   if(zr.full)pw.style.height='';
+   else{const [top,bot]=zrScreen(),ctrl=box.querySelector('.zr-ctrl'),out=e=>{if(!e||e.hidden)return 0;const c=getComputedStyle(e);return e.offsetHeight+parseFloat(c.marginTop)+parseFloat(c.marginBottom);};
+    pw.style.height=Math.max(300,Math.floor(bot-top-out(box.querySelector('.zr-hud'))-out(fl)-out(ctrl)-24))+'px';}
    const W=pw.clientWidth,H=pw.clientHeight;
    // Am Handy steht das Namensschild kompakt unter der Figur, die Zeilen sind dafür höher.
    const narrow=W<600;box.classList.toggle('zr-narrow',narrow);let vt=0,vb=0;
@@ -494,7 +506,8 @@
   zr.exit=()=>setFull(false);
   box.querySelector('[data-zr-full]').onclick=()=>{setFull(true);if(!zr.timer){if(zr.i>=n-1)show(0);btn.click();}};
   box.querySelector('[data-zr-close]').onclick=()=>setFull(false);
-  if(zr.full){box.classList.add('zr-full');document.body.classList.add('zr-on');requestAnimationFrame(zr.fit);}
+  if(zr.full){box.classList.add('zr-full');document.body.classList.add('zr-on');}
+  if(box.open)requestAnimationFrame(zr.fit);
   const vb=box.querySelector('[data-zr-video]'),vs=box.querySelector('[data-zr-vstat]');
   if(zr.video){vb.disabled=true;vs.textContent='Video wird aufgenommen …';}
   vb.onclick=async()=>{if(zr.video)return;zr.video=true;vb.disabled=true;zrStop();btn.textContent='▶';
@@ -508,7 +521,10 @@
    finally{zr.video=false;const b=document.querySelector('[data-zr-video]');if(b)b.disabled=false;}};
   if(box.open)box.dataset.zrSkip='1';// beim Neuladen wieder aufgeklappt: nicht von vorn starten
   box.ontoggle=()=>{if(box.dataset.zrSkip){delete box.dataset.zrSkip;return;}
-   if(!box.open){zrStop();btn.textContent='▶';return;}
+   if(!box.open){zrStop();btn.textContent='▶';zr.fit();return;}
+   // aufgeklappt: einpassen und so scrollen, dass Uhrzeit, Feld und Abspielleiste zu sehen sind
+   zr.fit();if(!zr.full){const r=box.querySelector('.zr-hud').getBoundingClientRect(),top=zrScreen()[0];
+    if(Math.abs(r.top-top-6)>4)scrollTo({top:scrollY+r.top-top-6,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});}
    if(!players){zr.autoplay=true;loadPlayers().then(()=>render()).catch(()=>{});return;}
    if(!zr.timer&&zr.i===n-1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){show(0);btn.click();}};
   show(zr.i);
