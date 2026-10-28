@@ -321,13 +321,16 @@
    return {at:f.at,fin:!!f.fin,players,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
   }));
  }
+ // Kevin-Wunsch: Punkteänderungen untereinander, je Spieler eine Zeile mit der Differenz.
+ const zrDiff=z=>`${z.to>z.from?'+':'−'}${fmt(Math.abs(z.to-z.from))}`;
+ const zrFixLines=fixes=>fixes.map(z=>`<span class="zr-fixl">${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b> <small>(${zrDiff(z)})</small></span>`).join('');
  function zrMoments(frames){
   const out=[];let lastBest='',lastLead='';
   frames.forEach((f,i)=>{
    const b=(f.best?.players||[]).map(p=>p.id).sort().join(),l=f.lead.map(r=>r.m.id).sort().join();
-   const fx=f.fixes.map(x=>`${esc(x.name)} ${fmt(x.from)} → <b>${fmt(x.to)}</b>`).join(', ');
-   if(f.fin)out.push({i,ico:'🏁',fix:!!fx,txt:`Spieltag beendet, Wertung nach den Kickbase-Leistungsdaten${f.best?`: <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> mit ${fmt(f.best.points)}`:''}${fx?`<br><small>Geändert: ${fx}</small>`:''}`});
-   else if(fx)out.push({i,ico:'✏️',fix:true,txt:`Korrektur nach Abpfiff: ${fx}`});
+   const fx=zrFixLines(f.fixes);
+   if(f.fin)out.push({i,ico:'🏁',fix:!!fx,txt:`Spieltag beendet, Wertung nach den Kickbase-Leistungsdaten${f.best?`: <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> mit ${fmt(f.best.points)}`:''}${fx?`<small class="zr-fixes">Geändert:${fx}</small>`:''}`});
+   else if(fx)out.push({i,ico:'✏️',fix:true,txt:`Korrektur nach Abpfiff:<span class="zr-fixes">${fx}</span>`});
    if(b&&b!==lastBest&&!f.fin)out.push({i,ico:'👑',txt:`${f.best.players.map(p=>`<b>${esc(p.name)}</b>`).join(', ')} ${i?'übernimmt':'vorne'} mit ${fmt(f.best.points)} Punkten`});
    if(l!==lastLead&&f.lead.length)out.push({i,ico:'🕺',txt:`Führend: ${f.lead.map(r=>`<b>${esc(r.m.name)}</b> (${esc(r.t.player)} ${fmt(r.t.points)})`).join(', ')}`});
    lastBest=b;lastLead=l;
@@ -391,7 +394,7 @@
      el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
    });
    const fl=box.querySelector('[data-zr-flash]');
-   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b>`).join(', ')}`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
+   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
    else fl.hidden=true;
    box.querySelectorAll('[data-zr-go]').forEach(li=>li.classList.toggle('now',Number(li.dataset.zrGo)===i));
   };
@@ -562,10 +565,10 @@
    });
    c.restore();
    // Korrektur-Hinweis
-   if(f.fixes.length&&p>=1){c.font=font(36,800);const t=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${z.name} ${fmt(z.from)} → ${fmt(z.to)}`).join(', ')}`;
-    const words=t.split(' '),lines=[];let l='';for(const w of words){const tt=l?l+' '+w:w;if(c.measureText(tt).width>PW-80){lines.push(l);l=w;}else l=tt;}lines.push(l);
+   // Kevin-Wunsch: je Spieler eine Zeile, untereinander.
+   if(f.fixes.length&&p>=1){const lines=[`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:`,...f.fixes.map(z=>`${z.name}  ${fmt(z.from)} → ${fmt(z.to)}  (${zrDiff(z)})`)];
     const bh=lines.length*46+30;c.fillStyle='#ffd54a';c.strokeStyle='#111';c.lineWidth=4;rr(PX+20,PY+20,PW-40,bh,18);c.fill();c.stroke();
-    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>c.fillText(ln,W/2,PY+62+j*46));}
+    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>{c.font=font(j?34:36,j?700:800);c.fillText(fit(ln,PW-80),W/2,PY+62+j*46);});}
    // Zeitleiste
    const TY=1740,TX=PX+20,TW=PW-40,prog=n>1?(k-1+e)/(n-1):1,pr=Math.max(0,Math.min(1,k===0?0:prog));
    c.fillStyle='#465864';rr(TX,TY,TW,12,6);c.fill();c.fillStyle='#ebc768';rr(TX,TY,TW*pr,12,6);c.fill();
