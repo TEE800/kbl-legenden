@@ -41,8 +41,8 @@
   const p=pruef[b.day],rows=[];
   if(p){
    rows.push(p.zahlen?.length?`<li class="bad">⚠️ ${p.zahlen.length} Zahl${p.zahlen.length===1?'':'en'} nicht in den App-Daten gefunden: ${p.zahlen.map(z=>`<b>${esc(z.zahl)}</b>`).join(', ')}</li>`:'<li>✓ Alle Zahlen stammen aus den App-Daten.</li>');
-   if(!p.ki||p.ki.fehler)rows.push(`<li class="muted">Gegenprüfung durch Claude: ${esc(p.ki?.fehler||'nicht gelaufen')}</li>`);
-   else rows.push(p.ki.probleme.length?`<li class="bad">⚠️ Gegenprüfung fand ${p.ki.probleme.length} Punkt${p.ki.probleme.length===1?'':'e'}:<ul>${p.ki.probleme.map(x=>`<li>„${esc(x.zitat)}“: ${esc(x.grund)}</li>`).join('')}</ul></li>`:'<li>✓ Gegenprüfung: Claude hat jede Aussage mit den App-Daten verglichen, kein Fehler gefunden.</li>');
+   if(!p.ki||p.ki.fehler)rows.push(`<li class="muted">Gegenprüfung durch die BumsKI: ${esc(p.ki?.fehler||'nicht gelaufen')}</li>`);
+   else rows.push(p.ki.probleme.length?`<li class="bad">⚠️ Gegenprüfung fand ${p.ki.probleme.length} Punkt${p.ki.probleme.length===1?'':'e'}:<ul>${p.ki.probleme.map(x=>`<li>„${esc(x.zitat)}“: ${esc(x.grund)}</li>`).join('')}</ul></li>`:'<li>✓ Gegenprüfung: Die BumsKI hat jede Aussage mit den App-Daten verglichen, kein Fehler gefunden.</li>');
   }else rows.push('<li class="muted">Noch keine automatische Prüfung für diese Fassung.</li>');
   if(b.editedAt){const f=fremdeZahlen(b.text,b.day);if(f)rows.push(f.length?`<li class="bad">⚠️ In deiner Änderung stehen Zahlen, die nicht in den App-Daten vorkommen: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}</li>`:'<li>✓ Auch nach deiner Änderung stammen alle Zahlen aus den App-Daten.</li>');}
   return `<div class="ber-pruef"><b>🔍 Prüfung</b><ul>${rows.join('')}</ul></div>`;
@@ -66,12 +66,12 @@
   if(!sel&&!isAdmin()){sec.hidden=true;return;}
   sec.hidden=false;
   const pill=$('berichtPill'),box=$('berichtContent');
-  if(!sel){pill.textContent='Noch kein Bericht';box.innerHTML=`<p class="muted">Noch kein Bericht. Sobald ein Spieltag abgerechnet ist, schreibt Claude einen Entwurf, den du hier prüfst und freigibst.</p>${msg?`<p class="error">${esc(msg)}</p>`:''}`;return;}
+  if(!sel){pill.textContent='Noch kein Bericht';box.innerHTML=`<p class="muted">Noch kein Bericht. Sobald ein Spieltag abgerechnet ist, schreibt die BumsKI einen Entwurf, den du hier prüfst und freigibst.</p>${msg?`<p class="error">${esc(msg)}</p>`:''}`;return;}
   const draft=sel.status&&sel.status!=='frei';
   pill.textContent=`${draft?'📝 Entwurf · ':''}ST ${sel.day}: ${sel.title||''}`;pill.title=sel.title||'';
   const admin=isAdmin()&&drafts.some(b=>b.day===sel.day);
   const bar=admin?`<div class="ber-admin">${draft?'<span class="ber-badge">Entwurf · nur für dich sichtbar</span>':'<span class="ber-badge ber-ok">✓ Veröffentlicht</span>'}<div class="ber-btns">${editing?'':`<button type="button" class="ghost" data-ber="edit">✏️ Bearbeiten</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Veröffentlichen</button>':'<button type="button" class="ghost" data-ber="zurueckziehen">↩ Zurückziehen</button>'}`}</div></div>`:'';
-  const foot=`<p class="muted tiny ber-foot">Spieltag ${sel.day} · geschrieben von Claude${sel.editedAt?' · bearbeitet von T800':''}${sel.approvedAt?' · freigegeben '+esc(when(sel.approvedAt)):''} · alle Zahlen aus der App</p>`;
+  const foot=`<p class="muted tiny ber-foot">Spieltag ${sel.day} · geschrieben von BumsKI${sel.editedAt?' · bearbeitet von T800':''}${sel.approvedAt?' · freigegeben '+esc(when(sel.approvedAt)):''} · alle Zahlen aus der App</p>`;
   if(editing){
    box.innerHTML=`${bar}<label class="ber-lbl">Schlagzeile<input id="berTitle" maxlength="200" value="${esc(sel.title||'')}"></label><label class="ber-lbl">Text<textarea id="berText" rows="18">${esc(bodyOf(sel.text))}</textarea></label><p class="muted tiny">## am Zeilenanfang = Zwischenüberschrift, **so** = fett, - am Zeilenanfang = Liste, Leerzeile = neuer Absatz.</p><div class="ber-btns"><button type="button" class="ghost" data-ber="speichern">💾 Speichern</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Speichern und veröffentlichen</button>':''}<button type="button" class="ghost" data-ber="abbrechen">Abbrechen</button></div><p class="muted tiny" id="berLive"></p><p class="muted tiny" role="status">${esc(msg)}</p>`;
    const live=()=>{const f=fremdeZahlen($('berText').value,sel.day),el=$('berLive');if(!el||!f)return;el.innerHTML=f.length?`⚠️ Diese Zahlen stehen nicht in den App-Daten: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}`:'✓ Alle Zahlen stammen aus den App-Daten.';el.className=f.length?'tiny ber-warn':'muted tiny';};
