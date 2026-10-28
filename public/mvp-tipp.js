@@ -245,6 +245,18 @@
  // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
  window.kblToon={toon,clubColor,kbImg,headSrc};
  const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`;
+ // Kevin-Wunsch: Die Manager laufen als Strichmännchen über den Platz (Profilbild als Kopf) und tragen ihren getippten Spieler als Baby im Arm.
+ // Baby = Wackelkopf des Spielers auf einer Decke im Vereinstrikot, ohne Kopf ein gezeichnetes Babygesicht.
+ // Klassen: best = Baby hat die Krone, champ = Manager liegt nach der Wertung vorne und stemmt sein Baby hoch, mourn = richtiger Spieler, andere Zahl (weint),
+ // run = Spiel läuft, idle = noch nicht angepfiffen (wiegt das Baby), fall = Minuspunkte, ko = kann nicht mehr gewinnen.
+ const STK_FIG='<svg class="stk-fig" viewBox="0 0 48 60" aria-hidden="true"><g class="stk-legs"><path class="stk-leg l" d="M18 39 L18 57"/><path class="stk-leg r" d="M18 39 L18 57"/></g><path class="stk-line" d="M18 19 L18 40"/><g class="stk-hold"><path class="stk-line" d="M18 25 L26 34 L38 32"/><path class="stk-line" d="M18 26 L28 27 L36 23"/></g><g class="stk-up"><path class="stk-line" d="M18 26 L4 19 L5 -4"/><path class="stk-line" d="M18 26 L32 19 L31 -4"/></g><circle class="stk-headc" cx="18" cy="10" r="9"/></svg>';
+ function stick(o){
+  const [shirt,trim]=clubColor(o.team),face=window.kblMgrFace?window.kblMgrFace(o.mname,'',o.mid):'';
+  return `<div class="stk${o.cls||''}"${o.attr||''} style="left:${o.x}%;top:${o.top}px;z-index:${o.z}">
+   <div class="stk-body">${STK_FIG}<span class="stk-face">${face||`<span class="mgr-av mgr-av-txt">${esc(String(o.mname||'?')[0].toUpperCase())}</span>`}</span><span class="stk-tear">💧</span>
+    <div class="stk-baby"><span class="stk-crown">👑</span><svg class="stk-swad" viewBox="0 0 26 14" aria-hidden="true"><path d="M1 8 Q1 2 9 2 L19 2 Q25 4 24 9 Q23 13 14 13 L6 13 Q1 12 1 8Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/><path d="M8 2.5 L8 12.5" stroke="${trim}" stroke-width="2"/><g class="stk-bface"><circle cx="20" cy="4" r="5" fill="#f8d4b4" stroke="#111" stroke-width="1"/><path d="M17.5 3.5 q1 1 2 0 M20.5 3.5 q1 1 2 0" stroke="#111" stroke-width=".7" fill="none"/><circle cx="20" cy="6.6" r="1.1" fill="#ff8fb1"/></g></svg>${toonPhoto(o.crest,'stk-crest',o.team)}<img class="stk-bhead" src="${esc(headSrc(o.pid))}" alt="${esc(o.pname)}" onload="this.closest('.stk')?.classList.add('has-bhead')" onerror="this.remove()"></div></div>
+   <span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span><div class="stk-tag">${o.tag}</div></div>`;
+ }
  function toonRace(live,groups,leadIds,bestIds,me,best,pool,auto=false){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
@@ -252,43 +264,37 @@
   const pos=v=>(4+78*((v??0)-lo)/span).toFixed(1);
   // Alle Figuren auf einem Platz (Kevin-Wunsch): x nach Punkten, je Spieler eine eigene Höhe, damit sich niemand verdeckt.
   // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
-  const ROW=88,TOP=104;
+  // Je Manager eine eigene Zeile (Kevin-Wunsch: Manager laufen mit ihrem Tipp als Baby), x nach den Punkten des getippten Spielers.
+  // Oben, wenn ihn keiner getippt hat, der gerade Beste als Spieler-Männchen mit Krone. TOP: Platz für das hochgestemmte Baby.
+  const ROW=64,TOP=122,Y=row=>TOP+row*ROW;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner${o.run}${x>50?' flip':''}${crest?' has-crest':''}${o.ghost?' leader':''}${o.crown?' champ':''}${o.party?' tag-down':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
-    ${o.crown?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.mood,o.num)}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>${o.run===' run'?'<span class="toon-ball">⚽</span>':''}${o.ko?'<span class="toon-dizzy">💫</span>':''}
-    <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.ko?' <span class="toon-ko">K.O.</span>':''}</div></div>`;};
+   return `<div class="toon-runner leader champ${x>50?' flip':''}${crest?' has-crest':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
+    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>
+    <div class="toon-tag">${esc(o.name)} <b>${fmt(o.pts)}</b> <small>keiner getippt</small></div></div>`;};
   const figs=[];
-  // Ist der Beste selbst getippt, trägt er die Krone im Rennen; halbtransparent nur, wen keiner getippt hat.
   const tipped=new Set(groups.map(g=>String(g.t.playerId)));
-  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,crown:true,ghost:true,mood:'wow',num:'★',run:''}));
+  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({ghost:true,id:p.id,name:p.name,team:p.team,pts:best.points}));
   // K.O. auf dem Rasen (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
   // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist.
   const ko=g=>!bestIds.has(String(g.t.playerId))&&(offRule(pool,g.t.team,g.t.playerId)||(!!best&&g.state==='done'&&g.pts!==null&&g.pts<best.points));
-  groups.forEach(g=>{const neg=g.pts!==null&&g.pts<0,k=ko(g);
-   figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,crown:bestIds.has(String(g.t.playerId)),ko:k,mood:neg||k?'sad':g.place===1&&g.pts!==null?'wow':'happy',num:g.place??'?',
-    run:k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':''});});
-  // Kevin-Wunsch: Wer den Sieger-Spieler getippt hat und nach der Wertung vorne liegt, tanzt direkt neben ihm.
-  // Wer den richtigen Spieler, aber eine andere Zahl getippt hat, liegt weinend daneben. Ohne Wertung tanzen alle seine Tipper.
-  const right=best?groups.filter(g=>bestIds.has(String(g.t.playerId))).flatMap(g=>g.rs):[];
-  const fans=right.filter(r=>!auto||leadIds.has(r.m.id)),losers=auto?right.filter(r=>!leadIds.has(r.m.id)):[];
-  const wi=figs.findIndex(f=>f.crown);
-  // Kevin-Wunsch: alle in der Zeile des Siegers, direkt links neben ihm die Tanzenden, daneben auf gleicher Höhe die Weinenden.
-  // Der Name des Siegers steht dann über der Krone (oben 24px mehr Platz), die der Tänzer unter den Füßen (Zeilen darunter rücken um PARTY nach unten).
-  const party=wi>=0&&(fans.length||losers.length),PARTY=12;
-  if(party)figs[wi].party=true;
-  const Y=row=>TOP+(party?24:0)+row*ROW+(party&&row>wi?PARTY:0);
-  const face=window.kblMgrFace||(()=>'');
-  const edge=o=>`${(100-Number(pos(o.pts))).toFixed(1)}%`,fansW=fans.length?fans.length*52-12+10:0;
-  const dancers=(o,row)=>(losers.length?mourners(o,row):'')+(fans.length?`<div class="toon-dancers" style="right:calc(${edge(o)} + 2px);top:${Y(row)-84}px">${fans.map(r=>`<div class="toon-dancer"><div class="toon-dancer-body">${toon({},'#d4a017','#fff','wow','')}<span class="toon-dancer-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-dancer-name">${esc(r.m.name)} <b>${fmt(r.t.points)}</b></span></div>`).join('')}</div>`:'');
-  const mourners=(o,row)=>`<div class="toon-mourners" style="right:calc(${edge(o)} + ${2+fansW}px);top:${Y(row)-74}px">${losers.map(r=>`<div class="toon-mourner"><div class="toon-mourner-body">${toon({},'#6b7280','#fff','sad','')}<span class="toon-mourner-face">${face(r.m.name,'',r.m.id)}</span></div><span class="toon-tears">💧</span><span class="toon-mourner-name">${esc(r.m.name)}</span></div>`).join('')}</div>`;
-  const pitch=`<div class="toon-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>runner(o,row)+(o.party?dancers(o,row):'')).join('')}</div>`;
+  // Kevin-Wunsch: Wer den Sieger-Spieler getippt hat und nach der Wertung vorne liegt, tanzt (hier: stemmt sein Baby hoch).
+  // Wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Ohne erkannte Wertung tanzen alle seine Tipper.
+  groups.forEach(g=>{const k=ko(g),neg=g.pts!==null&&g.pts<0,isBest=bestIds.has(String(g.t.playerId));
+   const st=k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':'';
+   [...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)||a.m.name.localeCompare(b.m.name,'de')).forEach(r=>{
+    const champ=isBest&&(!auto||leadIds.has(r.m.id)),mourn=isBest&&auto&&!leadIds.has(r.m.id);
+    figs.push({g,r,k,cls:st+(isBest?' best':'')+(champ?' champ':'')+(mourn?' mourn':'')+(leadIds.has(r.m.id)?' lead':'')+(r.m.id===me?' me':'')});});});
+  const man=(o,row)=>{const g=o.g,r=o.r,x=pos(g.pts),crest=kbImg(byId.get(String(g.t.playerId))?.teamImg);
+   return stick({cls:o.cls+(x>50?' flip':''),x,top:Y(row)-60,z:row+2,team:g.t.team,mname:r.m.name,mid:r.m.id,pid:g.t.playerId,pname:g.t.player,crest,
+    tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">👶 ${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
+  const pitch=`<div class="toon-pitch stk-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.ghost?runner(o,row):man(o,row)).join('')}</div>`;
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&!offRule(pool,g.t.team,g.t.playerId)),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
   const ghostLine=tops.length?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">Gerade bester getippter Spieler:</span> <b>${tops.map(g=>esc(g.t.player)).join(', ')}</b> <small class="muted">${esc([...new Set(tops.map(g=>g.t.team))].join(', '))}</small><span class="toon-pts">${fmt(top)}<small> Pkt.</small></span></div>`:'';
   const rows=groups.map(g=>`<div class="toon-row${bestIds.has(String(g.t.playerId))?' best':''}"><span class="mvp-rank">${g.place??'–'}</span><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${mn(r.m.name,r.m.id)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div></div>`).join('');
   // Während des Spieltags gleich offen und ohne Erklärtext (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel: kbl-keep-open).
-  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Mit Krone: wer gerade nach der Tippregel vorne liegt. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wer gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
+  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Jeder Manager trägt seinen getippten Spieler als Baby im Arm. Je mehr Punkte das Baby hat, desto weiter rechts. 👑 auf dem Baby: der gerade Beste nach der Tippregel. Wer nach der Wertung vorne liegt, stemmt sein Baby hoch und tanzt; wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wessen Baby gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
  }
  // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
  // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
@@ -350,26 +356,28 @@
   zr.i=Math.min(zr.i,n-1);
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   const final=frames[n-1].players;
-  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true,rs:[]})),
-   ...groups.map(g=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,rs:g.rs})).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9))];
+  // Je Manager eine Zeile mit seinem Tipp als Baby (wie im Rennen), oben der Beste, wenn ihn keiner getippt hat.
+  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true})),
+   ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
   const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
   const pos=v=>(4+78*((v??0)-lo)/(hi-lo));
-  const ROW=78,TOP=96,Y=r=>TOP+r*ROW;
+  const ROW=64,TOP=122,Y=r=>TOP+r*ROW;
   const pitch=box.querySelector('[data-zr-pitch]');
   pitch.style.height=Y(rowsList.length-1)+40+'px';
   pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
    const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
-   return `<div class="toon-runner zr-runner${crest?' has-crest':''}${o.ghost?' leader zr-ghost':''}" data-zr-id="${esc(o.id)}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
-    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy',o.ghost?'★':'')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
-    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b><span class="zr-fix" data-zr-fix></span></div>
-    ${o.rs.length?`<div class="zr-fans">${o.rs.map(r=>`<span data-zr-m="${esc(r.m.id)}" title="${esc(r.m.name)} tippt ${esc(fmt(r.t.points))}">${(window.kblMgrFace||(()=>''))(r.m.name,'',r.m.id)}<small>${esc(fmt(r.t.points))}</small></span>`).join('')}</div>`:''}</div>`;}).join('');
+   if(!o.ghost)return stick({cls:' zr-runner',attr:` data-zr-i="${r}"`,x:4,top:Y(r)-60,z:r+2,team:o.team,mname:o.m.name,mid:o.m.id,pid:o.id,pname:o.name,crest,
+    tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">👶 ${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
+   return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader zr-ghost" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
+    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy','★')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
+    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
    const sk=box.querySelector('[data-zr-seek]');sk.value=String(i);sk.style.setProperty('--f',String(n>1?i/(n-1):0));
    box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
    box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:`<span class="muted">${f.start?'Alle starten bei 0':'Noch kein Zwischenstand'}</span>`;
-   pitch.querySelectorAll('[data-zr-id]').forEach(el=>{
-    const id=el.dataset.zrId,o=rowsList.find(x=>x.id===id),x=f.players[id],isBest=bestIds.has(id),pts=o.ghost?(isBest?f.best.points:null):x?.points??null;
+   pitch.querySelectorAll('[data-zr-i]').forEach(el=>{
+    const o=rowsList[Number(el.dataset.zrI)],id=o.id,x=f.players[id],isBest=bestIds.has(id),pts=o.ghost?(isBest?f.best.points:null):x?.points??null;
     const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
     const left=pos(pts);el.style.left=left.toFixed(1)+'%';
     el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!!o.ghost&&!isBest);
@@ -377,7 +385,10 @@
     el.querySelector('[data-zr-pts]').textContent=pts===null?'–':fmt(pts);
     const fx=f.fixes.find(z=>z.id===id),fe=el.querySelector('[data-zr-fix]');
     fe.textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';el.classList.toggle('zr-fixed',!!fx);
-    el.querySelectorAll('[data-zr-m]').forEach(m=>m.classList.toggle('lead',leadIds.has(m.dataset.zrM)));
+    // Manager: Krone aufs Baby, Führende nach der Wertung stemmen es hoch, mit richtigem Spieler und anderer Zahl wird geweint.
+    if(o.m){const ld=leadIds.has(o.m.id);el.classList.toggle('best',isBest);el.classList.toggle('lead',ld);
+     el.classList.toggle('champ',isBest&&(!f.lead.length||ld));el.classList.toggle('mourn',isBest&&!!f.lead.length&&!ld);
+     el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
    });
    const fl=box.querySelector('[data-zr-flash]');
    if(f.fixes.length){fl.hidden=false;fl.innerHTML=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b>`).join(', ')}`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
@@ -444,13 +455,13 @@
    return !k?u:window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
   const heads=new Map(),crests=new Map(),faces=new Map();
   await Promise.all(rowsList.map(async r=>{heads.set(r.id,await load(headSrc(r.id)));crests.set(r.id,await load(kbImg(byId.get(r.id)?.teamImg)));
-   for(const x of r.rs)if(!faces.has(x.m.id))faces.set(x.m.id,await load(faceSrc(x.m)));}));
+   if(r.m&&!faces.has(r.m.id))faces.set(r.m.id,await load(faceSrc(r.m)));}));
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
   // Ablauf: Start 1,5 s stehen, je Stand 1,2 s Bewegung und 0,8 s stehen (Korrekturen 2,4 s), am Ende 3 s.
   const seg=[];let T=1.5;
   for(let k=1;k<n;k++){const hold=frames[k].fixes.length?2.4:k===n-1?3:0.8;seg.push({k,t0:T,t1:T+1.2,t2:T+1.2+hold});T+=1.2+hold;}
   const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
-  const PX=40,PY=300,PW=W-80,PH=1360,rows=rowsList.length,RH=Math.min(150,PH/Math.max(rows,1)),S=RH/150;
+  const PX=40,PY=300,PW=W-80,PH=1360,rows=rowsList.length,RH=Math.min(150,(PH-70)/Math.max(rows,1)),S=Math.min(1,RH/115);
   const font=(sz,w=700)=>`${w} ${Math.round(sz)}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
   const rr=(x,y,w,h,r)=>{c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();};
   const fit=(t,max)=>{if(c.measureText(t).width<=max)return t;while(t.length>1&&c.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
@@ -459,24 +470,57 @@
    const x0=f.players[r.id],isBest=(f.best?.players||[]).some(p=>p.id===r.id),pts=ptsAt(f,r);
    const ko=!isBest&&(offRule(pool,r.team,r.id)||(!!f.best&&x0?.state==='done'&&pts!==null&&pts<f.best.points));
    const run=!ko&&x0?.state==='live',[shirt,trim]=clubColor(r.team),flip=(x-PX)/PW>.5;
+   const ld=!!r.m&&f.lead.some(q=>q.m.id===r.m.id),champ=isBest&&(!r.m||!f.lead.length||ld),mourn=!!r.m&&isBest&&!!f.lead.length&&!ld;
    c.save();c.globalAlpha=r.ghost?alphaGhost:ko?.45:1;c.translate(x,y);c.scale(S,S);
-   if(ko)c.rotate(flip?Math.PI/2:-Math.PI/2);
-   const bob=run?Math.sin(time*16)*3:isBest?Math.sin(time*8)*2:0,sw=run?Math.sin(time*16)*.5:0;
-   c.lineCap='round';c.strokeStyle='#f5c9a0';c.lineWidth=6;
-   [[-5,1],[5,-1]].forEach(([dx,dir])=>{c.save();c.translate(dx,-10);c.rotate(sw*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,26);c.stroke();c.restore();});
+   if(ko){if(r.m)c.translate(0,-50);c.rotate(flip?Math.PI/2:-Math.PI/2);}
+   else if(r.m&&!run&&pts!==null&&pts<0){c.translate(0,-40);c.rotate(-1.3);}
+   const bob=run?Math.sin(time*16)*3:champ?Math.sin(time*8)*2:0,sw=run?Math.sin(time*16)*.5:0;
+   c.lineCap='round';c.lineJoin='round';
+   if(!r.m){
+    c.strokeStyle='#f5c9a0';c.lineWidth=6;
+    [[-5,1],[5,-1]].forEach(([dx,dir])=>{c.save();c.translate(dx,-10);c.rotate(sw*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,26);c.stroke();c.restore();});
+    c.translate(0,bob);
+    const arm=champ?Math.sin(time*14)*.7:-sw;
+    [[-15,-50,1],[15,-50,-1]].forEach(([dx,dy,dir])=>{c.save();c.translate(dx,dy);c.rotate((dir>0?.5:-.5)+arm*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,24);c.stroke();c.restore();});
+    c.fillStyle=trim;rr(-14,-16,28,12,3);c.fill();
+    c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2;c.beginPath();c.moveTo(-18,-56);c.quadraticCurveTo(0,-64,18,-56);c.lineTo(16,-14);c.lineTo(-16,-14);c.closePath();c.fill();c.stroke();
+    const cr=crests.get(r.id);if(cr)c.drawImage(cr,-9,-46,18,18);
+    const hd=heads.get(r.id);
+    if(hd){const h=96,w=Math.min(110,h*hd.width/hd.height);c.drawImage(hd,-w/2,-56-h+4,w,h);}
+    else{c.fillStyle='#f5c9a0';c.beginPath();c.arc(0,-82,22,0,7);c.fill();c.stroke();c.fillStyle='#111';c.beginPath();c.arc(-7,-84,3,0,7);c.arc(7,-84,3,0,7);c.fill();}
+    if(isBest){c.font='44px serif';c.textAlign='center';c.fillText('👑',0,-150);}
+    if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',18,6);}
+    c.restore();
+    return {pts,ko,isBest,flip,ld};
+   }
+   // Strichmännchen (Kevin-Wunsch): weiß umrandete schwarze Linien, Kopf = Manager-Profilbild, Baby = Wackelkopf des getippten Spielers.
+   const line=pts2=>{for(const [w,col] of [[11,'rgba(255,255,255,.75)'],[6,'#111']]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();pts2.forEach(([a,b],i)=>i?c.lineTo(a,b):c.moveTo(a,b));c.stroke();}};
+   [[-1],[1]].forEach(([dir])=>{const a=sw*dir;line([[0,-42],[Math.sin(a+dir*.28)*44,-42+Math.cos(a+dir*.28)*44]]);});
    c.translate(0,bob);
-   const arm=isBest?Math.sin(time*14)*.7:-sw;
-   [[-15,-50,1],[15,-50,-1]].forEach(([dx,dy,dir])=>{c.save();c.translate(dx,dy);c.rotate((dir>0?.5:-.5)+arm*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,24);c.stroke();c.restore();});
-   c.fillStyle=trim;rr(-14,-16,28,12,3);c.fill();
-   c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2;c.beginPath();c.moveTo(-18,-56);c.quadraticCurveTo(0,-64,18,-56);c.lineTo(16,-14);c.lineTo(-16,-14);c.closePath();c.fill();c.stroke();
-   const cr=crests.get(r.id);if(cr)c.drawImage(cr,-9,-46,18,18);
+   line([[0,-42],[0,-84]]);
+   const lift=champ?Math.sin(time*9)*6:0,rock=!run&&!champ&&pts===null?Math.sin(time*3)*.15:0;
+   const bx=champ?0:42,by=champ?-152+lift:-70;
+   if(champ){line([[0,-76],[-18,-104],[-14,-136+lift]]);line([[0,-76],[18,-104],[14,-136+lift]]);}
+   else{line([[0,-74],[18,-56],[42,-60]]);line([[0,-72],[22,-70],[40,-80]]);}
+   // Kopf
+   const im=faces.get(r.m.id);
+   c.save();c.beginPath();c.arc(0,-104,20,0,7);c.fillStyle='#fff';c.fill();c.clip();
+   if(im)c.drawImage(im,-20,-124,40,40);else{c.fillStyle='#17242e';c.fillRect(-20,-124,40,40);c.fillStyle='#9db0bd';c.font=font(22,800);c.textAlign='center';c.fillText((r.m.name||'?')[0].toUpperCase(),0,-96);}
+   c.restore();c.strokeStyle=ld?'#ebc768':'#111';c.lineWidth=4;c.beginPath();c.arc(0,-104,20,0,7);c.stroke();
+   if(mourn){c.font='28px serif';c.textAlign='center';c.fillText('💧',-28,-96+((time*40)%24));}
+   // Baby: Decke im Vereinstrikot, darauf der Kopf des Spielers
+   c.save();c.translate(bx,by);c.rotate(rock);
+   c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2.5;c.beginPath();c.ellipse(0,0,26,13,0,0,7);c.fill();c.stroke();
+   c.fillStyle=trim;c.fillRect(-12,-12,5,24);
+   const cr=crests.get(r.id);if(cr)c.drawImage(cr,-4,-7,14,14);
    const hd=heads.get(r.id);
-   if(hd){const h=96,w=Math.min(110,h*hd.width/hd.height);c.drawImage(hd,-w/2,-56-h+4,w,h);}
-   else{c.fillStyle='#f5c9a0';c.beginPath();c.arc(0,-82,22,0,7);c.fill();c.stroke();c.fillStyle='#111';c.beginPath();c.arc(-7,-84,3,0,7);c.arc(7,-84,3,0,7);c.fill();}
-   if(isBest){c.font='44px serif';c.textAlign='center';c.fillText('👑',0,-150);}
-   if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',18,6);}
+   if(hd){const h=46,w=Math.min(54,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
+   else{c.fillStyle='#f8d4b4';c.beginPath();c.arc(24,-16,12,0,7);c.fill();c.lineWidth=2;c.stroke();c.fillStyle='#ff8fb1';c.beginPath();c.arc(24,-10,2.5,0,7);c.fill();}
+   if(isBest){c.font='34px serif';c.textAlign='center';c.fillText('👑',24,hd?-56:-32);}
    c.restore();
-   return {pts,ko,isBest,flip};
+   if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',22,6-bob);}
+   c.restore();
+   return {pts,ko,isBest,flip,ld};
   }
   function draw(time){
    let k=0,p=1;for(const s of seg){if(time>=s.t0){k=s.k;p=Math.min(1,(time-s.t0)/1.2);}}
@@ -499,26 +543,21 @@
    const leadIds=new Set(f.lead.map(r=>r.m.id));
    rowsList.forEach((r,i)=>{
     const a=ptsAt(prev,r),b=ptsAt(f,r),va=a??(r.ghost?b:0),vb=b??(r.ghost?a:0);
-    const v=(va??0)+((vb??0)-(va??0))*e,x=PX+PW*pos(v)/100,y=PY+(i+.5)*RH+RH*.38;
+    const v=(va??0)+((vb??0)-(va??0))*e,x=PX+PW*pos(v)/100,y=PY+70+(i+.5)*RH+RH*.38;
     const pb=(prev.best?.players||[]).some(q=>q.id===r.id),fb=(f.best?.players||[]).some(q=>q.id===r.id);
     const ga=r.ghost?(pb&&fb?1:fb?e:pb?1-e:0):1;if(r.ghost&&ga<=0.01)return;
     const st=figure(r,x,y,f,time,ga*.9);
     // Name und Punkte daneben, darunter die Tipper (Gold = führend)
     c.save();c.globalAlpha=r.ghost?ga:st.ko?.6:1;c.font=font(30*S,800);
     const fx=f.fixes.find(z=>z.id===r.id)&&p>=1;
-    const label=`${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
-    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-34*S-tw:x+34*S,ty=y-70*S;
-    c.fillStyle=fx?'#c0392b':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
+    const label=`${r.m?r.m.name+' · 👶 ':''}${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
+    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-(r.m?36:34)*S-tw:x+(r.m?78:34)*S,ty=y-(r.m?100:70)*S;
+    c.fillStyle=fx?'#c0392b':st.ld?'#8a6d1f':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
+    if(st.ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
     c.fillStyle='#fff';c.textAlign='left';c.fillText(label,tx+10*S,ty+29*S);
-    let fxp=tx;const fs=30*S;
-    const chips=r.rs.map(x=>({m:x.m,t:fmt(x.t.points)}));c.font=font(22*S,700);
-    const cwid=chips.map(ch=>fs+8*S+c.measureText(ch.t).width+10*S);const total=cwid.reduce((s,w)=>s+w+6*S,0);
-    if(st.flip)fxp=tx+tw-total;
-    chips.forEach((ch,j)=>{const w=cwid[j],cy=ty+th+8*S,ld=leadIds.has(ch.m.id);
-     c.fillStyle=ld?'#b48633':'rgba(0,0,0,.5)';rr(fxp,cy,w,fs,fs/2);c.fill();if(ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
-     const im=faces.get(ch.m.id);c.save();c.beginPath();c.arc(fxp+fs/2,cy+fs/2,fs/2-2*S,0,7);c.clip();
-     if(im)c.drawImage(im,fxp,cy,fs,fs);else{c.fillStyle='#17242e';c.fillRect(fxp,cy,fs,fs);c.fillStyle='#9db0bd';c.font=font(18*S,800);c.textAlign='center';c.fillText((ch.m.name||'?')[0].toUpperCase(),fxp+fs/2,cy+fs*.68);}
-     c.restore();c.fillStyle='#fff';c.font=font(22*S,700);c.textAlign='left';c.fillText(ch.t,fxp+fs+6*S,cy+fs*.72);fxp+=w+6*S;});
+    const sub=r.m?`Tipp ${fmt(r.t.points)}`:'keiner getippt';c.font=font(22*S,700);
+    const sw2=c.measureText(sub).width+16*S,sx=st.flip?tx+tw-sw2:tx;
+    c.fillStyle='rgba(0,0,0,.5)';rr(sx,ty+th+6*S,sw2,30*S,15*S);c.fill();c.fillStyle='#e9f0f4';c.fillText(sub,sx+8*S,ty+th+28*S);
     c.restore();
    });
    c.restore();
