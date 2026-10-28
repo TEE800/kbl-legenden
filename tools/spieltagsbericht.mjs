@@ -15,6 +15,8 @@ const EXCLUDED_IDS = new Set(['3783040']); // T1000 zählt nirgends
 const DATA = path.join(process.cwd(), 'site', 'data');
 const STORE = path.join(process.cwd(), 'kbl-berichte.json');
 const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
+// Falls ein Modellname nicht (mehr) existiert (Fehler 404), nacheinander diese versuchen.
+const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
 const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
@@ -215,17 +217,24 @@ Form: Deutsch. Erste Zeile: „# “ plus eine knackige Schlagzeile (ohne Spielt
 
 async function askClaude(f) {
   const key = process.env.ANTHROPIC_API_KEY;
-  const body = { model: MODEL, max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}` }] };
+  const models = [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)];
   let last;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) { last = Error(`API ${r.status}: ${d?.error?.message || 'Fehler'}`); if (r.status === 429 || r.status >= 500) { await new Promise(s => setTimeout(s, 10000 * attempt)); continue; } throw last; }
-      const text = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
-      if (text.length < 400) throw Error('Antwort zu kurz');
-      return { text, usage: d.usage || null, model: d.model || MODEL };
-    } catch (e) { last = e; if (/API 4\d\d/.test(e.message) && !/API 429/.test(e.message)) break; }
+  for (const model of models) {
+    const body = { model, max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}` }] };
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      let r, d;
+      try { r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); d = await r.json().catch(() => ({})); }
+      catch (e) { last = Error(`Verbindung: ${e.message}`); await new Promise(res => setTimeout(res, 10000 * attempt)); continue; }
+      if (r.ok) {
+        const text = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+        if (text.length >= 400) return { text, usage: d.usage || null, model: d.model || model };
+        last = Error('Antwort zu kurz'); continue;
+      }
+      last = Error(`API ${r.status} (${model}): ${d?.error?.message || 'Fehler'}`);
+      if (r.status === 429 || r.status >= 500) { await new Promise(res => setTimeout(res, 15000 * attempt)); continue; }
+      if (r.status === 404 || (r.status === 400 && /model/i.test(d?.error?.message || ''))) break; // nächstes Modell
+      throw last; // z. B. 401 Schlüssel falsch, 402/400 kein Guthaben: Modellwechsel hilft nicht
+    }
   }
   throw last;
 }
@@ -235,6 +244,8 @@ const store = readStore(); store.berichte ||= {};
 const arg = process.argv.indexOf('--fakten');
 await loadHaken(Math.max(1, ...((read('matchday-status.json')?.days || []).filter(d => d.status === 'finished').map(d => d.day))));
 if (arg > 0) { console.log(JSON.stringify(facts(Number(process.argv[arg + 1])), null, 1)); process.exit(0); }
+let stand = '';
+const say = m => { stand = m; console.log(m); };
 try {
   const status = read('matchday-status.json');
   const finished = (status?.days || []).filter(d => d.status === 'finished').map(d => d.day);
@@ -244,17 +255,19 @@ try {
   const rk = day ? read(`ranking_${LEAGUE}_dayNumber_${day}.json`) : null, mt = day ? read(`mvp-tipps_${day}.json`) : null;
   const S = day ? settlement(day) : null;
   const ready = day && rk && rk.il === false && S?.settled && (!mt || mt.status === 'finished');
-  if (!day) console.log('Spieltagsbericht: noch kein Spieltag abgeschlossen.');
-  else if (store.berichte[day] && neu !== day) console.log(`Spieltagsbericht ${day} liegt schon vor.`);
-  else if (!ready) console.log(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
-  else if (!process.env.ANTHROPIC_API_KEY) console.log(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
+  if (!day) say('Spieltagsbericht: noch kein Spieltag abgeschlossen.');
+  else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} liegt schon vor.`);
+  else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
+  else if (!process.env.ANTHROPIC_API_KEY) say(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
   else {
     const f = facts(day);
     const { text, usage, model } = await askClaude(f);
     const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim();
     store.berichte[day] = { day, title, text, model, createdAt: new Date().toISOString(), usage };
     fs.writeFileSync(STORE, JSON.stringify(store, null, 1));
-    console.log(`Spieltagsbericht ${day} geschrieben: „${title}“`, usage ? `(${usage.input_tokens} rein, ${usage.output_tokens} raus)` : '');
+    say(`Spieltagsbericht ${day} geschrieben: „${title}“ (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''})`);
   }
-} catch (e) { console.log('Spieltagsbericht fehlgeschlagen:', e.message); }
+} catch (e) { say(`Spieltagsbericht fehlgeschlagen: ${e.message}`); }
+// Letzter Stand in der Datei (wird mit committet), damit man ohne Zugriff auf die Actions-Protokolle sieht, was los ist.
+if (stand && store.stand !== stand) { store.stand = stand; fs.writeFileSync(STORE, JSON.stringify(store, null, 1)); }
 publish(store);
