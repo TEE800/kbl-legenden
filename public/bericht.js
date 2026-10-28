@@ -33,10 +33,24 @@
  const when=s=>s?new Date(s).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'}):'';
  const req=async(p,body)=>{const r=await fetch(API+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,adminCode:code()}),cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok){if(r.status===403)try{localStorage.removeItem(CODE);}catch{}throw Error(d.error||'Tippdienst nicht erreichbar.');}return d;};
 
- let pub=[],drafts=[],sel=null,editing=false,msg='';
+ // Zahlenprüfung im Browser für eigene Änderungen (gleiche Regel wie zahlenPruefen in tools/spieltagsbericht.mjs).
+ const normNum=t=>Number(String(t).replace(/[–−]/g,'-').replace(/\.(?=\d{3}(\D|$))/g,'').replace(',','.'));
+ function fremdeZahlen(text,day){const ok=new Set(zahlen[day]||[]);if(!ok.size)return null;const out=[];for(const m of String(text).matchAll(/[–−-]?\d{1,3}(?:\.\d{3})+(?:,\d+)?|[–−-]?\d+(?:,\d+)?/g)){const v=normNum(m[0]);if(Number.isFinite(v)&&![v,Math.abs(v),Math.round(Math.abs(v)*10)/10].some(x=>ok.has(String(x))))out.push(m[0]);}return [...new Set(out)];}
+ // Prüfbox für den Admin: Ergebnis der automatischen Prüfung (Zahlen + Gegenprüfung durch Claude) und Zahlen aus eigenen Änderungen.
+ function pruefHtml(b){
+  const p=pruef[b.day],rows=[];
+  if(p){
+   rows.push(p.zahlen?.length?`<li class="bad">⚠️ ${p.zahlen.length} Zahl${p.zahlen.length===1?'':'en'} nicht in den App-Daten gefunden: ${p.zahlen.map(z=>`<b>${esc(z.zahl)}</b>`).join(', ')}</li>`:'<li>✓ Alle Zahlen stammen aus den App-Daten.</li>');
+   if(!p.ki||p.ki.fehler)rows.push(`<li class="muted">Gegenprüfung durch Claude: ${esc(p.ki?.fehler||'nicht gelaufen')}</li>`);
+   else rows.push(p.ki.probleme.length?`<li class="bad">⚠️ Gegenprüfung fand ${p.ki.probleme.length} Punkt${p.ki.probleme.length===1?'':'e'}:<ul>${p.ki.probleme.map(x=>`<li>„${esc(x.zitat)}“: ${esc(x.grund)}</li>`).join('')}</ul></li>`:'<li>✓ Gegenprüfung: Claude hat jede Aussage mit den App-Daten verglichen, kein Fehler gefunden.</li>');
+  }else rows.push('<li class="muted">Noch keine automatische Prüfung für diese Fassung.</li>');
+  if(b.editedAt){const f=fremdeZahlen(b.text,b.day);if(f)rows.push(f.length?`<li class="bad">⚠️ In deiner Änderung stehen Zahlen, die nicht in den App-Daten vorkommen: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}</li>`:'<li>✓ Auch nach deiner Änderung stammen alle Zahlen aus den App-Daten.</li>');}
+  return `<div class="ber-pruef"><b>🔍 Prüfung</b><ul>${rows.join('')}</ul></div>`;
+ }
+ let pub=[],drafts=[],sel=null,editing=false,msg='',pruef={},zahlen={};
  async function loadPublic(){
   let list=[];
-  try{const r=await fetch('/api/berichte',{cache:'no-store'});if(r.ok)list=(await r.json()).berichte||[];}catch{}
+  try{const r=await fetch('/api/berichte',{cache:'no-store'});if(r.ok){const d=await r.json();list=d.berichte||[];pruef=d.pruefungen||{};zahlen=d.zahlen||{};}}catch{}
   // Online sofort nach der Freigabe sichtbar, nicht erst nach dem nächsten Export.
   if(API)try{const r=await fetch(API+'/bericht',{cache:'no-store'});if(r.ok){const live=(await r.json()).berichte||[];const m=new Map(list.map(b=>[b.day,b]));for(const b of live)if(b.status==='frei')m.set(b.day,b);list=[...m.values()];}}catch{}
   return list.sort((a,b)=>b.day-a.day);
@@ -59,10 +73,13 @@
   const bar=admin?`<div class="ber-admin">${draft?'<span class="ber-badge">Entwurf · nur für dich sichtbar</span>':'<span class="ber-badge ber-ok">✓ Veröffentlicht</span>'}<div class="ber-btns">${editing?'':`<button type="button" class="ghost" data-ber="edit">✏️ Bearbeiten</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Veröffentlichen</button>':'<button type="button" class="ghost" data-ber="zurueckziehen">↩ Zurückziehen</button>'}`}</div></div>`:'';
   const foot=`<p class="muted tiny ber-foot">Spieltag ${sel.day} · geschrieben von Claude${sel.editedAt?' · bearbeitet':''}${sel.approvedAt?' · freigegeben '+esc(when(sel.approvedAt)):''} · alle Zahlen aus der App</p>`;
   if(editing){
-   box.innerHTML=`${bar}<label class="ber-lbl">Schlagzeile<input id="berTitle" maxlength="200" value="${esc(sel.title||'')}"></label><label class="ber-lbl">Text<textarea id="berText" rows="18">${esc(bodyOf(sel.text))}</textarea></label><p class="muted tiny">## am Zeilenanfang = Zwischenüberschrift, **so** = fett, - am Zeilenanfang = Liste, Leerzeile = neuer Absatz.</p><div class="ber-btns"><button type="button" class="ghost" data-ber="speichern">💾 Speichern</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Speichern und veröffentlichen</button>':''}<button type="button" class="ghost" data-ber="abbrechen">Abbrechen</button></div><p class="muted tiny" role="status">${esc(msg)}</p>`;
+   box.innerHTML=`${bar}<label class="ber-lbl">Schlagzeile<input id="berTitle" maxlength="200" value="${esc(sel.title||'')}"></label><label class="ber-lbl">Text<textarea id="berText" rows="18">${esc(bodyOf(sel.text))}</textarea></label><p class="muted tiny">## am Zeilenanfang = Zwischenüberschrift, **so** = fett, - am Zeilenanfang = Liste, Leerzeile = neuer Absatz.</p><div class="ber-btns"><button type="button" class="ghost" data-ber="speichern">💾 Speichern</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Speichern und veröffentlichen</button>':''}<button type="button" class="ghost" data-ber="abbrechen">Abbrechen</button></div><p class="muted tiny" id="berLive"></p><p class="muted tiny" role="status">${esc(msg)}</p>`;
+   const live=()=>{const f=fremdeZahlen($('berText').value,sel.day),el=$('berLive');if(!el||!f)return;el.innerHTML=f.length?`⚠️ Diese Zahlen stehen nicht in den App-Daten: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}`:'✓ Alle Zahlen stammen aus den App-Daten.';el.className=f.length?'tiny ber-warn':'muted tiny';};
+   $('berText').addEventListener('input',live);live();
    return;
   }
-  box.innerHTML=`${bar}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
+  const pr=admin&&draft?pruefHtml(sel):'';
+  box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
  }
  sec.addEventListener('click',async e=>{
   const b=e.target.closest('[data-ber]');if(!b||!sel)return;const act=b.dataset.ber;

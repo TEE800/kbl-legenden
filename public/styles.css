@@ -999,3 +999,7 @@ body.zr-on .mobilenav{display:none}
 .ber-lbl{display:grid;gap:6px;color:var(--muted);font-size:12px;margin:0 0 12px}
 .ber-lbl input,.ber-lbl textarea{width:100%;font-size:15px}
 .ber-lbl textarea{min-height:320px;line-height:1.5;resize:vertical}
+.ber-pruef{margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface-1);font-size:13px}
+.ber-pruef ul{margin:6px 0 0;padding-left:18px}
+.ber-pruef li{margin:3px 0}
+.ber-pruef li.bad,.ber-warn{color:var(--shame-text)}
