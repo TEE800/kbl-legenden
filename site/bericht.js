@@ -71,7 +71,7 @@
   pill.textContent=`${draft?'📝 Entwurf · ':''}ST ${sel.day}: ${sel.title||''}`;pill.title=sel.title||'';
   const admin=isAdmin()&&drafts.some(b=>b.day===sel.day);
   const bar=admin?`<div class="ber-admin">${draft?'<span class="ber-badge">Entwurf · nur für dich sichtbar</span>':'<span class="ber-badge ber-ok">✓ Veröffentlicht</span>'}<div class="ber-btns">${editing?'':`<button type="button" class="ghost" data-ber="edit">✏️ Bearbeiten</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Veröffentlichen</button>':'<button type="button" class="ghost" data-ber="zurueckziehen">↩ Zurückziehen</button>'}`}</div></div>`:'';
-  const foot=`<p class="muted tiny ber-foot">Spieltag ${sel.day} · geschrieben von BumsKI${sel.editedAt?' · bearbeitet von T800':''}${sel.approvedAt?' · freigegeben '+esc(when(sel.approvedAt)):''} · alle Zahlen aus der App</p>`;
+  const foot=`<p class="muted tiny ber-foot">Spieltag ${sel.day} · geschrieben von BumsKI${sel.editedAt?' · bearbeitet von T800':''}${sel.approvedAt?' · freigegeben '+esc(when(sel.approvedAt)):''}</p>`;
   if(editing){
    box.innerHTML=`${bar}<label class="ber-lbl">Schlagzeile<input id="berTitle" maxlength="200" value="${esc(sel.title||'')}"></label><label class="ber-lbl">Text<textarea id="berText" rows="18">${esc(bodyOf(sel.text))}</textarea></label><p class="muted tiny">## am Zeilenanfang = Zwischenüberschrift, **so** = fett, - am Zeilenanfang = Liste, Leerzeile = neuer Absatz.</p><div class="ber-btns"><button type="button" class="ghost" data-ber="speichern">💾 Speichern</button>${draft?'<button type="button" class="gold" data-ber="freigeben">✅ Speichern und veröffentlichen</button>':''}<button type="button" class="ghost" data-ber="abbrechen">Abbrechen</button></div><p class="muted tiny" id="berLive"></p><p class="muted tiny" role="status">${esc(msg)}</p>`;
    const live=()=>{const f=fremdeZahlen($('berText').value,sel.day),el=$('berLive');if(!el||!f)return;el.innerHTML=f.length?`⚠️ Diese Zahlen stehen nicht in den App-Daten: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}`:'✓ Alle Zahlen stammen aus den App-Daten.';el.className=f.length?'tiny ber-warn':'muted tiny';};
@@ -80,7 +80,20 @@
   }
   const pr=admin&&draft?pruefHtml(sel):'';
   box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
+  fitHeads();
  }
+ // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): nur zu lange einzeln so weit verkleinern, dass sie passen (min. 11 px, dann Umbruch).
+ // Der Bereich startet eingeklappt (Breite 0), darum beim Aufklappen und bei Größenänderung neu über den ResizeObserver.
+ function fitHeads(){
+  const box=$('berichtContent');if(!box)return;
+  for(const h of box.querySelectorAll('.ber-h')){
+   h.style.fontSize='';h.style.whiteSpace='nowrap';
+   const w=h.clientWidth;if(!w||h.scrollWidth<=w)continue;
+   h.style.fontSize=Math.max(11,Math.floor(parseFloat(getComputedStyle(h).fontSize)*w/h.scrollWidth*10)/10)+'px';
+   if(h.scrollWidth>w)h.style.whiteSpace='';
+  }
+ }
+ if(window.ResizeObserver&&$('berichtContent')){let lastW=-1;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;fitHeads();}}).observe($('berichtContent'));}
  sec.addEventListener('click',async e=>{
   const b=e.target.closest('[data-ber]');if(!b||!sel)return;const act=b.dataset.ber;
   if(act==='edit'){editing=true;msg='';render();return;}
