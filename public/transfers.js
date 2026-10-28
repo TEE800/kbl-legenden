@@ -15,7 +15,7 @@
  const date=s=>s?new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}):'';
  const img=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
  const face=(src,name)=>src?`<img class="tr-face" src="${esc(img(src))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tr-face tr-noimg',textContent:${esc(JSON.stringify((name||'?').trim()[0]||'?'))}}))">`:`<span class="tr-face tr-noimg">${esc((name||'?').trim()[0]||'?')}</span>`;
- let data=null,loading=false,sortBy='realized',season=null;
+ let data=null,pech=null,loading=false,sortBy='realized',season=null;
  // Halbserien vom Server (Hinrunde bis Spieltag 17, Rückrunde danach; Feld seasons); ältere Exporte ohne seasons gelten als ein laufender Zeitraum.
  const seasons=()=>data?.seasons||(data?.managers?[{key:'',current:true,managers:data.managers}]:[]);
  // Liga-Zählung (Kevin): jede Halbserie heißt „Saison“, Saison 0 = Rückrunde 2024/25, dann je Halbserie eins weiter.
@@ -48,6 +48,28 @@
    return `<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${c}">${money(v,true)}</b>${hits.map(t=>`<div class="tr-record-who">${face(t.img,t.name)}<div><strong>${esc(t.name)}</strong><small class="tr-record-mgr">${face(t.mgr.img,t.mgr.name)}${esc(t.mgr.name)}</small><small>${money(t.buy?.price)} → ${money(t.sell?.price)}${t.sell?.at?' · '+esc(date(t.sell.at)):''}</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div>`;
   };
   return `<div class="tr-tiles tr-records">${card('Größter Gewinn der Saison',Math.max,'tr-pos')}${card('Größter Verlust der Saison',Math.min,'tr-neg')}</div>`;
+ }
+ // Transfer-Pech-Radar (Kevin-Wunsch): verkauft und gleich am nächsten Spieltag gepunktet. Daten von /api/transfer-pech,
+ // nur die laufende Halbserie (Leistungsdaten der laufenden Bundesliga-Saison). Startet eingeklappt (feste Regel).
+ function pechRadar(){
+  if(!pech||!cur()?.current)return '';
+  if(pech.error)return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Transfer-Pech-Radar</span><span class="tr-pill error">fehlt</span></summary><div class="acc-sub"><p class="error">Das fehlt: ${esc(pech.error)}</p></div></details>`;
+  const hits=(pech.items||[]).filter(x=>x.points>=pech.min);
+  const before=h=>h<48?`${h} Std.`:`${Math.round(h/24)} Tage`;
+  const byMgr=new Map();for(const x of hits){const m=byMgr.get(x.seller.id)||{...x.seller,n:0,pts:0};m.n++;m.pts+=x.points;byMgr.set(x.seller.id,m);}
+  const mg=[...byMgr.values()].sort((a,b)=>b.n-a.n||b.pts-a.pts),kings=mg.filter(m=>m.n===mg[0]?.n);
+  const top=hits.filter(x=>x.points===hits[0]?.points);
+  const tiles=`<div class="tr-tiles tr-records">
+   <div class="tr-tile tr-record"><span>Größtes Pech</span>${top.length?`<b class="tr-neg">${top[0].points} Punkte</b>${top.map(x=>`<div class="tr-record-who">${face(x.img,x.name)}<div><strong>${esc(x.name)}</strong><small class="tr-record-mgr">${face(x.seller.img,x.seller.name)}${esc(x.seller.name)}</small><small>verkauft ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div>
+   <div class="tr-tile tr-record"><span>Pech-König</span>${kings.length?`<b class="tr-neg">${kings[0].n}× Pech</b>${kings.map(m=>`<div class="tr-record-who">${face(m.img,m.name)}<div><strong>${esc(m.name)}</strong><small>${m.pts} Punkte verschenkt</small></div></div>`).join('')}`:'<b class="muted">–</b><small>noch keiner</small>'}</div></div>`;
+  const row=(x,i)=>`<li class="tr-pech-row"><span class="tr-place">${i+1}.</span>${face(x.img,x.name)}<div class="tr-pech-txt"><b>${esc(x.name)}</b>
+   <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.price!=null?` · ${money(x.price)}`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
+   ${x.buyerStarted?`<small class="tr-pech-buyer">🍀 ${esc(x.buyer)} hatte ihn gleich in der Startelf</small>`:''}</div><b class="tr-pech-pts">${x.points}</b></li>`;
+  const notes=[pech.missing?`${pech.missing} Verkäufe ohne Punkte in den Leistungsdaten`:'',pech.failedPlayers?`Leistungsdaten von ${pech.failedPlayers} Spielern`:'',pech.failedManagers?.length?`Transfers von ${pech.failedManagers.join(', ')}`:''].filter(Boolean);
+  return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Transfer-Pech-Radar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
+   <p class="muted tiny">Verkauft und gleich am nächsten Spieltag mindestens ${pech.min} Punkte geholt. Die BumsKI zählt nur abgeschlossene Spieltage; wer den Spieler vor dem Anpfiff zurückgekauft hat, ist raus.</p>
+   ${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
+   ${notes.length?`<p class="error tiny">Das fehlt: ${esc(notes.join('; '))}.</p>`:''}</div></details>`;
  }
  const side=(s,verb)=>s?`<span class="tr-price">${money(s.price)}</span><small>${s.at?esc(date(s.at))+' · ':''}${verb} ${esc(s.other||'Markt')}</small>`:'';
  function trade(t){
@@ -86,11 +108,12 @@
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
   const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
-  root.innerHTML=`${pick}${records(c.managers)}${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
+  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div>${league(c.managers)}<h4 class="tr-h">Transfers je Manager</h4><div class="tr-managers">${c.managers.map(manager).join('')}</div>`;
  }
  async function load(){
   if(loading)return;loading=true;
-  try{data=await get('/api/transfers');render();}
+  const pp=get('/api/transfer-pech').catch(e=>({error:e.message}));
+  try{data=await get('/api/transfers');render();pech=await pp;const el=$('#trPech');if(el)el.innerHTML=pechRadar();}
   catch(e){const r=$('#transfersContent');r.className='error';r.textContent='Transfers nicht abrufbar: '+e.message;$('#transfersMeta').textContent='–';}
   finally{loading=false;}
  }
