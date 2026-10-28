@@ -343,7 +343,7 @@
   const moments=zrMoments(frames),n=frames.length;
   return `<details class="acc-group zr" data-zr data-zr-ghosts="${esc(JSON.stringify(ghosts))}" style="margin-top:14px"><summary>🎬 Spieltag im Zeitraffer</summary><div class="acc-sub">
    <div class="zr-hud"><div class="zr-clock" data-zr-clock></div><div class="zr-lead" data-zr-lead></div><button type="button" class="ghost zr-close" data-zr-close aria-label="Vollbild schließen">✕</button></div>
-   <div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div><div class="zr-flash" data-zr-flash hidden></div></div>
+   <div class="zr-flash empty" data-zr-flash hidden></div><div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div></div>
    <div class="zr-ctrl"><button type="button" class="gold zr-play" data-zr-play aria-label="Abspielen">▶</button>
     <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
     <button type="button" class="ghost zr-speed" data-zr-speed>1×</button><button type="button" class="ghost zr-fullbtn" data-zr-full aria-label="Vollbild">⛶</button></div>
@@ -374,6 +374,8 @@
    return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader zr-ghost" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
     <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy','★')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
     <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
+  const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
+  box.querySelector('[data-zr-flash]').style.minHeight=`calc(${maxFix+1}*1.4em + 12px)`;
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
    const sk=box.querySelector('[data-zr-seek]');sk.value=String(i);sk.style.setProperty('--f',String(n>1?i/(n-1):0));
@@ -394,8 +396,10 @@
      el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
    });
    const fl=box.querySelector('[data-zr-flash]');
-   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
-   else fl.hidden=true;
+   // Kevin-Wunsch: Korrekturen in eigenem Kasten über dem Platz (nicht über den Gesichtern), Platz für die meisten Zeilen fest reserviert.
+   fl.hidden=!maxFix;fl.classList.toggle('empty',!f.fixes.length);
+   if(f.fixes.length){fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
+   else fl.textContent='✏️ Hier erscheinen Punktekorrekturen nach Abpfiff';
    box.querySelectorAll('[data-zr-go]').forEach(li=>li.classList.toggle('now',Number(li.dataset.zrGo)===i));
   };
   const btn=box.querySelector('[data-zr-play]');
@@ -464,7 +468,9 @@
   const seg=[];let T=1.5;
   for(let k=1;k<n;k++){const hold=frames[k].fixes.length?2.4:k===n-1?3:0.8;seg.push({k,t0:T,t1:T+1.2,t2:T+1.2+hold});T+=1.2+hold;}
   const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
-  const PX=40,PY=300,PW=W-80,PH=1360,rows=rowsList.length,RH=Math.min(150,(PH-70)/Math.max(rows,1)),S=Math.min(1,RH/115);
+  // Korrektur-Kasten zwischen Kopf und Platz (Kevin-Wunsch: nicht über den Gesichtern), Höhe für die meisten Zeilen.
+  const maxFix=Math.max(0,...frames.map(f=>f.fixes.length)),FY=264,FH=maxFix?(maxFix+1)*44+28:0;
+  const PX=40,PY=maxFix?FY+FH+16:300,PW=W-80,PH=1660-PY,rows=rowsList.length,RH=Math.min(150,(PH-70)/Math.max(rows,1)),S=Math.min(1,RH/115);
   const font=(sz,w=700)=>`${w} ${Math.round(sz)}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
   const rr=(x,y,w,h,r)=>{c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();};
   const fit=(t,max)=>{if(c.measureText(t).width<=max)return t;while(t.length>1&&c.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
@@ -566,9 +572,12 @@
    c.restore();
    // Korrektur-Hinweis
    // Kevin-Wunsch: je Spieler eine Zeile, untereinander.
-   if(f.fixes.length&&p>=1){const lines=[`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:`,...f.fixes.map(z=>`${z.name}  ${fmt(z.from)} → ${fmt(z.to)}  (${zrDiff(z)})`)];
-    const bh=lines.length*46+30;c.fillStyle='#ffd54a';c.strokeStyle='#111';c.lineWidth=4;rr(PX+20,PY+20,PW-40,bh,18);c.fill();c.stroke();
-    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>{c.font=font(j?34:36,j?700:800);c.fillText(fit(ln,PW-80),W/2,PY+62+j*46);});}
+   if(maxFix){c.textAlign='center';
+    if(f.fixes.length&&p>=1){const lines=[`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:`,...f.fixes.map(z=>`${z.name}  ${fmt(z.from)} → ${fmt(z.to)}  (${zrDiff(z)})`)];
+     c.fillStyle='#ffd54a';c.strokeStyle='#111';c.lineWidth=4;rr(PX,FY,PW,FH,18);c.fill();c.stroke();
+     c.fillStyle='#111';const y0=FY+(FH-lines.length*44)/2+32;lines.forEach((ln,j)=>{c.font=font(j?30:32,j?700:800);c.fillText(fit(ln,PW-60),W/2,y0+j*44);});}
+    else{c.strokeStyle='#465864';c.lineWidth=2;c.setLineDash([10,8]);rr(PX,FY,PW,FH,18);c.stroke();c.setLineDash([]);
+     c.fillStyle='#728592';c.font=font(28,600);c.fillText('✏️ Hier erscheinen Punktekorrekturen nach Abpfiff',W/2,FY+FH/2+10);}}
    // Zeitleiste
    const TY=1740,TX=PX+20,TW=PW-40,prog=n>1?(k-1+e)/(n-1):1,pr=Math.max(0,Math.min(1,k===0?0:prog));
    c.fillStyle='#465864';rr(TX,TY,TW,12,6);c.fill();c.fillStyle='#ebc768';rr(TX,TY,TW*pr,12,6);c.fill();

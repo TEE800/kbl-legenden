@@ -968,3 +968,9 @@ body.zr-on .mobilenav{display:none}
 .zr-fixes{display:flex;flex-direction:column;gap:1px;margin-top:2px}
 .zr-fixl{white-space:nowrap}.zr-fixl small{opacity:.75;font-weight:600}
 .zr-flash .zr-fixes{align-items:center;font-weight:600}
+/* Zeitraffer: Korrektur-Kasten über dem Platz statt darauf (Kevin-Wunsch: nicht über die Gesichter) */
+.zr .zr-flash{position:static;left:auto;top:auto;transform:none;max-width:none;margin:4px 0 6px;line-height:1.4;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:none;padding:4px 10px}
+.zr .zr-flash.empty{background:transparent;border:1px dashed var(--line-strong);color:var(--muted);font-weight:500;font-size:12px}
+.zr .zr-flash[hidden]{display:none}
+.zr .zr-flash.pop{animation:zrPopIn .5s cubic-bezier(.3,1.6,.6,1)}
+@keyframes zrPopIn{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
