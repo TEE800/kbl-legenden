@@ -1003,3 +1003,4 @@ body.zr-on .mobilenav{display:none}
 .ber-pruef ul{margin:6px 0 0;padding-left:18px}
 .ber-pruef li{margin:3px 0}
 .ber-pruef li.bad,.ber-warn{color:var(--shame-text)}
+.mvp-result{margin:14px 0 6px;gap:6px}
