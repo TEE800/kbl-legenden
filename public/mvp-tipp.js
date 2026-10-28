@@ -249,7 +249,7 @@
  // Baby = Wackelkopf des Spielers auf einer Decke im Vereinstrikot, ohne Kopf ein gezeichnetes Babygesicht.
  // Klassen: best = Baby hat die Krone, champ = Manager liegt nach der Wertung vorne und stemmt sein Baby hoch, mourn = richtiger Spieler, andere Zahl (weint),
  // run = Spiel läuft, idle = noch nicht angepfiffen (wiegt das Baby), fall = Minuspunkte, ko = kann nicht mehr gewinnen.
- const STK_FIG='<svg class="stk-fig" viewBox="0 0 48 60" aria-hidden="true"><g class="stk-legs"><path class="stk-leg l" d="M18 39 L18 57"/><path class="stk-leg r" d="M18 39 L18 57"/></g><path class="stk-line" d="M18 19 L18 40"/><g class="stk-hold"><path class="stk-line" d="M18 25 L26 34 L38 32"/><path class="stk-line" d="M18 26 L28 27 L36 23"/></g><g class="stk-up"><path class="stk-line" d="M18 26 L4 19 L5 -4"/><path class="stk-line" d="M18 26 L32 19 L31 -4"/></g><circle class="stk-headc" cx="18" cy="10" r="9"/></svg>';
+ const STK_FIG='<svg class="stk-fig" viewBox="0 0 48 60" aria-hidden="true"><g class="stk-legs"><path class="stk-leg l" d="M18 39 L18 57"/><path class="stk-leg r" d="M18 39 L18 57"/></g><path class="stk-line" d="M18 19 L18 40"/><g class="stk-hold"><path class="stk-line" d="M18 27 L28 38 L44 37"/><path class="stk-line" d="M18 28 L31 31 L42 28"/></g><g class="stk-up"><path class="stk-line" d="M18 27 L-4 13 L2 -20"/><path class="stk-line" d="M18 27 L40 13 L34 -20"/></g><circle class="stk-headc" cx="18" cy="10" r="9"/></svg>';
  function stick(o){
   const [shirt,trim]=clubColor(o.team),face=window.kblMgrFace?window.kblMgrFace(o.mname,'',o.mid):'';
   return `<div class="stk${o.cls||''}"${o.attr||''} style="left:${o.x}%;top:${o.top}px;z-index:${o.z}">
@@ -261,12 +261,12 @@
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
   const vals=[...groups.map(g=>g.pts??0),...(best?[best.points]:[])],lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
-  const pos=v=>(4+78*((v??0)-lo)/span).toFixed(1);
+  const pos=v=>(4+72*((v??0)-lo)/span).toFixed(1);
   // Alle Figuren auf einem Platz (Kevin-Wunsch): x nach Punkten, je Spieler eine eigene Höhe, damit sich niemand verdeckt.
   // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
   // Je Manager eine eigene Zeile (Kevin-Wunsch: Manager laufen mit ihrem Tipp als Baby), x nach den Punkten des getippten Spielers.
   // Oben, wenn ihn keiner getippt hat, der gerade Beste als Spieler-Männchen mit Krone. TOP: Platz für das hochgestemmte Baby.
-  const ROW=64,TOP=122,Y=row=>TOP+row*ROW;
+  const ROW=74,Y=row=>(/ champ/.test(figs[0]?.cls||'')?150:104)+row*ROW;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
    return `<div class="toon-runner leader champ${x>50?' flip':''}${crest?' has-crest':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
     <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>
@@ -363,8 +363,8 @@
   const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true})),
    ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
   const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
-  const pos=v=>(4+78*((v??0)-lo)/(hi-lo));
-  const ROW=64,TOP=122,Y=r=>TOP+r*ROW;
+  const pos=v=>(4+72*((v??0)-lo)/(hi-lo));
+  const ROW=74,TOP=150,Y=r=>TOP+r*ROW;
   const pitch=box.querySelector('[data-zr-pitch]');
   pitch.style.height=Y(rowsList.length-1)+40+'px';
   pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
@@ -406,8 +406,11 @@
   const tick=()=>{if(zr.i>=n-1){zrStop();btn.textContent='▶';return;}show(zr.i+1);zr.timer=setTimeout(tick,(frames[zr.i].fixes.length?2600:1500)/zr.speed);};
   btn.onclick=()=>{if(zr.timer){zrStop();btn.textContent='▶';return;}if(zr.i>=n-1)show(0);btn.textContent='⏸';zr.timer=setTimeout(tick,900/zr.speed);};
   box.querySelector('[data-zr-seek]').oninput=e=>{zrStop();btn.textContent='▶';show(Number(e.target.value));};
-  box.querySelector('[data-zr-speed]').onclick=e=>{zr.speed=zr.speed===1?2:zr.speed===2?4:1;e.target.textContent=zr.speed+'×';};
-  box.querySelector('[data-zr-speed]').textContent=zr.speed+'×';
+  // Kevin-Wunsch: auch 0,5× (Korrekturen sind sonst schwer zu greifen); das Video übernimmt das gewählte Tempo.
+  const SPEEDS=[0.5,1,2,4],spLabel=v=>String(v).replace('.',',')+'×';
+  box.querySelector('[data-zr-speed]').onclick=e=>{zr.speed=SPEEDS[(SPEEDS.indexOf(zr.speed)+1)%SPEEDS.length];e.target.textContent=spLabel(zr.speed);vidLabel();};
+  const vidLabel=()=>{const b=box.querySelector('[data-zr-video]');if(b)b.textContent=`⬇ Video herunterladen (${spLabel(zr.speed)})`;};
+  box.querySelector('[data-zr-speed]').textContent=spLabel(zr.speed);vidLabel();
   box.querySelectorAll('[data-zr-go]').forEach(li=>li.onclick=()=>{zrStop();btn.textContent='▶';show(Number(li.dataset.zrGo));});
   // Beim Aufklappen von vorn abspielen; Wackelköpfe und Wappen brauchen die Spielerliste.
   // Vollbild (Kevin-Wunsch): alle Spieler, Zeit und Steuerung auf einem Bildschirm; der Platz wird passend verkleinert.
@@ -431,7 +434,7 @@
   vb.onclick=async()=>{if(zr.video)return;zr.video=true;vb.disabled=true;zrStop();btn.textContent='▶';
    const stat=t=>{const el=document.querySelector('[data-zr-vstat]');if(el)el.textContent=t;};
    try{const marks=zrMoments(frames).filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>({i:m.i,cls:m.ico==='🏁'?'fin':m.fix?'fix':'lead'}));
-    const {blob,ext}=await zrVideo({d,frames,rowsList,pos,pool,byId,marks},stat);
+    const {blob,ext}=await zrVideo({d,frames,rowsList,pos,pool,byId,marks,speed:zr.speed},stat);
     const name=`MVP-Zeitraffer-Spieltag-${d.day}.${ext}`,url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
     stat(`Fertig: ${name} (${(blob.size/1e6).toFixed(1).replace('.',',')} MB).`);
@@ -508,24 +511,24 @@
    c.translate(0,bob);
    line([[0,-42],[0,-84]]);
    const lift=champ?Math.sin(time*9)*6:0,rock=!run&&!champ&&pts===null?Math.sin(time*3)*.15:0;
-   const bx=champ?0:42,by=champ?-152+lift:-70;
-   if(champ){line([[0,-76],[-18,-104],[-14,-136+lift]]);line([[0,-76],[18,-104],[14,-136+lift]]);}
-   else{line([[0,-74],[18,-56],[42,-60]]);line([[0,-72],[22,-70],[40,-80]]);}
+   const bx=champ?0:50,by=champ?-190+lift:-62;
+   if(champ){line([[0,-76],[-44,-104],[-18,-174+lift]]);line([[0,-76],[44,-104],[18,-174+lift]]);}
+   else{line([[0,-74],[22,-52],[48,-54]]);line([[0,-72],[26,-68],[44,-76]]);}
    // Kopf
    const im=faces.get(r.m.id);
-   c.save();c.beginPath();c.arc(0,-104,20,0,7);c.fillStyle='#fff';c.fill();c.clip();
-   if(im)c.drawImage(im,-20,-124,40,40);else{c.fillStyle='#17242e';c.fillRect(-20,-124,40,40);c.fillStyle='#9db0bd';c.font=font(22,800);c.textAlign='center';c.fillText((r.m.name||'?')[0].toUpperCase(),0,-96);}
-   c.restore();c.strokeStyle=ld?'#ebc768':'#111';c.lineWidth=4;c.beginPath();c.arc(0,-104,20,0,7);c.stroke();
-   if(mourn){c.font='28px serif';c.textAlign='center';c.fillText('💧',-28,-96+((time*40)%24));}
+   c.save();c.beginPath();c.arc(0,-116,34,0,7);c.fillStyle='#fff';c.fill();c.clip();
+   if(im)c.drawImage(im,-34,-150,68,68);else{c.fillStyle='#17242e';c.fillRect(-34,-150,68,68);c.fillStyle='#9db0bd';c.font=font(30,800);c.textAlign='center';c.fillText((r.m.name||'?')[0].toUpperCase(),0,-99);}
+   c.restore();c.strokeStyle=ld?'#ebc768':'#111';c.lineWidth=5;c.beginPath();c.arc(0,-116,34,0,7);c.stroke();
+   if(mourn){c.font='28px serif';c.textAlign='center';c.fillText('💧',-34,-96+((time*40)%24));}
    // Baby: Decke im Vereinstrikot, darauf der Kopf des Spielers
    c.save();c.translate(bx,by);c.rotate(rock);
    c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2.5;c.beginPath();c.ellipse(0,0,26,13,0,0,7);c.fill();c.stroke();
    c.fillStyle=trim;c.fillRect(-12,-12,5,24);
    const cr=crests.get(r.id);if(cr)c.drawImage(cr,-4,-7,14,14);
    const hd=heads.get(r.id);
-   if(hd){const h=46,w=Math.min(54,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
+   if(hd){const h=70,w=Math.min(82,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
    else{c.fillStyle='#f8d4b4';c.beginPath();c.arc(24,-16,12,0,7);c.fill();c.lineWidth=2;c.stroke();c.fillStyle='#ff8fb1';c.beginPath();c.arc(24,-10,2.5,0,7);c.fill();}
-   if(isBest){c.font='34px serif';c.textAlign='center';c.fillText('👑',24,hd?-56:-32);}
+   if(isBest){c.font='34px serif';c.textAlign='center';c.fillText('👑',24,hd?-80:-32);}
    c.restore();
    if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',22,6-bob);}
    c.restore();
@@ -560,7 +563,7 @@
     c.save();c.globalAlpha=r.ghost?ga:st.ko?.6:1;c.font=font(30*S,800);
     const fx=f.fixes.find(z=>z.id===r.id)&&p>=1;
     const label=`${r.m?r.m.name+' · 👶 ':''}${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
-    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-(r.m?36:34)*S-tw:x+(r.m?78:34)*S,ty=y-(r.m?100:70)*S;
+    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-(r.m?50:34)*S-tw:x+(r.m?116:34)*S,ty=y-(r.m?100:70)*S;
     c.fillStyle=fx?'#c0392b':st.ld?'#8a6d1f':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
     if(st.ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
     c.fillStyle='#fff';c.textAlign='left';c.fillText(label,tx+10*S,ty+29*S);
@@ -590,7 +593,8 @@
   const done=new Promise(r=>rec.onstop=r);
   draw(0);rec.start(500);
   const t0=performance.now();
-  await new Promise(res=>{const step=()=>{const t=(performance.now()-t0)/1000;draw(Math.min(t,T));onStat(`Video wird aufgenommen … ${Math.max(0,Math.ceil(T-t))} s (Seite bitte offen lassen)`);if(t>=T)return res();setTimeout(step,1000/30);};step();});
+  const sp=o.speed||1;
+  await new Promise(res=>{const step=()=>{const t=(performance.now()-t0)/1000*sp;draw(Math.min(t,T));onStat(`Video wird aufgenommen … ${Math.max(0,Math.ceil((T-t)/sp))} s (Seite bitte offen lassen)`);if(t>=T)return res();setTimeout(step,1000/30);};step();});
   rec.stop();await done;stream.getTracks().forEach(t=>t.stop());
   return {blob:new Blob(chunks,{type:mime.split(';')[0]}),ext:mime.includes('mp4')?'mp4':'webm'};
  }

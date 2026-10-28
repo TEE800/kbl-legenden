@@ -977,3 +977,18 @@ body.zr-on .mobilenav{display:none}
 
 /* Verlinkte Manager (Profil), Farbe bleibt wie der umgebende Text */
 .mgr-link{color:inherit;text-decoration:none;cursor:pointer}.mgr-link:hover,.mgr-link:focus-visible{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+/* Größere Köpfe (Kevin-Wunsch: Manager und Babys sonst zu klein, vor allem am Handy). Körper bleibt gleich, Köpfe wie Wackelköpfe. */
+.stk-face{left:-1px;top:-16px;width:38px;height:38px}
+.stk-face .mgr-av{width:38px;height:38px;font-size:16px;box-shadow:0 0 0 2.5px #111}
+.stk-baby{left:27px;top:26px}
+.stk-bhead{left:9px;bottom:6px;height:38px;max-width:44px}
+.stk-crown{left:16px;top:-50px;font-size:16px}
+.stk:not(.has-bhead) .stk-crown{top:-14px}
+.stk-tear{left:-6px;top:10px;font-size:15px}
+.stk-tag{top:30px;left:78px}
+.stk.flip .stk-tag{right:46px}
+.stk.ko.flip .stk-tag,.stk.fall.flip .stk-tag{right:58px}
+.stk.champ .stk-baby{transform:translate(-22px,-56px)}
+@keyframes stkLift{from{transform:translate(-22px,-56px)}to{transform:translate(-22px,-61px)}}
+.stk.ko.flip .stk-tag{right:84px}
+.stk-tear{left:0;top:16px}
