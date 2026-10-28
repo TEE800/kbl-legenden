@@ -103,12 +103,13 @@ function renderRankingTable(){
  const avgOf=new Map(),winsOf=new Map();
  for(const h of finished){const scored=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));const best=Math.max(...scored.map(m=>m.dayPoints));
   for(const m of scored){const a=avgOf.get(m.name)||{s:0,n:0};a.s+=m.dayPoints;a.n++;avgOf.set(m.name,a);if(m.dayPoints===best)winsOf.set(m.name,(winsOf.get(m.name)||0)+1);}}
+ // data-profile = Index in currentManagers (Profil-Auswahl), nicht die Reihenfolge der LIVE-Tabelle (sonst öffnet ein Klick den falschen Manager).
  body.innerHTML=managers.map((m,i)=>{
   let move='<span class="muted">–</span>';
   if(now&&prev&&now.has(m.name)&&prev.has(m.name)){const d=prev.get(m.name)-now.get(m.name);move=d>0?`<span class="rank-up">▲${d}</span>`:d<0?`<span class="rank-down">▼${-d}</span>`:'<span class="muted">=</span>';}
   const cls=m.pos===1?'rank-row-1':m.pos<=3?'rank-row-top':m.pos===lastPos&&managers.length>3?'rank-row-last':'';
   const gap=leader===null||m.score===null||m.pos===1?'':`−${fmt(leader-m.score)}`;
-  return `<tr class="${cls}"><td>${escapeHtml(m.pos)}</td><td class="center">${move}</td><td><button class="manager-link" data-profile="${i}">${mgrName(m.name)}</button></td><td class="right muted">${last?fmt(lastPoints.get(m.name)):'–'}</td><td class="right muted">${avgOf.has(m.name)?fmt(Math.round(avgOf.get(m.name).s/avgOf.get(m.name).n)):'–'}</td><td class="right muted">${last?(winsOf.get(m.name)||0):'–'}</td><td class="right muted">${gap}</td><td class="right">${fmt(m.score)}</td></tr>`;
+  return `<tr class="${cls}"><td>${escapeHtml(m.pos)}</td><td class="center">${move}</td><td><button class="manager-link" data-profile="${currentManagers.findIndex(x=>x.name===m.name)}">${mgrName(m.name)}</button></td><td class="right muted">${last?fmt(lastPoints.get(m.name)):'–'}</td><td class="right muted">${avgOf.has(m.name)?fmt(Math.round(avgOf.get(m.name).s/avgOf.get(m.name).n)):'–'}</td><td class="right muted">${last?(winsOf.get(m.name)||0):'–'}</td><td class="right muted">${gap}</td><td class="right">${fmt(m.score)}</td></tr>`;
  }).join('');
 }
 function storageKey(){return 'kbl-penalties-'+String(currentLeague?.id||'none')}
