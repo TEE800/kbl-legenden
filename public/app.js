@@ -306,21 +306,24 @@ function bumsOf(name){
 }
 // Wer hat den Empfänger gebumst? Aus „bekommt/kauft … von X“ (gleiche Lesart wie „Wer bumst wen“).
 function bumsGiver(x){if(x?.d!=='i')return null;const m=/ von (.+?)(?::|$)/.exec(x.t||'');return m?m[1].trim()||null:null;}
-// Bums-Erzfeind (Kevin-Wunsch): von wem ein Manager in der Halbserie am häufigsten gebumst wurde, Gleichstand = alle.
-// null = BumsTabelle noch nicht geladen, {n:0} = noch von niemandem gebumst.
-function bumsFoe(name){
+// Bums-Erzfeind (Kevin-Wunsch): von wem ein Manager in der Halbserie am häufigsten gebumst wurde.
+// Lieblingsopfer (Kevin-Wunsch, Gegenstück): wen er selbst am häufigsten gebumst hat. Gleichstand = alle.
+// null = BumsTabelle noch nicht geladen, {n:0} = noch keiner.
+function bumsFoe(name,victim=false){
  const days=bumsHalfDays();if(!days)return null;const by=new Map();
- for(const d of days)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)for(const x of (v.moves||[])){
-  const g=bumsGiver(x);if(!g||g===name||!isEligibleManager(g))continue;const e=by.get(g)||{n:0,rules:{}};e.n++;e.rules[x.r]=(e.rules[x.r]||0)+1;by.set(g,e);}
+ for(const d of days)for(const v of Object.values(bumsDays[d].managers||{}))for(const x of (v.moves||[])){
+  const g=bumsGiver(x);if(!g||g===v.name)continue;
+  const other=victim?(g===name?v.name:null):(v.name===name?g:null);if(!other||!isEligibleManager(other))continue;
+  const e=by.get(other)||{n:0,rules:{}};e.n++;e.rules[x.r]=(e.rules[x.r]||0)+1;by.set(other,e);}
  const n=Math.max(0,...[...by.values()].map(e=>e.n));
  const who=[...by.entries()].filter(([,e])=>e.n===n&&n>0).sort((a,b)=>a[0].localeCompare(b[0],'de'));
  const rules={};for(const [,e] of who)for(const [k,c] of Object.entries(e.rules))rules[k]=(rules[k]||0)+c;
  return {n,who:who.map(([g])=>g),rules:Object.entries(rules).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,c])=>c>1?`${k} ×${c}`:k).join(', ')};
 }
 // Kachel-Inhalt: Name(n) (mit Profilbild, im Vergleich ohne, dort steht davor schon das eigene), Zusatz „3× gebumst · DD ×2, BN“.
-function bumsFoeVal(name,faces=true){
- const f=bumsFoe(name);if(!f)return {value:'–',raw:null,detail:''};
- if(!f.n)return {value:'–',raw:0,detail:'noch von keinem gebumst'};
+function bumsFoeVal(name,faces=true,victim=false){
+ const f=bumsFoe(name,victim);if(!f)return {value:'–',raw:null,detail:''};
+ if(!f.n)return {value:'–',raw:0,detail:victim?'noch keinen gebumst':'noch von keinem gebumst'};
  return {value:f.who.map(g=>mgrLink(g,faces?mgrName(g):escapeHtml(g))).join(', '),raw:f.n,detail:f.who.length>1?`je ${f.n}× gebumst`:`${f.n}× gebumst${f.rules?' · '+escapeHtml(f.rules):''}`};
 }
 // Abzeichen im Managerprofil (Kevin-Wunsch): was ein Manager in der laufenden Halbserie erreicht hat.
@@ -470,14 +473,16 @@ function profileSeasonHtml(name,other){
  return `<div style="grid-column:1/-1;min-width:0;width:100%;margin-top:20px;border-top:1px solid #4b463b;padding-top:12px"><div style="opacity:.75;font-size:12px">SAISONSTATISTIK · ${s.games} AUSGEWERTETE SPIELTAGE · NUR ABGESCHLOSSEN</div>`+
  badgesHtml(name,other)+section('💀 HALL OF SHAME','shame','shame')+section('🏆 RUHMESHALLE','fame')+section('📈 FORM & KONSTANZ','form')+(other?duelHtml(name,other.name):'')+'</div>';
 }
-const FOE_NOTE='bumst am häufigsten · diese Halbserie';
-const foeTile=f=>`<div class="profiletile bums-foe"><small>BUMS-ERZFEIND</small><strong>${f.value}</strong>${f.detail?`<span class="bums-foe-d">${f.detail}</span>`:''}<span class="muted tiny bums-foe-note">${FOE_NOTE}</span></div>`;
+// Erzfeind und Lieblingsopfer stehen als Paar nebeneinander (zweite Kachelreihe).
+const FOE_KINDS=[{t:'😈 BUMS-ERZFEIND',v:false,note:n=>n?`bumst ${escapeHtml(n)} am häufigsten`:'bumst am häufigsten'},{t:'🎯 LIEBLINGSOPFER',v:true,note:n=>n?`wird von ${escapeHtml(n)} am häufigsten gebumst`:'wird am häufigsten gebumst'}];
+const foeNote=t=>`<span class="muted tiny bums-foe-note">${t} · diese Halbserie</span>`;
+const foeTile=(name,k)=>{const f=bumsFoeVal(name,true,k.v);return `<div class="profiletile bums-foe"><small>${k.t}</small><strong>${f.value}</strong>${f.detail?`<span class="bums-foe-d">${f.detail}</span>`:''}${foeNote(k.note(name))}</div>`;};
 function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
  const bm=bumsOf(m.name),bums=`<span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span>`;
  if(!other){
-  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${foeTile(bumsFoeVal(m.name))}${profileSeasonHtml(m.name,null)}`;
+  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${FOE_KINDS.map(k=>foeTile(m.name,k)).join('')}${profileSeasonHtml(m.name,null)}`;
   return;
  }
  // Vergleich: beide Manager in jeder Kachel, Abstand in Punkten beim Verfolger.
@@ -488,7 +493,7 @@ function showProfile(){
   `<div class="profiletile pcmp"><small>PLATZIERUNG</small>${rows(v('#'+fmt(m.pos),m.pos),v('#'+fmt(other.pos),other.pos),'lo')}</div>`+
   `<div class="profiletile pcmp"><small>PUNKTE</small>${rows(v(fmt(m.score),m.score,gap(diff)),v(fmt(other.score),other.score,gap(diff==null?null:-diff)),'hi')}</div>`+
   `<div class="profiletile pcmp bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small>${rows(v(bm??'–',bm),v(bumsOf(other.name)??'–',bumsOf(other.name)),'lo')}${bums}</div>`+
-  `<div class="profiletile pcmp bums-foe"><small>BUMS-ERZFEIND</small>${rows(bumsFoeVal(m.name,false),bumsFoeVal(other.name,false),null)}<span class="muted tiny bums-foe-note">${FOE_NOTE}</span></div>`+
+  FOE_KINDS.map(k=>`<div class="profiletile pcmp bums-foe"><small>${k.t}</small>${rows(bumsFoeVal(m.name,false,k.v),bumsFoeVal(other.name,false,k.v),null)}${foeNote(k.note(''))}</div>`).join('')+
   profileSeasonHtml(m.name,other);
 }
 $('#profileSelect').addEventListener('change',showProfile);
