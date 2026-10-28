@@ -1009,6 +1009,14 @@ body.zr-on .mobilenav{display:none}
 .stk-crest{left:12px;bottom:-5px;width:13px;height:13px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
 .stk-bhead{z-index:2}
 @media (prefers-reduced-motion:reduce){.zr.zr-full .zr-runner{transition:none}}
+/* Zeitraffer-Vollbild am Handy (Kevin-Wunsch: Figuren und Köpfe größer, mehrere in einer Zeile): Namensschild kompakt unter der Figur. */
+.zr.zr-narrow .stk-tag,.zr.zr-narrow .stk.flip .stk-tag,.zr.zr-narrow .stk.ko .stk-tag,.zr.zr-narrow .stk.fall .stk-tag,
+.zr.zr-narrow .toon-tag,.zr.zr-narrow .toon-runner.flip .toon-tag{top:76px;left:-12px;right:auto;transform:none;white-space:nowrap;width:max-content;max-width:none;font-size:11px;line-height:1.2;padding:1px 5px;text-align:left}
+.zr.zr-narrow .stk-tag small,.zr.zr-narrow .toon-tag small{display:none}
+.zr.zr-narrow .stk-tag .stk-mn{display:block}
+.zr.zr-narrow .stk-tag .stk-pl{font-size:10px}
+.zr.zr-narrow .stk.champ .stk-baby{transform:translate(-22px,-30px);animation-name:stkLiftN}
+@keyframes stkLiftN{from{transform:translate(-22px,-30px)}to{transform:translate(-22px,-34px)}}
 /* Gespeicherte Aufstellungen auf dem Rasen (Reiter Aufstellungen) */
 #snapshotSaved .lu-row{cursor:pointer}
 #snapshotSaved .lu-row:hover td,#snapshotSaved .lu-row.open td{background:rgba(255,255,255,.04)}
@@ -1030,3 +1038,13 @@ body.zr-on .mobilenav{display:none}
 .lu-tag span{overflow:hidden;text-overflow:ellipsis}
 .lu-empty{padding:16px 12px;border:2px dashed rgba(255,255,255,.5);border-radius:8px;color:#fff;font-weight:700;font-size:12px;background:rgba(0,0,0,.25)}
 @media (max-width:480px){.lu-tag{font-size:10px;padding:1px 3px;gap:3px}.lu-pitch{gap:10px;padding-top:24px}}
+/* Managerprofil „Vergleichen mit“: beide Manager in jeder Kachel (profCmpRows) */
+.pcmp-title{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}.pcmp-title .pcmp-b{color:#6fd6d6}.pcmp-vs{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.pcmp-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;margin:5px 0}
+.pcmp-row .mgr-av{align-self:center;margin-right:0;top:0}
+.pcmp-row b{font-size:20px;font-weight:800;color:var(--gold);overflow-wrap:anywhere}
+.pcmp-b b{color:#6fd6d6}
+.pcmp-row>span:not(.mgr-av){font-size:11px;color:var(--muted);flex-basis:100%;padding-left:calc(1.55em + 6px)}
+.pcmp-lose{opacity:.55}
+.hall-card.pcmp .hall-title,.profiletile.pcmp small{margin-bottom:4px}
+@media(max-width:600px){.pcmp-row b{font-size:17px}.pcmp-row{margin:3px 0}}
