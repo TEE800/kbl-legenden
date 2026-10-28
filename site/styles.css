@@ -1010,9 +1010,8 @@ body.zr-on .mobilenav{display:none}
 .ber-lbl{display:grid;gap:6px;color:var(--muted);font-size:12px;margin:0 0 12px}
 .ber-lbl input,.ber-lbl textarea{width:100%;font-size:15px}
 .ber-lbl textarea{min-height:320px;line-height:1.5;resize:vertical}
-/* Zeitraffer im Vollbild (Kevin-Wunsch „reize alles aus“): Platz in Spalten, Korrekturen nebeneinander */
-.zr-cols,.zr-col{position:absolute;top:0;bottom:0;pointer-events:none}.zr-cols{left:0;right:0}
-.zr-col+.zr-col{border-left:4px solid rgba(255,255,255,.55)}
+/* Zeitraffer im Vollbild (Kevin-Wunsch „reize alles aus“): ein Feld, Schwächere rücken hinter die Stärkeren in dieselbe Zeile, Korrekturen nebeneinander */
+.zr.zr-full .zr-runner{transition:left 1.1s cubic-bezier(.3,1.3,.6,1),top .7s ease,opacity .5s}
 .zr.zr-full .zr-flash{flex-direction:row;flex-wrap:wrap;gap:2px 12px;margin:6px 0;padding:3px 10px;font-size:14px}
 .zr.zr-full .zr-flash .zr-fixes{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:2px 16px;margin:0}
 .zr.zr-full .zr-flash.empty{font-size:12px}
@@ -1027,3 +1026,4 @@ body.zr-on .mobilenav{display:none}
 .stk-swad{height:20px;bottom:-6px}
 .stk-crest{left:12px;bottom:-5px;width:13px;height:13px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
 .stk-bhead{z-index:2}
+@media (prefers-reduced-motion:reduce){.zr.zr-full .zr-runner{transition:none}}

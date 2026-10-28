@@ -365,13 +365,13 @@
    ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
   const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
   const pos=v=>(4+72*((v??0)-lo)/(hi-lo));
-  // Vollbild (Kevin-Wunsch „reize alles aus“): Zeilen über die ganze Höhe, bei breitem Bildschirm in 2 bis 3 Spalten nebeneinander.
-  const ROW0=74,TOP=150,N=rowsList.length;let ROW=ROW0,per=N,cols=1;
-  const Y=r=>TOP+r*ROW,colOf=r=>Math.floor(r/per),rowOf=r=>r%per;
-  const MARKS='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>';
+  // Vollbild (Kevin-Wunsch „reize alles aus“, aber nur ein Feld): große Figuren, und wer weniger Punkte hat, fällt hinter die Stärkeren
+  // in dieselbe Zeile zurück, solange sich Figur und Name nicht überdecken. LW = Breite des Platzes in px, 0 = normale Ansicht (je Manager eine Zeile).
+  const ROW0=74,ROWMIN=40,TOP=150,N=rowsList.length;let ROW=ROW0,LW=0,LH=0,tagW=[];
+  const Y=r=>TOP+r*ROW;
   const pitch=box.querySelector('[data-zr-pitch]');
   pitch.style.height=Y(N-1)+40+'px';
-  pitch.innerHTML='<div class="zr-cols" data-zr-cols><div class="zr-col" style="left:0;width:100%">'+MARKS+'</div></div>'+rowsList.map((o,r)=>{
+  pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
    const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
    if(!o.ghost)return stick({cls:' zr-runner',attr:` data-zr-i="${r}"`,x:4,top:Y(r)-60,z:r+2,team:o.team,mname:o.m.name,mid:o.m.id,pid:o.id,pname:o.name,crest,
     tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">👶 ${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
@@ -380,15 +380,28 @@
     <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
   const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
   const flMin=`calc(${maxFix+1}*1.4em + 12px)`;box.querySelector('[data-zr-flash]').style.minHeight=flMin;
+  const isBestIn=(f,o)=>(f.best?.players||[]).some(p=>p.id===o.id);
+  const ptsOf=(f,o)=>o.ghost?(isBestIn(f,o)?f.best.points:null):f.players[o.id]?.points??null;
+  // Zeilen packen: von den meisten Punkten abwärts in die oberste Zeile, in der Figur samt Namensschild Platz hat.
+  const packLanes=(f,lw)=>{
+   const items=rowsList.map((o,r)=>{if(o.ghost&&!isBestIn(f,o))return null;const p=ptsOf(f,o),lp=pos(p),x=lp/100*lw,w=(tagW[r]||200)+25;
+    return {r,v:p??-1e9,iv:lp>50?[x-w-95,x+75]:[x-15,x+85+w]};}).filter(Boolean).sort((a,b)=>b.v-a.v||a.r-b.r);
+   const L=[],lane=new Array(N).fill(0);
+   for(const it of items){let k=0;while(k<L.length&&!L[k].every(([a,b])=>it.iv[1]+8<a||it.iv[0]>b+8))k++;(L[k]||(L[k]=[])).push(it.iv);lane[it.r]=k;}
+   return {lane,n:Math.max(1,L.length)};};
   const show=i=>{
    zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
    const sk=box.querySelector('[data-zr-seek]');sk.value=String(i);sk.style.setProperty('--f',String(n>1?i/(n-1):0));
    box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
    box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:`<span class="muted">${f.start?'Alle starten bei 0':'Noch kein Zwischenstand'}</span>`;
+   const pk=LW?packLanes(f,LW):null,lanes=pk?.lane;
+   // Zeilen über die ganze Höhe verteilen, bei vielen Zeilen enger
+   if(pk)ROW=Math.max(ROWMIN,Math.min(ROW0*2.2,(LH-TOP-40)/Math.max(pk.n-1,1)));
    pitch.querySelectorAll('[data-zr-i]').forEach(el=>{
-    const o=rowsList[Number(el.dataset.zrI)],id=o.id,x=f.players[id],isBest=bestIds.has(id),pts=o.ghost?(isBest?f.best.points:null):x?.points??null;
+    const o=rowsList[Number(el.dataset.zrI)],id=o.id,x=f.players[id],isBest=bestIds.has(id),pts=ptsOf(f,o);
     const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
-    const r=Number(el.dataset.zrI),left=pos(pts);el.style.left=((colOf(r)*100+left)/cols).toFixed(2)+'%';
+    const r=Number(el.dataset.zrI),left=pos(pts),row=lanes?lanes[r]:r;el.style.left=left.toFixed(2)+'%';
+    el.style.top=Y(row)-60+'px';el.style.zIndex=row+2;
     el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!!o.ghost&&!isBest);
     el.classList.toggle('run',!out&&x?.state==='live');el.classList.toggle('idle',!o.ghost&&pts===null);el.classList.toggle('ko',out);
     el.querySelector('[data-zr-pts]').textContent=pts===null?'–':fmt(pts);
@@ -425,23 +438,22 @@
   // Am PC zusätzlich Browser-Vollbild, am Handy nur über die ganze Seite (wie in der BumsParade, kein Browser-Hinweis).
   const pw=box.querySelector('.zr-pitch-wrap');
   const fl=box.querySelector('[data-zr-flash]');
-  const layout=h=>{
-   box.querySelector('[data-zr-cols]').innerHTML=Array.from({length:cols},(_,c)=>`<div class="zr-col" style="left:${c*100/cols}%;width:${100/cols}%">${MARKS}</div>`).join('');
-   pitch.querySelectorAll('[data-zr-i]').forEach(el=>{const r=Number(el.dataset.zrI);el.style.top=Y(rowOf(r))-60+'px';el.style.zIndex=rowOf(r)+2;});
-   pitch.style.height=(h||Y(per-1)+40)+'px';show(zr.i);};
   zr.fit=()=>{if(!box.isConnected)return;
    pitch.style.transform='';pitch.style.width='';
-   if(!zr.full){fl.style.minHeight=flMin;if(cols!==1||ROW!==ROW0){cols=1;per=N;ROW=ROW0;layout();}return;}
+   if(!zr.full){fl.style.minHeight=flMin;if(LW){LW=0;ROW=ROW0;pitch.style.height=Y(N-1)+40+'px';show(zr.i);}return;}
    // Korrekturkasten im Vollbild nebeneinander statt untereinander, Höhe nach der längsten Korrektur fest, damit nichts springt.
    if(maxFix){const big=frames.reduce((a,f)=>f.fixes.length>a.fixes.length?f:a);fl.style.minHeight='';fl.classList.remove('empty','pop');
     fl.innerHTML=`<div>✏️ ${big.fin?"Endwert nach Spieltagsende":"Kickbase-Korrektur"}:</div><div class="zr-fixes">${zrFixLines(big.fixes)}</div>`;fl.style.minHeight=fl.offsetHeight+'px';}
-   const W=pw.clientWidth,H=pw.clientHeight,minW=W<700?360:620;let best=null;
-   for(let c=1;c<=(W<700?1:3);c++){const p=Math.ceil(N/c),s=Math.min(2.2,H/(TOP+(p-1)*ROW0+40),c===1?Math.max(1,W/minW):W/c/minW);
-    if(!best||s>best.s*1.1)best={c,p,s};}
-   cols=best.c;per=best.p;const sc=best.s,LH=H/sc;
-   ROW=Math.max(ROW0,Math.min(ROW0*2,(LH-TOP-40)/Math.max(per-1,1)));
-   layout(Math.max(LH,Y(per-1)+40));
-   pitch.style.transformOrigin='0 0';pitch.style.width=(100/sc)+'%';pitch.style.transform=`scale(${sc})`;};
+   // Größter Maßstab, bei dem die Zeilen aller Zwischenstände in die Höhe passen (gleich für den ganzen Spieltag, damit nichts springt).
+   const W=pw.clientWidth,H=pw.clientHeight;
+   tagW=rowsList.map((o,r)=>pitch.querySelector(`[data-zr-i="${r}"]`)?.querySelector('.stk-tag,.toon-tag')?.offsetWidth||200);
+   // Gedrängte Stände (Anpfiff: alle bei 0) dürfen enger stehen (ROWMIN), die übrigen bekommen die volle Zeilenhöhe.
+   let sc=2.2;
+   for(;sc>0.3;sc*=0.94){const ns=frames.map(f=>packLanes(f,W/sc).n).sort((a,b)=>a-b),typ=ns[Math.floor((ns.length-1)*0.8)],mx=ns[ns.length-1];
+    if((TOP+(typ-1)*ROW0+40)*sc<=H&&(TOP+(mx-1)*ROWMIN+40)*sc<=H)break;}
+   LH=H/sc;LW=W/sc;
+   pitch.style.height=LH+'px';
+   pitch.style.transformOrigin='0 0';pitch.style.width=(100/sc)+'%';pitch.style.transform=`scale(${sc})`;show(zr.i);};
   // Kopfzeile kann beim Abspielen umbrechen: dann neu einpassen, damit unten nichts abgeschnitten wird.
   if(window.ResizeObserver){let lastH=0;new ResizeObserver(()=>{if(zr.full&&pw.clientHeight!==lastH){lastH=pw.clientHeight;zr.fit();}}).observe(pw);}
   const setFull=on=>{zr.full=on;box.classList.toggle('zr-full',on);document.body.classList.toggle('zr-on',on);
