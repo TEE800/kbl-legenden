@@ -101,8 +101,8 @@ function facts(day) {
   const ids = R[day].us.map(u => String(u.i)).filter(i => !EXCLUDED_IDS.has(i));
   const u = (d, i) => R[d]?.us?.find(x => String(x.i) === i);
   // Tagespunkte = Differenz der kumulierten Gesamtpunkte (CLAUDE.md). Ausnahme Spieltag 1 (Kevin 28.10.): Dort stimmt die Gesamtpunktzahl
-  // nicht mit den Spieltagspunkten der Kickbase-App überein, es gilt mdp; wer −1100 hatte (keine Startelf), wird an ST 1 nicht gewertet.
-  const dayPts = (i, d) => { if (d === 1) { const m = u(1, i)?.mdp; return Number.isFinite(m) && m !== -1100 ? m : null; }
+  // nicht mit den Spieltagspunkten der Kickbase-App überein, es gilt mdp; wer −1100 hatte (keine Startelf), wurde auf 0 gesetzt und zählt mit 0.
+  const dayPts = (i, d) => { if (d === 1) { const m = u(1, i)?.mdp; return Number.isFinite(m) ? (m === -1100 ? 0 : m) : null; }
     const a = u(d, i)?.sp, b = u(d - 1, i)?.sp; return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; };
   const name = i => u(day, i).n;
   const days = Array.from({ length: day }, (_, k) => k + 1);
