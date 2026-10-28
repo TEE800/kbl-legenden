@@ -100,8 +100,10 @@ function facts(day) {
   if (!R[day]?.us?.length) throw Error(`Ranking von Spieltag ${day} fehlt`);
   const ids = R[day].us.map(u => String(u.i)).filter(i => !EXCLUDED_IDS.has(i));
   const u = (d, i) => R[d]?.us?.find(x => String(x.i) === i);
-  // Tagespunkte = Differenz der kumulierten Gesamtpunkte (CLAUDE.md). mdp von Spieltag 1 ist bei Kickbase teils falsch (−1100).
-  const dayPts = (i, d) => { const a = u(d, i)?.sp, b = d > 1 ? u(d - 1, i)?.sp : 0; return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; };
+  // Tagespunkte = Differenz der kumulierten Gesamtpunkte (CLAUDE.md). Ausnahme Spieltag 1 (Kevin 28.10.): Dort stimmt die Gesamtpunktzahl
+  // nicht mit den Spieltagspunkten der Kickbase-App überein, es gilt mdp; wer −1100 hatte (keine Startelf), wird an ST 1 nicht gewertet.
+  const dayPts = (i, d) => { if (d === 1) { const m = u(1, i)?.mdp; return Number.isFinite(m) && m !== -1100 ? m : null; }
+    const a = u(d, i)?.sp, b = u(d - 1, i)?.sp; return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; };
   const name = i => u(day, i).n;
   const days = Array.from({ length: day }, (_, k) => k + 1);
   const leagueAvg = d => round(mean(ids.map(i => dayPts(i, d)).filter(Number.isFinite)));
@@ -109,7 +111,7 @@ function facts(day) {
   const sorted = ids.map(i => ({ i, p: dayPts(i, day) })).sort((a, b) => b.p - a.p);
   const totalRank = (d) => { const arr = ids.map(i => ({ i, sp: u(d, i)?.sp ?? -Infinity })).sort((a, b) => b.sp - a.sp); return new Map(arr.map((x, k) => [x.i, k + 1])); };
   const ranks = Object.fromEntries(days.map(d => [d, totalRank(d)]));
-  const dayRankMap = d => { const arr = ids.map(i => ({ i, p: dayPts(i, d) })).sort((a, b) => b.p - a.p); return new Map(arr.map((x, k) => [x.i, k + 1])); };
+  const dayRankMap = d => { const arr = ids.map(i => ({ i, p: dayPts(i, d) })).filter(x => Number.isFinite(x.p)); return new Map(arr.map(x => [x.i, 1 + arr.filter(y => y.p > x.p).length])); };
   const dayRanks = Object.fromEntries(days.map(d => [d, dayRankMap(d)]));
 
   // Spielerpunkte des Spieltags (alle Bundesliga-Spieler aus der AH-Prüfung) + Startelfen aus dem Ranking (lp).
