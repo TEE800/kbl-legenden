@@ -1,5 +1,11 @@
 {
  "berichte": {},
- "stand": "Spieltagsbericht 7: Geheimnis KBL_ADMIN_CODE fehlt, der Entwurf hätte keinen privaten Platz. Wird übersprungen.",
- "entwuerfe": {}
+ "stand": "Spieltagsbericht 7: Vorlage als Entwurf übernommen, wartet auf Freigabe.",
+ "entwuerfe": {
+  "7": {
+   "vorgaben": 3,
+   "createdAt": "2026-10-28T14:08:18.726Z",
+   "vorlage": true
+  }
+ }
 }
