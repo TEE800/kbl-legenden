@@ -272,12 +272,12 @@ function profileFormTiles(name,tile){
  const avgs=[...new Set(days.flatMap(h=>h.list.map(m=>m.name)))].filter(isEligibleManager).map(nm=>{const p=days.map(h=>h.list.find(m=>m.name===nm)?.dayPoints).filter(x=>x!=null);return p.length?{nm,avg:p.reduce((s,x)=>s+x,0)/p.length}:null;}).filter(Boolean);
  const avgRank=1+avgs.filter(x=>x.avg>own).length;
  return [
-  tile('PODESTPLÄTZE',fmt(mine.filter(x=>x.better<3).length),'Unter den besten drei im Spieltag'),
-  tile('ÜBER DEM LIGASCHNITT',`${mine.filter(x=>x.points>x.avg).length} von ${mine.length}`,'Spieltagen'),
-  tile('AKTUELLE FORM',fmt(Math.round(form)),`Ø der letzten ${n} Spieltage · ${fd>0?'+':''}${fmt(fd)} zum eigenen Schnitt`),
-  tile('BESTER TABELLENPLATZ',bestRank?`#${bestRank}`:'–',bestRankDay?`nach Spieltag ${bestRankDay.day} · aktuell #${ranks.at(-1).rank}`:''),
-  tile('SCHNITT-RANG',`#${avgRank}`,`von ${avgs.length} Managern nach Ø Punkten`),
-  tile('Ø RÜCKSTAND AUF DEN SIEGER',fmt(Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length)),'Punkte pro Spieltag')];
+  tile('PODESTPLÄTZE',fmt(mine.filter(x=>x.better<3).length),'Unter den besten drei im Spieltag',mine.filter(x=>x.better<3).length,'hi'),
+  tile('ÜBER DEM LIGASCHNITT',`${mine.filter(x=>x.points>x.avg).length} von ${mine.length}`,'Spieltagen',mine.filter(x=>x.points>x.avg).length,'hi'),
+  tile('AKTUELLE FORM',fmt(Math.round(form)),`Ø der letzten ${n} Spieltage · ${fd>0?'+':''}${fmt(fd)} zum eigenen Schnitt`,Math.round(form),'hi'),
+  tile('BESTER TABELLENPLATZ',bestRank?`#${bestRank}`:'–',bestRankDay?`nach Spieltag ${bestRankDay.day} · aktuell #${ranks.at(-1).rank}`:'',bestRank,'lo'),
+  tile('SCHNITT-RANG',`#${avgRank}`,`von ${avgs.length} Managern nach Ø Punkten`,avgRank,'lo'),
+  tile('Ø RÜCKSTAND AUF DEN SIEGER',fmt(Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length)),'Punkte pro Spieltag',Math.round(mine.reduce((s,x)=>s+(x.best-x.points),0)/mine.length),'lo')];
 }
 // Ligaschnitt wie in der Halbserien-Analyse: Schnitt der Manager-Durchschnitte, nur abgeschlossene Spieltage.
 function leagueAvgNote(){
@@ -288,7 +288,8 @@ function leagueAvgNote(){
 // Gegenstück zu „Über dem Ligaschnitt“: Spieltage unter dem Schnitt aller Manager dieses Spieltags.
 function profileBelowAvgTile(name,tile){
  const games=historyData.filter(h=>h.status==='finished').map(h=>{const sc=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));const me=sc.find(m=>m.name===name);return me?{points:me.dayPoints,avg:sc.reduce((s,m)=>s+m.dayPoints,0)/sc.length}:null;}).filter(Boolean);
- return games.length?[tile('UNTER DEM LIGASCHNITT',`${games.filter(x=>x.points<x.avg).length} von ${games.length}`,'Spieltagen')]:[];
+ const n=games.filter(x=>x.points<x.avg).length;
+ return games.length?[tile('UNTER DEM LIGASCHNITT',`${n} von ${games.length}`,'Spieltagen',n,'lo')]:[];
 }
 // Bumsungen eines Managers in der laufenden Halbserie, aus der BumsTabelle (null = noch nicht geladen).
 function bumsOf(name){
@@ -298,29 +299,14 @@ function bumsOf(name){
  for(const d of keys)if(d>=from&&d<=to)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)n+=v.count;
  return n;
 }
-// Direktduell im Managerprofil: Bilanz, Werte nebeneinander, Punkteverlauf.
+// Direktduell im Managerprofil: Bilanz und Punkteverlauf (die Werte stehen verglichen in den Kacheln darüber).
 const DUEL_SEC='⚔️ DIREKTDUELL';
-function duelHtml(a,b,bm){
+function duelHtml(a,b){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((x,y)=>x.day-y.day);
  const rows=days.map(h=>{const pa=h.list.find(m=>m.name===a)?.dayPoints,pb=h.list.find(m=>m.name===b)?.dayPoints;return pa!=null&&pb!=null?{day:h.day,pa,pb}:null;}).filter(Boolean);
  const open=profOpen.has(DUEL_SEC)?' open':'';
  if(!rows.length)return `<details class="hall-section prof-sec" data-sec="${DUEL_SEC}"${open}><summary><h4>${DUEL_SEC}</h4></summary><p class="muted">Noch keine gemeinsamen abgeschlossenen Spieltage.</p></details>`;
  const wa=rows.filter(r=>r.pa>r.pb).length,wb=rows.filter(r=>r.pb>r.pa).length,dr=rows.length-wa-wb;
- const sa=managerSeasonStats(a),sb=managerSeasonStats(b);
- const form=n=>{const p=days.map(h=>h.list.find(m=>m.name===n)?.dayPoints).filter(x=>x!=null).slice(-3);return p.length?p.reduce((s,x)=>s+x,0)/p.length:null;};
- const ma=currentManagers.find(m=>m.name===a),bA=bumsOf(a),bB=bumsOf(b);
- // [Bezeichnung, Wert A, Wert B, höher besser?, Anzeige]
- const lines=[
-  ['Platz',ma?.pos,bm?.pos,false,v=>v==null?'–':'#'+fmt(v)],
-  ['Punkte gesamt',ma?.score,bm?.score,true,fmt],
-  ['Ø Punkte / Spieltag',sa.avg,sb.avg,true,v=>fmt(v==null?null:Math.round(v))],
-  ['Bester Spieltag',sa.best?.points,sb.best?.points,true,fmt],
-  ['Schwächster Spieltag',sa.worst?.points,sb.worst?.points,true,fmt],
-  ['Spieltagssiege',sa.wins,sb.wins,true,fmt],
-  ['Form (Ø letzte 3)',form(a),form(b),true,v=>fmt(v==null?null:Math.round(v))],
-  ['Bumsungen',bA,bB,false,v=>v==null?'–':fmt(v)]];
- const cell=(v,o,hi,f)=>`<td class="${v!=null&&o!=null&&v!==o&&(hi?v>o:v<o)?'duel-win':''}">${f(v)}</td>`;
- const table=`<table class="duel-table"><thead><tr><th>${mgrName(a)}</th><th></th><th>${mgrName(b)}</th></tr></thead><tbody>${lines.map(([l,va,vb,hi,f])=>`<tr>${cell(va,vb,hi,f)}<th>${l}</th>${cell(vb,va,hi,f)}</tr>`).join('')}</tbody></table>`;
  // Punkte je Spieltag als kleines Liniendiagramm.
  const W=900,H=260,L=44,R=12,T=14,B=30,vals=rows.flatMap(r=>[r.pa,r.pb]);let lo=Math.min(...vals),hi=Math.max(...vals);if(lo===hi){lo-=50;hi+=50;}
  const pad=(hi-lo)*.1;lo=Math.floor((lo-pad)/50)*50;const step=Math.max(50,Math.ceil((hi+pad-lo)/4/50)*50);hi=lo+4*step;
@@ -332,36 +318,61 @@ function duelHtml(a,b,bm){
  return `<details class="hall-section prof-sec" data-sec="${DUEL_SEC}"${open}><summary><h4>${DUEL_SEC}</h4></summary>
  <div class="duel-score"><div class="duel-side"><b>${escapeHtml(a)}</b></div><div class="duel-num"><span class="${wa>wb?'duel-win':''}">${wa}</span> : <span class="${wb>wa?'duel-win':''}">${wb}</span></div><div class="duel-side right"><b>${escapeHtml(b)}</b></div></div>
  <p class="muted tiny" style="text-align:center;margin:4px 0 14px">Spieltage mit mehr Punkten${dr?` · ${dr}× unentschieden`:''} · ${rows.length} gemeinsame Spieltage${lead?` · ${escapeHtml(lead)} führt`:''}</p>
- ${table}<div class="duel-legend"><span><i style="background:#ebc768"></i>${escapeHtml(a)}</span><span><i style="background:#6fd6d6"></i>${escapeHtml(b)}</span></div>${svg}</details>`;
+ <div class="duel-legend"><span><i style="background:#ebc768"></i>${escapeHtml(a)}</span><span><i style="background:#6fd6d6"></i>${escapeHtml(b)}</span></div>${svg}</details>`;
 }
 const profOpen=new Set();
 document.addEventListener('toggle',e=>{const d=e.target;if(d.classList?.contains('prof-sec')){if(d.open)profOpen.add(d.dataset.sec);else profOpen.delete(d.dataset.sec);}},true);
+// Vergleich in einer Kachel: je Manager eine Zeile (Profilbild, Wert, eigener Zusatz); der bessere Wert leuchtet, der andere tritt zurück.
+// better: 'hi' = mehr ist besser, 'lo' = weniger ist besser, null = keine Wertung.
+function profCmpRows(na,nb,ta,tb,better){
+ const win=(x,y)=>better&&x?.raw!=null&&y?.raw!=null&&x.raw!==y.raw?(better==='hi'?x.raw>y.raw:x.raw<y.raw):null;
+ const shared=ta?.detail&&ta.detail===tb?.detail;
+ const row=(nm,x,y,side)=>{const w=win(x,y);return `<div class="pcmp-row pcmp-${side}${w===false?' pcmp-lose':''}">${mgrFace(nm)}<b>${x?.value??'–'}</b>${!shared&&x?.detail?`<span>${x.detail}</span>`:''}</div>`;};
+ return row(na,ta,tb,'a')+row(nb,tb,ta,'b')+(shared?`<div class="hall-desc">${ta.detail}</div>`:'');
+}
 function profileSeasonHtml(name,other){
  const s=managerSeasonStats(name);
  if(!s.games)return '<div class="profilecompare">Saisonstatistiken werden automatisch geladen oder sind noch nicht verfügbar.</div>';
- // Gleiche Optik wie Ruhm & Schande in der Übersicht.
- const tile=(label,value,detail='')=>`<article class="hall-card __type__"><div class="hall-title">${label}</div><div class="hall-value">${value}</div>${detail?`<div class="hall-desc">${detail}</div>`:''}</article>`;
+ // Kachel als Daten (raw/better für den Vergleich); gleiche Optik wie Ruhm & Schande in der Übersicht.
+ const tile=(label,value,detail='',raw=null,better=null)=>({label,value,detail,raw,better});
+ const lists=n=>{const s=managerSeasonStats(n);return {
+  shame:[
+   tile('TOTALAUSFALL',fmt(s.worst?.points),s.worst?`Spieltag ${s.worst.day}`:'',s.worst?.points,'hi'),
+   tile('KELLERKIND · LETZTE PLÄTZE',fmt(s.last),'',s.last,'lo'),
+   tile('GRÖSSTE KLATSCHE',s.humiliation?`${fmt(s.humiliation.deficit)} Pkt.`:'–',s.humiliation?`Rückstand auf den Spieltagssieger · Spieltag ${s.humiliation.day}`:'',s.humiliation?.deficit,'lo'),
+   tile('EWIGER ZWEITER',fmt(s.second),'Zweite Plätze'),
+   tile('SIEGLOSE SERIE',fmt(s.longest),'Spieltage in Folge',s.longest,'lo'),
+   tile('ROTE LATERNE',fmt(s.lantern),'Letzter der Gesamtwertung',s.lantern,'lo'),
+   ...profileBelowAvgTile(n,tile)],
+  fame:[
+   tile('SPIELTAGSSIEGE',fmt(s.wins),'',s.wins,'hi'),tile('Ø PUNKTE / SPIELTAG',fmt(s.avg),leagueAvgNote(),s.avg,'hi'),
+   tile('BESTER SPIELTAG',fmt(s.best?.points),s.best?`Spieltag ${s.best.day}`:'',s.best?.points,'hi')],
+  form:profileFormTiles(n,tile)};};
+ const la=lists(name),lb=other?lists(other.name):null;
+ const card=(t,b,type)=>`<article class="hall-card ${type}${lb?' pcmp':''}"><div class="hall-title">${t.label}</div>${lb?profCmpRows(name,other.name,t,b,t.better):`<div class="hall-value">${t.value}</div>${t.detail?`<div class="hall-desc">${t.detail}</div>`:''}`}</article>`;
  // Einklappbar (feste Regel: beim Öffnen des Reiters zu); beim Wechsel des Managers bleibt offen, was offen war.
- const section=(title,items,type='fame')=>`<details class="hall-section prof-sec" data-sec="${title}"${profOpen.has(title)?' open':''}><summary><h4>${title}</h4></summary><div class="hall-grid">${items.join('').replaceAll('__type__',type)}</div></details>`;
+ const section=(title,key,type='fame')=>{const A=la[key],B=lb?.[key]||[];const base=A.length?A:B;
+  return `<details class="hall-section prof-sec" data-sec="${title}"${profOpen.has(title)?' open':''}><summary><h4>${title}</h4></summary><div class="hall-grid">${base.map(t=>card(A.find(x=>x.label===t.label)||{...t,value:'–',detail:'',raw:null},B.find(x=>x.label===t.label),type)).join('')}</div></details>`;};
  return `<div style="grid-column:1/-1;min-width:0;width:100%;margin-top:20px;border-top:1px solid #4b463b;padding-top:12px"><div style="opacity:.75;font-size:12px">SAISONSTATISTIK · ${s.games} AUSGEWERTETE SPIELTAGE · NUR ABGESCHLOSSEN</div>`+
- section('💀 HALL OF SHAME',[
-  tile('TOTALAUSFALL',fmt(s.worst?.points),s.worst?`Spieltag ${s.worst.day}`:''),
-  tile('KELLERKIND · LETZTE PLÄTZE',fmt(s.last)),
-  tile('GRÖSSTE KLATSCHE',s.humiliation?`${fmt(s.humiliation.deficit)} Pkt.`:'–',s.humiliation?`Rückstand auf den Spieltagssieger · Spieltag ${s.humiliation.day}`:''),
-  tile('EWIGER ZWEITER',fmt(s.second),'Zweite Plätze'),
-  tile('SIEGLOSE SERIE',fmt(s.longest),'Spieltage in Folge'),
-  tile('ROTE LATERNE',fmt(s.lantern),'Letzter der Gesamtwertung'),
-  ...profileBelowAvgTile(name,tile)],'shame')+
- section('🏆 RUHMESHALLE',[
-  tile('SPIELTAGSSIEGE',fmt(s.wins)),tile('Ø PUNKTE / SPIELTAG',fmt(s.avg),leagueAvgNote()),
-  tile('BESTER SPIELTAG',fmt(s.best?.points),s.best?`Spieltag ${s.best.day}`:'')])+
- section('📈 FORM & KONSTANZ',profileFormTiles(name,tile))+(other?duelHtml(name,other.name,other):'')+'</div>';
+ section('💀 HALL OF SHAME','shame','shame')+section('🏆 RUHMESHALLE','fame')+section('📈 FORM & KONSTANZ','form')+(other?duelHtml(name,other.name):'')+'</div>';
 }
 function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
- const diff=other&&m.score!=null&&other.score!=null?m.score-other.score:null;
- $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bumsOf(m.name)??'–'}</strong><span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span></div>${other?`<div class="profilecompare">Vergleich mit <b>${mgrName(other.name)}</b>: ${diff==null?'Keine Punkte':(diff>0?'+':'')+fmt(diff)+' Punkte'} · Platz #${fmt(other.pos)}</div>`:''}${profileSeasonHtml(m.name,other)}`;
+ const bm=bumsOf(m.name),bums=`<span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span>`;
+ if(!other){
+  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${profileSeasonHtml(m.name,null)}`;
+  return;
+ }
+ // Vergleich: beide Manager in jeder Kachel, Abstand in Punkten beim Verfolger.
+ const v=(value,raw,detail='')=>({value,raw,detail}),diff=m.score!=null&&other.score!=null?m.score-other.score:null;
+ const gap=d=>d==null||d>=0?'':`${fmt(-d)} zurück`;
+ const rows=(a,b,better)=>profCmpRows(m.name,other.name,a,b,better);
+ $('#profileDetails').innerHTML=`<div class="profiletitle pcmp-title"><span class="pcmp-a">${mgrName(m.name)}</span><span class="pcmp-vs">vs</span><span class="pcmp-b">${mgrName(other.name)}</span></div>`+
+  `<div class="profiletile pcmp"><small>PLATZIERUNG</small>${rows(v('#'+fmt(m.pos),m.pos),v('#'+fmt(other.pos),other.pos),'lo')}</div>`+
+  `<div class="profiletile pcmp"><small>PUNKTE</small>${rows(v(fmt(m.score),m.score,gap(diff)),v(fmt(other.score),other.score,gap(diff==null?null:-diff)),'hi')}</div>`+
+  `<div class="profiletile pcmp bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small>${rows(v(bm??'–',bm),v(bumsOf(other.name)??'–',bumsOf(other.name)),'lo')}${bums}</div>`+
+  profileSeasonHtml(m.name,other);
 }
 $('#profileSelect').addEventListener('change',showProfile);
 $('#compareSelect').addEventListener('change',()=>{if($('#compareSelect').value!=='')profOpen.add(DUEL_SEC);showProfile();});
@@ -708,7 +719,7 @@ async function snapshotLoadSaved(){
  const day=snapshotDayValue();if(!day)return;
  try{const d=await api(`/api/lineup-snapshots/${day}`);snapshotState.saved=d.snapshots||[];
  const names=new Map(snapshotState.managers.map(m=>[String(m.id),m.name]));
- $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr><td>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
+ $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<p class="muted tiny" style="margin:0 0 8px">Auf einen Manager tippen, um seine Elf auf dem Rasen zu sehen.</p><table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr class="lu-row" data-snapshot-show="${escapeHtml(String(s.managerId))}" tabindex="0" aria-expanded="false"><td><span class="lu-caret" aria-hidden="true">▸</span>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
  snapshotUpdateButtons();
  }catch(e){snapshotMsg(e.message,true);}
 }
@@ -734,7 +745,45 @@ async function snapshotInit(){
  await snapshotLoadSaved();snapshotMsg('Manager auswählen und Startelf bestätigen.');
  }catch(e){snapshotMsg(e.message,true);}
 }
+// Gespeicherte Elf auf dem Rasen (Kevin-Wunsch): Antippen klappt unter der Zeile die Aufstellung auf, startet zu.
+// Formation aus der Position im Vereinsprofil (pos 1 Torwart … 4 Sturm), Punkte aus /api/lineup-points.
+let luPlayers=null;const luPoints=new Map();
+async function luData(day){
+ if(!luPlayers)luPlayers=api('/api/mvp-tipps/players').then(r=>new Map((r.players||[]).map(p=>[String(p.id),p]))).catch(()=>new Map());
+ if(!luPoints.has(day))luPoints.set(day,api(`/api/lineup-points/${day}`).catch(()=>null));
+ const [players,pts]=await Promise.all([luPlayers,luPoints.get(day)]);
+ return {players,pts};
+}
+function luPitchHtml(s,players,pts){
+ const K=window.kblToon,ids=(s.playerIds||[]).map(String);
+ const ps=ids.map(id=>{const p=players.get(id),q=pts?.points?.[id];return {id,name:p?.name||s.playerNames?.[id]||id,team:p?.team||'',img:p?.img,teamImg:p?.teamImg,pos:Number(p?.pos)||null,points:q?.points??null,state:q?.state||''};});
+ const fig=p=>{const [shirt,trim]=K?K.clubColor(p.team):['#555','#fff'],crest=K&&p.teamImg?K.kbImg(p.teamImg):'',live=p.state==='live';
+  return `<div class="rd-fig toon-runner lu-fig${live?' run':''}${crest?' has-crest':''}" title="${escapeHtml(p.name)}${p.team?' · '+escapeHtml(p.team):''}"><div class="toon-body">${K?K.toon({},shirt,trim,p.points!=null&&p.points<0?'sad':'happy',''):''}${K&&p.img?`<img class="toon-face" src="${escapeHtml(K.headSrc(p.id))}" alt="" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`:''}${crest?`<img class="toon-crest" src="${escapeHtml(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`:''}</div>${live?'<span class="toon-ball">⚽</span>':''}<div class="rd-tag lu-tag"><span>${escapeHtml(p.name)}</span>${p.points!=null?`<b>${fmt(p.points)}</b>`:''}</div></div>`;};
+ const rows=[4,3,2,1].map(n=>ps.filter(p=>p.pos===n)).filter(r=>r.length);
+ const unknown=ps.filter(p=>![1,2,3,4].includes(p.pos));
+ const formation=[2,3,4].map(n=>ps.filter(p=>p.pos===n).length).join('-');
+ const empty=Math.max(0,11-ids.length);
+ const known=ps.filter(p=>p.points!=null),sum=known.reduce((a,p)=>a+p.points,0);
+ const total=known.length===ps.length&&ps.length?`${fmt(sum-100*empty)} Punkte${empty?` (${fmt(sum)} minus ${empty*100} für ${empty===1?'den leeren Platz':`${empty} leere Plätze`})`:''}${pts?.status==='live'?' · LIVE':''}`:pts?.status==='live'||pts?.status==='finished'?'Punkte noch nicht für alle Spieler da':'';
+ const head=`<div class="lu-head"><b>${unknown.length?'Formation unklar':escapeHtml(formation)}</b>${total?`<span>${total}</span>`:''}</div>`;
+ const pitch=`<div class="lu-pitch">${rows.map(r=>`<div class="lu-line">${r.map(fig).join('')}</div>`).join('')}${empty?`<div class="lu-line"><div class="lu-empty">${empty}× leer</div></div>`:''}</div>`;
+ const rest=unknown.length?`<p class="muted tiny" style="margin:8px 0 0">Position unbekannt (nicht mehr im Vereinsprofil): ${unknown.map(p=>`${escapeHtml(p.name)}${p.points!=null?` (${fmt(p.points)})`:''}`).join(', ')}</p>`:'';
+ return head+pitch+rest;
+}
+async function luToggle(row){
+ const id=row.dataset.snapshotShow,next=row.nextElementSibling,open=next?.classList.contains('lu-detail');
+ row.setAttribute('aria-expanded',open?'false':'true');row.classList.toggle('open',!open);
+ if(open){next.remove();return;}
+ // Die Tabelle ist auf dem Handy breiter als der Bildschirm: der Rasen bleibt in der sichtbaren Breite stehen.
+ const tr=document.createElement('tr');tr.className='lu-detail';tr.innerHTML=`<td colspan="5"><div class="lu-box" style="width:${$('#snapshotSaved').clientWidth}px"><p class="muted">Aufstellung wird geladen …</p></div></td>`;row.after(tr);
+ const s=snapshotState.saved.find(x=>String(x.managerId)===id),day=snapshotDayValue();if(!s)return;
+ const {players,pts}=await luData(day);
+ if(tr.isConnected)tr.querySelector('.lu-box').innerHTML=luPitchHtml(s,players,pts);
+}
+$('#snapshotSaved')?.addEventListener('keydown',e=>{const row=e.target.closest('tr[data-snapshot-show]');if(row&&(e.key==='Enter'||e.key===' ')&&e.target===row){e.preventDefault();luToggle(row);}});
 $('#snapshotSaved')?.addEventListener('click',async e=>{
+ const show=e.target.closest('tr[data-snapshot-show]');
+ if(show&&!e.target.closest('button,a')){luToggle(show);return;}
  const button=e.target.closest('button[data-snapshot-delete]');if(!button)return;
  const day=snapshotDayValue(),managerId=button.dataset.snapshotDelete;
  const manager=snapshotState.managers.find(m=>m.id===managerId);
@@ -1555,7 +1604,6 @@ async function renderBumsTabelle(){
  for(const r of rows)r.clean=inHalf.filter(d=>r.per[d]===0).length;
  const wwMax=Math.max(0,...rows.map(r=>r.clean)),wwTop=wwMax?rows.filter(r=>r.clean===wwMax):[];
  const wwRows=rows.filter(r=>r.clean>0).sort((a,b)=>b.clean-a.clean||a.name.localeCompare(b.name,'de'));
- bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count,rules:r.rules,out:r.out,in:r.in})),clean:wwTop.map(r=>r.name),cleanN:wwMax,half:from===1?'Hinrunde':'Rückrunde',RN};
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
@@ -1574,7 +1622,6 @@ async function renderBumsTabelle(){
   `<div class="bums-legend">${legend}</div></details>${bumsDaysHtml(days,inHalf,RN)}${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
   `<p class="muted tiny">${inHalf.some(d=>days[d].manual)?`Von Hand nachgetragen: ST ${inHalf.filter(d=>days[d].manual).join(', ')}. `:''}${from===1?'Hinrunde':'Rückrunde'} · ${inHalf.length} von ${finished.filter(d=>d>=from&&d<=to).length} abgeschlossenen Spieltagen erfasst. Übernommen wird automatisch, sobald ein Spieltag in der BumsParade vollständig geprüft ist. Vorläufig: Ändert sich dort etwas, zieht die Tabelle nach.</p>`+
   (missing.length?`<p><button type="button" class="ghost" id="bumsFill">Fehlende Spieltage nachholen (ST ${missing.join(', ')})</button> <span class="muted tiny" id="bumsFillMsg"></span></p>`:'');
- kblBumsIntroTry();
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('#bumsFill');if(!b)return;
@@ -1645,71 +1692,6 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
-// BumsTabelle: Beim Öffnen des Reiters fliegen einzelne Statistiken durchs Bild (Kevin-Wunsch: meiste BD usw.),
-// der Bumskönig zum Schluss groß in der Mitte. Antippen, Esc oder Scrollen überspringt.
-let bumsIntroData=null,bumsIntroPending=false,bumsIntroSkipOnce=false;
-function kblBumsIntroTry(){
- if(!bumsIntroPending||!bumsIntroData)return;
- if(!document.querySelector('.kbl-view[data-view="penalties"]')?.classList.contains('kbl-current')){bumsIntroPending=false;return;}
- bumsIntroPending=false;
- if(!bumsIntroData.hit.length||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
- kblBumsIntro(bumsIntroData);
-}
-function kblBumsIntro({hit,clean,cleanN,half,RN}){
- document.querySelector('.bums-intro')?.remove();
- // Einzelne Statistiken: je Regel der Spitzenreiter (häufigste Regeln zuerst, max. 4), meiste abgegeben/bekommen, zum Schluss der Bumskönig.
- const best=f=>{const m=Math.max(0,...hit.map(f));return m?{n:m,who:hit.filter(r=>f(r)===m).map(r=>r.name)}:null;};
- const ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules||{}))ruleTot[k]=(ruleTot[k]||0)+n;
- const cards=[];
- for(const k of Object.keys(ruleTot).filter(k=>k!=='EZ').sort((a,b)=>ruleTot[b]-ruleTot[a]).slice(0,4)){const x=best(r=>r.rules?.[k]||0);if(x)cards.push({emo:'🎯',title:`Meiste ${k}`,sub:RN[k]||k,...x,unit:'×'});}
- const o=best(r=>r.out||0);if(o)cards.push({emo:'📤',title:'Meiste abgegeben',...o,unit:'×'});
- const i=best(r=>r.in||0);if(i)cards.push({emo:'📥',title:'Meiste bekommen',...i,unit:'×'});
- const king={...best(r=>r.count)};
- const ov=document.createElement('div');ov.className='bums-intro';ov.setAttribute('aria-hidden','true');
- ov.innerHTML=`<div class="bums-intro-title">💥 BumsTabelle<small>${escapeHtml(half)}</small></div><div class="bums-intro-skip">Antippen zum Überspringen</div>`;
- document.body.appendChild(ov);
- let done=false;const timers=[];
- const end=()=>{if(done)return;done=true;timers.forEach(clearTimeout);removeEventListener('keydown',key);removeEventListener('wheel',end);
-  ov.animate([{opacity:1},{opacity:0}],{duration:350,fill:'forwards'}).onfinish=()=>ov.remove();};
- const key=e=>{if(e.key==='Escape')end();};
- ov.addEventListener('click',end);addEventListener('keydown',key);addEventListener('wheel',end,{passive:true});
- ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
- ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
- const names=w=>w.map(n=>mgrName(n)).join('<br>');
- // Kevin-Vorgabe: je Welle 3 Karten gleichzeitig, verstreut übers Bild und leicht schräg hängend;
- // weich hereinschweben (0,8 s), 3 s stehen, hinaus.
- const per=3,step=4000,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
- const SLOTS=wide?[[[24,44,-5],[52,68,4],[78,42,-3]],[[27,68,4],[50,42,-4],[75,66,6]]]
-  :[[[45,30,-5],[56,53,4],[44,77,-3]],[[55,30,4],[44,53,-4],[56,77,5]]];
- const FROM=[[-130,-30],[20,120],[130,-25],[-120,40],[-15,-120],[125,35]];
- cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per;
-  timers.push(setTimeout(()=>{if(done)return;
-  const el=document.createElement('div');el.className='bums-intro-card';
-  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(n=>`<i class="bi-n">${mgrName(n)}</i>`).join(', ')}</b><span>${c.n}${c.unit}</span>`;
-  const [l,t,rot]=SLOTS[w%2][j],[fx,fy]=FROM[idx%FROM.length];
-  el.style.left=l+'%';el.style.top=t+'%';
-  ov.appendChild(el);
-  const at=(x,y,r,sc=1)=>`translate(calc(-50% + ${x}vw),calc(-50% + ${y}vh)) rotate(${r}deg) scale(${sc})`;
-  el.animate([
-   {transform:at(fx,fy,rot*5,.7),opacity:0,easing:'cubic-bezier(.16,1,.3,1)'},
-   {transform:at(0,0,rot),opacity:1,offset:.2},
-   {transform:at(0,-1,rot*.6),offset:.55,easing:'ease-in-out'},
-   {transform:at(0,0,rot),opacity:1,offset:.86,easing:'cubic-bezier(.5,0,.75,0)'},
-   {transform:at(-fx*.8,-fy*.4+30,rot*-4,.8),opacity:0}],
-   {duration:4400,fill:'forwards'}).onfinish=()=>el.remove();
- },500+w*step+j*180));});
- const cardsEnd=waves?waves*step+300:0;
- timers.push(setTimeout(()=>{if(done)return;
-  const k=document.createElement('div');k.className='bums-intro-king';
-  k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
-   (clean.length?`<div class="bums-intro-clean">😇 Meiste Weiße Westen: ${clean.map(n=>mgrName(n)).join(', ')} · ${cleanN} Spieltag${cleanN===1?'':'e'} ohne Bumsung</div>`:'');
-  ov.appendChild(k);
-  k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
-  k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
-  timers.push(setTimeout(end,2600));
- },500+cardsEnd));
-}
-
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
  for(const id of ['preview','overview','bericht','stats','table','rankHistory','progressPanel']){
@@ -1731,8 +1713,7 @@ window.kblCollapseView=view=>{
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
  if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accRadarOpen=true;accLiveLoad();}
  if(view==='profiles')profOpen.clear();
- if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;bumsIntroPending=!bumsIntroSkipOnce;bumsIntroSkipOnce=false;setTimeout(kblBumsIntroTry,0);}
- else document.querySelector('.bums-intro')?.remove();
+ if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
 };
 
 // Managerprofil: Kachel „Bumsungen“ führt zur BumsTabelle und zeigt die Zeile des Managers.
@@ -1740,7 +1721,7 @@ function kblBumsFocus(name){const tab=$('#bumsTab');if(!tab)return false;tab.ope
  const row=[...document.querySelectorAll('#bumsTable .bums-row')].find(r=>r.dataset.bumsName===name);
  if(row){row.querySelector('details.bums-dir')?.setAttribute('open','');row.classList.add('bums-focus');row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.classList.remove('bums-focus'),3000);}
  else tab.scrollIntoView({behavior:'smooth',block:'start'});return true;}
-function kblBumsGoto(el){const n=el.dataset.bumsGoto;bumsIntroSkipOnce=location.hash!=='#penalties';location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
+function kblBumsGoto(el){const n=el.dataset.bumsGoto;location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-bums-goto]');if(t)kblBumsGoto(t);});
 document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-goto]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblBumsGoto(t);}});
 

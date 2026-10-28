@@ -708,7 +708,7 @@ async function snapshotLoadSaved(){
  const day=snapshotDayValue();if(!day)return;
  try{const d=await api(`/api/lineup-snapshots/${day}`);snapshotState.saved=d.snapshots||[];
  const names=new Map(snapshotState.managers.map(m=>[String(m.id),m.name]));
- $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr><td>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
+ $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<p class="muted tiny" style="margin:0 0 8px">Auf einen Manager tippen, um seine Elf auf dem Rasen zu sehen.</p><table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr class="lu-row" data-snapshot-show="${escapeHtml(String(s.managerId))}" tabindex="0" aria-expanded="false"><td><span class="lu-caret" aria-hidden="true">▸</span>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
  snapshotUpdateButtons();
  }catch(e){snapshotMsg(e.message,true);}
 }
@@ -734,7 +734,45 @@ async function snapshotInit(){
  await snapshotLoadSaved();snapshotMsg('Manager auswählen und Startelf bestätigen.');
  }catch(e){snapshotMsg(e.message,true);}
 }
+// Gespeicherte Elf auf dem Rasen (Kevin-Wunsch): Antippen klappt unter der Zeile die Aufstellung auf, startet zu.
+// Formation aus der Position im Vereinsprofil (pos 1 Torwart … 4 Sturm), Punkte aus /api/lineup-points.
+let luPlayers=null;const luPoints=new Map();
+async function luData(day){
+ if(!luPlayers)luPlayers=api('/api/mvp-tipps/players').then(r=>new Map((r.players||[]).map(p=>[String(p.id),p]))).catch(()=>new Map());
+ if(!luPoints.has(day))luPoints.set(day,api(`/api/lineup-points/${day}`).catch(()=>null));
+ const [players,pts]=await Promise.all([luPlayers,luPoints.get(day)]);
+ return {players,pts};
+}
+function luPitchHtml(s,players,pts){
+ const K=window.kblToon,ids=(s.playerIds||[]).map(String);
+ const ps=ids.map(id=>{const p=players.get(id),q=pts?.points?.[id];return {id,name:p?.name||s.playerNames?.[id]||id,team:p?.team||'',img:p?.img,teamImg:p?.teamImg,pos:Number(p?.pos)||null,points:q?.points??null,state:q?.state||''};});
+ const fig=p=>{const [shirt,trim]=K?K.clubColor(p.team):['#555','#fff'],crest=K&&p.teamImg?K.kbImg(p.teamImg):'',live=p.state==='live';
+  return `<div class="rd-fig toon-runner lu-fig${live?' run':''}${crest?' has-crest':''}" title="${escapeHtml(p.name)}${p.team?' · '+escapeHtml(p.team):''}"><div class="toon-body">${K?K.toon({},shirt,trim,p.points!=null&&p.points<0?'sad':'happy',''):''}${K&&p.img?`<img class="toon-face" src="${escapeHtml(K.headSrc(p.id))}" alt="" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`:''}${crest?`<img class="toon-crest" src="${escapeHtml(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`:''}</div>${live?'<span class="toon-ball">⚽</span>':''}<div class="rd-tag lu-tag"><span>${escapeHtml(p.name)}</span>${p.points!=null?`<b>${fmt(p.points)}</b>`:''}</div></div>`;};
+ const rows=[4,3,2,1].map(n=>ps.filter(p=>p.pos===n)).filter(r=>r.length);
+ const unknown=ps.filter(p=>![1,2,3,4].includes(p.pos));
+ const formation=[2,3,4].map(n=>ps.filter(p=>p.pos===n).length).join('-');
+ const empty=Math.max(0,11-ids.length);
+ const known=ps.filter(p=>p.points!=null),sum=known.reduce((a,p)=>a+p.points,0);
+ const total=known.length===ps.length&&ps.length?`${fmt(sum-100*empty)} Punkte${empty?` (${fmt(sum)} minus ${empty*100} für ${empty===1?'den leeren Platz':`${empty} leere Plätze`})`:''}${pts?.status==='live'?' · LIVE':''}`:pts?.status==='live'||pts?.status==='finished'?'Punkte noch nicht für alle Spieler da':'';
+ const head=`<div class="lu-head"><b>${unknown.length?'Formation unklar':escapeHtml(formation)}</b>${total?`<span>${total}</span>`:''}</div>`;
+ const pitch=`<div class="lu-pitch">${rows.map(r=>`<div class="lu-line">${r.map(fig).join('')}</div>`).join('')}${empty?`<div class="lu-line"><div class="lu-empty">${empty}× leer</div></div>`:''}</div>`;
+ const rest=unknown.length?`<p class="muted tiny" style="margin:8px 0 0">Position unbekannt (nicht mehr im Vereinsprofil): ${unknown.map(p=>`${escapeHtml(p.name)}${p.points!=null?` (${fmt(p.points)})`:''}`).join(', ')}</p>`:'';
+ return head+pitch+rest;
+}
+async function luToggle(row){
+ const id=row.dataset.snapshotShow,next=row.nextElementSibling,open=next?.classList.contains('lu-detail');
+ row.setAttribute('aria-expanded',open?'false':'true');row.classList.toggle('open',!open);
+ if(open){next.remove();return;}
+ // Die Tabelle ist auf dem Handy breiter als der Bildschirm: der Rasen bleibt in der sichtbaren Breite stehen.
+ const tr=document.createElement('tr');tr.className='lu-detail';tr.innerHTML=`<td colspan="5"><div class="lu-box" style="width:${$('#snapshotSaved').clientWidth}px"><p class="muted">Aufstellung wird geladen …</p></div></td>`;row.after(tr);
+ const s=snapshotState.saved.find(x=>String(x.managerId)===id),day=snapshotDayValue();if(!s)return;
+ const {players,pts}=await luData(day);
+ if(tr.isConnected)tr.querySelector('.lu-box').innerHTML=luPitchHtml(s,players,pts);
+}
+$('#snapshotSaved')?.addEventListener('keydown',e=>{const row=e.target.closest('tr[data-snapshot-show]');if(row&&(e.key==='Enter'||e.key===' ')&&e.target===row){e.preventDefault();luToggle(row);}});
 $('#snapshotSaved')?.addEventListener('click',async e=>{
+ const show=e.target.closest('tr[data-snapshot-show]');
+ if(show&&!e.target.closest('button,a')){luToggle(show);return;}
  const button=e.target.closest('button[data-snapshot-delete]');if(!button)return;
  const day=snapshotDayValue(),managerId=button.dataset.snapshotDelete;
  const manager=snapshotState.managers.find(m=>m.id===managerId);

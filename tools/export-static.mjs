@@ -105,9 +105,9 @@ try {
   const rankingLive = u => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')).il === true; } catch { return true; } };
   for (const d of days) {
     const urls = [`/api/ranking/${LEAGUE}?dayNumber=${d}`, `/api/rule-accounting/${d}`, `/api/points-overview/${d}`, `/api/todo-checks/${d}`,
-      `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`, `/api/bench-points/${d}`];
+      `/api/lineup-snapshots/${d}`, `/api/lineup-coverage/${d}`, `/api/npc-jokers/${d}`, `/api/bench-points/${d}`, `/api/lineup-points/${d}`];
     for (const u of urls) {
-      const needed = MODE === 'full' || d === live || !have(u) || u.includes('/todo-checks/') || (u.includes('/rule-accounting/') && unfinished(u)) || (u.includes('/bench-points/') && benchLive(u)) || (u.includes('/ranking/') && rankingLive(u));
+      const needed = MODE === 'full' || d === live || !have(u) || u.includes('/todo-checks/') || (u.includes('/rule-accounting/') && unfinished(u)) || ((u.includes('/bench-points/') || u.includes('/lineup-points/')) && benchLive(u)) || (u.includes('/ranking/') && rankingLive(u));
       if (needed) await save(u);
     }
   }
