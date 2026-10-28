@@ -83,30 +83,30 @@
   fitHeads();
   if(!draft)reactMount(sel.day);
  }
- // Emoji-Reaktionen je Abschnitt (Kevin-Wunsch 28.10.): Einleitung = Abschnitt 0, jede Zwischenüberschrift beginnt den nächsten.
- // Nur online mit Tippdienst und nur bei veröffentlichten Berichten. Je Emoji und Abschnitt einmal pro Gerät (kbl-vid wie nutzung.js),
+ // Emoji-Reaktionen je Absatz (Kevin-Wunsch 28.10.): unter jedem Absatz bzw. jeder Liste, durchgezählt ab 0 (Überschriften zählen nicht).
+ // Kompakt: zu sehen sind nur Emojis, die schon jemand gesetzt hat, dazu ein kleiner ☺+-Knopf, der die Auswahl aufklappt.
+ // Nur online mit Tippdienst und nur bei veröffentlichten Berichten. Je Emoji und Absatz einmal pro Gerät (kbl-vid wie nutzung.js),
  // nochmal tippen nimmt die Reaktion zurück. Gezählt wird im Tippdienst (/reaktion/:day), alle sehen dieselben Zahlen.
  const VID='kbl-vid';
  const vid=()=>{let v='';try{v=localStorage.getItem(VID)||'';}catch{}if(!/^[a-z0-9]{8,32}$/.test(v)){v=Array.from(crypto.getRandomValues(new Uint8Array(10)),b=>b.toString(36).padStart(2,'0')).join('').slice(0,16);try{localStorage.setItem(VID,v);}catch{}}return v;};
- let rx=null;
+ let rx=null,pickSec=null;
  function reactBars(day){
   const body=$('berichtContent')?.querySelector('.ber-body');if(!body)return [];
-  const bars=[];let sec=0,has=false;
-  const close=after=>{if(!has)return;const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec;after.after(d);bars.push(d);};
-  let last=null;
+  const bars=[];let sec=0;
   for(const el of [...body.children]){
-   if(el.classList.contains('ber-h')){if(last)close(last);sec++;has=true;last=el;continue;}
-   if(el.classList.contains('ber-hr'))continue;
-   has=true;last=el;
+   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr'))continue;
+   const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec++;el.after(d);bars.push(d);
   }
-  if(last)close(last);
   return bars;
  }
  function reactPaint(){
   if(!rx||rx.day!==sel?.day)return;
   for(const d of $('berichtContent').querySelectorAll('.ber-react')){
-   const c=rx.counts[d.dataset.sec]||{},mine=new Set(rx.mine[d.dataset.sec]||[]);
-   d.innerHTML=rx.emojis.map(e=>{const n=c[e]||0,on=mine.has(e);return `<button type="button" class="ber-rx${on?' on':''}${n?' has':''}" data-rx="${e}" aria-pressed="${on}" title="${on?'Reaktion zurücknehmen':'Reagieren'}">${e}${n?`<span>${n}</span>`:''}</button>`;}).join('');
+   const sec=d.dataset.sec,c=rx.counts[sec]||{},mine=new Set(rx.mine[sec]||[]),open=pickSec===sec;
+   const chip=(e,all)=>{const n=c[e]||0,on=mine.has(e);return `<button type="button" class="ber-rx${on?' on':''}" data-rx="${e}" aria-pressed="${on}" title="${on?'Reaktion zurücknehmen':'Reagieren'}">${e}${n&&!all?`<span>${n}</span>`:''}</button>`;};
+   const used=rx.emojis.filter(e=>c[e]>0);
+   d.classList.toggle('open',open);
+   d.innerHTML=`${used.map(e=>chip(e,false)).join('')}<button type="button" class="ber-rx-add" data-rx-add aria-expanded="${open}" title="Reagieren">☺<b>${open?'×':'+'}</b></button>${open?`<div class="ber-rx-pick">${rx.emojis.map(e=>chip(e,true)).join('')}</div>`:''}`;
   }
  }
  async function reactMount(day){
@@ -137,7 +137,8 @@
  }
  if(window.ResizeObserver&&$('berichtContent')){let lastW=-1;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;fitHeads();}}).observe($('berichtContent'));}
  sec.addEventListener('click',async e=>{
-  const x=e.target.closest('[data-rx]');if(x){reactToggle(x);return;}
+  const ad=e.target.closest('[data-rx-add]');if(ad){const sec=ad.closest('.ber-react').dataset.sec;pickSec=pickSec===sec?null:sec;reactPaint();return;}
+  const x=e.target.closest('[data-rx]');if(x){if(x.closest('.ber-rx-pick'))pickSec=null;reactToggle(x);return;}
   const b=e.target.closest('[data-ber]');if(!b||!sel)return;const act=b.dataset.ber;
   if(act==='edit'){editing=true;msg='';render();return;}
   if(act==='abbrechen'){editing=false;msg='';render();return;}
@@ -149,6 +150,7 @@
   try{const d=await req(`/bericht/${sel.day}`,body);sel=d.bericht;editing=false;msg=act==='freigeben'?'Veröffentlicht. Alle sehen ihn sofort.':act==='zurueckziehen'?'Zurückgezogen.':'Gespeichert.';await load();}
   catch(err){msg='Nicht gespeichert: '+err.message;render();}
  });
+ document.addEventListener('click',e=>{if(pickSec!=null&&e.target.isConnected&&!e.target.closest('.ber-react')){pickSec=null;reactPaint();}});
  load();
  // Neue Berichte kommen mit dem nächsten Export; beim Zurückholen der Seite neu laden (nicht während des Bearbeitens).
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!editing)load();});

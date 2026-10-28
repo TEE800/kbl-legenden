@@ -964,14 +964,16 @@ body.zr-on .mobilenav{display:none}
 .ber-body li{margin:4px 0}
 .ber-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .ber-foot{margin:16px 0 0}
-.ber-react{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 14px}
-.ber-rx{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font-size:15px;line-height:1;cursor:pointer;opacity:.7;filter:grayscale(.35);transition:opacity .15s,filter .15s,transform .1s}
-.ber-rx:hover{opacity:1;filter:none}
-.ber-rx.has{opacity:1;filter:none}
-.ber-rx.on{border-color:var(--gold);background:var(--surface-1);box-shadow:0 0 0 1px var(--gold) inset;opacity:1;filter:none}
-.ber-rx:active{transform:scale(.9)}
+.ber-react{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:-6px 0 12px}
+.ber-rx{display:inline-flex;align-items:center;gap:3px;min-height:26px;padding:1px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font-size:14px;line-height:1;cursor:pointer;transition:transform .1s}
+.ber-rx.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.ber-rx:active,.ber-rx-add:active{transform:scale(.9)}
 .ber-rx span{font-size:12px;font-weight:700;color:var(--text)}
-@media(max-width:560px){.ber-react{gap:4px}.ber-rx{padding:2px 6px;font-size:14px;min-height:28px}}
+.ber-rx-add{display:inline-flex;align-items:center;gap:1px;min-height:26px;padding:1px 8px;border:1px dashed var(--line-strong);border-radius:999px;background:transparent;color:var(--dim);font-size:14px;line-height:1;cursor:pointer}
+.ber-rx-add b{font-size:12px}
+.ber-rx-add:hover,.ber-react.open .ber-rx-add{color:var(--gold);border-color:var(--gold-dark)}
+.ber-rx-pick{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface-0)}
+.ber-rx-pick .ber-rx{font-size:17px;min-height:32px;padding:2px 7px}
 @media(max-width:560px){#bericht .ber-title{font-size:19px}.ber-pill{max-width:55%}}
 /* Zeitraffer: Punkteänderungen untereinander (Kevin-Wunsch) */
 .zr-fixes{display:flex;flex-direction:column;gap:1px;margin-top:2px}
