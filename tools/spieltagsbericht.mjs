@@ -17,6 +17,8 @@ const STORE = path.join(process.cwd(), 'kbl-berichte.json');
 const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
 // Falls ein Modellname nicht (mehr) existiert (Fehler 404), nacheinander diese versuchen.
 const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
+// Bei Änderungen an SYSTEM oder den Fakten hochzählen: der Bericht des neuesten Spieltags wird dann einmal neu geschrieben.
+const VORGABEN = 2;
 const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
@@ -131,7 +133,7 @@ function facts(day) {
     return {
       name: name(i), id: i, admin: i === '699062' ? 'Admin der Liga und Erbauer dieser App' : undefined,
       spieltagPunkte: last, spieltagPlatz: dayRanks[day].get(i), gesamtPunkte: u(day, i).sp, gesamtPlatz: r, gesamtPlatzVorher: prevR,
-      platzVerlauf: days.map(d => ranks[d].get(i)), punkteJeSpieltag: pts,
+      platzVerlauf: days.map(d => ranks[d].get(i)), punkteJeSpieltag: pts, spieltagPlatzJeSpieltag: days.map(d => dayRanks[d].get(i)),
       saisonSchnitt: round(mean(own)), streuung: round(sd(own)), besterSpieltag: Math.max(...own), schlechtesterSpieltag: Math.min(...own),
       schnittLetzte3: own.length >= 3 ? round(mean(own.slice(-3))) : null, schnittDie3Davor: own.length >= 6 ? round(mean(own.slice(-6, -3))) : null,
       spieltagssiege: days.filter(d => dayRanks[d].get(i) === 1).length, spieltagsletzter: days.filter(d => dayRanks[d].get(i) === ids.length).length,
@@ -209,24 +211,31 @@ Harte Regeln für Zahlen:
 - Verwende ausschließlich Zahlen und Fakten aus dem JSON. Erfinde nichts, schätze nichts, rechne nichts Neues aus (keine eigenen Summen, Differenzen oder Prozentwerte). Alles, was du brauchst, steht fertig im JSON.
 - Fehlt etwas, lass es weg. Wenn ein Feld „nicht sicher“ sagt, nicht verwenden.
 - Spielerpunkte, Platzierungen und Namen exakt wie im JSON schreiben.
+- Behaupte keine Platzierung, keinen Sieg und keine Serie, die nicht ausdrücklich als Feld im JSON steht (z. B. wer an welchem Spieltag Sieger war: nur aus spieltagPlatzJeSpieltag, Platz 1 = Sieger). Keine Folgerungen wie „hätte“, „wäre“, außer das Feld steht so im JSON.
+- Überschriften müssen zum Inhalt passen (z. B. nicht „Treffer“ schreiben, wenn es 0 Treffer gab).
+- Schreibe NIE Feldnamen oder JSON-Schreibweise in den Text (nicht „schnittLetzte3“, „platzVerlauf“, „[1,1,3]“ usw.), sondern formuliere sie in normalem Deutsch („im Schnitt der letzten drei Spieltage“, „sechsmal in Folge Erster“).
+- Der Bericht muss vollständig sein: Lieber kürzer als mitten im Satz aufhören.
 
 Inhalt: Analysiere statt aufzuzählen. Suche die echten Geschichten in den Zahlen: Formkurven (schnittLetzte3 gegen schnittDie3Davor, platzVerlauf), Serien unter/über dem Ligaschnitt, Abhängigkeit von einem Spieler (topSpieler.anteilProzent, spieltagPlatzOhneIhn), selbst verschuldete Strafen (leerePositionen), knappe Abstände in der Tabelle, Führungswechsel, Konstanz (streuung), Transferbilanz, MVP-Tipp (knappsteFehlschuesse, Regelerfinder), Bumsungen des Spieltags (wer gab was an wen, Ketten über Teamlimit) und die BumsTabelle der Halbserie. Verknüpfe die Themen (z. B. wer den MVP abgeben musste und an wen er ging). Der Admin T800 wird auch nicht geschont.
 Liga-Vokabular: Bumsung = von einer Sonderregel betroffen, BumsParade = Abrechnung, BumsTabelle = Zählung der Halbserie. Regelnamen stehen im JSON.
 
-Form: Deutsch. Erste Zeile: „# “ plus eine knackige Schlagzeile (ohne Spieltagsnummer). Dann 6 bis 9 Abschnitte, jeder mit „## “ und einem Emoji. Fließtext mit **fett** für Namen und Schlüsselzahlen, Listen nur wenn sinnvoll. Etwa 700 bis 1000 Wörter. Kein Fazit über dich selbst, keine Erklärung, dass du eine KI bist, keine Rückfragen.`;
+Form: Deutsch. Erste Zeile: „# “ plus eine knackige Schlagzeile (ohne Spieltagsnummer). Dann 6 bis 9 Abschnitte, jeder mit „## “ und einem Emoji. Fließtext mit **fett** für Namen und Schlüsselzahlen, Listen nur wenn sinnvoll. Etwa 600 bis 900 Wörter. Kein Fazit über dich selbst, keine Erklärung, dass du eine KI bist, keine Rückfragen.`;
 
 async function askClaude(f) {
   const key = process.env.ANTHROPIC_API_KEY;
   const models = [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)];
   let last;
   for (const model of models) {
-    const body = { model, max_tokens: 4000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}` }] };
+    const body = { model, max_tokens: 10000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}` }] };
     for (let attempt = 1; attempt <= 3; attempt++) {
       let r, d;
       try { r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); d = await r.json().catch(() => ({})); }
       catch (e) { last = Error(`Verbindung: ${e.message}`); await new Promise(res => setTimeout(res, 10000 * attempt)); continue; }
       if (r.ok) {
         const text = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+        const leak = /\b(schnitt(Letzte3|Die3Davor)|platzVerlauf|spieltagPlatz\w*|ueberLigaschnitt\w*|unterLigaschnitt\w*|spieltagPunkteOhneIhn|anteilProzent|topSpieler|flopSpieler)\b/.exec(text);
+        if (d.stop_reason === 'max_tokens') { last = Error('Antwort abgeschnitten'); continue; }
+        if (leak) { last = Error(`Feldname im Text: ${leak[0]}`); continue; }
         if (text.length >= 400) return { text, usage: d.usage || null, model: d.model || model };
         last = Error('Antwort zu kurz'); continue;
       }
@@ -256,14 +265,14 @@ try {
   const S = day ? settlement(day) : null;
   const ready = day && rk && rk.il === false && S?.settled && (!mt || mt.status === 'finished');
   if (!day) say('Spieltagsbericht: noch kein Spieltag abgeschlossen.');
-  else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} liegt schon vor.`);
+  else if (store.berichte[day] && (store.berichte[day].vorgaben || 1) >= VORGABEN && neu !== day) say(`Spieltagsbericht ${day} liegt schon vor.`);
   else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
   else if (!process.env.ANTHROPIC_API_KEY) say(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
   else {
     const f = facts(day);
     const { text, usage, model } = await askClaude(f);
     const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim();
-    store.berichte[day] = { day, title, text, model, createdAt: new Date().toISOString(), usage };
+    store.berichte[day] = { day, title, text, model, vorgaben: VORGABEN, createdAt: new Date().toISOString(), usage };
     fs.writeFileSync(STORE, JSON.stringify(store, null, 1));
     say(`Spieltagsbericht ${day} geschrieben: „${title}“ (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''})`);
   }
