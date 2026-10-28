@@ -233,5 +233,16 @@
         "Schalke"
       ]
     }
+  },
+  "8": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Der beste Feldspieler ohne direkte Torbeteiligung \n(ohne Tor, Eigentor erzwungen, Vorlage, absichtliche Vorlage, abgefälschte Vorlage, Tor eingeleitet und Eigentor)",
+      "by": {
+        "id": "1631136",
+        "name": "Fabio"
+      }
+    }
   }
 }
