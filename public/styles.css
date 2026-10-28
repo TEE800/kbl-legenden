@@ -196,6 +196,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bums-stats>div{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .bums-stats small{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase}
 .bums-stats strong{color:var(--gold);font-size:22px;overflow-wrap:anywhere}
+.bums-avg{color:var(--muted);font-size:14px;font-weight:600}
 .bums-podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
 .bums-pod{background:var(--shame);border:1px solid var(--shame-line);border-radius:12px;padding:16px;min-width:0}
 .bums-pod-1{border-color:var(--bad);box-shadow:0 0 0 1px rgba(237,139,133,.25) inset}
