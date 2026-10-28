@@ -970,7 +970,7 @@ body.zr-on .mobilenav{display:none}
 .ber-rx.on{border-color:var(--gold);background:var(--surface-1);box-shadow:0 0 0 1px var(--gold) inset;opacity:1;filter:none}
 .ber-rx:active{transform:scale(.9)}
 .ber-rx span{font-size:12px;font-weight:700;color:var(--text)}
-@media(max-width:560px){.ber-react{gap:5px}.ber-rx{padding:2px 7px;font-size:14px}}
+@media(max-width:560px){.ber-react{gap:4px}.ber-rx{padding:2px 6px;font-size:14px;min-height:28px}}
 @media(max-width:560px){#bericht .ber-title{font-size:19px}.ber-pill{max-width:55%}}
 /* Zeitraffer: Punkteänderungen untereinander (Kevin-Wunsch) */
 .zr-fixes{display:flex;flex-direction:column;gap:1px;margin-top:2px}
