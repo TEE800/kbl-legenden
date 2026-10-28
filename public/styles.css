@@ -1052,3 +1052,4 @@ body.zr-on .mobilenav{display:none}
 .zr.zr-fit:not(.zr-full) .zr-pitch-wrap{overflow:hidden;border-radius:10px}
 .zr.zr-fit:not(.zr-full) .zr-pitch{margin:0}
 .zr.zr-fit .zr-lead{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zr-runner.zr-ghost:not(.champ) .toon-crown{display:none}
