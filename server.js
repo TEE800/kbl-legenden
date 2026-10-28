@@ -1932,12 +1932,15 @@ function netEvents(center) {
   }
   return [...map.values()].filter(x => x.net !== 0);
 }
+// Einzelne Gelbe Karten eines Spieltags (Kevin 28.10.): Die Gelbe vor einer Gelb-Roten zaehlt nicht zur Gelbsperre.
+// Steht sie bei Kickbase als eigene 4 neben der 5, wird sie abgezogen; steht nur die 5 da, aendert sich nichts.
+function singleYellows(k) { const a = Array.isArray(k) ? k.map(Number) : [], y = a.filter(c => c === 4).length; return y - Math.min(y, a.filter(c => c === 5).length); }
 function seasonYellowCards(perfData, day) {
   let before = 0, upTo = 0;
   for (const rec of seasonEntries(perfData, CURRENT_SEASON)) {
     const d = Number(rec.day);
     if (!Number.isFinite(d) || d > day || !Array.isArray(rec.k)) continue;
-    const n = rec.k.filter(c => c === 4).length;
+    const n = singleYellows(rec.k);
     upTo += n; if (d < day) before += n;
   }
   return { before, upTo };
@@ -2169,7 +2172,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
    if(ev.actions.some(a=>a.rule==='RK'&&String(a.playerId)===lp.playerId))continue;
    let c;try{c=await center(lp.playerId);}catch{continue;}
    const rec=findDayRecord(lp.perf,day);if(Array.isArray(rec?.k)&&rec.k.includes(4))continue;
-   const today=(Array.isArray(c?.k)?c.k:[]).filter(x=>x===4).length;if(!today)continue;
+   const today=singleYellows(c?.k);if(!today)continue;
    const before=seasonYellowCards(lp.perf,day).before;
    if(Math.floor((before+today)/5)>Math.floor(before/5))ev.actions.push({managerId:lp.managerId,manager:lp.manager,playerId:lp.playerId,playerName:lp.playerName,rule:'RK',reason:`${Math.floor((before+today)/5)*5}. Gelbe Karte der Saison`});
   }
