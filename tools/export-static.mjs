@@ -159,6 +159,8 @@ try {
   // Transfers je Manager (Reiter "Transfers"): je Manager Verlauf und Kader. Im Live-Lauf hoechstens stuendlich neu.
   const transfersOld = () => { try { return !(Date.now() - Date.parse(JSON.parse(fs.readFileSync(path.join(DATA, key('/api/transfers')), 'utf8')).updatedAt) <= 3600e3); } catch { return true; } };
   if (MODE === 'full' || transfersOld()) await save('/api/transfers');
+  // Transfer-Pech-Radar: aendert sich nur nach abgeschlossenen Spieltagen, darum nur im Voll-Lauf (und wenn er fehlt).
+  if (MODE === 'full' || !have('/api/transfer-pech')) await save('/api/transfer-pech');
   // Arena (Head-to-Head-Liga): Paarungen und Aufstellungen aus kbl-arena.json (vom PC, GitHub ist kein Arena-Mitglied),
   // Live-Punkte der Spieler rechnet der Server selbst. Live-Lauf: laufender und naechster Spieltag und Fehlendes.
   const arena = await save('/api/arena');

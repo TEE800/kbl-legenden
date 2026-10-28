@@ -2953,9 +2953,79 @@ app.get('/api/transfers', async (req, res) => {
       return { key: pd.key, current, from: new Date(pd.from).toISOString(), to: pd.to == null ? null : new Date(pd.to).toISOString(), managers };
     }).filter(se => se.current || se.managers.length);
     const value = { updatedAt: new Date().toISOString(), seasons };
-    transferCache = { at: Date.now(), value };
+    transferCache = { at: Date.now(), value, raw };
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
+});
+
+// Transfer-Pech-Radar (Kevin-Wunsch 28.10., Reiter "Transfers"): Spieler, die ein Manager verkauft hat und die gleich am nächsten
+// Spieltag gepunktet haben. Nächster Spieltag = erster Spieltag, dessen erster Anstoß (OpenLigaDB) nach dem Verkauf liegt; nur
+// abgeschlossene Spieltage, Punkte aus den Leistungsdaten (nur Saison 2026/27, darum nur die laufende Halbserie). Hat der Verkäufer
+// ihn vor dem Anstoß zurückgekauft, zählt der Verkauf nicht. Pech ab PECH_MIN Punkten; Käufer aus der Liga: ob er ihn in der Startelf
+// hatte (ranking?dayNumber lp). Fehlen Punkte, wird der Verkauf nicht gewertet (nie raten).
+const PECH_MIN = 100;
+let pechCache = null;
+app.get('/api/transfer-pech', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  if (pechCache && Date.now() - pechCache.at < 3 * 3600e3 && req.query.neu !== '1') return res.set('Cache-Control', 'no-store').json(pechCache.value);
+  try {
+    const md = await loadMatchdays();
+    const kick = md.days.filter(d => d.firstKickoffUTC).map(d => ({ day: d.day, at: Date.parse(d.firstKickoffUTC), finished: d.status === 'finished' })).sort((a, b) => a.at - b.at);
+    if (!kick.length) throw new Error('Kein Spielplan');
+    let raw = transferCache && Date.now() - transferCache.at < 30 * 60e3 && transferCache.raw;
+    if (!raw) {
+      const ranking = await kbFetch('/v4/leagues/6422780/ranking', { token });
+      const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+      raw = [];
+      for (let i = 0; i < users.length; i += 3) raw.push(...await Promise.all(users.slice(i, i + 3).map(async u => {
+        const base = { id: String(u.i), name: u.n, img: u.uim || null };
+        try { return { base, list: await fetchTransferList(token, u.i) }; } catch (e) { return { base, error: e.message }; }
+      })));
+    }
+    // Nur die laufende Halbserie: sie beginnt mit dem ersten Transfer nach der Rücksetzung der Liga.
+    const periods = transferPeriods(raw.flatMap(r => (r.list || []).map(t => Date.parse(t.dt))));
+    const from = periods[0]?.from ?? 0;
+    const sales = [];
+    for (const r of raw) for (const t of (r.list || [])) {
+      const at = Date.parse(t.dt);
+      if (t.tty !== 2 || t.pi == null || !(at >= from)) continue;
+      const next = kick.find(k => k.at > at);
+      if (!next || !next.finished) continue;
+      // Vor dem Anstoß zurückgekauft: der Verkäufer hatte ihn am Spieltag wieder, kein Pech.
+      if (r.list.some(b => b.tty === 1 && String(b.pi) === String(t.pi) && Date.parse(b.dt) > at && Date.parse(b.dt) < next.at)) continue;
+      sales.push({ seller: r.base, t, at, next });
+    }
+    const perf = new Map(); let failed = 0;
+    const ids = [...new Set(sales.map(x => String(x.t.pi)))];
+    for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+      try { perf.set(id, await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token })); } catch { failed++; }
+    }));
+    const lineups = new Map();
+    const lineupOf = async day => {
+      if (!lineups.has(day)) {
+        try { const r = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token }); lineups.set(day, new Map((r.us || []).map(u => [String(u.n || '').toLowerCase(), new Set((u.lp || []).filter(x => x != null).map(String))]))); }
+        catch { lineups.set(day, null); }
+      }
+      return lineups.get(day);
+    };
+    const items = []; let missing = 0;
+    for (const x of sales) {
+      const data = perf.get(String(x.t.pi));
+      const points = data ? pointFromPerformance(data, x.next.day, true) : null;
+      if (points == null) { missing++; continue; }
+      const buyer = x.t.othnm || null, lu = buyer ? await lineupOf(x.next.day) : null, bl = lu && lu.get(buyer.toLowerCase());
+      items.push({ id: String(x.t.pi), name: x.t.pn || '?', team: x.t.tid != null ? String(x.t.tid) : null, img: x.t.pim || null,
+        seller: x.seller, soldAt: x.t.dt, price: Number.isFinite(Number(x.t.trp)) ? Number(x.t.trp) : null, buyer,
+        buyerStarted: bl ? bl.has(String(x.t.pi)) : null, day: x.next.day, kickoff: new Date(x.next.at).toISOString(),
+        hoursBefore: Math.round((x.next.at - x.at) / 36e5), points });
+    }
+    items.sort((a, b) => b.points - a.points);
+    const value = { updatedAt: new Date().toISOString(), from: new Date(from).toISOString(), min: PECH_MIN, checked: items.length, missing, failedPlayers: failed,
+      failedManagers: raw.filter(r => r.error).map(r => r.base.name), items };
+    pechCache = { at: Date.now(), value };
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Transfer-Pech-Radar konnte nicht geladen werden.', detail: err.message }); }
 });
 
 app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
