@@ -23,7 +23,9 @@
    if(t.rule==='BD'){const x=(d.bd||[]).find(x=>same(x,mid,pid));return x?`Schnapszahl: ${fmt(x.points)} Punkte`:'Schnapszahl';}
    if(t.rule==='DD'){const w=(d.dd?.winners||[]).find(x=>same(x,mid)),l=d.dd?.lastPlace||[];return `Spieltagssieger mit ${fmt(w?.dayPoints)} Punkten. ${l.map(x=>`${x.manager} (${fmt(x.dayPoints)})`).join(' & ')} sucht sich einen aus.`;}
    if(t.rule==='MM'){const v=(d.mm?.values||[]).find(x=>same(x,mid));return v?`Die meisten Minuspunkte: ${fmt(v.negativeSum)}`:'Die meisten Minuspunkte';}
-   if(t.rule==='AH'){const m=d.ah?.mvp?.players?.[0];return m?`MVP des Spieltags: ${m.name} mit ${fmt(m.points)} Punkten`:'MVP des Spieltags aufgestellt';}
+   if(t.rule==='AH'){const all=d.ah?.mvp?.players||[],m=all.find(x=>String(x.id)===String(pid))||all[0];if(!m)return 'MVP des Spieltags aufgestellt';
+    // Gleichstand an der Spitze: alle MVPs nennen (Kevin-Wunsch), der eigene zuerst.
+    return all.length>1?`MVP des Spieltags (Gleichstand, ${all.length} MVPs mit ${fmt(m.points)} Punkten): ${[m,...all.filter(x=>x!==m)].map(x=>x.name).join(', ')}`:`MVP des Spieltags: ${m.name} mit ${fmt(m.points)} Punkten`;}
    if(['RK','BN','UM'].includes(t.rule)){const x=(ae?.actions||[]).find(x=>x.rule===t.rule&&same(x,mid,pid));return x?.reason||'';}
    if(t.rule==='TL')return 'Teamlimit 1: nur ein Spieler pro Verein';
    if(t.rule==='EZ'){const c=(d.conflicts||[]).find(x=>String(x.playerId)===String(pid));return (c?.details||[]).map(x=>`${x.rule}: ${x.reason}`).join(' · ');}
