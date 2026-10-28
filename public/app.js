@@ -1151,7 +1151,7 @@ function centerTodoHtml(){
    out.push('Der bestimmte Manager stellt am nächsten Spieltag einen Spieler weniger auf.');}
   if(t.rule==='AH'){const mv=d.ah?.mvp,p=(mv?.players||[]).find(x=>String(x.id)===String(pid))||(mv?.players||[])[0];
    if(p)out.push(`MVP des Spieltags: ${safe(p.name)} (${safe(p.team)}), ${fmt(p.points)} Punkte.`);
-   if((mv?.players||[]).length>1)out.push('<span class="error">Gleichstand an der Spitze, bitte prüfen.</span>');
+   if((mv?.players||[]).length>1)out.push('Gleichstand an der Spitze: AH gilt für alle MVPs.');
    out.push('Verkauf an den Höchstbietenden, ohne Gebot an Kickbase. Gebote verdeckt in der Kickbase-App. Nicht über die Dämonische Drehtür.');
    if(mv&&!mv.reliable)out.push('<span class="error">Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.</span>');
    if(mv?.top?.length)out.push(`Die besten fünf: ${mv.top.map(x=>`${safe(x.name)} ${fmt(x.points)}`).join(' · ')}`);}
