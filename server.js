@@ -2994,7 +2994,10 @@ app.get('/api/transfer-pech', async (req, res) => {
       if (!next || !next.finished) continue;
       // Vor dem Anstoß zurückgekauft: der Verkäufer hatte ihn am Spieltag wieder, kein Pech.
       if (r.list.some(b => b.tty === 1 && String(b.pi) === String(t.pi) && Date.parse(b.dt) > at && Date.parse(b.dt) < next.at)) continue;
-      sales.push({ seller: r.base, t, at, next });
+      // Gewinn/Verlust (Kevin): Verkaufspreis minus letzter Kaufpreis davor; ohne Kauf im Verlauf (Startkader) keiner.
+      const buy = r.list.filter(b => b.tty === 1 && String(b.pi) === String(t.pi) && Date.parse(b.dt) < at).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt))[0];
+      const diff = buy && Number.isFinite(Number(buy.trp)) && Number.isFinite(Number(t.trp)) ? Number(t.trp) - Number(buy.trp) : null;
+      sales.push({ seller: r.base, t, at, next, diff });
     }
     const perf = new Map(); let failed = 0;
     const ids = [...new Set(sales.map(x => String(x.t.pi)))];
@@ -3016,7 +3019,7 @@ app.get('/api/transfer-pech', async (req, res) => {
       if (points == null) { missing++; continue; }
       const buyer = x.t.othnm || null, lu = buyer ? await lineupOf(x.next.day) : null, bl = lu && lu.get(buyer.toLowerCase());
       items.push({ id: String(x.t.pi), name: x.t.pn || '?', team: x.t.tid != null ? String(x.t.tid) : null, img: x.t.pim || null,
-        seller: x.seller, soldAt: x.t.dt, price: Number.isFinite(Number(x.t.trp)) ? Number(x.t.trp) : null, buyer,
+        seller: x.seller, soldAt: x.t.dt, diff: x.diff, buyer,
         buyerStarted: bl ? bl.has(String(x.t.pi)) : null, day: x.next.day, kickoff: new Date(x.next.at).toISOString(),
         hoursBefore: Math.round((x.next.at - x.at) / 36e5), points });
     }
