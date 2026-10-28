@@ -1701,7 +1701,7 @@ function kblBumsIntro({hit,clean,half,RN}){
 
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
- for(const id of ['preview','bericht','overview','stats','table','rankHistory','progressPanel']){
+ for(const id of ['preview','overview','bericht','stats','table','rankHistory','progressPanel']){
   const sec=document.getElementById(id),head=sec?.querySelector(':scope>.sectionhead');if(!head)continue;
   const fold=v=>{sec.classList.toggle('kbl-folded',v);head.setAttribute('aria-expanded',String(!v));};
   fold(true);
