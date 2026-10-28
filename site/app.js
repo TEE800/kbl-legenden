@@ -1593,7 +1593,6 @@ async function renderBumsTabelle(){
  for(const r of rows)r.clean=inHalf.filter(d=>r.per[d]===0).length;
  const wwMax=Math.max(0,...rows.map(r=>r.clean)),wwTop=wwMax?rows.filter(r=>r.clean===wwMax):[];
  const wwRows=rows.filter(r=>r.clean>0).sort((a,b)=>b.clean-a.clean||a.name.localeCompare(b.name,'de'));
- bumsIntroData={hit:hit.map(r=>({name:r.name,count:r.count,rules:r.rules,out:r.out,in:r.in})),clean:wwTop.map(r=>r.name),cleanN:wwMax,half:from===1?'Hinrunde':'Rückrunde',RN};
  const total=hit.reduce((s,r)=>s+r.count,0),ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules))ruleTot[k]=(ruleTot[k]||0)+n;
  const topRule=Object.entries(ruleTot).sort((a,b)=>b[1]-a[1])[0];
  const medal=['🥇','🥈','🥉'],podRanks=[...new Set(hit.map(rankOf))].filter(x=>x<=3);
@@ -1612,7 +1611,6 @@ async function renderBumsTabelle(){
   `<div class="bums-legend">${legend}</div></details>${bumsDaysHtml(days,inHalf,RN)}${bumsStatsHtml(rows,hit,inHalf,days,RN)}${bumsPairsHtml(rows)}`:'<p class="muted">Noch keine Bumsungen erfasst.</p>')+
   `<p class="muted tiny">${inHalf.some(d=>days[d].manual)?`Von Hand nachgetragen: ST ${inHalf.filter(d=>days[d].manual).join(', ')}. `:''}${from===1?'Hinrunde':'Rückrunde'} · ${inHalf.length} von ${finished.filter(d=>d>=from&&d<=to).length} abgeschlossenen Spieltagen erfasst. Übernommen wird automatisch, sobald ein Spieltag in der BumsParade vollständig geprüft ist. Vorläufig: Ändert sich dort etwas, zieht die Tabelle nach.</p>`+
   (missing.length?`<p><button type="button" class="ghost" id="bumsFill">Fehlende Spieltage nachholen (ST ${missing.join(', ')})</button> <span class="muted tiny" id="bumsFillMsg"></span></p>`:'');
- kblBumsIntroTry();
 }
 document.addEventListener('click',async e=>{
  const b=e.target.closest('#bumsFill');if(!b)return;
@@ -1683,71 +1681,6 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
-// BumsTabelle: Beim Öffnen des Reiters fliegen einzelne Statistiken durchs Bild (Kevin-Wunsch: meiste BD usw.),
-// der Bumskönig zum Schluss groß in der Mitte. Antippen, Esc oder Scrollen überspringt.
-let bumsIntroData=null,bumsIntroPending=false,bumsIntroSkipOnce=false;
-function kblBumsIntroTry(){
- if(!bumsIntroPending||!bumsIntroData)return;
- if(!document.querySelector('.kbl-view[data-view="penalties"]')?.classList.contains('kbl-current')){bumsIntroPending=false;return;}
- bumsIntroPending=false;
- if(!bumsIntroData.hit.length||matchMedia('(prefers-reduced-motion: reduce)').matches||!Element.prototype.animate)return;
- kblBumsIntro(bumsIntroData);
-}
-function kblBumsIntro({hit,clean,cleanN,half,RN}){
- document.querySelector('.bums-intro')?.remove();
- // Einzelne Statistiken: je Regel der Spitzenreiter (häufigste Regeln zuerst, max. 4), meiste abgegeben/bekommen, zum Schluss der Bumskönig.
- const best=f=>{const m=Math.max(0,...hit.map(f));return m?{n:m,who:hit.filter(r=>f(r)===m).map(r=>r.name)}:null;};
- const ruleTot={};for(const r of hit)for(const [k,n] of Object.entries(r.rules||{}))ruleTot[k]=(ruleTot[k]||0)+n;
- const cards=[];
- for(const k of Object.keys(ruleTot).filter(k=>k!=='EZ').sort((a,b)=>ruleTot[b]-ruleTot[a]).slice(0,4)){const x=best(r=>r.rules?.[k]||0);if(x)cards.push({emo:'🎯',title:`Meiste ${k}`,sub:RN[k]||k,...x,unit:'×'});}
- const o=best(r=>r.out||0);if(o)cards.push({emo:'📤',title:'Meiste abgegeben',...o,unit:'×'});
- const i=best(r=>r.in||0);if(i)cards.push({emo:'📥',title:'Meiste bekommen',...i,unit:'×'});
- const king={...best(r=>r.count)};
- const ov=document.createElement('div');ov.className='bums-intro';ov.setAttribute('aria-hidden','true');
- ov.innerHTML=`<div class="bums-intro-title">💥 BumsTabelle<small>${escapeHtml(half)}</small></div><div class="bums-intro-skip">Antippen zum Überspringen</div>`;
- document.body.appendChild(ov);
- let done=false;const timers=[];
- const end=()=>{if(done)return;done=true;timers.forEach(clearTimeout);removeEventListener('keydown',key);removeEventListener('wheel',end);
-  ov.animate([{opacity:1},{opacity:0}],{duration:350,fill:'forwards'}).onfinish=()=>ov.remove();};
- const key=e=>{if(e.key==='Escape')end();};
- ov.addEventListener('click',end);addEventListener('keydown',key);addEventListener('wheel',end,{passive:true});
- ov.animate([{opacity:0},{opacity:1}],{duration:300,fill:'forwards'});
- ov.querySelector('.bums-intro-title').animate([{transform:'scale(.4) rotate(-8deg)',opacity:0},{transform:'scale(1.12) rotate(2deg)',opacity:1,offset:.6},{transform:'scale(1) rotate(0)',opacity:1}],{duration:600,easing:'ease-out',fill:'forwards'});
- const names=w=>w.map(n=>mgrName(n)).join('<br>');
- // Kevin-Vorgabe: je Welle 3 Karten gleichzeitig, verstreut übers Bild und leicht schräg hängend;
- // weich hereinschweben (0,8 s), 3 s stehen, hinaus.
- const per=3,step=4000,wide=matchMedia('(min-width:760px)').matches,waves=Math.ceil(cards.length/per);
- const SLOTS=wide?[[[24,44,-5],[52,68,4],[78,42,-3]],[[27,68,4],[50,42,-4],[75,66,6]]]
-  :[[[45,30,-5],[56,53,4],[44,77,-3]],[[55,30,4],[44,53,-4],[56,77,5]]];
- const FROM=[[-130,-30],[20,120],[130,-25],[-120,40],[-15,-120],[125,35]];
- cards.forEach((c,idx)=>{const w=Math.floor(idx/per),j=idx%per;
-  timers.push(setTimeout(()=>{if(done)return;
-  const el=document.createElement('div');el.className='bums-intro-card';
-  el.innerHTML=`<small>${c.emo} ${escapeHtml(c.title)}</small>${c.sub?`<em>${escapeHtml(c.sub)}</em>`:''}<b>${c.who.map(n=>`<i class="bi-n">${mgrName(n)}</i>`).join(', ')}</b><span>${c.n}${c.unit}</span>`;
-  const [l,t,rot]=SLOTS[w%2][j],[fx,fy]=FROM[idx%FROM.length];
-  el.style.left=l+'%';el.style.top=t+'%';
-  ov.appendChild(el);
-  const at=(x,y,r,sc=1)=>`translate(calc(-50% + ${x}vw),calc(-50% + ${y}vh)) rotate(${r}deg) scale(${sc})`;
-  el.animate([
-   {transform:at(fx,fy,rot*5,.7),opacity:0,easing:'cubic-bezier(.16,1,.3,1)'},
-   {transform:at(0,0,rot),opacity:1,offset:.2},
-   {transform:at(0,-1,rot*.6),offset:.55,easing:'ease-in-out'},
-   {transform:at(0,0,rot),opacity:1,offset:.86,easing:'cubic-bezier(.5,0,.75,0)'},
-   {transform:at(-fx*.8,-fy*.4+30,rot*-4,.8),opacity:0}],
-   {duration:4400,fill:'forwards'}).onfinish=()=>el.remove();
- },500+w*step+j*180));});
- const cardsEnd=waves?waves*step+300:0;
- timers.push(setTimeout(()=>{if(done)return;
-  const k=document.createElement('div');k.className='bums-intro-king';
-  k.innerHTML=`<div class="bums-intro-crown">👑</div><div class="bums-intro-kname">${names(king.who)}</div><div class="bums-intro-kcount">${king.n}× gebumst</div><small>${king.who.length>1?'Die Bumskönige':'Bumskönig'} der ${escapeHtml(half)}</small>`+
-   (clean.length?`<div class="bums-intro-clean">😇 Meiste Weiße Westen: ${clean.map(n=>mgrName(n)).join(', ')} · ${cleanN} Spieltag${cleanN===1?'':'e'} ohne Bumsung</div>`:'');
-  ov.appendChild(k);
-  k.animate([{transform:'translate(-50%,-50%) scale(.1) rotate(-25deg)',opacity:0},{transform:'translate(-50%,-50%) scale(1.15) rotate(4deg)',opacity:1,offset:.55},{transform:'translate(-50%,-50%) scale(.96) rotate(-2deg)',offset:.8},{transform:'translate(-50%,-50%) scale(1) rotate(0)',opacity:1}],{duration:800,easing:'ease-out',fill:'forwards'});
-  k.querySelector('.bums-intro-crown').animate([{transform:'translateY(-30px)'},{transform:'translateY(0)'},{transform:'translateY(-8px)'},{transform:'translateY(0)'}],{duration:900,delay:500,easing:'ease-out'});
-  timers.push(setTimeout(end,2600));
- },500+cardsEnd));
-}
-
 // Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
  for(const id of ['preview','overview','bericht','stats','table','rankHistory','progressPanel']){
@@ -1769,8 +1702,7 @@ window.kblCollapseView=view=>{
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
  if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accRadarOpen=true;accLiveLoad();}
  if(view==='profiles')profOpen.clear();
- if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;bumsIntroPending=!bumsIntroSkipOnce;bumsIntroSkipOnce=false;setTimeout(kblBumsIntroTry,0);}
- else document.querySelector('.bums-intro')?.remove();
+ if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
 };
 
 // Managerprofil: Kachel „Bumsungen“ führt zur BumsTabelle und zeigt die Zeile des Managers.
@@ -1778,7 +1710,7 @@ function kblBumsFocus(name){const tab=$('#bumsTab');if(!tab)return false;tab.ope
  const row=[...document.querySelectorAll('#bumsTable .bums-row')].find(r=>r.dataset.bumsName===name);
  if(row){row.querySelector('details.bums-dir')?.setAttribute('open','');row.classList.add('bums-focus');row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.classList.remove('bums-focus'),3000);}
  else tab.scrollIntoView({behavior:'smooth',block:'start'});return true;}
-function kblBumsGoto(el){const n=el.dataset.bumsGoto;bumsIntroSkipOnce=location.hash!=='#penalties';location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
+function kblBumsGoto(el){const n=el.dataset.bumsGoto;location.hash='#penalties';let tries=0;const go=()=>{if(!kblBumsFocus(n)&&++tries<15)setTimeout(go,300);};setTimeout(go,250);}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-bums-goto]');if(t)kblBumsGoto(t);});
 document.addEventListener('keydown',e=>{const t=e.target.closest?.('[data-bums-goto]');if(t&&(e.key==='Enter'||e.key===' ')){e.preventDefault();kblBumsGoto(t);}});
 
