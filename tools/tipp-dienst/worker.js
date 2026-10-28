@@ -526,7 +526,7 @@ async function handleBericht(req, env, cors, parts, body) {
 // Überschriften zählen nicht) mit Emojis reagieren, je Emoji und Absatz einmal pro Gerät (Gerätenummer kbl-vid wie bei
 // der Nutzung, keine Anmeldung). KV reakt:<day>:<vid>, die Auswahl steht in den Metadaten ({r: {Abschnitt: "Emoji-Nummern"}}),
 // darum reicht zum Zählen ein list() ohne einzelne Abrufe. Nur für freigegebene Berichte.
-const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺', '💀', '🤮', '👎', '👀', '⛺', '💦', '🍆']; // nur hinten anhängen, die Nummern stehen in KV (je Emoji ein Zeichen, Basis 36)
+const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺', '💀', '🤮', '👎', '👀', '⛺', '💦', '🍆', '😮']; // nur hinten anhängen, die Nummern stehen in KV (je Emoji ein Zeichen, Basis 36)
 const REAKT_VID = /^[a-z0-9]{8,32}$/;
 async function reaktState(env, day, vid, own) {
   const counts = {}; let mine = {}, cursor;
