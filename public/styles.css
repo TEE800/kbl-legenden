@@ -964,3 +964,7 @@ body.zr-on .mobilenav{display:none}
 .ber-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .ber-foot{margin:16px 0 0}
 @media(max-width:560px){#bericht .ber-title{font-size:19px}.ber-pill{max-width:55%}}
+/* Zeitraffer: Punkteänderungen untereinander (Kevin-Wunsch) */
+.zr-fixes{display:flex;flex-direction:column;gap:1px;margin-top:2px}
+.zr-fixl{white-space:nowrap}.zr-fixl small{opacity:.75;font-weight:600}
+.zr-flash .zr-fixes{align-items:center;font-weight:600}
