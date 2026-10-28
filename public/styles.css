@@ -904,3 +904,18 @@ body.zr-on .mobilenav{display:none}
 .zr-vid{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:2px 0 8px}
 .zr-vid button{min-height:36px;padding:6px 12px}
 .zr.zr-full .zr-vid{display:none}
+
+/* Spieltagsbericht auf der Startseite (public/bericht.js) */
+#bericht[hidden]{display:none!important}
+#bericht{margin-top:18px}
+.ber-pill{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold)}
+#bericht .ber-title{font:900 22px Georgia,serif;color:var(--gold-strong);margin:0 0 12px;line-height:1.25}
+.ber-body{color:var(--text-2);line-height:1.6;max-width:780px}
+.ber-body p{margin:0 0 12px}
+.ber-body b{color:var(--text)}
+.ber-h{color:var(--gold);font-size:16px;margin:20px 0 8px}
+.ber-body ul,.ber-body ol{margin:0 0 12px;padding-left:20px}
+.ber-body li{margin:4px 0}
+.ber-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.ber-foot{margin:16px 0 0}
+@media(max-width:560px){#bericht .ber-title{font-size:19px}.ber-pill{max-width:55%}}
