@@ -55,10 +55,19 @@
  document.addEventListener('focusout',e=>{if(e.target.matches?.('[data-mvp-player]'))setTimeout(()=>{const b=e.target.parentElement?.querySelector('.mvp-suggest');if(b&&!b.contains(document.activeElement))b.hidden=true;},200);});
  document.addEventListener('pointerdown',e=>{const b=e.target.closest?.('[data-mvp-pick]');if(b)e.preventDefault();});
  document.addEventListener('click',e=>{const b=e.target.closest?.('[data-mvp-pick]');if(!b)return;const input=b.closest('.mvp-pick').querySelector('input');input.value=b.dataset.mvpPick;b.parentElement.hidden=true;});
+ // Bester Tipper des Vorspieltags bestimmt die Tippregel (Kevin-Vorgabe), Server: tippBest (result.best).
+ const bestIds=d=>d.prevBest?.managers||[];
+ const bestNames=d=>bestIds(d).map(id=>{const m=d.managers.find(x=>x.id===id);return m?mn(m.name,m.id):null;}).filter(Boolean);
+ function bestLine(d){
+  if(!d.prevBest)return '';
+  const n=bestNames(d);
+  if(!n.length)return `<small class="muted">Wer die Regel bestimmt, steht noch nicht fest: Der beste Tipper von Spieltag ${d.prevBest.day} ist noch nicht ausgewertet.</small>`;
+  return `<small class="muted">Regel bestimmt von <b>${n.join(', ')}</b> (bester MVP-Tipper an Spieltag ${d.prevBest.day})</small>`;
+ }
  function ruleBox(d){
-  if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p></div>`;
+  if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b></small>`:''}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':kindAuto(d)?'':`<small class="muted mvp-wertung">Wertung (vom Admin gewählt): <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':kindAuto(d)?'':`<small class="muted mvp-wertung">Wertung (vom Admin gewählt): <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -572,6 +581,8 @@
   if(r.rows?.length){
    const names=d.managers.filter(m=>r.winners.includes(m.id)).map(m=>m.name);
    h+=`<p>Vorschlag für den Joker: <b>${names.length?esc(names.join(', ')):'niemand'}</b>${r.status==='ok'?'':' (bitte prüfen)'}. Entschieden wird in der BumsParade.</p>`;
+   const best=(r.best?.managers||[]).map(id=>d.managers.find(m=>m.id===id)).filter(Boolean);
+   h+=best.length?`<p>Bester Tipper: <b>${best.map(m=>mn(m.name,m.id)).join(', ')}</b>${r.best.how==='closest'?' (kein Gewinner, am nächsten dran)':''}. ${best.length>1?'Sie bestimmen':'Er bestimmt'} die Tippregel für Spieltag ${d.day+1}.</p>`:`<p class="muted">Bester Tipper: noch nicht bestimmbar.</p>`;
    if(d.admin&&!STATIC&&names.length)h+=`<button type="button" class="ghost" id="mvpToNpc">Vorschlag als Joker-Gewinner übernehmen</button> <span class="muted" id="mvpNpcMsg"></span>`;
   }
   return h;
@@ -597,7 +608,7 @@
    $('#mvpCodes').innerHTML=withCode.length?'<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code vergessen hat.</p>'+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
    $('#mvpRuleText').value=d.rule?.text||'';
    $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
-   $('#mvpRuleBy').value=d.rule?.by?.id||'';
+   $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
    $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
    $('#mvpRuleWertung').value=d.rule?.wertung||'';
   }
@@ -629,6 +640,10 @@
      if(x?.managers)for(const m of d.managers){const o=x.managers.find(y=>y.id===m.id);if(o?.tip&&!m.tip){m.tip=o.tip;m.tipped=true;}}}
    }
    if(d.status==='finished'&&await closingDay()===day)d.closing=true;
+   if(d.status!=='finished'&&day>1&&overview?.days?.find(x=>x.day===day-1)?.status==='finished'){
+    const p=await get(`/api/mvp-tipps/${day-1}`).catch(()=>null);
+    if(p?.result&&!['missing','empty'].includes(p.result.status))d.prevBest={day:day-1,managers:p.result.best?.managers||[]};
+   }
    data=d;render();}
   catch(e){root.className='error';root.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
  }
