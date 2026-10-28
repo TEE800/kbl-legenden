@@ -71,7 +71,7 @@
   ['marktwert\\w*|mio|millionen?','Marktwert'],['minus\\w*|negativ\\w*','Minuspunkte'],['tor|tore|treffer|torschuetz\\w*|vorlage\\w*|assists?','Tore/Vorlagen'],['elfmeter\\w*','Elfmeter'],
   ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
  function ruleUnclear(d){
-  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const kind=kindOf(d),c=condsOf(d);let t=' '+n(d.rule?.text)+' ';
   if(c.includes('noGoal'))t=t.replace(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung *(\([^)]*\))?/g,' ');
   if(c.includes('field'))t=t.replace(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/g,' ');
@@ -140,7 +140,7 @@
  // Wertung der Tippregel (vom Admin eingestellt); alte Einträge mit Vorlage werten nach ihrer Vorlage.
  // Ohne eingestellte Wertung aus dem Regeltext erkannt (gleiche Funktion wie detectWertung in server.js).
  function detectWertung(text){
-  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   if(!t.trim())return null;
   const pts=/punkt|zahl/.test(t);
   if(/mvp/.test(t)){
@@ -159,13 +159,13 @@
  const kindOf=d=>d.rule?.wertung||(d.rule&&d.rule.id!=='eigene'?d.rule.id:detectWertung(d.rule?.text));
  // Vereine, die der Regeltext nennt (gleiche Funktion wie in server.js). Leer = alle Spieler zählen.
  function ruleTeams(text,teams){
-  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const t=n(text);
   return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
  }
  // Bedingungen an den Spieler (gleiche Erkennung wie ruleConds in server.js): field = kein Torwart, noGoal = keine direkte Torbeteiligung.
  function ruleConds(text){
-  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss'),c=[];
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
   if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
   if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
   return c;
