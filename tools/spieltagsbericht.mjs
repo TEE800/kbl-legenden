@@ -18,7 +18,7 @@ const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
 // Falls ein Modellname nicht (mehr) existiert (Fehler 404), nacheinander diese versuchen.
 const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
 // Bei Änderungen an SYSTEM oder den Fakten hochzählen: der Bericht des neuesten Spieltags wird dann einmal neu geschrieben.
-const VORGABEN = 2;
+const VORGABEN = 3;
 const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
@@ -116,6 +116,10 @@ function facts(day) {
   const names = Object.assign({}, ...(read(`lineup-snapshots_${day}.json`)?.snapshots || []).map(s => s.playerNames || {}));
   const plaus = new Map((acc.plausibility || []).map(p => [String(p.managerId), p]));
 
+  // Auflagen aus der Abrechnung des Vorspieltags (z. B. Magic Miyoshi: mit einem Spieler weniger antreten). Eine dadurch leere
+  // Position ist eine Strafe, kein eigener Fehler (Kevin, ST 7: Stammler9 hatte MM von Cello).
+  const prevBums = day > 1 ? (settlement(day - 1)?.bums || read('bumsungen.json')?.days?.[day - 1]?.managers || {}) : {};
+  const auflagen = id => (prevBums[id]?.moves || []).filter(m => (m.richtung || (m.d === 'i' ? 'bekommen' : '')) === 'bekommen').map(m => ({ regel: RULE_NAMES[m.regel || m.r] || m.regel || m.r, text: m.text || m.t }));
   const manager = ids.map(i => {
     const pts = days.map(d => dayPts(i, d)), last = pts[day - 1];
     const own = pts.filter(Number.isFinite);
@@ -140,6 +144,8 @@ function facts(day) {
       unterLigaschnittInFolge: streak, ueberLigaschnittInFolge: streakUp,
       abstandZumVordermann: aboveSp != null ? aboveSp - u(day, i).sp : null, vorsprungAufHintermann: belowSp != null ? u(day, i).sp - belowSp : null,
       leerePositionen: empty, strafeLeerePositionen: 100 * empty,
+      auflagenVomVorspieltag: auflagen(i),
+      ...(empty ? { leerePositionGrund: auflagen(i).some(x => x.regel === 'Magic Miyoshi') ? `erzwungen durch Magic Miyoshi (${auflagen(i).find(x => x.regel === 'Magic Miyoshi').text}), kein eigener Fehler` : 'keine Auflage bekannt, also selbst verschuldet' } : {}),
       spieltagPlatzOhneLeerePositionen: empty ? 1 + ids.filter(j => j !== i && dayPts(j, day) > ohneLeere).length : undefined,
       ...(sumOk && top ? {
         topSpieler: { ...top, anteilProzent: last > 0 ? round(100 * top.punkte / last) : null, spieltagPunkteOhneIhn: last - top.punkte, spieltagPlatzOhneIhn: 1 + ids.filter(j => j !== i && dayPts(j, day) > last - top.punkte).length },
@@ -212,6 +218,7 @@ Harte Regeln für Zahlen:
 - Fehlt etwas, lass es weg. Wenn ein Feld „nicht sicher“ sagt, nicht verwenden.
 - Spielerpunkte, Platzierungen und Namen exakt wie im JSON schreiben.
 - Behaupte keine Platzierung, keinen Sieg und keine Serie, die nicht ausdrücklich als Feld im JSON steht (z. B. wer an welchem Spieltag Sieger war: nur aus spieltagPlatzJeSpieltag, Platz 1 = Sieger). Keine Folgerungen wie „hätte“, „wäre“, außer das Feld steht so im JSON.
+- Leere Positionen: Steht bei leerePositionGrund „erzwungen durch Magic Miyoshi“, war es eine Strafe, kein Fehler des Managers. Dann stichelst du gegen den, der sie verhängt hat, oder über das Pech, nie über „vergessen“. Auflagen aus dem Vorspieltag (auflagenVomVorspieltag) erklären oft schwache Spieltage, nutze sie.
 - Überschriften müssen zum Inhalt passen (z. B. nicht „Treffer“ schreiben, wenn es 0 Treffer gab).
 - Schreibe NIE Feldnamen oder JSON-Schreibweise in den Text (nicht „schnittLetzte3“, „platzVerlauf“, „[1,1,3]“ usw.), sondern formuliere sie in normalem Deutsch („im Schnitt der letzten drei Spieltage“, „sechsmal in Folge Erster“).
 - Der Bericht muss vollständig sein: Lieber kürzer als mitten im Satz aufhören.
@@ -284,6 +291,14 @@ try {
   else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} ist freigegeben.`);
   else if (hasDraft && neu !== day) say(`Spieltagsbericht ${day}: Entwurf liegt vor und wartet auf Freigabe in der App.`);
   else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
+  else if (API && CODE && dienstOk && fs.existsSync(path.join(process.cwd(), 'tools', 'bericht-vorlagen', `${day}.md`))) {
+    // Von Kevin im Chat abgesegneter Text (Vorlage) wird als Entwurf übernommen, ohne Claude-Aufruf. Danach Datei löschen.
+    const text = fs.readFileSync(path.join(process.cwd(), 'tools', 'bericht-vorlagen', `${day}.md`), 'utf8');
+    const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim(), createdAt = new Date().toISOString();
+    await post(`/bericht/${day}/entwurf`, { title, text, model: 'Vorlage (im Chat abgesegnet)', vorgaben: VORGABEN, createdAt });
+    store.entwuerfe[day] = { vorgaben: VORGABEN, createdAt, vorlage: true };
+    say(`Spieltagsbericht ${day}: Vorlage als Entwurf übernommen, wartet auf Freigabe.`);
+  }
   else if (!process.env.ANTHROPIC_API_KEY) say(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
   else if (API && CODE && !dienstOk) say(`Spieltagsbericht ${day}: Tippdienst kennt /bericht noch nicht (worker.js bei Cloudflare aktualisieren) oder ist nicht erreichbar. Kein Claude-Aufruf.`);
   else if (!API || !CODE) say(`Spieltagsbericht ${day}: ${!API ? 'Tippdienst (KBL_TIPP_DIENST)' : 'Geheimnis KBL_ADMIN_CODE'} fehlt, der Entwurf hätte keinen privaten Platz. Wird übersprungen.`);
