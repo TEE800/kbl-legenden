@@ -514,6 +514,29 @@ app.get('/api/lineup-snapshots/:day', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Spieltagspunkte der gespeicherten Startelfen (Anzeige "auf dem Rasen" im Reiter Aufstellungen).
+// Live hoechstens alle 5 Min., beendete Spieltage stuendlich neu (Kickbase korrigiert nachtraeglich).
+const lineupPointsCache = new Map();
+app.get('/api/lineup-points/:day', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const day = validDay(req.params.day);
+  if (!day) return res.status(400).json({ error: 'Ungültiger Spieltag.' });
+  try {
+    const st = (await loadMatchdays()).days.find(d => d.day === day)?.status;
+    if (st !== 'live' && st !== 'finished') return res.json({ day, status: st || 'unknown', points: {} });
+    const c = lineupPointsCache.get(day);
+    if (c && c.status === st && Date.now() - c.at < (st === 'live' ? 5 : 60) * 60e3) return res.set('Cache-Control', 'no-store').json(c.value);
+    const ids = [...new Set(Object.values(readSnapshots()).filter(r => r.day === day).flatMap(r => (r.playerIds || []).map(String)))];
+    const points = {};
+    for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+      try { const r = await dayPlayerPoints(token, id, day, st === 'finished'); points[id] = { points: r.points, state: r.state }; } catch { points[id] = { points: null, state: 'error' }; }
+    }));
+    const value = { day, status: st, updatedAt: new Date().toISOString(), points };
+    lineupPointsCache.set(day, { at: Date.now(), status: st, value });
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(502).json({ error: 'Punkte nicht abrufbar.', detail: err.message }); }
+});
 
 // KBL 4.9.5: Aufstellungs-Vollstaendigkeit ist auch vor Spieltagsende abrufbar.
 app.get('/api/lineup-coverage/:day', async (req,res) => {
@@ -1759,7 +1782,7 @@ app.get('/api/mvp-tipps/players',async(req,res)=>{
  try{const all=await loadAllPlayers(token);
   const photos=await playerPhotos().catch(e=>{console.log('Spielerfotos (Challenge-Konto) nicht abrufbar:',e.message);return null;});
   if(photos){let diff=0;for(const [id,p] of all.players)if(photos.get(String(id))&&photos.get(String(id))!==p.img)diff++;console.log(`Spielerfotos ueber Challenge-Konto: ${photos.size}, davon ${diff} anders als beim Dienst-Login`);}
-  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
+  res.set('Cache-Control','no-store').json({players:[...all.players.entries()].map(([id,p])=>{const img=photos?.get(String(id))||p.img;return {id:String(id),name:p.name,team:p.team,...(img?{img}:{}),...(p.teamImg?{teamImg:p.teamImg}:{}),...(p.pos?{pos:p.pos}:{})};}).sort((a,b)=>a.name.localeCompare(b.name,'de')),failedTeams:all.failedTeams});
  }catch(e){res.status(502).json({error:'Spielerliste nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps',async(req,res)=>{
