@@ -71,7 +71,7 @@
   ['marktwert\\w*|mio|millionen?','Marktwert'],['minus\\w*|negativ\\w*','Minuspunkte'],['tor|tore|treffer|torschuetz\\w*|vorlage\\w*|assists?','Tore/Vorlagen'],['elfmeter\\w*','Elfmeter'],
   ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
  function ruleUnclear(d){
-  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const kind=kindOf(d),c=condsOf(d);let t=' '+n(d.rule?.text)+' ';
   if(c.includes('noGoal'))t=t.replace(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung *(\([^)]*\))?/g,' ');
   if(c.includes('field'))t=t.replace(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/g,' ');
@@ -85,12 +85,12 @@
  function unclearLine(d){
   if(!kindOf(d)||kindOf(d)==='keine')return '';
   const u=ruleUnclear(d);
-  return u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil der Regel wertet die App nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende bitte selbst prüfen.</small>`:'<small class="muted mvp-wertung">✓ Die App versteht die ganze Regel.</small>';
+  return u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil der Regel wertet die BumsKI nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende bitte selbst prüfen.</small>`:'<small class="muted mvp-wertung">✓ Die BumsKI versteht die ganze Regel.</small>';
  }
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die App${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die BumsKI${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -140,7 +140,7 @@
  // Wertung der Tippregel (vom Admin eingestellt); alte Einträge mit Vorlage werten nach ihrer Vorlage.
  // Ohne eingestellte Wertung aus dem Regeltext erkannt (gleiche Funktion wie detectWertung in server.js).
  function detectWertung(text){
-  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   if(!t.trim())return null;
   const pts=/punkt|zahl/.test(t);
   if(/mvp/.test(t)){
@@ -159,13 +159,13 @@
  const kindOf=d=>d.rule?.wertung||(d.rule&&d.rule.id!=='eigene'?d.rule.id:detectWertung(d.rule?.text));
  // Vereine, die der Regeltext nennt (gleiche Funktion wie in server.js). Leer = alle Spieler zählen.
  function ruleTeams(text,teams){
-  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const t=n(text);
   return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
  }
  // Bedingungen an den Spieler (gleiche Erkennung wie ruleConds in server.js): field = kein Torwart, noGoal = keine direkte Torbeteiligung.
  function ruleConds(text){
-  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss'),c=[];
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
   if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
   if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
   return c;
@@ -321,13 +321,16 @@
    return {at:f.at,fin:!!f.fin,players,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
   }));
  }
+ // Kevin-Wunsch: Punkteänderungen untereinander, je Spieler eine Zeile mit der Differenz.
+ const zrDiff=z=>`${z.to>z.from?'+':'−'}${fmt(Math.abs(z.to-z.from))}`;
+ const zrFixLines=fixes=>fixes.map(z=>`<span class="zr-fixl">${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b> <small>(${zrDiff(z)})</small></span>`).join('');
  function zrMoments(frames){
   const out=[];let lastBest='',lastLead='';
   frames.forEach((f,i)=>{
    const b=(f.best?.players||[]).map(p=>p.id).sort().join(),l=f.lead.map(r=>r.m.id).sort().join();
-   const fx=f.fixes.map(x=>`${esc(x.name)} ${fmt(x.from)} → <b>${fmt(x.to)}</b>`).join(', ');
-   if(f.fin)out.push({i,ico:'🏁',fix:!!fx,txt:`Spieltag beendet, Wertung nach den Kickbase-Leistungsdaten${f.best?`: <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> mit ${fmt(f.best.points)}`:''}${fx?`<br><small>Geändert: ${fx}</small>`:''}`});
-   else if(fx)out.push({i,ico:'✏️',fix:true,txt:`Korrektur nach Abpfiff: ${fx}`});
+   const fx=zrFixLines(f.fixes);
+   if(f.fin)out.push({i,ico:'🏁',fix:!!fx,txt:`Spieltag beendet, Wertung nach den Kickbase-Leistungsdaten${f.best?`: <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> mit ${fmt(f.best.points)}`:''}${fx?`<small class="zr-fixes">Geändert:${fx}</small>`:''}`});
+   else if(fx)out.push({i,ico:'✏️',fix:true,txt:`Korrektur nach Abpfiff:<span class="zr-fixes">${fx}</span>`});
    if(b&&b!==lastBest&&!f.fin)out.push({i,ico:'👑',txt:`${f.best.players.map(p=>`<b>${esc(p.name)}</b>`).join(', ')} ${i?'übernimmt':'vorne'} mit ${fmt(f.best.points)} Punkten`});
    if(l!==lastLead&&f.lead.length)out.push({i,ico:'🕺',txt:`Führend: ${f.lead.map(r=>`<b>${esc(r.m.name)}</b> (${esc(r.t.player)} ${fmt(r.t.points)})`).join(', ')}`});
    lastBest=b;lastLead=l;
@@ -391,7 +394,7 @@
      el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
    });
    const fl=box.querySelector('[data-zr-flash]');
-   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${esc(z.name)} ${fmt(z.from)} → <b>${fmt(z.to)}</b>`).join(', ')}`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
+   if(f.fixes.length){fl.hidden=false;fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
    else fl.hidden=true;
    box.querySelectorAll('[data-zr-go]').forEach(li=>li.classList.toggle('now',Number(li.dataset.zrGo)===i));
   };
@@ -562,10 +565,10 @@
    });
    c.restore();
    // Korrektur-Hinweis
-   if(f.fixes.length&&p>=1){c.font=font(36,800);const t=`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}: ${f.fixes.map(z=>`${z.name} ${fmt(z.from)} → ${fmt(z.to)}`).join(', ')}`;
-    const words=t.split(' '),lines=[];let l='';for(const w of words){const tt=l?l+' '+w:w;if(c.measureText(tt).width>PW-80){lines.push(l);l=w;}else l=tt;}lines.push(l);
+   // Kevin-Wunsch: je Spieler eine Zeile, untereinander.
+   if(f.fixes.length&&p>=1){const lines=[`✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:`,...f.fixes.map(z=>`${z.name}  ${fmt(z.from)} → ${fmt(z.to)}  (${zrDiff(z)})`)];
     const bh=lines.length*46+30;c.fillStyle='#ffd54a';c.strokeStyle='#111';c.lineWidth=4;rr(PX+20,PY+20,PW-40,bh,18);c.fill();c.stroke();
-    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>c.fillText(ln,W/2,PY+62+j*46));}
+    c.fillStyle='#111';c.textAlign='center';lines.forEach((ln,j)=>{c.font=font(j?34:36,j?700:800);c.fillText(fit(ln,PW-80),W/2,PY+62+j*46);});}
    // Zeitleiste
    const TY=1740,TX=PX+20,TW=PW-40,prog=n>1?(k-1+e)/(n-1):1,pr=Math.max(0,Math.min(1,k===0?0:prog));
    c.fillStyle='#465864';rr(TX,TY,TW,12,6);c.fill();c.fillStyle='#ebc768';rr(TX,TY,TW*pr,12,6);c.fill();
