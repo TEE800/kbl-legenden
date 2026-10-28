@@ -526,11 +526,11 @@ async function handleBericht(req, env, cors, parts, body) {
 // dann je Zwischenüberschrift 1, 2, …) mit Emojis reagieren, je Emoji und Abschnitt einmal pro Gerät (Gerätenummer kbl-vid wie bei
 // der Nutzung, keine Anmeldung). KV reakt:<day>:<vid>, die Auswahl steht in den Metadaten ({r: {Abschnitt: "Emoji-Nummern"}}),
 // darum reicht zum Zählen ein list() ohne einzelne Abrufe. Nur für freigegebene Berichte.
-const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺'];
+const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺', '💀', '🤮', '👎', '👀', '⛺', '💦', '🍆']; // nur hinten anhängen, die Nummern stehen in KV (je Emoji ein Zeichen, Basis 36)
 const REAKT_VID = /^[a-z0-9]{8,32}$/;
 async function reaktState(env, day, vid, own) {
   const counts = {}; let mine = {}, cursor;
-  const add = r => { for (const [sec, ix] of Object.entries(r || {})) for (const c of String(ix)) { const e = REAKT_EMOJI[Number(c)]; if (e) { counts[sec] ??= {}; counts[sec][e] = (counts[sec][e] || 0) + 1; } } };
+  const add = r => { for (const [sec, ix] of Object.entries(r || {})) for (const c of String(ix)) { const e = REAKT_EMOJI[parseInt(c, 36)]; if (e) { counts[sec] ??= {}; counts[sec][e] = (counts[sec][e] || 0) + 1; } } };
   do {
     const page = await env.TIPPS.list({ prefix: `reakt:${day}:`, cursor });
     for (const k of page.keys) { const v = k.name.slice(`reakt:${day}:`.length); if (v === vid) { if (!own) mine = k.metadata?.r || {}; continue; } add(k.metadata?.r); }
@@ -538,7 +538,7 @@ async function reaktState(env, day, vid, own) {
   } while (cursor);
   if (own) mine = own; // list() ist erst nach bis zu 60 s aktuell, die eigene Auswahl darum direkt nehmen
   add(mine);
-  const out = {}; for (const [sec, ix] of Object.entries(mine)) out[sec] = [...String(ix)].map(c => REAKT_EMOJI[Number(c)]).filter(Boolean);
+  const out = {}; for (const [sec, ix] of Object.entries(mine)) out[sec] = [...String(ix)].map(c => REAKT_EMOJI[parseInt(c, 36)]).filter(Boolean);
   return { day, emojis: REAKT_EMOJI, counts, mine: out };
 }
 async function handleReaktion(req, env, cors, parts, body, url) {
@@ -550,8 +550,8 @@ async function handleReaktion(req, env, cors, parts, body, url) {
   if (!REAKT_VID.test(vid) || !/^\d{1,2}$/.test(sec) || Number(sec) > 40 || body.sec == null || ix < 0) return json({ error: 'Ungültige Angabe.' }, 400, cors);
   if ((await env.TIPPS.get(`bericht:${day}`, 'json'))?.status !== 'frei') return json({ error: 'Dieser Bericht ist nicht veröffentlicht.' }, 409, cors);
   const key = `reakt:${day}:${vid}`, old = (await env.TIPPS.getWithMetadata(key)).metadata?.r || {};
-  const r = { ...old }, cur = String(r[sec] || ''), c = String(ix);
-  r[sec] = cur.includes(c) ? cur.replace(c, '') : [...cur + c].sort().join('');
+  const r = { ...old }, cur = String(r[sec] || ''), c = ix.toString(36);
+  r[sec] = cur.includes(c) ? cur.replace(c, '') : [...cur + c].sort((a, b) => parseInt(a, 36) - parseInt(b, 36)).join('');
   if (!r[sec]) delete r[sec];
   if (Object.keys(r).length) await env.TIPPS.put(key, '1', { metadata: { r }, expirationTtl: 400 * 86400 });
   else await env.TIPPS.delete(key);
