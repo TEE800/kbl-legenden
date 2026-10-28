@@ -427,6 +427,9 @@ async function loadHistory(){
    const list=rankingItems(data).filter(x=>isEligibleManager(managerName(x))).map(x=>{
     const name=String(managerName(x)),score=number(points(x));
     const prior=day===1?0:previous.get(name);
+    // ST 1 (Kevin 28.10.): Die Gesamtpunkte passen dort nicht zu den Spieltagspunkten der Kickbase-App, es gilt mdp.
+    // Wer −1100 hatte (keine Startelf, später auf 0 gesetzt), wird an ST 1 nicht gewertet, wie in der BumsParade.
+    if(day===1){const mdp=number(x?.mdp);return {name,score,dayPoints:mdp===null||mdp===-1100?null:mdp};}
     return {name,score,dayPoints:score===null||prior==null?null:score-prior};
    }).filter(x=>x.score!==null);
    if(!list.length)continue;
