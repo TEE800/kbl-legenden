@@ -2958,7 +2958,7 @@ app.get('/api/transfers', async (req, res) => {
   } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
 });
 
-// Transfer-Pech-Radar (Kevin-Wunsch 28.10., Reiter "Transfers"): Spieler, die ein Manager verkauft hat und die gleich am nächsten
+// Pechradar (Kevin-Wunsch 28.10., Reiter "Transfers"): Spieler, die ein Manager verkauft hat und die gleich am nächsten
 // Spieltag gepunktet haben. Nächster Spieltag = erster Spieltag, dessen erster Anstoß (OpenLigaDB) nach dem Verkauf liegt; nur
 // abgeschlossene Spieltage, Punkte aus den Leistungsdaten (nur Saison 2026/27, darum nur die laufende Halbserie). Hat der Verkäufer
 // ihn vor dem Anstoß zurückgekauft, zählt der Verkauf nicht. Pech ab PECH_MIN Punkten; Käufer aus der Liga: ob er ihn in der Startelf
@@ -3028,7 +3028,7 @@ app.get('/api/transfer-pech', async (req, res) => {
       failedManagers: raw.filter(r => r.error).map(r => r.base.name), items };
     pechCache = { at: Date.now(), value };
     res.set('Cache-Control', 'no-store').json(value);
-  } catch (err) { res.status(err.status || 502).json({ error: 'Transfer-Pech-Radar konnte nicht geladen werden.', detail: err.message }); }
+  } catch (err) { res.status(err.status || 502).json({ error: 'Pechradar konnte nicht geladen werden.', detail: err.message }); }
 });
 
 app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
