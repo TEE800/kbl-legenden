@@ -406,7 +406,12 @@
    box.querySelectorAll('[data-zr-go]').forEach(li=>li.classList.toggle('now',Number(li.dataset.zrGo)===i));
   };
   const btn=box.querySelector('[data-zr-play]');
-  const tick=()=>{if(zr.i>=n-1){zrStop();btn.textContent='▶';return;}show(zr.i+1);zr.timer=setTimeout(tick,(frames[zr.i].fixes.length?2600:1500)/zr.speed);};
+  // Kevin-Wunsch: Kommt beim Abspielen eine Korrektur, scrollt die Seite so, dass der Korrekturkasten und darunter der obere Rasen zu sehen sind.
+  const reveal=()=>{if(zr.full)return;const fl=box.querySelector('[data-zr-flash]');if(!fl||fl.hidden)return;
+   const top=Math.max(0,...[...document.querySelectorAll('.topbar,.push-hint')].filter(e=>!e.hidden&&/sticky|fixed/.test(getComputedStyle(e).position)).map(e=>e.getBoundingClientRect().bottom)),r=fl.getBoundingClientRect();
+   if(r.top>=top&&r.bottom<=innerHeight*0.45)return;
+   scrollTo({top:scrollY+r.top-top-8,behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'});};
+  const tick=()=>{if(zr.i>=n-1){zrStop();btn.textContent='▶';return;}show(zr.i+1);if(frames[zr.i].fixes.length&&!frames[zr.i-1]?.fixes.length)reveal();zr.timer=setTimeout(tick,(frames[zr.i].fixes.length?2600:1500)/zr.speed);};
   btn.onclick=()=>{if(zr.timer){zrStop();btn.textContent='▶';return;}if(zr.i>=n-1)show(0);btn.textContent='⏸';zr.timer=setTimeout(tick,900/zr.speed);};
   box.querySelector('[data-zr-seek]').oninput=e=>{zrStop();btn.textContent='▶';show(Number(e.target.value));};
   // Kevin-Wunsch: auch 0,5× (Korrekturen sind sonst schwer zu greifen); das Video übernimmt das gewählte Tempo.
