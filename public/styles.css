@@ -301,7 +301,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bd-man li b{display:inline-block;width:14px}
 
 .bums-goto{cursor:pointer}.bums-goto:hover{border-color:#f1c75c}
-.profiledetails{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.profiledetails{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Kopfkacheln: oben Platzierung, Punkte, Bumsungen; darunter Erzfeind und Lieblingsopfer als Paar. Handy: Bumsungen über die ganze Breite. */
+.profiledetails{grid-template-columns:repeat(6,minmax(0,1fr))}.profiledetails>.profiletile{grid-column:span 2}.profiledetails>.profiletile.bums-foe{grid-column:span 3}@media(max-width:600px){.profiledetails{grid-template-columns:repeat(2,minmax(0,1fr))}.profiledetails>.profiletile{grid-column:span 1}.profiledetails>.profiletile.bums-goto{grid-column:1/-1}.profiledetails>.profiletile.bums-foe{grid-column:span 1}}
 .bums-foe strong{font-size:17px;line-height:1.35}.bums-foe strong .mgr-link{color:inherit}.bums-foe-d{display:block;margin-top:4px;color:var(--text-2);font-size:13px}.bums-foe-note{display:block;margin-top:6px}@media(max-width:600px){.bums-foe strong{font-size:15px}}.bums-foe .pcmp-row b{font-size:15px;line-height:1.3}.bums-foe .pcmp-row b .mgr-link{color:inherit}
 .bums-row.bums-focus{outline:2px solid #f1c75c;outline-offset:2px;transition:outline-color .3s}
 
