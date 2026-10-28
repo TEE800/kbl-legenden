@@ -85,12 +85,12 @@
  function unclearLine(d){
   if(!kindOf(d)||kindOf(d)==='keine')return '';
   const u=ruleUnclear(d);
-  return u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil der Regel wertet die App nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende bitte selbst prüfen.</small>`:'<small class="muted mvp-wertung">✓ Die App versteht die ganze Regel.</small>';
+  return u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil der Regel wertet die BumsKI nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende bitte selbst prüfen.</small>`:'<small class="muted mvp-wertung">✓ Die BumsKI versteht die ganze Regel.</small>';
  }
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die App${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die BumsKI${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
