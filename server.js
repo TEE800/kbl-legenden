@@ -1551,8 +1551,28 @@ async function tippResult(token,day,rule,rows){
  else if(kind==='spieler'&&el.length){const hi=Math.max(...el.map(r=>r.actual)),b=el.filter(r=>r.actual===hi),best=Math.min(...b.map(r=>r.diff));winners=b.filter(r=>r.diff===best).map(r=>r.managerId);}
  else if(el.length){const best=Math.min(...el.map(r=>r.diff));winners=el.filter(r=>r.diff===best).map(r=>r.managerId);}
  const unsure=!mvp.reliable||missing>0;
- return {status:unsure?'unsure':'ok',kind,...(pool.length?{pool}:{}),...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top}}:{}),rows:out,winners,
+ const best=await tippBest(token,day,kind,top,pool,rows,out,winners);
+ return {status:unsure?'unsure':'ok',kind,...(pool.length?{pool}:{}),...(mvp.players.length?{mvp:{players:mvp.players.map(p=>({id:String(p.id),name:p.name,team:p.team})),points:top}}:{}),rows:out,winners,...(best?{best}:{}),
   message:missing?`Das fehlt: Für ${missing} getippte Spieler gibt es noch keine Spieltagspunkte.`:!mvp.reliable?'Nicht alle Spielerdaten waren abrufbar, der MVP ist unsicher.':''};
+}
+// Bester Tipper des Spieltags (Kevin-Vorgabe): Er bestimmt die Tippregel des naechsten Spieltags, auch wenn niemand gewonnen hat.
+// Gibt es Gewinner, ist es der Gewinner mit dem kleinsten Abstand. Sonst zaehlt (nur Spieler der genannten Vereine, falls die Regel welche nennt):
+// meiste Punkte des getippten Spielers, dann kleinster Abstand zur Zahl (bei MVP-Wertungen zur MVP-Punktzahl). Gleichstand = alle.
+async function tippBest(token,day,kind,top,pool,rows,out,winners){
+ let cand=out.filter(r=>winners.includes(r.managerId)),how='winner';
+ if(!cand.length){
+  how='closest';
+  const tipOf=new Map(rows.map(r=>[r.managerId,r])),inPool=out.filter(r=>!pool.length||pool.includes(tipOf.get(r.managerId)?.team));
+  cand=[];
+  for(const r of inPool){const t=tipOf.get(r.managerId),own=await tippPlayerPoints(token,t.playerId,day);
+   if(own===null)return null;// Punkte fehlen: nie raten
+   const ref=TIPP_MVP_KINDS.has(kind)&&top!==null?top:own;cand.push({managerId:r.managerId,own,diff:Math.abs(t.points-ref)});}
+  if(!cand.length)return null;
+  const hi=Math.max(...cand.map(r=>r.own));cand=cand.filter(r=>r.own===hi);
+ }
+ const d=cand.map(r=>r.diff).filter(Number.isFinite),lo=d.length?Math.min(...d):null;
+ if(lo!==null)cand=cand.filter(r=>r.diff===lo);
+ return {how,managers:cand.map(r=>r.managerId)};
 }
 // Spielerfotos: Ohne Kickbase-Abo liefert Kickbase nur Silhouetten (Kevin, T1000 hat kein Abo). Darum die Bildpfade
 // mit dem Challenge-Konto (T800, mit Abo) holen, falls eingerichtet, und in kbl-player-photos.json sichern.
