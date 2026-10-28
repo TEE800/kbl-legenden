@@ -1009,6 +1009,14 @@ body.zr-on .mobilenav{display:none}
 .stk-crest{left:12px;bottom:-5px;width:13px;height:13px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
 .stk-bhead{z-index:2}
 @media (prefers-reduced-motion:reduce){.zr.zr-full .zr-runner{transition:none}}
+/* Zeitraffer-Vollbild am Handy (Kevin-Wunsch: Figuren und Köpfe größer, mehrere in einer Zeile): Namensschild kompakt unter der Figur. */
+.zr.zr-narrow .stk-tag,.zr.zr-narrow .stk.flip .stk-tag,.zr.zr-narrow .stk.ko .stk-tag,.zr.zr-narrow .stk.fall .stk-tag,
+.zr.zr-narrow .toon-tag,.zr.zr-narrow .toon-runner.flip .toon-tag{top:76px;left:-12px;right:auto;transform:none;white-space:nowrap;width:max-content;max-width:none;font-size:11px;line-height:1.2;padding:1px 5px;text-align:left}
+.zr.zr-narrow .stk-tag small,.zr.zr-narrow .toon-tag small{display:none}
+.zr.zr-narrow .stk-tag .stk-mn{display:block}
+.zr.zr-narrow .stk-tag .stk-pl{font-size:10px}
+.zr.zr-narrow .stk.champ .stk-baby{transform:translate(-22px,-30px);animation-name:stkLiftN}
+@keyframes stkLiftN{from{transform:translate(-22px,-30px)}to{transform:translate(-22px,-34px)}}
 /* Gespeicherte Aufstellungen auf dem Rasen (Reiter Aufstellungen) */
 #snapshotSaved .lu-row{cursor:pointer}
 #snapshotSaved .lu-row:hover td,#snapshotSaved .lu-row.open td{background:rgba(255,255,255,.04)}
