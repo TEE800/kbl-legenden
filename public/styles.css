@@ -1053,3 +1053,25 @@ body.zr-on .mobilenav{display:none}
 .zr.zr-fit:not(.zr-full) .zr-pitch{margin:0}
 .zr.zr-fit .zr-lead{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zr-runner.zr-ghost:not(.champ) .toon-crown{display:none}
+/* Abzeichen im Managerprofil (badgesHtml in app.js) */
+.bdg-count{font-size:12px;font-weight:700;color:var(--muted);margin-left:6px;letter-spacing:.03em}
+.bdg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:10px}
+.bdg-sub{margin:16px 0 10px;font-size:13px;letter-spacing:.05em;color:var(--muted);text-transform:uppercase}
+.bdg{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:12px;min-width:0;background:var(--fame);border:1px solid var(--fame-line)}
+.bdg.bdg-shame{background:var(--shame);border-color:var(--shame-line)}
+.bdg-icon{flex:0 0 52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:27px;background:#0f1a22;border:3px solid #3a4852;box-shadow:inset 0 0 0 2px rgba(255,255,255,.04)}
+.bdg-body{min-width:0;flex:1}
+.bdg-info{margin:5px 0 0;font-weight:700;overflow-wrap:anywhere}
+.bdg-info b{color:var(--gold)}
+.bdg-stars{margin-left:6px;letter-spacing:1px;font-size:12px}
+.bdg-stars i{font-style:normal;color:#4a5660}
+.bdg:not(.bdg-on){opacity:.5}
+.bdg:not(.bdg-on) .bdg-icon{filter:grayscale(1);border-style:dashed}
+.bdg-l1 .bdg-icon{border-color:#c98a4b;box-shadow:0 0 10px rgba(201,138,75,.35)}
+.bdg-l2 .bdg-icon{border-color:#cdd5dc;box-shadow:0 0 10px rgba(205,213,220,.35)}
+.bdg-l3 .bdg-icon{border-color:var(--gold);box-shadow:0 0 14px rgba(235,199,104,.5)}
+.bdg-l1 .bdg-stars i.on{color:#c98a4b}.bdg-l2 .bdg-stars i.on{color:#cdd5dc}.bdg-l3 .bdg-stars i.on{color:var(--gold)}
+.bdg.bdg-shame.bdg-on .bdg-icon{border-color:var(--shame-text);box-shadow:0 0 10px rgba(255,90,90,.3)}
+.bdg.bdg-shame .bdg-info b{color:var(--shame-text)}
+.bdg.pcmp .pcmp-row b{font-size:17px}
+@media(max-width:600px){.bdg{padding:10px;gap:10px}.bdg-icon{flex-basis:44px;height:44px;font-size:22px}}
