@@ -4,9 +4,14 @@ on:
     - cron: '*/5 * * * *'    # alle 5 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
     - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
+    inputs:
+      bericht_neu:
+        description: 'Spieltagsbericht fuer diesen Spieltag neu schreiben lassen (leer = nichts neu)'
+        required: false
+        default: ''
   push:                      # nach Programm-Aenderungen gleich neu bauen, voll (sonst bleiben beendete Spieltage bis 6:07 auf altem Stand)
     branches: [main]
-    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs', 'kbl-challenge-cache.json']
+    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/spieltagsbericht.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs', 'kbl-challenge-cache.json']
 permissions:
   contents: write
   pages: write
@@ -48,6 +53,15 @@ jobs:
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
           KBL_TIPP_DIENST: ${{ vars.KBL_TIPP_DIENST }}
         run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch' || github.event_name == 'push') && 'full' || 'live' }}
+      - name: Spieltagsbericht (Claude, nur nach der Abrechnung, einmal je Spieltag)
+        if: steps.gate.outputs.aktiv == 'true'
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KBL_TIPP_DIENST: ${{ vars.KBL_TIPP_DIENST }}
+          KBL_BERICHT_MODEL: ${{ vars.KBL_BERICHT_MODEL }}
+          KBL_BERICHT_NEU: ${{ github.event.inputs.bericht_neu }}
+        run: node tools/spieltagsbericht.mjs
       - uses: actions/upload-pages-artifact@v3
         if: steps.gate.outputs.aktiv == 'true'
         with:
