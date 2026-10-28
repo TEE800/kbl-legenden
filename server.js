@@ -1348,7 +1348,7 @@ const TIPP_WERTUNG=[
 const TIPP_MVP_KINDS=new Set(['volltreffer','zahl','name','drunter','korridor']);
 // Ohne eingestellte Wertung erkennt die App sie aus dem Regeltext (Stichwoerter, gleiche Funktion in public/mvp-tipp.js). Nicht erkannt = keine Wertung.
 function detectWertung(text){
- const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+ const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
  if(!t.trim())return null;
  const pts=/punkt|zahl/.test(t);
  if(/mvp/.test(t)){
@@ -1366,7 +1366,7 @@ function detectWertung(text){
 }
 // Vereine, die der Regeltext nennt (z. B. "von den Aufsteigern Schalke, Elversberg und Paderborn"). Leer = alle Spieler zaehlen.
 function ruleTeams(text,teams){
- const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+ const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
  const t=n(text);
  return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
 }
@@ -1381,7 +1381,7 @@ function poolMvp(m,pool){
 // Eigentor erzwungen, Vorlage, absichtliche Vorlage, abgefälschte Vorlage, Tor eingeleitet und Eigentor)"). Gleiche Erkennung in public/mvp-tipp.js.
 // field = kein Torwart, noGoal = keine direkte Torbeteiligung am Spieltag.
 function ruleConds(text){
- const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss'),c=[];
+ const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
  if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
  if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
  return c;
