@@ -82,17 +82,16 @@
   box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
   fitHeads();
  }
- // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): alle gleich groß, so klein wie die längste es braucht (min. 11 px, dann Umbruch).
+ // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): nur zu lange einzeln so weit verkleinern, dass sie passen (min. 11 px, dann Umbruch).
  // Der Bereich startet eingeklappt (Breite 0), darum beim Aufklappen und bei Größenänderung neu über den ResizeObserver.
  function fitHeads(){
   const box=$('berichtContent');if(!box)return;
-  const hs=[...box.querySelectorAll('.ber-h')];
-  for(const h of hs){h.style.fontSize='';h.style.whiteSpace='nowrap';}
-  let size=Infinity;
-  for(const h of hs){const w=h.clientWidth;if(w&&h.scrollWidth>w)size=Math.min(size,parseFloat(getComputedStyle(h).fontSize)*w/h.scrollWidth);}
-  if(size===Infinity)return;
-  size=Math.max(11,Math.floor(size*10)/10);
-  for(const h of hs){h.style.fontSize=size+'px';if(h.scrollWidth>h.clientWidth)h.style.whiteSpace='';}
+  for(const h of box.querySelectorAll('.ber-h')){
+   h.style.fontSize='';h.style.whiteSpace='nowrap';
+   const w=h.clientWidth;if(!w||h.scrollWidth<=w)continue;
+   h.style.fontSize=Math.max(11,Math.floor(parseFloat(getComputedStyle(h).fontSize)*w/h.scrollWidth*10)/10)+'px';
+   if(h.scrollWidth>w)h.style.whiteSpace='';
+  }
  }
  if(window.ResizeObserver&&$('berichtContent')){let lastW=-1;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;fitHeads();}}).observe($('berichtContent'));}
  sec.addEventListener('click',async e=>{
