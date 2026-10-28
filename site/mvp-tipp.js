@@ -64,10 +64,33 @@
   if(!n.length)return `<small class="muted">Wer die Regel bestimmt, steht noch nicht fest: Der beste Tipper von Spieltag ${d.prevBest.day} ist noch nicht ausgewertet.</small>`;
   return `<small class="muted">Regel bestimmt von <b>${n.join(', ')}</b> (bester MVP-Tipper an Spieltag ${d.prevBest.day})</small>`;
  }
+ // Prüft bei jeder Tippregel, ob sie Teile enthält, die die App nicht auswertet (Kevin-Wunsch): Erkanntes (Vereine, Feldspieler,
+ // ohne Torbeteiligung samt Klammerliste, Wörter der Wertung) wird entfernt; bleiben Bedingungswörter übrig, steht eine Warnung da.
+ const RULE_TRIGGERS=[['torwart|torhueter|keeper','Torwart'],['abwehr\\w*|verteidiger','Abwehr'],['mittelfeld\\w*','Mittelfeld'],['stuermer|angreifer|sturm','Sturm'],
+  ['gelb\\w*|rot\\w*|karten?','Karten'],['eingewechselt\\w*|einwechsl\\w*|joker|bank','Einwechslung/Bank'],['startelf|aufgestellt\\w*','Startelf'],['heim\\w*|auswaert\\w*','Heim/Auswärts'],
+  ['marktwert\\w*|mio|millionen?','Marktwert'],['minus\\w*|negativ\\w*','Minuspunkte'],['tor|tore|treffer|torschuetz\\w*|vorlage\\w*|assists?','Tore/Vorlagen'],['elfmeter\\w*','Elfmeter'],
+  ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
+ function ruleUnclear(d){
+  const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss');
+  const kind=kindOf(d),c=condsOf(d);let t=' '+n(d.rule?.text)+' ';
+  if(c.includes('noGoal'))t=t.replace(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung *(\([^)]*\))?/g,' ');
+  if(c.includes('field'))t=t.replace(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/g,' ');
+  for(const team of poolOf(d)){const k=n(team);for(const w of [k,...k.split(/['\s]/).filter(w=>w.length>=5)])t=t.split(w).join(' ');}
+  if(kind==='drunter')t=t.replace(/(nicht|ohne|kein) *(drueber|darueber|ueber)/g,' ');
+  if(kind==='name')t=t.replace(/punkt\w* *(zaehl\w*|ist|sind) *(nicht|egal)|ohne punkt\w*/g,' ');
+  if(kind==='korridor')t=t.replace(/(hoechstens|maximal|max\.?) *\d+ *punkte?/g,' ');
+  const hits=RULE_TRIGGERS.filter(([re])=>new RegExp(`(^|[^a-z])(${re})([^a-z]|$)`).test(t)).map(x=>x[1]);
+  return [...new Set(hits)];
+ }
+ function unclearLine(d){
+  if(!kindOf(d)||kindOf(d)==='keine')return '';
+  const u=ruleUnclear(d);
+  return u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil der Regel wertet die App nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende bitte selbst prüfen.</small>`:'<small class="muted mvp-wertung">✓ Die App versteht die ganze Regel.</small>';
+ }
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':kindAuto(d)?'':`<small class="muted mvp-wertung">Wertung (vom Admin gewählt): <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':`<small class="muted mvp-wertung">So wertet die App${kindAuto(d)?'':' (vom Admin gewählt)'}: <b>${esc(kindTitle(d,kindOf(d)))}</b></small>`}${unclearLine(d)}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
