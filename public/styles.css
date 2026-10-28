@@ -949,3 +949,18 @@ body.zr-on .mobilenav{display:none}
 .zr-pitch .stk.zr-fixed .stk-tag{background:#c0392b;animation:zrPop .5s}
 @media (prefers-reduced-motion:reduce){.stk,.stk *{animation:none!important;transition:none!important}}
 @media (max-width:600px){.stk-tag{font-size:9px;padding:1px 4px;white-space:normal;width:max-content;max-width:150px;line-height:1.2}.stk-tag small{font-size:8px;white-space:nowrap}.stk-tag .stk-mn{display:block}}
+
+/* Spieltagsbericht auf der Startseite (public/bericht.js) */
+#bericht[hidden]{display:none!important}
+#bericht{margin-top:18px}
+.ber-pill{max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold)}
+#bericht .ber-title{font:900 22px Georgia,serif;color:var(--gold-strong);margin:0 0 12px;line-height:1.25}
+.ber-body{color:var(--text-2);line-height:1.6;max-width:780px}
+.ber-body p{margin:0 0 12px}
+.ber-body b{color:var(--text)}
+.ber-h{color:var(--gold);font-size:16px;margin:20px 0 8px}
+.ber-body ul,.ber-body ol{margin:0 0 12px;padding-left:20px}
+.ber-body li{margin:4px 0}
+.ber-hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.ber-foot{margin:16px 0 0}
+@media(max-width:560px){#bericht .ber-title{font-size:19px}.ber-pill{max-width:55%}}

@@ -656,7 +656,7 @@
   if(r.message)h+=`<p class="${['ok','empty','manual'].includes(r.status)?'muted':'error'}">${esc(r.message)}</p>`;
   if(r.rows?.length){
    const names=d.managers.filter(m=>r.winners.includes(m.id)).map(m=>m.name);
-   h+=`<p>Vorschlag für den Joker: <b>${names.length?esc(names.join(', ')):'niemand'}</b>${r.status==='ok'?'':' (bitte prüfen)'}. Entschieden wird in der BumsParade.</p>`;
+   h+=`<p>Vorschlag für den Joker: <b>${names.length?esc(names.join(', ')):'niemand'}</b>${r.status==='ok'?'':' (bitte prüfen)'}.</p>`;
    const best=(r.best?.managers||[]).map(id=>d.managers.find(m=>m.id===id)).filter(Boolean);
    h+=best.length?`<p>Bester Tipper: <b>${best.map(m=>mn(m.name,m.id)).join(', ')}</b>${r.best.how==='closest'?' (kein Gewinner, am nächsten dran)':''}. ${best.length>1?'Sie bestimmen':'Er bestimmt'} die Tippregel für Spieltag ${d.day+1}.</p>`:`<p class="muted">Bester Tipper: noch nicht bestimmbar.</p>`;
    if(d.admin&&!STATIC&&names.length)h+=`<button type="button" class="ghost" id="mvpToNpc">Vorschlag als Joker-Gewinner übernehmen</button> <span class="muted" id="mvpNpcMsg"></span>`;

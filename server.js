@@ -2027,6 +2027,11 @@ app.post('/api/todo-checks/:day',(req,res)=>{
 // KBL 4.16: BumsTabelle. Bumsungen je Spieltag und Manager, wie sie die BumsParade zaehlt (vom Browser gemeldet).
 const BUMS_FILE=path.join(process.cwd(),'kbl-bumsungen.json');
 function readBums(){try{return JSON.parse(fs.readFileSync(BUMS_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
+// Spieltagsbericht (Kevin-Wunsch): schreibt tools/spieltagsbericht.mjs auf GitHub in kbl-berichte.json; hier nur lesen.
+app.get('/api/berichte',(req,res)=>{
+  let d={berichte:{}};try{d=JSON.parse(fs.readFileSync(path.join(process.cwd(),'kbl-berichte.json'),'utf8'));}catch{}
+  res.set('Cache-Control','no-store').json({berichte:Object.values(d.berichte||{}).sort((a,b)=>b.day-a.day)});
+});
 app.get('/api/bumsungen',(req,res)=>{
   if(!getToken(req))return res.status(401).json({error:'Nicht angemeldet.'});
   try{res.set('Cache-Control','no-store').json({days:readBums()});}catch(e){res.status(500).json({error:'BumsTabelle nicht lesbar.'});}
