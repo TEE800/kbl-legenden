@@ -292,13 +292,126 @@ function profileBelowAvgTile(name,tile){
  const n=games.filter(x=>x.points<x.avg).length;
  return games.length?[tile('UNTER DEM LIGASCHNITT',`${n} von ${games.length}`,'Spieltagen',n,'lo')]:[];
 }
-// Bumsungen eines Managers in der laufenden Halbserie, aus der BumsTabelle (null = noch nicht geladen).
-function bumsOf(name){
+// Spieltage der laufenden Halbserie in der BumsTabelle (null = noch nicht geladen).
+function bumsHalfDays(){
  let keys;try{keys=Object.keys(bumsDays||{}).map(Number);}catch{return null;}if(!keys.length)return null;
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day),ref=Math.max(0,...finished,...keys);
- const from=ref<=17?1:18,to=ref<=17?17:34;let n=0;
- for(const d of keys)if(d>=from&&d<=to)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)n+=v.count;
+ const from=ref<=17?1:18,to=ref<=17?17:34;return keys.filter(d=>d>=from&&d<=to);
+}
+// Bumsungen eines Managers in der laufenden Halbserie, aus der BumsTabelle (null = noch nicht geladen).
+function bumsOf(name){
+ const days=bumsHalfDays();if(!days)return null;let n=0;
+ for(const d of days)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)n+=v.count;
  return n;
+}
+// Wer hat den Empfänger gebumst? Aus „bekommt/kauft … von X“ (gleiche Lesart wie „Wer bumst wen“).
+function bumsGiver(x){if(x?.d!=='i')return null;const m=/ von (.+?)(?::|$)/.exec(x.t||'');return m?m[1].trim()||null:null;}
+// Bums-Erzfeind (Kevin-Wunsch): von wem ein Manager in der Halbserie am häufigsten gebumst wurde, Gleichstand = alle.
+// null = BumsTabelle noch nicht geladen, {n:0} = noch von niemandem gebumst.
+function bumsFoe(name){
+ const days=bumsHalfDays();if(!days)return null;const by=new Map();
+ for(const d of days)for(const v of Object.values(bumsDays[d].managers||{}))if(v.name===name)for(const x of (v.moves||[])){
+  const g=bumsGiver(x);if(!g||g===name||!isEligibleManager(g))continue;const e=by.get(g)||{n:0,rules:{}};e.n++;e.rules[x.r]=(e.rules[x.r]||0)+1;by.set(g,e);}
+ const n=Math.max(0,...[...by.values()].map(e=>e.n));
+ const who=[...by.entries()].filter(([,e])=>e.n===n&&n>0).sort((a,b)=>a[0].localeCompare(b[0],'de'));
+ const rules={};for(const [,e] of who)for(const [k,c] of Object.entries(e.rules))rules[k]=(rules[k]||0)+c;
+ return {n,who:who.map(([g])=>g),rules:Object.entries(rules).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,c])=>c>1?`${k} ×${c}`:k).join(', ')};
+}
+// Kachel-Inhalt: Name(n) (mit Profilbild, im Vergleich ohne, dort steht davor schon das eigene), Zusatz „3× gebumst · DD ×2, BN“.
+function bumsFoeVal(name,faces=true){
+ const f=bumsFoe(name);if(!f)return {value:'–',raw:null,detail:''};
+ if(!f.n)return {value:'–',raw:0,detail:'noch von keinem gebumst'};
+ return {value:f.who.map(g=>mgrLink(g,faces?mgrName(g):escapeHtml(g))).join(', '),raw:f.n,detail:f.who.length>1?`je ${f.n}× gebumst`:`${f.n}× gebumst${f.rules?' · '+escapeHtml(f.rules):''}`};
+}
+// Abzeichen im Managerprofil (Kevin-Wunsch): was ein Manager in der laufenden Halbserie erreicht hat.
+// Nur abgeschlossene Spieltage; Stufen Bronze/Silber/Gold nach Anzahl (tiers). Gleichstand zählt für alle.
+const badgeTipps=new Map();let badgeTippsBusy=false;
+// MVP-Tipp-Ergebnisse der abgeschlossenen Spieltage einmal laden (fehlt eins, zählt der Spieltag nicht).
+async function badgeLoadTipps(days){
+ const need=days.filter(d=>!badgeTipps.has(d));if(!need.length||badgeTippsBusy)return;badgeTippsBusy=true;
+ try{for(const d of need){let v=null;try{const j=await api(`/api/mvp-tipps/${d}`),r=j.result;
+   if(r?.status==='ok'){const ids=new Set((r.mvp?.players||[]).map(p=>String(p.id))),nm=new Map((j.managers||[]).map(m=>[String(m.id),m.name]));
+    v={best:(r.best?.managers||[]).map(id=>nm.get(String(id))).filter(Boolean),hit:(j.managers||[]).filter(m=>m.tip&&ids.has(String(m.tip.playerId))).map(m=>m.name)};}}catch{}
+   badgeTipps.set(d,v);}}
+ finally{badgeTippsBusy=false;}
+ try{if(document.querySelector('[data-sec="'+BADGE_SEC+'"]'))showProfile();}catch{}
+}
+const BADGE_SEC='🎖️ ABZEICHEN';
+function managerBadges(name){
+ const finished=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
+ let keys=[];try{keys=Object.keys(bumsDays||{}).map(Number);}catch{}
+ const ref=Math.max(0,...finished.map(h=>h.day),...keys),from=ref<=17?1:18,to=ref<=17?17:34,inHalf=d=>d>=from&&d<=to;
+ const days=finished.filter(h=>inHalf(h.day));
+ const hit={win:[],podium:[],k1000:[],lead:[],last:[],lantern:[],cold:[],jump:[],double:[],ww:[],magnet:[],bd:[],ah:[],best:[],riecher:[]};
+ let prevWin=null,prevRank=null,prevDay=null;
+ for(const h of days){
+  const sc=h.list.filter(m=>isEligibleManager(m.name)&&m.dayPoints!==null&&Number.isFinite(m.dayPoints));
+  const me=sc.find(m=>m.name===name);
+  // ST 1: wer ohne Startelf war (−1100, dayPoints null), zählt auch in der Gesamtwertung nicht (wie in loadHistory).
+  const rm=rankMap(h.day===1?{...h,list:h.list.filter(m=>m.dayPoints!==null)}:h),rank=rm.get(name)??null,ranks=[...rm.values()];
+  if(rank===1)hit.lead.push(h.day);
+  if(rank!=null&&ranks.length>=6&&rank===Math.max(...ranks))hit.lantern.push(h.day);
+  if(rank!=null&&prevRank!=null&&prevDay===h.day-1&&prevRank-rank>=3)hit.jump.push(h.day);
+  if(!me){prevWin=null;prevRank=rank;prevDay=h.day;continue;}
+  const better=sc.filter(m=>m.dayPoints>me.dayPoints).length,win=better===0,low=Math.min(...sc.map(m=>m.dayPoints));
+  if(win)hit.win.push(h.day);
+  if(better<3)hit.podium.push(h.day);
+  if(me.dayPoints>=1000)hit.k1000.push(h.day);
+  if(me.dayPoints<500)hit.cold.push(h.day);
+  if(sc.length>=2&&me.dayPoints===low)hit.last.push(h.day);
+  if(win&&prevWin===true&&prevDay===h.day-1)hit.double.push(h.day);
+  prevWin=win;prevRank=rank;prevDay=h.day;
+ }
+ // Aus der BumsTabelle (gleiche Daten wie dort, Weiße Weste = Spieltag mit 0 Bumsungen).
+ const bumsLoaded=keys.length>0;
+ for(const d of keys.filter(inHalf).sort((a,b)=>a-b)){
+  const v=Object.values(bumsDays[d].managers||{}).find(x=>x.name===name);if(!v)continue;
+  if(v.count===0)hit.ww.push(d);
+  if(v.count>=5)hit.magnet.push(d);
+  if(v.rules?.BD)hit.bd.push(d);
+  if((v.moves||[]).some(x=>x.r==='AH'&&(x.d==='o'||x.d==='x')))hit.ah.push(d);
+ }
+ // MVP-Tipp: bester Tipper (bestimmt die nächste Regel) und richtiger Spieler.
+ const tippDays=days.map(h=>h.day);badgeLoadTipps(tippDays);
+ const tippKnown=tippDays.filter(d=>badgeTipps.get(d));
+ for(const d of tippKnown){const t=badgeTipps.get(d);if(t.best.includes(name))hit.best.push(d);if(t.hit.includes(name))hit.riecher.push(d);}
+ const B=(key,icon,title,desc,type='fame',tiers=[1,3,5],avail=true)=>({key,icon,title,desc,type,tiers,avail,days:hit[key]});
+ return [
+  B('win','🏆','SPIELTAGSSIEGER','Spieltag gewonnen'),
+  B('double','🔥','DOPPELSCHLAG','Zwei Spieltage in Folge gewonnen','fame',[1]),
+  B('podium','🥉','PODEST','Unter den besten drei im Spieltag','fame',[3,5,8]),
+  B('k1000','🚀','TAUSENDER','Mindestens 1.000 Punkte an einem Spieltag'),
+  B('lead','👑','TABELLENFÜHRER','Platz 1 der Gesamtwertung nach einem Spieltag'),
+  B('jump','🛫','ÜBERFLIEGER','Mindestens 3 Plätze in der Gesamtwertung an einem Spieltag gutgemacht','fame',[1,2,3]),
+  B('ww','😇','WEISSE WESTE','Spieltag ohne Bumsung','fame',[1,3,5],bumsLoaded),
+  B('riecher','🎯','RICHTIGER RIECHER','Im MVP-Tipp den besten Spieler laut Tippregel getippt','fame',[1,3,5],tippKnown.length>0),
+  B('best','🔮','TIPPKÖNIG','Bester MVP-Tipper eines Spieltags (bestimmt die nächste Tippregel)','fame',[1,3,5],tippKnown.length>0),
+  B('ah','⚽','GOLDHÄNDCHEN','Den MVP des Spieltags aufgestellt (AH)','fame',[1,2,3],bumsLoaded),
+  B('last','🥄','HOLZLÖFFEL','Letzter im Spieltag','shame'),
+  B('lantern','🚨','ROTE LATERNE','Letzter der Gesamtwertung nach einem Spieltag','shame'),
+  B('cold','🧊','EISZEIT','Unter 500 Punkte an einem Spieltag','shame'),
+  B('magnet','🍆','BUMSMAGNET','Mindestens 5 Bumsungen an einem Spieltag','shame',[1,2,3],bumsLoaded),
+  B('bd','🍺','BESOFFEN','Spieler mit Schnapszahl aufgestellt (BD)','shame',[1,3,5],bumsLoaded)
+ ].map(b=>({...b,n:b.days.length,level:b.tiers.filter(t=>b.days.length>=t).length}));
+}
+const BADGE_TIER=['','Bronze','Silber','Gold'];
+function badgeTierName(b){return b.tiers.length===1?'':BADGE_TIER[b.level+(3-b.tiers.length)]||'';}
+function badgeNext(b){const t=b.tiers.find(t=>b.n<t);return t&&b.level?`Nächste Stufe ab ${t}×`:'';}
+function badgesHtml(name,other){
+ const A=managerBadges(name),Bo=other?managerBadges(other.name):null;
+ const got=A.filter(b=>b.level).length;
+ const stars=b=>b.tiers.length>1?`<span class="bdg-stars">${b.tiers.map((t,i)=>`<i class="${i<b.level?'on':''}">★</i>`).join('')}</span>`:'';
+ const card=(b,o)=>{
+  const tier=badgeTierName(b);
+  if(o){const v=x=>({value:x.avail?(x.n?`${x.n}×${badgeTierName(x)?' · '+badgeTierName(x):''}`:'–'):'?',raw:x.avail?x.n:null,detail:''});
+   return `<article class="bdg bdg-${b.type}${b.level||o.level?' bdg-on':''} pcmp"><div class="bdg-icon">${b.icon}</div><div class="bdg-body"><div class="hall-title">${b.title}</div>${profCmpRows(name,other.name,v(b),v(o),b.type==='fame'?'hi':'lo')}<div class="hall-desc">${b.desc}</div></div></article>`;}
+  const info=!b.avail?'Daten fehlen noch':b.n?`${b.n}× · ST ${b.days.join(', ')}`:'noch nicht';
+  return `<article class="bdg bdg-${b.type}${b.level?' bdg-on bdg-l'+(b.level+(3-b.tiers.length)):''}"><div class="bdg-icon">${b.icon}</div><div class="bdg-body"><div class="hall-title">${b.title}${stars(b)}</div><div class="bdg-info">${tier?`<b>${tier}</b> · `:''}${info}</div><div class="hall-desc">${b.desc}${b.tiers.length>1?` · Stufen ab ${b.tiers.join(' / ')}×`:''}${badgeNext(b)?' · '+badgeNext(b):''}</div></div></article>`;};
+ const grid=type=>A.map((b,i)=>[b,Bo?.[i]]).filter(([b])=>b.type===type).sort(([a,ao],[b,bo])=>other?0:(b.level>0)-(a.level>0)).map(([b,o])=>card(b,o)).join('');
+ const pill=other?`${got} : ${Bo.filter(b=>b.level).length}`:`${got} von ${A.length}`;
+ return `<details class="hall-section prof-sec" data-sec="${BADGE_SEC}"${profOpen.has(BADGE_SEC)?' open':''}><summary><h4>${BADGE_SEC} <span class="bdg-count">${pill}</span></h4></summary>`+
+  `<p class="muted tiny" style="margin:0 0 10px">Diese Halbserie, nur abgeschlossene Spieltage. Gleichstand zählt für alle.</p>`+
+  `<div class="bdg-grid">${grid('fame')}</div><h5 class="bdg-sub">Schandabzeichen</h5><div class="bdg-grid">${grid('shame')}</div></details>`;
 }
 // Direktduell im Managerprofil: Bilanz und Punkteverlauf (die Werte stehen verglichen in den Kacheln darüber).
 const DUEL_SEC='⚔️ DIREKTDUELL';
@@ -355,14 +468,16 @@ function profileSeasonHtml(name,other){
  const section=(title,key,type='fame')=>{const A=la[key],B=lb?.[key]||[];const base=A.length?A:B;
   return `<details class="hall-section prof-sec" data-sec="${title}"${profOpen.has(title)?' open':''}><summary><h4>${title}</h4></summary><div class="hall-grid">${base.map(t=>card(A.find(x=>x.label===t.label)||{...t,value:'–',detail:'',raw:null},B.find(x=>x.label===t.label),type)).join('')}</div></details>`;};
  return `<div style="grid-column:1/-1;min-width:0;width:100%;margin-top:20px;border-top:1px solid #4b463b;padding-top:12px"><div style="opacity:.75;font-size:12px">SAISONSTATISTIK · ${s.games} AUSGEWERTETE SPIELTAGE · NUR ABGESCHLOSSEN</div>`+
- section('💀 HALL OF SHAME','shame','shame')+section('🏆 RUHMESHALLE','fame')+section('📈 FORM & KONSTANZ','form')+(other?duelHtml(name,other.name):'')+'</div>';
+ badgesHtml(name,other)+section('💀 HALL OF SHAME','shame','shame')+section('🏆 RUHMESHALLE','fame')+section('📈 FORM & KONSTANZ','form')+(other?duelHtml(name,other.name):'')+'</div>';
 }
+const FOE_NOTE='bumst am häufigsten · diese Halbserie';
+const foeTile=f=>`<div class="profiletile bums-foe"><small>BUMS-ERZFEIND</small><strong>${f.value}</strong>${f.detail?`<span class="bums-foe-d">${f.detail}</span>`:''}<span class="muted tiny bums-foe-note">${FOE_NOTE}</span></div>`;
 function showProfile(){
  const m=currentManagers[Number($('#profileSelect').value)],other=$('#compareSelect').value===''?null:currentManagers[Number($('#compareSelect').value)];
  if(!m){$('#profileDetails').textContent='Keine Managerdaten geladen.';return}
  const bm=bumsOf(m.name),bums=`<span class="muted tiny" style="display:block;margin-top:6px">diese Halbserie · zur BumsTabelle</span>`;
  if(!other){
-  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${profileSeasonHtml(m.name,null)}`;
+  $('#profileDetails').innerHTML=`<div class="profiletitle">${mgrName(m.name,'mgr-av-lg')}</div><div class="profiletile"><small>PLATZIERUNG</small><strong>#${fmt(m.pos)}</strong></div><div class="profiletile"><small>PUNKTE</small><strong>${fmt(m.score)}</strong></div><div class="profiletile bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small><strong>${bm??'–'}</strong>${bums}</div>${foeTile(bumsFoeVal(m.name))}${profileSeasonHtml(m.name,null)}`;
   return;
  }
  // Vergleich: beide Manager in jeder Kachel, Abstand in Punkten beim Verfolger.
@@ -373,6 +488,7 @@ function showProfile(){
   `<div class="profiletile pcmp"><small>PLATZIERUNG</small>${rows(v('#'+fmt(m.pos),m.pos),v('#'+fmt(other.pos),other.pos),'lo')}</div>`+
   `<div class="profiletile pcmp"><small>PUNKTE</small>${rows(v(fmt(m.score),m.score,gap(diff)),v(fmt(other.score),other.score,gap(diff==null?null:-diff)),'hi')}</div>`+
   `<div class="profiletile pcmp bums-goto" data-bums-goto="${escapeHtml(m.name)}" role="link" tabindex="0" title="Zur BumsTabelle"><small>BUMSUNGEN ›</small>${rows(v(bm??'–',bm),v(bumsOf(other.name)??'–',bumsOf(other.name)),'lo')}${bums}</div>`+
+  `<div class="profiletile pcmp bums-foe"><small>BUMS-ERZFEIND</small>${rows(bumsFoeVal(m.name,false),bumsFoeVal(other.name,false),null)}<span class="muted tiny bums-foe-note">${FOE_NOTE}</span></div>`+
   profileSeasonHtml(m.name,other);
 }
 $('#profileSelect').addEventListener('change',showProfile);
@@ -1530,8 +1646,7 @@ function bumsPairsHtml(rows){
  // Kreuztabelle: Zeile bumst Spalte. Wer einen Spieler oder MM abgibt, bumst damit den, der ihn aufnimmt.
  const cnt=new Map(),rules=new Map(),key=(a,b)=>a+'\u0000'+b;
  for(const r of rows)for(const x of (r.moves||[])){
-  if(x.d!=='i')continue;const m=/ von (.+?)(?::|$)/.exec(x.t||'');if(!m)continue;
-  const by=m[1].trim(),on=r.name;if(!by||by===on)continue;
+  const by=bumsGiver(x),on=r.name;if(!by||by===on)continue;
   const k=key(by,on);cnt.set(k,(cnt.get(k)||0)+1);const rr=rules.get(k)||{};rr[x.r]=(rr[x.r]||0)+1;rules.set(k,rr);}
  const open=bumsPairOpen?' open':'';
  const head=`<details class="hall-section prof-sec bums-statsbox" id="bumsPairs"${open}><summary><h4>⚔️ WER BUMST WEN</h4></summary>`;
