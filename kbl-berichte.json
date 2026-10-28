@@ -3,25 +3,16 @@
  "stand": "Spieltagsbericht 7: Entwurf liegt vor und wartet auf Freigabe in der App.",
  "entwuerfe": {
   "7": {
-   "vorgaben": 4,
-   "createdAt": "2026-10-28T14:15:25.791Z",
+   "vorgaben": 5,
+   "createdAt": "2026-10-28T14:41:30.002Z",
    "vorlage": true,
    "pruefung": {
-    "am": "2026-10-28T14:15:42.764Z",
+    "am": "2026-10-28T14:41:49.847Z",
     "zahlen": [],
     "ki": {
-     "probleme": [
-      {
-       "zitat": "BumsParade: 20 Bumsungen, eine Erkenntnis",
-       "grund": "Am Spieltag gab es insgesamt 27 Bumsungen (6+6+3+3+2 und siebenmal 1), nicht 20."
-      },
-      {
-       "zitat": "Beim **Besoffenen Davies** werfen neun Manager Spieler raus",
-       "grund": "Die Regel Besoffener Davies (BD) betraf nur acht Manager: Stammler9, xDanii, T800, Hasan, Mic193, Daniel_Niederlande, diminator und Hansaaufdie1."
-      }
-     ]
+     "probleme": []
     },
-    "ok": false
+    "ok": true
    },
    "zahlen": [
     "7",
