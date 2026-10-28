@@ -161,16 +161,19 @@ function facts(day) {
   const mt = read(`mvp-tipps_${day}.json`);
   const mvpTipp = mt && mt.status === 'finished' ? (() => {
     const pool = mt.result?.pool, top = mt.tracking?.top10?.players || [], mvp = mt.result?.mvp;
+    // Platz in der Top 10 wie in der App (mvp-tipp.js): Gleichstand = gleicher Platz. Ohne Platzangabe zählte Claude selbst
+    // (Kevin, ST 7: Katic als Platz 11 statt geteilter Platz 10 mit Noll).
+    const placeOf = new Map(); top.forEach((p, i) => placeOf.set(String(p.id), i && top[i - 1].points === p.points ? placeOf.get(String(top[i - 1].id)) : i + 1));
     const tips = (mt.managers || []).filter(m => m.tip && !EXCLUDED_IDS.has(String(m.id))).map(m => {
       const pid = String(m.tip.playerId), act = mt.tracking?.players?.[pid]?.points ?? top.find(p => String(p.id) === pid)?.points ?? null;
-      return { manager: m.name, tippSpieler: m.tip.player, tippVerein: m.tip.team, tippZahl: m.tip.points, spielerPunkte: act, nachAnpfiffNachgetragen: !!m.tip.late };
+      return { manager: m.name, tippSpieler: m.tip.player, tippVerein: m.tip.team, tippZahl: m.tip.points, spielerPunkte: act, platzInTop10NachRegel: placeOf.get(pid) ?? null, nachAnpfiffNachgetragen: !!m.tip.late };
     });
     const winners = (mt.result?.winners || []).map(w => w.name || w.manager || w);
     const missBy = mvp?.points != null ? tips.filter(t => t.spielerPunkte != null).map(t => ({ ...t, fehlenZumMvp: mvp.points - t.spielerPunkte })).filter(t => t.fehlenZumMvp > 0).sort((a, b) => a.fehlenZumMvp - b.fehlenZumMvp) : [];
     return {
       regel: mt.rule?.text || mt.rule?.title || null, regelVon: mt.rule?.by?.name || null, erlaubteVereine: pool || null,
       mvpNachRegel: mvp ? { spieler: (mvp.players || []).map(p => `${p.name} (${p.team})`), punkte: mvp.points } : null,
-      top10NachRegel: top.map(p => `${p.name} (${p.team}) ${p.points}`), gewinner: winners, treffer: winners.length,
+      top10NachRegel: top.map(p => `${placeOf.get(String(p.id))}. ${p.name} (${p.team}) ${p.points}`), gewinner: winners, treffer: winners.length,
       tipps: tips, knappsteFehlschuesse: missBy.slice(0, 4),
       bisherigeTippspiele: days.filter(d => read(`mvp-tipps_${d}.json`)?.rule).length,
     };

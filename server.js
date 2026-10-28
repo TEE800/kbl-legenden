@@ -2918,7 +2918,7 @@ function transferPeriods(times, now = Date.now()) {
   if (!ts.length) return [];
   const starts = [ts[0]];
   for (let i = 1; i < ts.length; i++) if (ts[i] - ts[i - 1] >= 5 * 864e5) starts.push(ts[i]);
-  const keyOf = ms => { const d = new Date(ms), m = d.getUTCMonth(), y = m >= 6 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; return `${m >= 5 && m <= 9 ? 'Hinrunde' : 'Rückrunde'} ${y}/${String(y + 1).slice(2)}`; };
+  const keyOf = ms => { const d = new Date(ms), m = d.getUTCMonth(), y = m >= 5 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; return `${m >= 5 && m <= 9 ? 'Hinrunde' : 'Rückrunde'} ${y}/${String(y + 1).slice(2)}`; };
   const periods = [];
   for (const st of starts) { const key = keyOf(st); if (periods.length && periods[periods.length - 1].key === key) continue; if (periods.length) periods[periods.length - 1].to = st; periods.push({ key, from: st, to: null }); }
   // Der Zeitraum beginnt am Tag des ersten Transfers (0 Uhr UTC), damit nichts vom ersten Tag fehlt.
