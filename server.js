@@ -2030,7 +2030,7 @@ function readBums(){try{return JSON.parse(fs.readFileSync(BUMS_FILE,'utf8'));}ca
 // Spieltagsbericht (Kevin-Wunsch): schreibt tools/spieltagsbericht.mjs auf GitHub in kbl-berichte.json; hier nur lesen.
 app.get('/api/berichte',(req,res)=>{
   let d={berichte:{}};try{d=JSON.parse(fs.readFileSync(path.join(process.cwd(),'kbl-berichte.json'),'utf8'));}catch{}
-  res.set('Cache-Control','no-store').json({berichte:Object.values(d.berichte||{}).sort((a,b)=>b.day-a.day)});
+  res.set('Cache-Control','no-store').json({berichte:Object.values(d.berichte||{}).sort((a,b)=>b.day-a.day),pruefungen:Object.fromEntries(Object.entries(d.entwuerfe||{}).filter(([k,e])=>e.pruefung&&!d.berichte?.[k]).map(([k,e])=>[k,e.pruefung])),zahlen:Object.fromEntries(Object.entries(d.entwuerfe||{}).filter(([k,e])=>e.zahlen&&!d.berichte?.[k]).map(([k,e])=>[k,e.zahlen]))});
 });
 app.get('/api/bumsungen',(req,res)=>{
   if(!getToken(req))return res.status(401).json({error:'Nicht angemeldet.'});

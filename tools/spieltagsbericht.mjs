@@ -18,7 +18,7 @@ const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
 // Falls ein Modellname nicht (mehr) existiert (Fehler 404), nacheinander diese versuchen.
 const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
 // Bei Änderungen an SYSTEM oder den Fakten hochzählen: der Bericht des neuesten Spieltags wird dann einmal neu geschrieben.
-const VORGABEN = 2;
+const VORGABEN = 5;
 const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
@@ -30,7 +30,9 @@ const sd = a => { const m = mean(a); return a.length ? Math.sqrt(mean(a.map(x =>
 function publish(store) {
   const list = Object.values(store.berichte || {}).sort((a, b) => b.day - a.day);
   fs.mkdirSync(DATA, { recursive: true });
-  fs.writeFileSync(path.join(DATA, 'berichte.json'), JSON.stringify({ berichte: list }));
+  // Prüfergebnis und erlaubte Zahlen nur für offene Entwürfe (Anzeige für den Admin, Zahlenprüfung nach eigenen Änderungen).
+  const offen = Object.entries(store.entwuerfe || {}).filter(([d]) => !store.berichte?.[d]);
+  fs.writeFileSync(path.join(DATA, 'berichte.json'), JSON.stringify({ berichte: list, pruefungen: Object.fromEntries(offen.filter(([, e]) => e.pruefung).map(([d, e]) => [d, e.pruefung])), zahlen: Object.fromEntries(offen.filter(([, e]) => e.zahlen).map(([d, e]) => [d, e.zahlen])) }));
 }
 
 // ---- Bumsungen eines Spieltags: gleiche Rechnung wie bumsCounts/bumsStaticDerive in public/app.js (bei Änderungen beide anpassen) ----
@@ -116,6 +118,10 @@ function facts(day) {
   const names = Object.assign({}, ...(read(`lineup-snapshots_${day}.json`)?.snapshots || []).map(s => s.playerNames || {}));
   const plaus = new Map((acc.plausibility || []).map(p => [String(p.managerId), p]));
 
+  // Auflagen aus der Abrechnung des Vorspieltags (z. B. Magic Miyoshi: mit einem Spieler weniger antreten). Eine dadurch leere
+  // Position ist eine Strafe, kein eigener Fehler (Kevin, ST 7: Stammler9 hatte MM von Cello).
+  const prevBums = day > 1 ? (settlement(day - 1)?.bums || read('bumsungen.json')?.days?.[day - 1]?.managers || {}) : {};
+  const auflagen = id => (prevBums[id]?.moves || []).filter(m => (m.richtung || (m.d === 'i' ? 'bekommen' : '')) === 'bekommen').map(m => ({ regel: RULE_NAMES[m.regel || m.r] || m.regel || m.r, text: m.text || m.t }));
   const manager = ids.map(i => {
     const pts = days.map(d => dayPts(i, d)), last = pts[day - 1];
     const own = pts.filter(Number.isFinite);
@@ -136,10 +142,13 @@ function facts(day) {
       platzVerlauf: days.map(d => ranks[d].get(i)), punkteJeSpieltag: pts, spieltagPlatzJeSpieltag: days.map(d => dayRanks[d].get(i)),
       saisonSchnitt: round(mean(own)), streuung: round(sd(own)), besterSpieltag: Math.max(...own), schlechtesterSpieltag: Math.min(...own),
       schnittLetzte3: own.length >= 3 ? round(mean(own.slice(-3))) : null, schnittDie3Davor: own.length >= 6 ? round(mean(own.slice(-6, -3))) : null,
+      formAenderungLetzte3: own.length >= 6 ? round(mean(own.slice(-3))) - round(mean(own.slice(-6, -3))) : null,
       spieltagssiege: days.filter(d => dayRanks[d].get(i) === 1).length, spieltagsletzter: days.filter(d => dayRanks[d].get(i) === ids.length).length,
       unterLigaschnittInFolge: streak, ueberLigaschnittInFolge: streakUp,
       abstandZumVordermann: aboveSp != null ? aboveSp - u(day, i).sp : null, vorsprungAufHintermann: belowSp != null ? u(day, i).sp - belowSp : null,
       leerePositionen: empty, strafeLeerePositionen: 100 * empty,
+      auflagenVomVorspieltag: auflagen(i),
+      ...(empty ? { leerePositionGrund: auflagen(i).some(x => x.regel === 'Magic Miyoshi') ? `erzwungen durch Magic Miyoshi (${auflagen(i).find(x => x.regel === 'Magic Miyoshi').text}), kein eigener Fehler` : 'keine Auflage bekannt, also selbst verschuldet' } : {}),
       spieltagPlatzOhneLeerePositionen: empty ? 1 + ids.filter(j => j !== i && dayPts(j, day) > ohneLeere).length : undefined,
       ...(sumOk && top ? {
         topSpieler: { ...top, anteilProzent: last > 0 ? round(100 * top.punkte / last) : null, spieltagPunkteOhneIhn: last - top.punkte, spieltagPlatzOhneIhn: 1 + ids.filter(j => j !== i && dayPts(j, day) > last - top.punkte).length },
@@ -179,7 +188,7 @@ function facts(day) {
   // Transfermarkt der laufenden Halbserie
   const tr = read('transfers.json')?.seasons?.find(s => s.current);
   const transfers = tr ? tr.managers.filter(m => !EXCLUDED_IDS.has(String(m.id))).map(m => ({
-    manager: m.name, kaeufe: m.buys, verkaeufe: m.sells, gewinnVerlustVerkauftMio: round(m.realized / 1e6, 1), wertaenderungKaderMio: round(m.unrealized / 1e6, 1),
+    manager: m.name, kaeufe: m.buys, verkaeufe: m.sells, gewinnVerlustVerkauftMio: round(m.realized / 1e6, 1), wertaenderungKaderMio: round(m.unrealized / 1e6, 1), transferBilanzGesamtMio: round((m.realized + m.unrealized) / 1e6, 1),
     deals_mitGewinn: m.wins, deals_mitVerlust: m.losses, besterDeal: m.best ? `${m.best.name} ${round(m.best.diff / 1e6, 1)} Mio` : null, schlechtesterDeal: m.worst ? `${m.worst.name} ${round(m.worst.diff / 1e6, 1)} Mio` : null,
   })).sort((a, b) => (b.gewinnVerlustVerkauftMio + b.wertaenderungKaderMio) - (a.gewinnVerlustVerkauftMio + a.wertaenderungKaderMio)) : null;
 
@@ -191,7 +200,7 @@ function facts(day) {
       sieger: `${name(sorted[0].i)} ${sorted[0].p}`, letzter: `${name(sorted.at(-1).i)} ${sorted.at(-1).p}`,
       ligaSchnittDiesmal: leagueAvg(day), ligaSchnittJeSpieltag: ligaSchnitt,
       niedrigsterSchnittSeitSpieltag: (() => { for (let d = day - 1; d >= 1; d--) if (leagueAvg(d) <= leagueAvg(day)) return d; return null; })(),
-      ueber900: pts.filter(p => p >= 900).length, ueber1000: pts.filter(p => p >= 1000).length,
+      ueber900: pts.filter(p => p >= 900).length, ueber1000: pts.filter(p => p >= 1000).length, schwellen: [900, 1000],
       saisonRekordSpieltag: rec ? `${name(rec.i)} ${rec.p} an Spieltag ${rec.d}` : null,
       fuehrungswechsel: day > 1 && [...ranks[day]].find(([, r]) => r === 1)?.[0] !== [...ranks[day - 1]].find(([, r]) => r === 1)?.[0],
     },
@@ -212,6 +221,7 @@ Harte Regeln für Zahlen:
 - Fehlt etwas, lass es weg. Wenn ein Feld „nicht sicher“ sagt, nicht verwenden.
 - Spielerpunkte, Platzierungen und Namen exakt wie im JSON schreiben.
 - Behaupte keine Platzierung, keinen Sieg und keine Serie, die nicht ausdrücklich als Feld im JSON steht (z. B. wer an welchem Spieltag Sieger war: nur aus spieltagPlatzJeSpieltag, Platz 1 = Sieger). Keine Folgerungen wie „hätte“, „wäre“, außer das Feld steht so im JSON.
+- Leere Positionen: Steht bei leerePositionGrund „erzwungen durch Magic Miyoshi“, war es eine Strafe, kein Fehler des Managers. Dann stichelst du gegen den, der sie verhängt hat, oder über das Pech, nie über „vergessen“. Auflagen aus dem Vorspieltag (auflagenVomVorspieltag) erklären oft schwache Spieltage, nutze sie.
 - Überschriften müssen zum Inhalt passen (z. B. nicht „Treffer“ schreiben, wenn es 0 Treffer gab).
 - Schreibe NIE Feldnamen oder JSON-Schreibweise in den Text (nicht „schnittLetzte3“, „platzVerlauf“, „[1,1,3]“ usw.), sondern formuliere sie in normalem Deutsch („im Schnitt der letzten drei Spieltage“, „sechsmal in Folge Erster“).
 - Der Bericht muss vollständig sein: Lieber kürzer als mitten im Satz aufhören.
@@ -221,12 +231,50 @@ Liga-Vokabular: Bumsung = von einer Sonderregel betroffen, BumsParade = Abrechnu
 
 Form: Deutsch. Erste Zeile: „# “ plus eine knackige Schlagzeile (ohne Spieltagsnummer). Dann 6 bis 9 Abschnitte, jeder mit „## “ und einem Emoji. Fließtext mit **fett** für Namen und Schlüsselzahlen, Listen nur wenn sinnvoll. Etwa 600 bis 900 Wörter. Kein Fazit über dich selbst, keine Erklärung, dass du eine KI bist, keine Rückfragen.`;
 
-async function askClaude(f) {
+// ---- Prüfung (Kevin 28.10.: „ich habe keine Lust, alle Zahlen nachzuprüfen“) ----
+// 1) Zahlenprüfung, fest programmiert: Jede Zahl im Text muss irgendwo in den Fakten stehen (auch als Betrag, gerundet).
+const normNum = t => Number(String(t).replace(/[–−]/g, '-').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+function erlaubteZahlen(f) {
+  const set = new Set(), add = v => { if (!Number.isFinite(v)) return; for (const x of [v, Math.abs(v), Math.round(v), Math.round(Math.abs(v)), Math.round(Math.abs(v) * 10) / 10]) set.add(String(x)); };
+  const walk = o => { if (o == null) return; if (typeof o === 'number') return add(o); if (typeof o === 'string') { for (const m of o.match(/-?\d+(?:[.,]\d+)?/g) || []) add(normNum(m)); return; } if (Array.isArray(o)) return o.forEach(walk); if (typeof o === 'object') for (const v of Object.values(o)) walk(v); };
+  walk(f); return set;
+}
+function zahlenPruefen(text, allowed) {
+  const out = [];
+  for (const line of String(text).split(/\n+/)) for (const m of line.matchAll(/[–−-]?\d{1,3}(?:\.\d{3})+(?:,\d+)?|[–−-]?\d+(?:,\d+)?/g)) {
+    const v = normNum(m[0]); if (!Number.isFinite(v)) continue;
+    const ok = [v, Math.abs(v), Math.round(Math.abs(v) * 10) / 10].some(x => allowed.has(String(x)));
+    if (!ok) out.push({ zahl: m[0], stelle: line.replace(/[#*]/g, '').trim().slice(0, 160) });
+  }
+  return out;
+}
+// 2) Gegenprüfung durch Claude: jede Aussage gegen die Fakten, Antwort als JSON-Liste der Probleme.
+const PRUEF_SYSTEM = `Du bist ein strenger Faktenprüfer. Du bekommst Fakten als JSON und einen Spieltagsbericht. Prüfe jede Tatsachenbehauptung im Bericht (Zahlen, Platzierungen, Sieger, Serien, wer was an wen gegeben hat, Ursachen wie „vergessen“ oder „Strafe“). Sticheleien und Meinungen sind erlaubt, solange die Tatsache darunter stimmt. Antworte NUR mit JSON: {"probleme":[{"zitat":"kurzes Zitat aus dem Bericht","grund":"was laut Fakten stimmt"}]}. Keine Probleme: {"probleme":[]}.`;
+async function gegenpruefen(f, text) {
+  const key = process.env.ANTHROPIC_API_KEY; if (!key) return null;
+  for (const model of [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)]) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model, max_tokens: 6000, system: PRUEF_SYSTEM, messages: [{ role: 'user', content: `FAKTEN:\n${JSON.stringify(f)}\n\nBERICHT:\n${text}` }] }), signal: AbortSignal.timeout(180000) });
+      const d = await r.json().catch(() => ({}));
+      if (r.status === 404) continue; if (!r.ok) return { fehler: `Gegenprüfung nicht möglich (${r.status})` };
+      const raw = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+      const j = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+      return { probleme: (j.probleme || []).slice(0, 20).map(p => ({ zitat: String(p.zitat || '').slice(0, 200), grund: String(p.grund || '').slice(0, 300) })) };
+    } catch (e) { return { fehler: `Gegenprüfung nicht möglich (${e.message})` }; }
+  }
+  return { fehler: 'Gegenprüfung nicht möglich (kein Modell)' };
+}
+async function pruefen(f, text) {
+  const zahlen = zahlenPruefen(text, erlaubteZahlen(f)), ki = await gegenpruefen(f, text);
+  return { am: new Date().toISOString(), zahlen, ki, ok: !zahlen.length && !!ki && !ki.fehler && !ki.probleme.length };
+}
+
+async function askClaude(f, hinweise = '') {
   const key = process.env.ANTHROPIC_API_KEY;
   const models = [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)];
   let last;
   for (const model of models) {
-    const body = { model, max_tokens: 10000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}` }] };
+    const body = { model, max_tokens: 10000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}${hinweise ? `\n\nEin früherer Entwurf hatte diese Fehler, vermeide sie unbedingt:\n${hinweise}` : ''}` }] };
     for (let attempt = 1; attempt <= 3; attempt++) {
       let r, d;
       try { r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); d = await r.json().catch(() => ({})); }
@@ -257,6 +305,8 @@ const post = async (p, body) => { const r = await fetch(API + p, { method: 'POST
 const store = readStore(); store.berichte ||= {}; store.entwuerfe ||= {};
 const arg = process.argv.indexOf('--fakten');
 await loadHaken(Math.max(1, ...((read('matchday-status.json')?.days || []).filter(d => d.status === 'finished').map(d => d.day))));
+const pa = process.argv.indexOf('--pruefen');
+if (pa > 0) { const f = facts(Number(process.argv[pa + 1])); console.log(JSON.stringify(zahlenPruefen(fs.readFileSync(process.argv[pa + 2], 'utf8'), erlaubteZahlen(f)), null, 1)); process.exit(0); }
 if (arg > 0) { console.log(JSON.stringify(facts(Number(process.argv[arg + 1])), null, 1)); process.exit(0); }
 let stand = '';
 const say = m => { stand = m; console.log(m); };
@@ -284,16 +334,32 @@ try {
   else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} ist freigegeben.`);
   else if (hasDraft && neu !== day) say(`Spieltagsbericht ${day}: Entwurf liegt vor und wartet auf Freigabe in der App.`);
   else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
+  else if (API && CODE && dienstOk && fs.existsSync(path.join(process.cwd(), 'tools', 'bericht-vorlagen', `${day}.md`))) {
+    // Von Kevin im Chat abgesegneter Text (Vorlage) wird als Entwurf übernommen, ohne Claude-Aufruf. Danach Datei löschen.
+    const text = fs.readFileSync(path.join(process.cwd(), 'tools', 'bericht-vorlagen', `${day}.md`), 'utf8');
+    const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim(), createdAt = new Date().toISOString();
+    const f = facts(day), pruefung = await pruefen(f, text);
+    await post(`/bericht/${day}/entwurf`, { title, text, model: 'Vorlage (im Chat abgesegnet)', vorgaben: VORGABEN, createdAt });
+    store.entwuerfe[day] = { vorgaben: VORGABEN, createdAt, vorlage: true, pruefung, zahlen: [...erlaubteZahlen(f)] };
+    say(`Spieltagsbericht ${day}: Vorlage als Entwurf übernommen, wartet auf Freigabe.`);
+  }
   else if (!process.env.ANTHROPIC_API_KEY) say(`Spieltagsbericht ${day}: kein ANTHROPIC_API_KEY hinterlegt, wird übersprungen.`);
   else if (API && CODE && !dienstOk) say(`Spieltagsbericht ${day}: Tippdienst kennt /bericht noch nicht (worker.js bei Cloudflare aktualisieren) oder ist nicht erreichbar. Kein Claude-Aufruf.`);
   else if (!API || !CODE) say(`Spieltagsbericht ${day}: ${!API ? 'Tippdienst (KBL_TIPP_DIENST)' : 'Geheimnis KBL_ADMIN_CODE'} fehlt, der Entwurf hätte keinen privaten Platz. Wird übersprungen.`);
   else {
     const f = facts(day);
-    const { text, usage, model } = await askClaude(f);
+    let { text, usage, model } = await askClaude(f);
+    let pruefung = await pruefen(f, text);
+    if (!pruefung.ok && (pruefung.zahlen.length || pruefung.ki?.probleme?.length)) {
+      const h = [...pruefung.zahlen.map(z => `- Zahl ${z.zahl} steht nicht in den Fakten: „${z.stelle}“`), ...(pruefung.ki?.probleme || []).map(p => `- „${p.zitat}“: ${p.grund}`)].join('\n');
+      const zweiter = await askClaude(f, h); const p2 = await pruefen(f, zweiter.text);
+      const n = p => p.zahlen.length + (p.ki?.probleme?.length || 0);
+      if (n(p2) <= n(pruefung)) ({ text, usage, model } = zweiter), pruefung = p2;
+    }
     const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim();
     const createdAt = new Date().toISOString();
     const r = await post(`/bericht/${day}/entwurf`, { title, text, model, vorgaben: VORGABEN, createdAt });
-    store.entwuerfe[day] = { vorgaben: VORGABEN, createdAt };
+    store.entwuerfe[day] = { vorgaben: VORGABEN, createdAt, pruefung, zahlen: [...erlaubteZahlen(f)] };
     say(r.skipped ? `Spieltagsbericht ${day}: schon freigegeben, neuer Entwurf verworfen.` : `Spieltagsbericht ${day}: Entwurf geschrieben, wartet auf Freigabe (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''}).`);
   }
 } catch (e) { say(`Spieltagsbericht fehlgeschlagen: ${e.message}`); }
