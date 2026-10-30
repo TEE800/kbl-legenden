@@ -2987,6 +2987,51 @@ app.get('/api/transfers', async (req, res) => {
 // hatte (ranking?dayNumber lp). Fehlen Punkte, wird der Verkauf nicht gewertet (nie raten).
 const PECH_MIN = 100;
 let pechCache = null;
+// Ligenübersicht (Kevin-Wunsch): Spielplan, Ergebnisse und Tabelle der Kickbase-Wettbewerbe. Nur lesend.
+// /v4/competitions/{cid}/matchdays: it[] je Spieltag (day, mdln) mit it[] Spielen (dt Anstoß, t1/t2 Verein, t1g/t2g Tore,
+// st 2 = beendet, il = läuft, mtd Minute); oben day = aktueller Spieltag. /table: Vereine (tn Name, tim Wappen, cpl Platz,
+// cp Punkte, mc Spiele, gd Tordifferenz), MLS zusätzlich conf[] je Conference. Am 30.10. auf GitHub geprüft.
+const LIGEN = [
+  { key: 'bl1', cid: 1, name: 'Bundesliga' },
+  { key: 'bl2', cid: 2, name: '2. Bundesliga' },
+  { key: 'laliga', cid: 3, name: 'LaLiga' },
+  { key: 'fbl', cid: 4, name: 'Frauen-Bundesliga' },
+  { key: 'mls', cid: 9, name: 'MLS' }
+];
+let ligenCache = null;
+async function loadLiga(lg, token) {
+  const [md, table] = await Promise.all([kbFetch(`/v4/competitions/${lg.cid}/matchdays`, { token }), kbFetch(`/v4/competitions/${lg.cid}/table`, { token }).catch(() => null)]);
+  const teams = {};
+  const row = t => { teams[t.tid] = { n: t.tn || null, img: t.tim || null }; return { id: String(t.tid), place: t.cpl ?? null, points: t.cp ?? null, games: t.mc ?? null, gd: t.gd ?? null, live: !!t.il }; };
+  const rows = (table?.it || []).filter(t => t?.tid != null).map(row).sort((a, b) => (a.place ?? 99) - (b.place ?? 99));
+  const conf = (table?.conf || []).filter(c => Array.isArray(c?.it)).map(c => ({ name: c.n || '', rows: c.it.map(row).sort((a, b) => (a.place ?? 99) - (b.place ?? 99)) }));
+  const team = (id, sy, img) => { const t = teams[id] || (teams[id] = { n: null, img: null }); t.sy = t.sy || sy || null; t.img = t.img || img || null; return String(id); };
+  const days = (md?.it || []).filter(d => Number.isInteger(d?.day)).map(d => ({
+    day: d.day, label: d.mdln || `Spieltag ${d.day}`,
+    matches: (d.it || []).map(m => ({ dt: m.dt || null, t1: team(m.t1, m.t1sy, m.t1im), t2: team(m.t2, m.t2sy, m.t2im),
+      g1: Number.isFinite(m.t1g) ? m.t1g : null, g2: Number.isFinite(m.t2g) ? m.t2g : null,
+      state: m.il ? 'live' : m.st === 2 ? 'done' : 'open', min: m.il && m.mtd ? String(m.mtd) : null }))
+      .sort((a, b) => Date.parse(a.dt || 0) - Date.parse(b.dt || 0))
+  })).sort((a, b) => a.day - b.day);
+  for (const d of days) { const t = d.matches.map(m => Date.parse(m.dt)).filter(Number.isFinite); d.first = t.length ? new Date(Math.min(...t)).toISOString() : null; }
+  return { key: lg.key, name: lg.name, current: Number.isInteger(md?.day) ? md.day : null, days, table: rows, conf, teams };
+}
+app.get('/api/ligen', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  // Läuft irgendwo ein Spiel, nach 2 Min. neu, sonst nach 15 Min.
+  const maxAge = ligenCache?.value.leagues.some(l => l.days.some(d => d.matches.some(m => m.state === 'live'))) ? 2 * 60e3 : 15 * 60e3;
+  if (ligenCache && Date.now() - ligenCache.at < maxAge && req.query.neu !== '1') return res.set('Cache-Control', 'no-store').json(ligenCache.value);
+  const leagues = [];
+  for (const lg of LIGEN) {
+    try { leagues.push(await loadLiga(lg, token)); }
+    catch (e) { leagues.push({ key: lg.key, name: lg.name, error: e.message, days: [], table: [], conf: [], teams: {} }); }
+  }
+  const value = { updatedAt: new Date().toISOString(), leagues };
+  if (leagues.some(l => !l.error)) ligenCache = { at: Date.now(), value };
+  res.set('Cache-Control', 'no-store').json(value);
+});
+
 app.get('/api/transfer-pech', async (req, res) => {
   const token = getToken(req) || newestToken();
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });

@@ -115,7 +115,7 @@ const unb64u = s => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_
 const cat = (...a) => { const out = new Uint8Array(a.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of a) { out.set(x, o); o += x.length; } return out; };
 async function hmac(key, data) { const k = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); return new Uint8Array(await crypto.subtle.sign('HMAC', k, data)); }
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|android\.googleapis\.com|updates\.push\.services\.mozilla\.com|push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)$/;
-const PUSH_PREFS = ['bums', 'tipp', 'mvp', 'spieltag', 'arena'];
+const PUSH_PREFS = ['bums', 'tipp', 'mvp', 'spieltag', 'arena', 'l_bl1', 'l_bl2', 'l_laliga', 'l_fbl', 'l_mls'];
 const BERLIN = { timeZone: 'Europe/Berlin' };
 
 async function vapid(env) {
@@ -201,6 +201,19 @@ async function pushTick(env) {
     const mins = Math.max(1, Math.round((kick - now) / 60e3));
     outbox.push({ pref: 'tipp', skip: id => !!tips[id], done: async () => env.TIPPS.put(`push:done:tipp:${next.day}`, '1', { expirationTtl: 14 * 86400 }),
       msg: () => ({ title: `⏰ Tippschluss in ${mins} Minuten`, body: `Du hast für Spieltag ${next.day} noch keinen MVP-Tipp. Anstoß ${fmtTime(kick)} Uhr: ${next.firstMatch || ''}${rule?.text ? `\nTippregel: ${rule.text}` : ''}`.trim(), url: './#mvp', tag: `tipp${next.day}`, ttl: Math.max(60, Math.round((kick - now) / 1000)) }) });
+  }
+  // 1b. Ligenuebersicht (Kevin-Wunsch): 1 Std. vor dem ersten Anstoss eines Spieltags je Liga (Anlass l_<liga>).
+  // Anstosszeiten aus data/ligen.json (Export aus Kickbase), nur wenn noch kein Spiel des Spieltags begonnen hat.
+  const ligen = await siteJson(env, 'ligen.json').catch(() => null);
+  for (const l of (ligen?.leagues || [])) for (const d of (l.days || [])) {
+    const t = Date.parse(d.first || ''), doneKey = `push:done:liga:${l.key}:${d.day}`;
+    if (!Number.isFinite(t) || t - now <= 0 || t - now > 61 * 60e3 || (d.matches || []).some(m => m.state !== 'open')) continue;
+    if (await env.TIPPS.get(doneKey)) continue;
+    const mins = Math.max(1, Math.round((t - now) / 60e3)), team = id => l.teams?.[id]?.n || l.teams?.[id]?.sy || '?';
+    const first = (d.matches || []).filter(m => Date.parse(m.dt) === t).map(m => `${team(m.t1)} – ${team(m.t2)}`);
+    const rest = (d.matches || []).length - first.length;
+    outbox.push({ pref: 'l_' + l.key, done: async () => env.TIPPS.put(doneKey, '1', { expirationTtl: 14 * 86400 }),
+      msg: () => ({ title: `⚽ ${l.name}: ${d.label || `Spieltag ${d.day}`} beginnt in ${mins} Minuten`, body: `Anstoß ${fmtTime(t)} Uhr: ${first.slice(0, 3).join(', ')}${first.length > 3 ? ` und ${first.length - 3} weitere` : ''}${rest > 0 ? `\nDanach noch ${rest} ${rest === 1 ? 'Spiel' : 'Spiele'}.` : ''}`, url: './#ligen', tag: `liga-${l.key}-${d.day}`, ttl: Math.max(60, Math.round((t - now) / 1000)) }) });
   }
   // 2. Laufende und gerade beendete Spieltage.
   const active = days.filter(d => d.status === 'live' || (d.status === 'finished' && d.firstKickoffUTC && now - Date.parse(d.firstKickoffUTC) < 5 * 86400e3));
