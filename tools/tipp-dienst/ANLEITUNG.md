@@ -53,7 +53,7 @@ Unter https://github.com/TEE800/kbl-legenden/actions/workflows/seite.yml auf **R
 Nach ein paar Minuten können alle Manager im Reiter „MVP-Tipp“ tippen.
 
 ## So läuft es danach
-- Jeder Manager wählt seinen Namen, legt beim ersten Tipp seinen eigenen Tipp-Code fest und tippt Spieler und Punkte.
+- Jeder Manager wählt seinen Namen, legt beim ersten Tipp jedes Spieltags einen eigenen Tipp-Code fest (gilt nur für diesen Spieltag) und tippt Spieler und Punkte.
 - Bis zum ersten Anpfiff beliebig oft änderbar. Vorher sieht niemand fremde Tipps, auch du nicht.
 - Die Tippregel trägst du im Bereich „Tippregel festlegen (nur Admin)“ mit deinem Admin-Code ein.
 - Nach dem Anpfiff holt GitHub die Tipps ab (beim nächsten Lauf während der Spiele). Nach dem Spieltag zeigt die Seite den Gewinner-Vorschlag.

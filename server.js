@@ -1453,7 +1453,8 @@ const TIPP_EXPORT=process.env.KBL_EXPORT==='1';
 function readTipps(){try{return JSON.parse(fs.readFileSync(TIPP_FILE,'utf8'));}catch(e){if(e.code==='ENOENT')return {};throw e;}}
 function saveTipps(data){const tmp=TIPP_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2),{mode:0o600});fs.renameSync(tmp,TIPP_FILE);}
 const tippRule=rec=>rec?.rule||null;
-// Tipp-Code: Wer nicht angemeldet ist, waehlt seinen Namen und tippt mit einem eigenen Code (4-8 Ziffern), den er beim ersten Tipp selbst festlegt.
+// Tipp-Code: Wer nicht angemeldet ist, waehlt seinen Namen und tippt mit einem eigenen Code (4-8 Ziffern), den er beim ersten Tipp des Spieltags selbst festlegt.
+// Der Code gilt nur fuer diesen Spieltag (Kevin-Vorgabe 30.10.), Schluessel "<Spieltag>:<Manager-ID>".
 // Gespeichert nur als Salt+scrypt in mvp-tipp-codes.json (bewusst kein kbl-*-Name: wird nie committet/veroeffentlicht, siehe .gitignore).
 // Hoechstens 5 Fehlversuche je Manager in 15 Minuten. Der Admin kann einen Code zuruecksetzen.
 const TIPP_CODE_FILE=path.join(process.cwd(),'mvp-tipp-codes.json');
@@ -1462,13 +1463,16 @@ function saveTippCodes(d){const tmp=TIPP_CODE_FILE+'.tmp';fs.writeFileSync(tmp,J
 const tippHash=(code,salt)=>crypto.scryptSync(String(code),salt,32).toString('hex');
 const tippCodeFails=new Map();
 // Prueft den Code; ohne gespeicherten Code wird er (nur wenn set=true) neu festgelegt.
-function checkTippCode(managerId,code,set){
+function checkTippCode(day,managerId,code,set){
  if(!/^\d{4,8}$/.test(String(code||'')))return {error:'Bitte einen Code aus 4 bis 8 Ziffern eingeben.',status:400};
  const now=Date.now(),f=(tippCodeFails.get(managerId)||[]).filter(t=>now-t<15*60e3);
  if(f.length>=5)return {error:'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.',status:429};
- const all=readTippCodes(),rec=all[managerId];
- if(!rec){if(!set)return {error:'Für diesen Namen gibt es noch keinen Code. Er wird beim ersten Tipp festgelegt.',status:404};
-  const salt=crypto.randomBytes(16).toString('hex');all[managerId]={salt,hash:tippHash(code,salt),createdAt:new Date().toISOString()};saveTippCodes(all);return {ok:true,created:true};}
+ const key=`${day}:${managerId}`,all=readTippCodes();
+ // Uebergang: Wer an diesem Spieltag schon mit dem alten, festen Code getippt hat, behaelt ihn fuer diesen Spieltag.
+ if(!all[key]&&all[managerId]&&readTipps()[day]?.tips?.[managerId]){all[key]=all[managerId];saveTippCodes(all);}
+ const rec=all[key];
+ if(!rec){if(!set)return {error:'Für diesen Namen gibt es an diesem Spieltag noch keinen Code. Er wird beim ersten Tipp des Spieltags festgelegt.',status:404};
+  const salt=crypto.randomBytes(16).toString('hex');all[key]={salt,hash:tippHash(code,salt),createdAt:new Date().toISOString()};saveTippCodes(all);return {ok:true,created:true};}
  const a=Buffer.from(rec.hash,'hex'),b=Buffer.from(tippHash(code,rec.salt),'hex');
  if(a.length!==b.length||!crypto.timingSafeEqual(a,b)){f.push(now);tippCodeFails.set(managerId,f);return {error:'Falscher Code.',status:403};}
  tippCodeFails.delete(managerId);return {ok:true};
@@ -1804,7 +1808,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
  try{const md=await tippMatchdays(),st=tippState(md,day),managers=await tippManagers(token),codes=readTippCodes();
   const rec=readTipps()[day]||{},tips=rec.tips||{},me=TIPP_EXPORT?null:currentSession(req)?.userId||null,rule=tippRule(rec);
   const reveal=st.locked&&st.status!=='upcoming';
-  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!codes[m.id],...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt,...(t.late?{late:true}:{})}}:{})};});
+  const list=managers.map(m=>{const t=tips[m.id];return {id:m.id,name:m.name,tipped:!!t,hasCode:!!(codes[`${day}:${m.id}`]||t&&codes[m.id]),...(t&&(reveal||m.id===me)?{tip:{playerId:t.playerId,player:t.player,team:t.team,points:t.points,updatedAt:t.updatedAt,...(t.late?{late:true}:{})}}:{})};});
   let result=null;
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
@@ -1830,7 +1834,7 @@ app.put('/api/mvp-tipps/:day',async(req,res)=>{
   if(!me){
    me=managers.find(m=>m.id===String(req.body?.managerId||''));
    if(!me)return res.status(400).json({error:'Bitte deinen Namen aus der Liste wählen.'});
-   const c=checkTippCode(me.id,req.body?.code,true);if(!c.ok)return res.status(c.status).json({error:c.error});created=!!c.created;
+   const c=checkTippCode(day,me.id,req.body?.code,true);if(!c.ok)return res.status(c.status).json({error:c.error});created=!!c.created;
   }
   const player=(await loadAllPlayers(token)).players.get(playerId);
   if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
@@ -1844,13 +1848,13 @@ app.put('/api/mvp-tipps/:day',async(req,res)=>{
 app.post('/api/mvp-tipps/:day/mine',async(req,res)=>{
  const day=validDay(req.params.day),id=String(req.body?.managerId||'');
  if(!day||!validManager(id))return res.status(400).json({error:'Ungültige Angaben.'});
- const c=checkTippCode(id,req.body?.code,false);if(!c.ok)return res.status(c.status).json({error:c.error});
+ const c=checkTippCode(day,id,req.body?.code,false);if(!c.ok)return res.status(c.status).json({error:c.error});
  res.set('Cache-Control','no-store').json({ok:true,tip:readTipps()[day]?.tips?.[id]||null});
 });
 app.delete('/api/mvp-tipps/codes/:id',(req,res)=>{
  if(!isAdmin(req)||!getToken(req))return res.status(403).json({error:'Nur der Liga-Admin kann Codes zurücksetzen.'});
- const id=String(req.params.id);if(!validManager(id))return res.status(400).json({error:'Ungültiger Manager.'});
- const all=readTippCodes();delete all[id];saveTippCodes(all);tippCodeFails.delete(id);
+ const id=String(req.params.id),day=validDay(req.query.day);if(!validManager(id)||!day)return res.status(400).json({error:'Ungültiger Manager oder Spieltag.'});
+ const all=readTippCodes();delete all[`${day}:${id}`];delete all[id];saveTippCodes(all);tippCodeFails.delete(id);
  res.set('Cache-Control','no-store').json({ok:true});
 });
 app.put('/api/mvp-tipps/:day/rule',async(req,res)=>{

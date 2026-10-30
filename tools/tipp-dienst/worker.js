@@ -72,22 +72,25 @@ async function listTips(env, day) {
   } while (cursor);
   return out;
 }
-async function codeIds(env) {
-  const ids = new Set(); let cursor;
-  do { const page = await env.TIPPS.list({ prefix: 'code:', cursor }); for (const k of page.keys) ids.add(k.name.slice(5)); cursor = page.list_complete ? null : page.cursor; } while (cursor);
-  return ids;
+// Tipp-Codes gelten je Spieltag (Kevin-Vorgabe 30.10.): KV code:<day>:<id>. Alte Eintraege code:<id> nur noch fuer schon abgegebene Tipps (Uebergang).
+async function codeIds(env, day) {
+  const ids = new Set(), legacy = new Set(), prefix = `code:${day}:`; let cursor;
+  do { const page = await env.TIPPS.list({ prefix: 'code:', cursor }); for (const k of page.keys) { if (k.name.startsWith(prefix)) ids.add(k.name.slice(prefix.length)); else if (/^code:\d+$/.test(k.name)) legacy.add(k.name.slice(5)); } cursor = page.list_complete ? null : page.cursor; } while (cursor);
+  return { has: (id, tipped) => ids.has(id) || (tipped && legacy.has(id)), size: ids.size + legacy.size };
 }
 // Code pruefen; ohne gespeicherten Code wird er bei set=true festgelegt. Hoechstens 5 Fehlversuche in 15 Minuten.
-async function checkCode(env, id, code, set) {
+async function checkCode(env, day, id, code, set) {
   if (!/^\d{4,8}$/.test(String(code || ''))) return { error: 'Bitte einen Code aus 4 bis 8 Ziffern eingeben.', status: 400 };
   const fails = (await env.TIPPS.get(`fail:${id}`, 'json')) || [];
   const recent = fails.filter(t => Date.now() - t < 15 * 60e3);
   if (recent.length >= 5) return { error: 'Zu viele falsche Codes. Bitte in 15 Minuten erneut versuchen.', status: 429 };
-  const rec = await env.TIPPS.get(`code:${id}`, 'json');
+  let rec = await env.TIPPS.get(`code:${day}:${id}`, 'json');
+  // Uebergang: Wer an diesem Spieltag schon mit dem alten, festen Code getippt hat, behaelt ihn fuer diesen Spieltag.
+  if (!rec && await env.TIPPS.get(`tip:${day}:${id}`)) { rec = await env.TIPPS.get(`code:${id}`, 'json'); if (rec) await env.TIPPS.put(`code:${day}:${id}`, JSON.stringify(rec)); }
   if (!rec) {
-    if (!set) return { error: 'Für diesen Namen gibt es noch keinen Code. Er wird beim ersten Tipp festgelegt.', status: 404 };
+    if (!set) return { error: 'Für diesen Namen gibt es an diesem Spieltag noch keinen Code. Er wird beim ersten Tipp des Spieltags festgelegt.', status: 404 };
     const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
-    await env.TIPPS.put(`code:${id}`, JSON.stringify({ salt, hash: await hashCode(code, salt), createdAt: new Date().toISOString() }));
+    await env.TIPPS.put(`code:${day}:${id}`, JSON.stringify({ salt, hash: await hashCode(code, salt), createdAt: new Date().toISOString() }));
     return { ok: true, created: true };
   }
   if (!sameText(rec.hash, await hashCode(code, rec.salt))) {
@@ -585,8 +588,9 @@ async function handle(req, env, cors) {
 
   if (parts[0] === 'codes' && parts[1] && req.method === 'DELETE') {
     if (!isAdmin(env, req.headers.get('X-Admin-Code'))) return json({ error: 'Falscher Admin-Code.' }, 403, cors);
-    if (!/^\d{1,15}$/.test(parts[1])) return json({ error: 'Ungültiger Manager.' }, 400, cors);
-    await env.TIPPS.delete(`code:${parts[1]}`); await env.TIPPS.delete(`fail:${parts[1]}`);
+    const cday = Number(url.searchParams.get('day'));
+    if (!/^\d{1,15}$/.test(parts[1]) || !Number.isInteger(cday) || cday < 1 || cday > 34) return json({ error: 'Ungültiger Manager oder Spieltag.' }, 400, cors);
+    await env.TIPPS.delete(`code:${cday}:${parts[1]}`); await env.TIPPS.delete(`code:${parts[1]}`); await env.TIPPS.delete(`fail:${parts[1]}`);
     return json({ ok: true }, 200, cors);
   }
 
@@ -615,7 +619,7 @@ async function handle(req, env, cors) {
   if (parts[2] === 'mine' && req.method === 'POST') {
     const id = String(body.managerId || '');
     if (!managers.some(m => String(m.id) === id)) return json({ error: 'Bitte deinen Namen aus der Liste wählen.' }, 400, cors);
-    const c = await checkCode(env, id, body.code, false); if (!c.ok) return json({ error: c.error }, c.status, cors);
+    const c = await checkCode(env, day, id, body.code, false); if (!c.ok) return json({ error: c.error }, c.status, cors);
     return json({ ok: true, tip: await env.TIPPS.get(`tip:${day}:${id}`, 'json') }, 200, cors);
   }
   if (!parts[2] && req.method === 'PUT') {
@@ -626,7 +630,7 @@ async function handle(req, env, cors) {
     if (!/^\d{1,10}$/.test(playerId) || !Number.isInteger(points) || points < -1000 || points > 2000) return json({ error: 'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.' }, 400, cors);
     const player = ((await siteJson(env, 'mvp-tipps_players.json')).players || []).find(p => String(p.id) === playerId);
     if (!player) return json({ error: 'Spieler nicht gefunden.' }, 400, cors);
-    const c = await checkCode(env, String(me.id), body.code, true); if (!c.ok) return json({ error: c.error }, c.status, cors);
+    const c = await checkCode(env, day, String(me.id), body.code, true); if (!c.ok) return json({ error: c.error }, c.status, cors);
     const tip = { name: me.name, playerId, player: player.name, team: player.team, points, updatedAt: new Date().toISOString() };
     await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
     return json({ ok: true, codeCreated: !!c.created, tip }, 200, cors);
@@ -661,11 +665,11 @@ async function handle(req, env, cors) {
     return json({ ok: true, tip }, 200, cors);
   }
   if (!parts[2] && req.method === 'GET') {
-    const [tips, codes, rule] = await Promise.all([listTips(env, day), codeIds(env), env.TIPPS.get(`rule:${day}`, 'json')]);
+    const [tips, codes, rule] = await Promise.all([listTips(env, day), codeIds(env, day), env.TIPPS.get(`rule:${day}`, 'json')]);
     const reveal = st.locked && st.status !== 'upcoming';
     return json({ day, ...st, reveal, rule: rule || null, rules: info.rules || [], wertungen: info.wertungen || [], managers: managers.map(m => {
       const t = tips[m.id];
-      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id)), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
+      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id), !!t), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
     }), me: null, admin: false, result: null, online: true }, 200, cors);
   }
   return json({ error: 'Nicht gefunden.' }, 404, cors);
