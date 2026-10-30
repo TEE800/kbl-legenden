@@ -609,7 +609,24 @@ async function loadMatchdayMvp(token, day, { live = false } = {}) {
   const cached = live ? null : mvpCache.get(day);
   if (cached && Date.now() - cached.at < 60 * 60 * 1000) return cached.value;
   const all = await loadAllPlayers(token);
-  const ids = [...all.players.keys()];
+  let ids = [...all.players.keys()];
+  // Live: Vereine, deren Spiel noch nicht angefangen hat, haben noch keine Punkte. Ihr Anstoss steht in den Leistungsdaten
+  // eines ihrer Spieler (bis zu zwei probiert); liegt er in der Zukunft, wird der ganze Verein uebersprungen. So kostet der
+  // Zwischenstand nur noch Abrufe fuer die Vereine, die schon spielen oder gespielt haben (Freitag: 2 statt 18 Vereine).
+  if (live) {
+    const byTeam = new Map();
+    for (const id of ids) { const t = all.players.get(id).team; if (!byTeam.has(t)) byTeam.set(t, []); byTeam.get(t).push(id); }
+    const later = new Set();
+    await Promise.all([...byTeam].map(async ([team, list]) => {
+      for (const id of list.slice(0, 2)) {
+        try {
+          const k = Date.parse(findDayRecord(await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token }), day)?.md || '');
+          if (Number.isFinite(k)) { if (k > Date.now()) later.add(team); return; }
+        } catch {}
+      }
+    }));
+    ids = ids.filter(id => !later.has(all.players.get(id).team));
+  }
   const scored = []; let failed = 0;
   for (let i = 0; i < ids.length; i += 5) {
     await Promise.all(ids.slice(i, i + 5).map(async id => {
@@ -628,7 +645,7 @@ async function loadMatchdayMvp(token, day, { live = false } = {}) {
   scored.sort((a, b) => b.points - a.points);
   const top = scored.length ? scored[0].points : null;
   const value = {
-    day, playersChecked: ids.length, failedPlayers: failed, failedTeams: all.failedTeams,
+    day, playersChecked: all.players.size, failedPlayers: failed, failedTeams: all.failedTeams,
     reliable: failed === 0 && all.failedTeams.length === 0 && scored.length > 0,
     players: top === null ? [] : scored.filter(x => x.points === top),
     top: scored.slice(0, 5),
@@ -1534,7 +1551,7 @@ async function dayPlayerPoints(token,id,day,finished=false,get=p=>kbFetch(p,{tok
  const p=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
  return {points:p,state:p===null?'open':'live',kick:pc?.md||rec?.md||null,mdst:rec?.mdst??null,mst:pc?.mst??null,...(rec?{}:{why:'nur playercenter'})};
 }
-// Der MVP-Zwischenstand ist bis zu 30 Min. alt, die getippten Spieler sind frischer (alle 5 Min.). Liegt einer von ihnen
+// Der MVP-Zwischenstand ist bis zu 10 Min. alt, die getippten Spieler sind frischer (alle 5 Min.). Liegt einer von ihnen
 // (bei genannten Vereinen nur aus diesen) inzwischen vorne, gilt er als Bester (Kevin: Krone stand bei 21, ein getippter Schalker hatte 59).
 function freshBest(lm,tips,players,pool,bad=new Set()){
  if(!lm)return lm;
@@ -1555,7 +1572,7 @@ function poolTop(list,pool,n=10){
  const cut=sc.length>=n?sc[n-1].points:null;
  return (cut===null?sc:sc.filter(p=>p.points>=cut)).map(p=>({id:String(p.id),name:p.name,team:p.team,points:p.points}));
 }
-// Wie freshBest: getippte Spieler haben frischere Punkte als der Zwischenstand (alle 30 Min.).
+// Wie freshBest: getippte Spieler haben frischere Punkte als der Zwischenstand (alle 10 Min.).
 function freshTop(top,tips,players,pool,bad=new Set()){
  if(!top)return top;
  const m=new Map(top.map(p=>[p.id,{...p}]));
@@ -1566,7 +1583,7 @@ function freshTop(top,tips,players,pool,bad=new Set()){
 }
 // Live-Stand nach dem Anpfiff: Spieltagspunkte aller getippten Spieler (wie BD/AH aus "performance").
 // state: done = Spiel beendet, live = Punkte da, Spiel laeuft noch, open = noch keine Punkte. Fehlt etwas, bleibt points null.
-const tippTrackCache=new Map();
+const tippTrackCache=new Map(),LIVE_MVP_MAX_AGE=10*60e3;
 async function tippTracking(token,day,tips,finished,kind,pool=[],conds=[]){
  const ids=[...new Set(Object.values(tips).map(t=>String(t.playerId)))].sort(),key=ids.join(',')+'|'+kind+'|'+pool.join(',')+'|'+conds.join(','),c=tippTrackCache.get(day);
  if(c&&c.key===key&&Date.now()-c.at<2*60e3)return c.value;
@@ -1579,11 +1596,12 @@ async function tippTracking(token,day,tips,finished,kind,pool=[],conds=[]){
  // Getippte Spieler, die die Bedingungen der Tippregel nicht erfuellen (z. B. Torwart, Tor oder Vorlage): out = {Spieler-ID: Grund}.
  const chk=condChecker(token,day,conds),bad=new Set();
  if(chk){value.out={};for(const id of ids){const r=await chk(id);if(!r.ok){value.out[id]=r.why;if(r.ok===false)bad.add(id);}}}
- // Wertungen mit MVP brauchen den MVP-Zwischenstand aller Bundesliga-Spieler: teuer, darum hoechstens alle 30 Minuten (gespeichert in kbl-mvp-tipps.json).
+ // Wertungen mit MVP brauchen den MVP-Zwischenstand aller Bundesliga-Spieler: teuer, darum hoechstens alle 10 Minuten (gespeichert in kbl-mvp-tipps.json;
+ // bis 30.10. alle 30 Min., Kevin: Livestand im MVP-Rennen zu alt; dafuer zaehlen nur noch Vereine, deren Spiel schon begonnen hat).
  // Die Top 10 (Kevin-Wunsch) brauchen ihn bei jeder Wertung.
  if(!finished){
   let lm=readTipps()[day]?.liveMvp;
-  if(!lm||!lm.top10||Date.now()-Date.parse(lm.at)>30*60e3||String(lm.pool||[])!==String(pool)||String(lm.conds||[])!==String(conds)){
+  if(!lm||!lm.top10||Date.now()-Date.parse(lm.at)>LIVE_MVP_MAX_AGE||String(lm.pool||[])!==String(pool)||String(lm.conds||[])!==String(conds)){
    const m=await loadMatchdayMvp(token,day,{live:true}),ct=chk?await condTop(m.all,pool,chk,10):null,best=ct?ct.list.filter(p=>p.points===ct.list[0].points):poolMvp(m,pool);
    lm={at:new Date().toISOString(),points:best.length?best[0].points:null,players:best.map(p=>({id:String(p.id),name:p.name,team:p.team})),top10:ct?poolTop(ct.list,[]):poolTop(m.all,pool),checked:m.playersChecked,failed:m.failedPlayers,reliable:m.reliable&&!ct?.unsure,...(pool.length?{pool}:{}),...(conds.length?{conds}:{})};
    const all=readTipps();(all[day]||(all[day]={tips:{}})).liveMvp=lm;saveTipps(all);
@@ -2095,13 +2113,13 @@ app.post('/api/bumsungen/:day',(req,res)=>{
 // BumsParade LIVE (Kevin-Wunsch): Waehrend der Spieltag laeuft, zeigt die BumsParade ohne "pruefen", welche Strafen nach dem
 // aktuellen Stand faellig waeren. Nur vorlaeufig: Punkte und Ereignisse aendern sich bis Spielende (und koennen danach korrigiert werden).
 // Startelf aus ranking?dayNumber (lp, wie die Live-Punkte), sonst die gespeicherte. Punkte aus dayPlayerPoints.
-// AH: MVP-Zwischenstand aller Bundesliga-Spieler, hoechstens alle 30 Min. neu (ca. 500 Abrufe, kbl-live-mvp.json).
+// AH: MVP-Zwischenstand aller Bundesliga-Spieler, hoechstens alle 10 Min. neu (nur Vereine, deren Spiel begonnen hat, kbl-live-mvp.json).
 // Hoechstens alle 5 Min. neu. Keine Haken, nichts geht in die BumsTabelle, Teamlimit erst in der echten BumsParade.
 const fmtNum=n=>Number(n).toLocaleString('de-DE');
 const LIVE_MVP_FILE=path.join(process.cwd(),'kbl-live-mvp.json'),ruleLiveCache=new Map(),ruleLiveDone=new Map();
 async function liveMvpFor(token,day){
  let file={};try{file=JSON.parse(fs.readFileSync(LIVE_MVP_FILE,'utf8'));}catch{}
- const fresh=x=>x&&Date.now()-Date.parse(x.at)<30*60e3;
+ const fresh=x=>x&&Date.now()-Date.parse(x.at)<LIVE_MVP_MAX_AGE;
  if(fresh(file[day]))return file[day];
  const t=readTipps()[day]?.liveMvp;if(fresh(t)&&!(t.pool||[]).length&&!(t.conds||[]).length)return t;
  const m=await loadMatchdayMvp(token,day,{live:true});
