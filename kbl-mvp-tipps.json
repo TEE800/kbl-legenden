@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T21:25:25.338Z",
-      "points": 86,
+      "at": "2026-10-30T21:39:53.784Z",
+      "points": 111,
       "players": [
         {
           "id": "3284",
@@ -390,19 +390,31 @@
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 86
+          "points": 111
         },
         {
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
-          "points": 70
+          "points": 95
         },
         {
           "id": "2928",
           "name": "Petkov",
           "team": "Elversberg",
-          "points": 54
+          "points": 77
+        },
+        {
+          "id": "7278",
+          "name": "Poreba",
+          "team": "Elversberg",
+          "points": 66
+        },
+        {
+          "id": "3026",
+          "name": "Günther",
+          "team": "Elversberg",
+          "points": 64
         },
         {
           "id": "1639",
@@ -429,22 +441,10 @@
           "points": 46
         },
         {
-          "id": "3026",
-          "name": "Günther",
-          "team": "Elversberg",
-          "points": 43
-        },
-        {
           "id": "11665",
           "name": "Potulski",
           "team": "Mainz",
           "points": 42
-        },
-        {
-          "id": "7278",
-          "name": "Poreba",
-          "team": "Elversberg",
-          "points": 41
         }
       ],
       "checked": 470,
