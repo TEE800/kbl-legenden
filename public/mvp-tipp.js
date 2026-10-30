@@ -621,8 +621,8 @@
    c.save();c.translate(bx,by);c.rotate(rock);
    c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2.5;c.beginPath();c.ellipse(0,0,26,13,0,0,7);c.fill();c.stroke();
    c.fillStyle=trim;c.fillRect(-21,-8,4,16);
-   // Wappen auf der Brust unter dem Kinn, 90° nach rechts gedreht (Kevin-Wunsch, wie im Rennen)
-   const cr=crests.get(r.id);if(cr){c.save();c.translate(11,2);c.rotate(Math.PI/2);c.drawImage(cr,-10,-10,20,20);c.restore();}
+   // Wappen mittig auf dem Körper, 90° nach rechts gedreht (Kevin-Wunsch, wie im Rennen)
+   const cr=crests.get(r.id);if(cr){c.save();c.translate(0,1);c.rotate(Math.PI/2);c.drawImage(cr,-12,-12,24,24);c.restore();}
    const hd=heads.get(r.id);
    if(hd){const h=70,w=Math.min(82,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
    else{c.fillStyle='#f8d4b4';c.beginPath();c.arc(24,-16,12,0,7);c.fill();c.lineWidth=2;c.stroke();c.fillStyle='#ff8fb1';c.beginPath();c.arc(24,-10,2.5,0,7);c.fill();}
