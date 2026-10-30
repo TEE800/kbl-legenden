@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T21:10:31.744Z",
-      "points": 83,
+      "at": "2026-10-30T21:25:25.338Z",
+      "points": 86,
       "players": [
         {
           "id": "3284",
@@ -390,43 +390,43 @@
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 83
-        },
-        {
-          "id": "8301",
-          "name": "Sirch",
-          "team": "Elversberg",
-          "points": 65
-        },
-        {
-          "id": "1639",
-          "name": "Amiri",
-          "team": "Mainz",
-          "points": 63
+          "points": 86
         },
         {
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
-          "points": 60
+          "points": 70
         },
         {
           "id": "2928",
           "name": "Petkov",
           "team": "Elversberg",
-          "points": 53
+          "points": 54
         },
         {
-          "id": "11665",
-          "name": "Potulski",
+          "id": "1639",
+          "name": "Amiri",
           "team": "Mainz",
+          "points": 54
+        },
+        {
+          "id": "8301",
+          "name": "Sirch",
+          "team": "Elversberg",
           "points": 51
+        },
+        {
+          "id": "2646",
+          "name": "Becker",
+          "team": "Mainz",
+          "points": 50
         },
         {
           "id": "3470",
           "name": "Caci",
           "team": "Mainz",
-          "points": 50
+          "points": 46
         },
         {
           "id": "3026",
@@ -435,16 +435,16 @@
           "points": 43
         },
         {
-          "id": "2646",
-          "name": "Becker",
+          "id": "11665",
+          "name": "Potulski",
           "team": "Mainz",
-          "points": 33
+          "points": 42
         },
         {
           "id": "7278",
           "name": "Poreba",
           "team": "Elversberg",
-          "points": 29
+          "points": 41
         }
       ],
       "checked": 470,
