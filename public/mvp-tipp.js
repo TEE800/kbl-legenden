@@ -352,7 +352,7 @@
     <button type="button" class="ghost zr-speed" data-zr-speed>1×</button><button type="button" class="ghost zr-fullbtn" data-zr-full aria-label="Vollbild">⛶</button></div>
    <div class="zr-vid"><button type="button" class="ghost" data-zr-video>⬇ Video herunterladen</button><span class="muted tiny" data-zr-vstat></span></div>
    <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
-   <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 30 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
+   <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 10 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
  }
  // Sichtbarer Bereich der Seite: unter fester Kopfzeile/Hinweisleiste, über der Handy-Navigation.
@@ -704,7 +704,7 @@
   const t=d.tracking?.top10,list=t?.players||[];
   const fans=new Map();rows.forEach(r=>{const k=String(r.t.playerId);if(!fans.has(k))fans.set(k,[]);fans.get(k).push(r);});
   let place=0;
-  const body=!list.length?`<p class="muted tiny">Das fehlt: ${fin?'Die Spieltagspunkte aller Spieler sind nicht abrufbar.':'Der Zwischenstand aller Spieler wird während der Spiele etwa alle 30 Minuten berechnet und ist noch nicht da.'}</p>`
+  const body=!list.length?`<p class="muted tiny">Das fehlt: ${fin?'Die Spieltagspunkte aller Spieler sind nicht abrufbar.':'Der Zwischenstand aller Spieler wird während der Spiele etwa alle 10 Minuten berechnet und ist noch nicht da.'}</p>`
    :`<ol class="mvp-top10">${list.map((p,i)=>{if(!i||list[i-1].points!==p.points)place=i+1;const f=fans.get(p.id)||[];
      return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}"><span class="mvp-top10-pl">${place}.</span><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
     <p class="muted tiny">${pool.length?`Nur Spieler von ${esc(pool.join(', '))}${condsOf(d).length?`, ${esc(condText(condsOf(d)))}`:''}. `:condsOf(d).length?`Alle Bundesliga-Spieler, ${esc(condText(condsOf(d)))}. `:'Alle Bundesliga-Spieler. '}Darunter steht, wer den Spieler getippt hat.${fin?'':` Stand ${esc(clock(t.at))} Uhr, getippte Spieler aktueller.`}${t.reliable===false?' Nicht alle Spieler waren abrufbar.':''}</p>`;
@@ -725,7 +725,7 @@
   if(done){}
   else if(live&&!(auto&&ready&&lead.length)){if(auto&&ready)h+=`<div class="mvp-lead"><div class="eyebrow">FÜHREND</div>${tipBest||'<div>Gerade liegt niemand vorne.</div>'}${mvpLine}</div>`;}
   else if(!auto)h+=`<p class="muted">${kind?'Für diese Tippregel gibt es keine automatische Wertung.':'Die Wertung ließ sich aus dem Regeltext nicht erkennen. Der Admin kann sie unten wählen.'} Sortiert nach den Punkten der getippten Spieler.</p>`;
-  else if(!ready)h+=`<p class="muted">Wertung: ${esc(kindTitle(d,kind))}. Der ${pool.length||condsOf(d).length?'Zwischenstand laut Tippregel':'MVP-Zwischenstand'} fehlt noch${fin?'':', er wird während der Spiele etwa alle 30 Minuten berechnet'}.</p>`;
+  else if(!ready)h+=`<p class="muted">Wertung: ${esc(kindTitle(d,kind))}. Der ${pool.length||condsOf(d).length?'Zwischenstand laut Tippregel':'MVP-Zwischenstand'} fehlt noch${fin?'':', er wird während der Spiele etwa alle 10 Minuten berechnet'}.</p>`;
   else if(lead.length)h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'VORNE NACH DER WERTUNG':'FÜHREND'}</div>${lead.map(r=>`<div><b>${mn(r.m.name,r.m.id)}</b> mit ${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small>: getippt ${fmt(r.t.points)}${r.pts===null?'':`, Spieler hat ${fmt(r.pts)}`}${off(r,needMvp,' (',')',pool.length||condsOf(d).length)}</div>`).join('')}${mvpLine}</div>
    ${live?'':`<p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.${fin?' Den Joker vergebt ihr in der BumsParade.':' Vorläufig, bis der Spieltag beendet ist.'}</p>`}`;
   else h+=`<div class="mvp-lead"><div class="eyebrow">${fin?'ERGEBNIS':'FÜHREND'}</div><div>Gerade liegt niemand nach der Wertung vorne.</div>${tipBest}${mvpLine}</div><p class="muted tiny">Wertung: ${esc(kindTitle(d,kind))}.</p>`;
