@@ -243,6 +243,247 @@
         "id": "1631136",
         "name": "Fabio"
       }
+    },
+    "tips": {
+      "699062": {
+        "name": "T800",
+        "playerId": "4199",
+        "player": "García",
+        "team": "Leverkusen",
+        "points": 145,
+        "updatedAt": "2026-10-29T15:54:10.772Z"
+      },
+      "841764": {
+        "name": "Hasan",
+        "playerId": "1685",
+        "player": "Kimmich",
+        "team": "Bayern",
+        "points": 180,
+        "updatedAt": "2026-10-30T03:27:17.510Z"
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "playerId": "7224",
+        "player": "Castello Jr.",
+        "team": "Leipzig",
+        "points": 208,
+        "updatedAt": "2026-10-30T14:51:34.546Z"
+      },
+      "1386995": {
+        "name": "Adam",
+        "playerId": "1685",
+        "player": "Kimmich",
+        "team": "Bayern",
+        "points": 182,
+        "updatedAt": "2026-10-30T12:44:30.945Z"
+      },
+      "1403991": {
+        "name": "Cello",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 158,
+        "updatedAt": "2026-10-29T06:30:33.645Z"
+      },
+      "1450470": {
+        "name": "Meister",
+        "playerId": "7224",
+        "player": "Castello Jr.",
+        "team": "Leipzig",
+        "points": 228,
+        "late": true,
+        "updatedAt": "2026-10-30T19:31:50.350Z"
+      },
+      "1631136": {
+        "name": "Fabio",
+        "playerId": "1991",
+        "player": "Upamecano",
+        "team": "Bayern",
+        "points": 196,
+        "updatedAt": "2026-10-30T08:37:36.717Z"
+      },
+      "1631954": {
+        "name": "YW7",
+        "playerId": "1685",
+        "player": "Kimmich",
+        "team": "Bayern",
+        "points": 222,
+        "updatedAt": "2026-10-29T23:20:28.513Z"
+      },
+      "1646647": {
+        "name": "Baumann",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 176,
+        "updatedAt": "2026-10-30T13:29:05.065Z"
+      },
+      "1906625": {
+        "name": "xDanii",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 212,
+        "updatedAt": "2026-10-30T15:38:49.386Z"
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 208,
+        "updatedAt": "2026-10-30T10:05:45.763Z"
+      },
+      "1929473": {
+        "name": "Mic193",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 208,
+        "updatedAt": "2026-10-30T15:23:59.248Z"
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "playerId": "1246",
+        "player": "Orban",
+        "team": "Leipzig",
+        "points": 234,
+        "updatedAt": "2026-10-29T05:57:42.629Z"
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "playerId": "6080",
+        "player": "Pavlović",
+        "team": "Bayern",
+        "points": 188,
+        "updatedAt": "2026-10-30T14:17:44.848Z"
+      },
+      "2710049": {
+        "name": "diminator",
+        "playerId": "4199",
+        "player": "García",
+        "team": "Leverkusen",
+        "points": 198,
+        "updatedAt": "2026-10-29T21:29:05.949Z"
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "playerId": "2144",
+        "player": "Koch",
+        "team": "Frankfurt",
+        "points": 175,
+        "updatedAt": "2026-10-30T07:22:11.319Z"
+      }
+    },
+    "liveMvp": {
+      "at": "2026-10-30T19:33:57.286Z",
+      "points": 11,
+      "players": [
+        {
+          "id": "3470",
+          "name": "Caci",
+          "team": "Mainz"
+        }
+      ],
+      "top10": [
+        {
+          "id": "3470",
+          "name": "Caci",
+          "team": "Mainz",
+          "points": 11
+        },
+        {
+          "id": "2030",
+          "name": "Tietz",
+          "team": "Mainz",
+          "points": 7
+        },
+        {
+          "id": "2928",
+          "name": "Petkov",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "3284",
+          "name": "Rohr",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "3350",
+          "name": "Keidel",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "6148",
+          "name": "Pinckert",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "7278",
+          "name": "Poreba",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "7463",
+          "name": "Onyeka",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "8301",
+          "name": "Sirch",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "9995",
+          "name": "Mokwa",
+          "team": "Elversberg",
+          "points": 5
+        },
+        {
+          "id": "1540",
+          "name": "Da Costa",
+          "team": "Mainz",
+          "points": 5
+        },
+        {
+          "id": "2232",
+          "name": "Mwene",
+          "team": "Mainz",
+          "points": 5
+        },
+        {
+          "id": "2646",
+          "name": "Becker",
+          "team": "Mainz",
+          "points": 5
+        },
+        {
+          "id": "8307",
+          "name": "Sano",
+          "team": "Mainz",
+          "points": 5
+        },
+        {
+          "id": "11665",
+          "name": "Potulski",
+          "team": "Mainz",
+          "points": 5
+        }
+      ],
+      "checked": 470,
+      "failed": 0,
+      "reliable": true,
+      "conds": [
+        "field",
+        "noGoal"
+      ]
     }
   }
 }
