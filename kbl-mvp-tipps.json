@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T23:27:36.715Z",
-      "points": 111,
+      "at": "2026-10-30T23:47:03.417Z",
+      "points": 115,
       "players": [
         {
           "id": "3284",
@@ -390,7 +390,7 @@
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 111
+          "points": 115
         },
         {
           "id": "6148",
@@ -408,7 +408,7 @@
           "id": "3026",
           "name": "Günther",
           "team": "Elversberg",
-          "points": 68
+          "points": 72
         },
         {
           "id": "7278",
@@ -429,22 +429,22 @@
           "points": 52
         },
         {
-          "id": "2646",
-          "name": "Becker",
-          "team": "Mainz",
-          "points": 51
-        },
-        {
           "id": "11665",
           "name": "Potulski",
           "team": "Mainz",
           "points": 49
         },
         {
+          "id": "2646",
+          "name": "Becker",
+          "team": "Mainz",
+          "points": 48
+        },
+        {
           "id": "3470",
           "name": "Caci",
           "team": "Mainz",
-          "points": 46
+          "points": 45
         }
       ],
       "checked": 470,
