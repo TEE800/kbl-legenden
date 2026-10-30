@@ -287,7 +287,7 @@
     figs.push({g,r,k,cls:st+(isBest?' best':'')+(champ?' champ':'')+(mourn?' mourn':'')+(leadIds.has(r.m.id)?' lead':'')+(r.m.id===me?' me':'')});});});
   const man=(o,row)=>{const g=o.g,r=o.r,x=pos(g.pts),crest=kbImg(byId.get(String(g.t.playerId))?.teamImg);
    return stick({cls:o.cls+(x>50?' flip':''),x,top:Y(row)-60,z:row+2,team:g.t.team,mname:r.m.name,mid:r.m.id,pid:g.t.playerId,pname:g.t.player,crest,
-    tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">👶 ${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
+    tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
   const pitch=`<div class="toon-pitch stk-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.ghost?runner(o,row):man(o,row)).join('')}</div>`;
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&!offRule(pool,g.t.team,g.t.playerId)),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
@@ -389,7 +389,7 @@
   pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
    const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
    if(!o.ghost)return stick({cls:' zr-runner',attr:` data-zr-i="${r}"`,x:4,top:Y(r)-60,z:r+2,team:o.team,mname:o.m.name,mid:o.m.id,pid:o.id,pname:o.name,crest,
-    tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">👶 ${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
+    tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
    return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader zr-ghost" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
     <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy','★')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
     <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
@@ -660,7 +660,7 @@
     // Name und Punkte daneben, darunter die Tipper (Gold = führend)
     c.save();c.globalAlpha=r.ghost?ga:st.ko?.6:1;c.font=font(30*S,800);
     const fx=f.fixes.find(z=>z.id===r.id)&&p>=1;
-    const label=`${r.m?r.m.name+' · 👶 ':''}${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
+    const label=`${r.m?r.m.name+' · ':''}${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
     const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-(r.m?50:34)*S-tw:x+(r.m?116:34)*S,ty=y-(r.m?100:70)*S;
     c.fillStyle=fx?'#c0392b':st.ld?'#8a6d1f':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
     if(st.ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
