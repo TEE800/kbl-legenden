@@ -376,105 +376,75 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T19:33:57.286Z",
-      "points": 11,
+      "at": "2026-10-30T20:08:00.517Z",
+      "points": 66,
       "players": [
         {
-          "id": "3470",
-          "name": "Caci",
-          "team": "Mainz"
+          "id": "3284",
+          "name": "Rohr",
+          "team": "Elversberg"
         }
       ],
       "top10": [
         {
-          "id": "3470",
-          "name": "Caci",
-          "team": "Mainz",
-          "points": 11
-        },
-        {
-          "id": "2030",
-          "name": "Tietz",
-          "team": "Mainz",
-          "points": 7
-        },
-        {
-          "id": "2928",
-          "name": "Petkov",
-          "team": "Elversberg",
-          "points": 5
-        },
-        {
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 5
-        },
-        {
-          "id": "3350",
-          "name": "Keidel",
-          "team": "Elversberg",
-          "points": 5
-        },
-        {
-          "id": "6148",
-          "name": "Pinckert",
-          "team": "Elversberg",
-          "points": 5
-        },
-        {
-          "id": "7278",
-          "name": "Poreba",
-          "team": "Elversberg",
-          "points": 5
-        },
-        {
-          "id": "7463",
-          "name": "Onyeka",
-          "team": "Elversberg",
-          "points": 5
+          "points": 66
         },
         {
           "id": "8301",
           "name": "Sirch",
           "team": "Elversberg",
-          "points": 5
+          "points": 50
         },
         {
-          "id": "9995",
-          "name": "Mokwa",
+          "id": "6148",
+          "name": "Pinckert",
           "team": "Elversberg",
-          "points": 5
+          "points": 36
         },
         {
-          "id": "1540",
-          "name": "Da Costa",
+          "id": "1639",
+          "name": "Amiri",
           "team": "Mainz",
-          "points": 5
+          "points": 34
         },
         {
-          "id": "2232",
-          "name": "Mwene",
+          "id": "3470",
+          "name": "Caci",
           "team": "Mainz",
-          "points": 5
+          "points": 33
+        },
+        {
+          "id": "7278",
+          "name": "Poreba",
+          "team": "Elversberg",
+          "points": 22
+        },
+        {
+          "id": "3026",
+          "name": "Günther",
+          "team": "Elversberg",
+          "points": 20
+        },
+        {
+          "id": "2928",
+          "name": "Petkov",
+          "team": "Elversberg",
+          "points": 19
+        },
+        {
+          "id": "2006",
+          "name": "Posch",
+          "team": "Mainz",
+          "points": 19
         },
         {
           "id": "2646",
           "name": "Becker",
           "team": "Mainz",
-          "points": 5
-        },
-        {
-          "id": "8307",
-          "name": "Sano",
-          "team": "Mainz",
-          "points": 5
-        },
-        {
-          "id": "11665",
-          "name": "Potulski",
-          "team": "Mainz",
-          "points": 5
+          "points": 19
         }
       ],
       "checked": 470,
