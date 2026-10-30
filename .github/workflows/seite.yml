@@ -9,6 +9,10 @@ on:
         description: 'Spieltagsbericht fuer diesen Spieltag neu schreiben lassen (leer = nichts neu)'
         required: false
         default: ''
+      live:
+        description: 'Nur Live-Lauf (stoesst der Lauf waehrend der Spiele alle 5 Min. selbst an)'
+        required: false
+        default: 'false'
   push:                      # nach Programm-Aenderungen gleich neu bauen, voll (sonst bleiben beendete Spieltage bis 6:07 auf altem Stand)
     branches: [main]
     paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/spieltagsbericht.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs', 'kbl-challenge-cache.json']
@@ -16,6 +20,7 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  actions: write            # damit sich der Live-Lauf selbst wieder anstossen kann
 concurrency:
   group: seite
   cancel-in-progress: false
@@ -31,7 +36,8 @@ jobs:
       - id: gate
         name: Laeuft gerade ein Spieltag?
         run: |
-          if [ "${{ github.event.schedule }}" = "*/5 * * * *" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
+          echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event.schedule }}" = "*/5 * * * *" ] || [ "${{ github.event.inputs.live }}" = "true" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.aktiv == 'true'
         with:
@@ -52,7 +58,7 @@ jobs:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
           KBL_TIPP_DIENST: ${{ vars.KBL_TIPP_DIENST }}
-        run: node tools/export-static.mjs ${{ (github.event.schedule == '7 4 * * *' || github.event_name == 'workflow_dispatch' || github.event_name == 'push') && 'full' || 'live' }}
+        run: node tools/export-static.mjs ${{ (github.event.schedule == '*/5 * * * *' || github.event.inputs.live == 'true') && 'live' || 'full' }}
       - name: Spieltagsbericht (Claude, nur nach der Abrechnung, einmal je Spieltag)
         if: steps.gate.outputs.aktiv == 'true'
         continue-on-error: true
@@ -81,3 +87,14 @@ jobs:
           # Bei gleichzeitigen Aenderungen gewinnen die eben erzeugten Daten.
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done
           exit 1
+      # GitHub startet den 5-Minuten-Zeitplan nur etwa alle 45 bis 60 Minuten (ST 8: Livepunkte online fast eine Stunde alt).
+      # Waehrend der Spiele (und solange Online-Daten offen sind) stoesst sich der Lauf darum selbst wieder an, 5 Min. nach seinem Start.
+      # Laufen zwei Ketten gleichzeitig, bleibt durch concurrency nur ein wartender Lauf uebrig, sie fallen wieder zu einer zusammen.
+      - name: Naechsten Live-Lauf in 5 Minuten anstossen
+        if: ${{ !cancelled() && steps.gate.outputs.weiter == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rest=$(( 300 - $(date +%s) + ${{ steps.gate.outputs.start }} - 20 ))
+          [ "$rest" -gt 0 ] && sleep "$rest"
+          gh workflow run seite.yml --repo "${{ github.repository }}" --ref main -f live=true
