@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T20:08:00.517Z",
-      "points": 66,
+      "at": "2026-10-30T20:18:50.431Z",
+      "points": 83,
       "players": [
         {
           "id": "3284",
@@ -390,61 +390,61 @@
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 66
+          "points": 83
         },
         {
           "id": "8301",
           "name": "Sirch",
           "team": "Elversberg",
-          "points": 50
+          "points": 57
         },
         {
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
-          "points": 36
+          "points": 51
         },
         {
           "id": "1639",
           "name": "Amiri",
           "team": "Mainz",
-          "points": 34
-        },
-        {
-          "id": "3470",
-          "name": "Caci",
-          "team": "Mainz",
-          "points": 33
-        },
-        {
-          "id": "7278",
-          "name": "Poreba",
-          "team": "Elversberg",
-          "points": 22
-        },
-        {
-          "id": "3026",
-          "name": "Günther",
-          "team": "Elversberg",
-          "points": 20
+          "points": 39
         },
         {
           "id": "2928",
           "name": "Petkov",
           "team": "Elversberg",
-          "points": 19
+          "points": 30
         },
         {
-          "id": "2006",
-          "name": "Posch",
+          "id": "3026",
+          "name": "Günther",
+          "team": "Elversberg",
+          "points": 28
+        },
+        {
+          "id": "7278",
+          "name": "Poreba",
+          "team": "Elversberg",
+          "points": 27
+        },
+        {
+          "id": "3470",
+          "name": "Caci",
           "team": "Mainz",
-          "points": 19
+          "points": 27
         },
         {
           "id": "2646",
           "name": "Becker",
           "team": "Mainz",
-          "points": 19
+          "points": 15
+        },
+        {
+          "id": "2006",
+          "name": "Posch",
+          "team": "Mainz",
+          "points": 14
         }
       ],
       "checked": 470,

@@ -1015,7 +1015,7 @@ body.zr-on .mobilenav{display:none}
 .mvp-result{margin:14px 0 6px;gap:6px}
 /* Baby-Wappen (Kevin-Wunsch): auf der Brust unter dem Kinn wie beim Spieler-Männchen, 90° nach rechts gedreht, kein Trikotstreifen darunter */
 .stk-swad{height:20px;bottom:-6px}
-.stk-crest{left:12px;bottom:-5px;width:13px;height:13px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
+.stk-crest{left:4px;bottom:-5px;width:18px;height:18px;transform:rotate(90deg);z-index:1;filter:drop-shadow(0 0 1px rgba(0,0,0,.6))}
 .stk-bhead{z-index:2}
 @media (prefers-reduced-motion:reduce){.zr.zr-fit .zr-runner{transition:none}}
 /* Zeitraffer-Vollbild am Handy (Kevin-Wunsch: Figuren und Köpfe größer, mehrere in einer Zeile): Namensschild kompakt unter der Figur. */
