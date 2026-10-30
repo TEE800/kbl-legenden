@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T20:29:02.347Z",
-      "points": 83,
+      "at": "2026-10-30T20:41:22.421Z",
+      "points": 85,
       "players": [
         {
           "id": "3284",
@@ -390,7 +390,13 @@
           "id": "3284",
           "name": "Rohr",
           "team": "Elversberg",
-          "points": 83
+          "points": 85
+        },
+        {
+          "id": "1639",
+          "name": "Amiri",
+          "team": "Mainz",
+          "points": 61
         },
         {
           "id": "8301",
@@ -402,19 +408,19 @@
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
-          "points": 51
-        },
-        {
-          "id": "1639",
-          "name": "Amiri",
-          "team": "Mainz",
-          "points": 39
+          "points": 49
         },
         {
           "id": "2928",
           "name": "Petkov",
           "team": "Elversberg",
-          "points": 30
+          "points": 29
+        },
+        {
+          "id": "7278",
+          "name": "Poreba",
+          "team": "Elversberg",
+          "points": 29
         },
         {
           "id": "3026",
@@ -423,16 +429,16 @@
           "points": 28
         },
         {
-          "id": "7278",
-          "name": "Poreba",
-          "team": "Elversberg",
-          "points": 27
-        },
-        {
           "id": "3470",
           "name": "Caci",
           "team": "Mainz",
-          "points": 27
+          "points": 26
+        },
+        {
+          "id": "2006",
+          "name": "Posch",
+          "team": "Mainz",
+          "points": 16
         },
         {
           "id": "2646",
@@ -441,10 +447,10 @@
           "points": 15
         },
         {
-          "id": "2006",
-          "name": "Posch",
+          "id": "8307",
+          "name": "Sano",
           "team": "Mainz",
-          "points": 14
+          "points": 15
         }
       ],
       "checked": 470,
