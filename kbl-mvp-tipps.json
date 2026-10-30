@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-30T23:08:10.042Z",
+      "at": "2026-10-30T23:27:36.715Z",
       "points": 111,
       "players": [
         {
@@ -396,7 +396,7 @@
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
-          "points": 95
+          "points": 92
         },
         {
           "id": "2928",
@@ -417,34 +417,34 @@
           "points": 66
         },
         {
-          "id": "1639",
-          "name": "Amiri",
-          "team": "Mainz",
-          "points": 53
-        },
-        {
           "id": "8301",
           "name": "Sirch",
           "team": "Elversberg",
-          "points": 51
+          "points": 54
+        },
+        {
+          "id": "1639",
+          "name": "Amiri",
+          "team": "Mainz",
+          "points": 52
         },
         {
           "id": "2646",
           "name": "Becker",
           "team": "Mainz",
-          "points": 50
+          "points": 51
+        },
+        {
+          "id": "11665",
+          "name": "Potulski",
+          "team": "Mainz",
+          "points": 49
         },
         {
           "id": "3470",
           "name": "Caci",
           "team": "Mainz",
           "points": 46
-        },
-        {
-          "id": "11665",
-          "name": "Potulski",
-          "team": "Mainz",
-          "points": 43
         }
       ],
       "checked": 470,
