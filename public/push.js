@@ -18,6 +18,8 @@
   ['mvp','🎯 MVP-Tipp','Sobald das Spiel deines getippten Spielers vorbei ist, und das Ergebnis nach dem Spieltag.'],
   ['spieltag','📊 Spieltag vorbei','Sieger, Letzter und dein Platz.'],
   ['arena','⚔️ Arena-Duell','Dein Ergebnis in der Legenden Arena.']];
+ // Ligenübersicht (Kevin-Wunsch): Erinnerung 1 Std. vor dem ersten Anstoß eines Spieltags, je Liga wählbar.
+ const LIGEN=[['l_bl1','Bundesliga'],['l_bl2','2. Bundesliga'],['l_laliga','LaLiga'],['l_fbl','Frauen-Bundesliga'],['l_mls','MLS']];
  const call=async(path,body)=>{const r=await fetch(API+path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Fehler ${r.status}`);return d;};
  const keyBytes=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4)),c=>c.charCodeAt(0));
  const sameKey=(sub,pub)=>{try{const a=new Uint8Array(sub.options.applicationServerKey),b=keyBytes(pub);return a.length===b.length&&a.every((x,i)=>x===b[i]);}catch{return true;}};
@@ -53,6 +55,7 @@
  const onKey=e=>{if(e.key==='Escape')close();};
  modal.addEventListener('click',e=>{if(e.target===modal||e.target.closest('[data-p="close"]'))close();});
  bell.addEventListener('click',open);
+ window.kblPushOpen=open;
  const msg=(t,cls='')=>{const m=body.querySelector('#pushMsg');if(m){m.className='push-msg '+cls;m.textContent=t;}};
 
  async function open(){
@@ -69,7 +72,8 @@
   const prefs=saved?.prefs||{bums:1,tipp:1,mvp:1,spieltag:1,arena:1};
   body.innerHTML=`<p class="muted">${on?'Push ist auf diesem Gerät an. Du kannst die Auswahl hier ändern.':'Du bekommst eine Nachricht auf dieses Gerät, wenn etwas passiert. Jedes Gerät wird einzeln eingeschaltet.'}</p>${android?ANDROID_TIP:''}
    <label class="acc-label push-who">Ich bin <select id="pushManager"><option value="">Manager wählen …</option>${info.managers.map(m=>`<option value="${esc(m.id)}"${String(saved?.managerId)===m.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
-   <div class="push-prefs">${PREFS.map(([k,t,d])=>`<label class="push-pref"><input type="checkbox" data-pref="${k}"${prefs[k]?' checked':''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}</div>
+   <div class="push-prefs">${PREFS.map(([k,t,d])=>`<label class="push-pref"><input type="checkbox" data-pref="${k}"${prefs[k]?' checked':''}><span><b>${t}</b><small>${d}</small></span></label>`).join('')}
+    <div class="push-pref push-ligen"><span><b>⚽ Spieltagsbeginn in 1 Stunde</b><small>Vor dem ersten Anstoß eines Spieltags, je Liga.</small><span class="push-ligen-list">${LIGEN.map(([k,t])=>`<label><input type="checkbox" data-pref="${k}"${prefs[k]?' checked':''}>${t}</label>`).join('')}</span></span></div></div>
    <div class="push-actions"><button type="button" class="gold" id="pushSave">${on?'Speichern':'Einschalten'}</button>${on?'<button type="button" class="ghost" id="pushTest">Test-Nachricht</button><button type="button" class="ghost" id="pushOff">Ausschalten</button>':''}</div>
    <p id="pushMsg" class="push-msg" role="status"></p>`;
   body.querySelector('#pushSave').onclick=save;

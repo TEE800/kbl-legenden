@@ -159,6 +159,14 @@ try {
   // Transfers je Manager (Reiter "Transfers"): je Manager Verlauf und Kader. Im Live-Lauf hoechstens stuendlich neu.
   const transfersOld = () => { try { return !(Date.now() - Date.parse(JSON.parse(fs.readFileSync(path.join(DATA, key('/api/transfers')), 'utf8')).updatedAt) <= 3600e3); } catch { return true; } };
   if (MODE === 'full' || transfersOld()) await save('/api/transfers');
+  // Ligenuebersicht (fuenf Kickbase-Wettbewerbe, Spielplan, Ergebnisse, Tabelle). Live-Lauf: wenn aelter als 15 Min. oder irgendwo ein Spiel laeuft.
+  // Der Tippdienst liest daraus die Anstosszeiten fuer die Erinnerung 1 Std. vor Spieltagsbeginn.
+  const ligenOld = () => { try { const l = JSON.parse(fs.readFileSync(path.join(DATA, key('/api/ligen')), 'utf8')); return !(Date.now() - Date.parse(l.updatedAt) <= 15 * 60e3) || l.leagues.some(x => x.days.some(d => d.matches.some(m => m.state === 'live'))); } catch { return true; } };
+  if (MODE === 'full' || ligenOld()) {
+    const r = await call('/api/ligen');
+    if (r.status === 200 && r.body.leagues?.some(l => !l.error)) { fs.writeFileSync(path.join(DATA, key('/api/ligen')), JSON.stringify(r.body)); saved.push('/api/ligen'); }
+    else failed.push(`/api/ligen (${r.status})`);
+  }
   // Transfer-Pech-Radar: aendert sich nur nach abgeschlossenen Spieltagen, darum nur im Voll-Lauf (und wenn er fehlt).
   if (MODE === 'full' || !have('/api/transfer-pech')) await save('/api/transfer-pech');
   // Arena (Head-to-Head-Liga): Paarungen und Aufstellungen aus kbl-arena.json (vom PC, GitHub ist kein Arena-Mitglied),
