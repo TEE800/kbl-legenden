@@ -99,7 +99,7 @@
   if(d.status==='finished')return '';// beendet: steht alles im Ergebnis-Kasten
   return `<p class="muted">Angepfiffen am ${esc(when(d.deadline))}. Die Tipps sind gesperrt und für alle sichtbar.</p>`;
  }
- // Ohne Anmeldung: Name wählen und mit eigenem Tipp-Code tippen (beim ersten Tipp selbst festgelegt).
+ // Ohne Anmeldung: Name wählen und mit eigenem Tipp-Code tippen (je Spieltag neu, beim ersten Tipp des Spieltags selbst festgelegt).
  const store={get(){try{return localStorage.getItem('kblMvpManager')||'';}catch{return '';}},set(v){try{localStorage.setItem('kblMvpManager',v);}catch{}}};
  let codeTip=null;
  function form(d){
@@ -109,7 +109,7 @@
   const mine=byCode?(codeTip&&codeTip.day===d.day&&codeTip.id===who?.id?codeTip.tip:null):d.managers.find(m=>m.id===d.me)?.tip;
   const codeFields=byCode?`<label class="acc-label">Dein Name<select id="mvpWho" required><option value="">Bitte wählen …</option>${d.managers.map(m=>`<option value="${esc(m.id)}"${m.id===who?.id?' selected':''}>${esc(m.name)}</option>`).join('')}</select></label>
    <label class="acc-label">Tipp-Code<input id="mvpCode" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required placeholder="4–8 Ziffern"></label>`:'';
-  const hint=byCode?(who?(who.hasCode?'Gib deinen Tipp-Code ein.':'Du tippst zum ersten Mal: Den Code legst du jetzt selbst fest (4 bis 8 Ziffern). Merk ihn dir gut, du brauchst ihn für jede Änderung.'):'Wähle deinen Namen.'):'';
+  const hint=byCode?(who?(who.hasCode?'Gib deinen Tipp-Code ein.':'Neuer Spieltag, neuer Code: Den Tipp-Code für diesen Spieltag legst du jetzt selbst fest (4 bis 8 Ziffern). Merk ihn dir, du brauchst ihn bis zum Anpfiff für jede Änderung.'):'Wähle deinen Namen.'):'';
   return `<form class="mvp-form" id="mvpForm" autocomplete="off">${codeFields}
    <label class="acc-label mvp-pick">Spieler<input id="mvpPlayer" data-mvp-player placeholder="Name eintippen …" autocomplete="off" required value="${esc(mine?`${mine.player} (${mine.team})`:'')}"><div class="mvp-suggest" hidden></div></label>
    <label class="acc-label">Punkte<input id="mvpPoints" type="number" inputmode="numeric" step="1" min="-1000" max="2000" required value="${mine?esc(mine.points):''}"></label>
@@ -806,7 +806,7 @@
   const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
   if(!admin.hidden){
    const withCode=d.managers.filter(m=>m.hasCode);
-   $('#mvpCodes').innerHTML=withCode.length?'<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code vergessen hat.</p>'+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
+   $('#mvpCodes').innerHTML=withCode.length?`<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code für Spieltag ${d.day} vergessen hat.</p>`+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
    $('#mvpRuleText').value=d.rule?.text||'';
    $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
    $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
@@ -919,8 +919,8 @@
    catch(err){m.textContent=err.message;}
   }
   const rc=e.target.closest?.('[data-mvp-reset]');
-  if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
-   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
+  if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} für Spieltag ${data.day} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
+   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}?day=${data.day}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');
