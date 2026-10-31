@@ -405,7 +405,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .toon-runner{position:absolute;bottom:4px;width:44px;margin-left:-4px;transition:left 1.2s cubic-bezier(.3,1.4,.6,1);z-index:1}
 .toon-fig{width:40px;height:60px;display:block;overflow:visible}
 .toon-leg,.toon-arm{stroke:#111;stroke-width:3.2;stroke-linecap:round;fill:none}
-.toon-leg{stroke:#f5c9a0;filter:drop-shadow(0 0 .6px #111)}.toon-arm{stroke:#f5c9a0;filter:drop-shadow(0 0 .6px #111)}
+.toon-leg,.toon-arm{stroke:var(--skin,#f5c9a0);filter:drop-shadow(0 0 .6px #111)}
 .toon-runner.run .toon-leg.l,.toon-runner.run .toon-arm.r{transform-origin:20px 42px;animation:toonSwing .38s ease-in-out infinite alternate}
 .toon-runner.run .toon-leg.r,.toon-runner.run .toon-arm.l{transform-origin:20px 42px;animation:toonSwing .38s ease-in-out infinite alternate-reverse}
 .toon-runner.run .toon-fig{animation:toonBob .19s ease-in-out infinite alternate}

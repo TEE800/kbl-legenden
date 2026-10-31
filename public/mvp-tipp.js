@@ -243,9 +243,23 @@
  // Lädt er nicht (kein Foto, kein Hals erkennbar), bleibt das gezeichnete Gesicht. Nie ein Kreis-Ausschnitt.
  const HEAD_VERSION=4;
  const headSrc=id=>window.KBL_STATIC?`heads/v${HEAD_VERSION}/${encodeURIComponent(id)}.png`:`/api/mvp-tipps/head/${encodeURIComponent(id)}`;
+ // Hautfarbe (Kevin-Wunsch): Arme und Beine in der Hautfarbe des Spielers, gemessen im Wangenbereich des Wackelkopfs
+ // (Wangen und Nase; dunklere Hälfte (Augen, Bart, Schatten) und hellste Pixel fallen raus). Ohne Kopf bleibt der Standard.
+ const SKIN='#f5c9a0',skinCache=new Map();
+ function skinOf(img){
+  const key=img.currentSrc||img.src;if(skinCache.has(key))return skinCache.get(key);
+  let col=null;
+  try{const N=32,cv=document.createElement('canvas');cv.width=cv.height=N;const c=cv.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0,N,N);
+   const d=c.getImageData(0,0,N,N).data,px=[];
+   for(let y=Math.round(N*.42);y<Math.round(N*.7);y++)for(let x=Math.round(N*.28);x<Math.round(N*.72);x++){const i=(y*N+x)*4;if(d[i+3]<220)continue;const [r,g,b]=[d[i],d[i+1],d[i+2]];if(r<g||r<b-5)continue;px.push([r,g,b,.299*r+.587*g+.114*b]);}
+   if(px.length>=20){px.sort((a,b)=>a[3]-b[3]);const m=px.slice(Math.floor(px.length*.5),Math.ceil(px.length*.92)),avg=k=>Math.round(m.reduce((a,p)=>a+p[k],0)/m.length);col=`rgb(${avg(0)},${avg(1)},${avg(2)})`;}
+  }catch{}
+  skinCache.set(key,col);return col;
+ }
+ const skin=img=>{const c=skinOf(img);if(c)img.closest('.toon-runner')?.style.setProperty('--skin',c);};
  // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
- window.kblToon={toon,clubColor,kbImg,headSrc};
- const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face')" onerror="this.remove()">`;
+ window.kblToon={toon,clubColor,kbImg,headSrc,skin};
+ const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face');window.kblToon.skin(this)" onerror="this.remove()">`;
  // Kevin-Wunsch: Die Manager laufen als Strichmännchen über den Platz (Profilbild als Kopf) und tragen ihren getippten Spieler als Baby im Arm.
  // Baby = Wackelkopf des Spielers auf einer Decke im Vereinstrikot, ohne Kopf ein gezeichnetes Babygesicht.
  // Klassen: best = Baby hat die Krone, champ = Manager liegt nach der Wertung vorne und stemmt sein Baby hoch, mourn = richtiger Spieler, andere Zahl (weint),
@@ -586,7 +600,8 @@
    const bob=run?Math.sin(time*16)*3:champ?Math.sin(time*8)*2:0,sw=run?Math.sin(time*16)*.5:0;
    c.lineCap='round';c.lineJoin='round';
    if(!r.m){
-    c.strokeStyle='#f5c9a0';c.lineWidth=6;
+    const hd=heads.get(r.id);
+    c.strokeStyle=(hd&&skinOf(hd))||SKIN;c.lineWidth=6;
     [[-5,1],[5,-1]].forEach(([dx,dir])=>{c.save();c.translate(dx,-10);c.rotate(sw*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,26);c.stroke();c.restore();});
     c.translate(0,bob);
     const arm=champ?Math.sin(time*14)*.7:-sw;
@@ -594,7 +609,6 @@
     c.fillStyle=trim;rr(-14,-16,28,12,3);c.fill();
     c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2;c.beginPath();c.moveTo(-18,-56);c.quadraticCurveTo(0,-64,18,-56);c.lineTo(16,-14);c.lineTo(-16,-14);c.closePath();c.fill();c.stroke();
     const cr=crests.get(r.id);if(cr)c.drawImage(cr,-9,-46,18,18);
-    const hd=heads.get(r.id);
     if(hd){const h=96,w=Math.min(110,h*hd.width/hd.height);c.drawImage(hd,-w/2,-56-h+4,w,h);}
     else{c.fillStyle='#f5c9a0';c.beginPath();c.arc(0,-82,22,0,7);c.fill();c.stroke();c.fillStyle='#111';c.beginPath();c.arc(-7,-84,3,0,7);c.arc(7,-84,3,0,7);c.fill();}
     if(isBest){c.font='44px serif';c.textAlign='center';c.fillText('👑',0,-150);}
