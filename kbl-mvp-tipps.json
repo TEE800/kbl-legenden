@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T16:07:41.423Z",
-      "points": 126,
+      "at": "2026-10-31T16:22:20.320Z",
+      "points": 136,
       "players": [
         {
           "id": "2373",
@@ -390,7 +390,25 @@
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
-          "points": 126
+          "points": 136
+        },
+        {
+          "id": "3190",
+          "name": "Chabot",
+          "team": "Stuttgart",
+          "points": 125
+        },
+        {
+          "id": "2084",
+          "name": "Lienhart",
+          "team": "Freiburg",
+          "points": 125
+        },
+        {
+          "id": "11161",
+          "name": "Machida",
+          "team": "Hoffenheim",
+          "points": 123
         },
         {
           "id": "11631",
@@ -405,58 +423,28 @@
           "points": 115
         },
         {
-          "id": "3190",
-          "name": "Chabot",
-          "team": "Stuttgart",
-          "points": 108
-        },
-        {
-          "id": "11161",
-          "name": "Machida",
-          "team": "Hoffenheim",
+          "id": "2294",
+          "name": "Pieper",
+          "team": "Bremen",
           "points": 100
         },
         {
-          "id": "6148",
-          "name": "Pinckert",
-          "team": "Elversberg",
-          "points": 92
-        },
-        {
-          "id": "15193",
-          "name": "Rots",
-          "team": "Hoffenheim",
-          "points": 92
-        },
-        {
-          "id": "9642",
-          "name": "Matsima",
-          "team": "Augsburg",
-          "points": 90
+          "id": "17288",
+          "name": "Regeer",
+          "team": "Bremen",
+          "points": 99
         },
         {
           "id": "1671",
           "name": "Prömel",
           "team": "Stuttgart",
-          "points": 89
-        },
-        {
-          "id": "3158",
-          "name": "Asllani",
-          "team": "Hoffenheim",
-          "points": 88
-        },
-        {
-          "id": "2294",
-          "name": "Pieper",
-          "team": "Bremen",
-          "points": 88
+          "points": 97
         },
         {
           "id": "3281",
           "name": "Reis",
           "team": "Bremen",
-          "points": 88
+          "points": 95
         }
       ],
       "checked": 470,
