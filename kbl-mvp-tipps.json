@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T20:48:59.819Z",
+      "at": "2026-10-31T21:08:38.613Z",
       "points": 168,
       "players": [
         {
@@ -411,15 +411,15 @@
           "points": 137
         },
         {
-          "id": "3281",
-          "name": "Reis",
-          "team": "Bremen",
-          "points": 137
-        },
-        {
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
+          "points": 134
+        },
+        {
+          "id": "3281",
+          "name": "Reis",
+          "team": "Bremen",
           "points": 134
         },
         {
