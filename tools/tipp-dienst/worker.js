@@ -62,22 +62,50 @@ function dayState(days, day) {
   const locked = !d || d.status !== 'upcoming' || !Number.isFinite(kickoff) || Date.now() >= kickoff;
   return { status: d?.status || 'unknown', deadline: d?.firstKickoffUTC || null, firstMatch: d?.firstMatch || null, locked, open: !locked && day === next, next };
 }
-async function listTips(env, day) {
+// KV list() ist im kostenlosen Tarif auf 1000 Aufrufe am Tag begrenzt (am 31.10. erreicht: "KV list() limit exceeded").
+// Darum nie mehr list() fuer Tipps, Codes, Regeln, Haken und Berichte: Die Schluessel sind bekannt (Manager-IDs, Spieltage),
+// einzelne get() sind mit 100.000 am Tag reichlich. Reaktionen und Push-Abos liegen in D1 (unten).
+const mgrIds = info => (info.managers || []).map(m => String(m.id)).filter(id => /^\d{1,15}$/.test(id) && id !== '3783040');
+async function listTips(env, day, ids) {
   const out = {};
-  let cursor;
-  do {
-    const page = await env.TIPPS.list({ prefix: `tip:${day}:`, cursor });
-    await Promise.all(page.keys.map(async k => { const v = await env.TIPPS.get(k.name, 'json'); if (v) out[k.name.split(':')[2]] = v; }));
-    cursor = page.list_complete ? null : page.cursor;
-  } while (cursor);
+  await Promise.all(ids.map(async id => { const v = await env.TIPPS.get(`tip:${day}:${id}`, 'json'); if (v) out[id] = v; }));
   return out;
 }
 // Tipp-Codes gelten je Spieltag (Kevin-Vorgabe 30.10.): KV code:<day>:<id>. Alte Eintraege code:<id> nur noch fuer schon abgegebene Tipps (Uebergang).
-async function codeIds(env, day) {
-  const ids = new Set(), legacy = new Set(), prefix = `code:${day}:`; let cursor;
-  do { const page = await env.TIPPS.list({ prefix: 'code:', cursor }); for (const k of page.keys) { if (k.name.startsWith(prefix)) ids.add(k.name.slice(prefix.length)); else if (/^code:\d+$/.test(k.name)) legacy.add(k.name.slice(5)); } cursor = page.list_complete ? null : page.cursor; } while (cursor);
-  return { has: (id, tipped) => ids.has(id) || (tipped && legacy.has(id)), size: ids.size + legacy.size };
+async function codeIds(env, day, ids, tips) {
+  const has = new Set();
+  await Promise.all(ids.map(async id => {
+    if (await env.TIPPS.get(`code:${day}:${id}`)) has.add(id);
+    else if (tips[id] && await env.TIPPS.get(`code:${id}`)) has.add(id);
+  }));
+  return has;
 }
+// Tipps und Codes eines Spieltags. Nach dem Anpfiff aendert sich nur noch per Nachtrag etwas: dann ein einziger Schluessel
+// tipsnap:<day> statt 32 Abrufen (erst ab 3 Min. nach dem Anpfiff, damit ein Tipp kurz vor Schluss sicher ueberall angekommen ist).
+// Vorher kurz je Worker-Instanz zwischengespeichert, eigene Aenderungen loeschen den Zwischenstand.
+async function dayTips(env, day, st, ids) {
+  const reveal = st.locked && st.status !== 'upcoming', kick = Date.parse(st.deadline || '');
+  if (reveal) {
+    const snap = await env.TIPPS.get(`tipsnap:${day}`, 'json');
+    if (snap?.tips) return { tips: snap.tips, codes: new Set(snap.codes || []) };
+  }
+  return cached(`tips:${day}`, reveal ? 60e3 : 15e3, async () => {
+    const tips = await listTips(env, day, ids), codes = await codeIds(env, day, ids, tips);
+    if (reveal && Number.isFinite(kick) && Date.now() - kick > 3 * 60e3)
+      await env.TIPPS.put(`tipsnap:${day}`, JSON.stringify({ tips, codes: [...codes], at: new Date().toISOString() }));
+    return { tips, codes };
+  });
+}
+// Nach Nachtrag oder Code-Loeschung den gespeicherten Stand nachziehen (nur der Admin schreibt, also kein Wettlauf).
+async function snapUpdate(env, day, fn) {
+  memo.delete(`tips:${day}`);
+  const snap = await env.TIPPS.get(`tipsnap:${day}`, 'json');
+  if (!snap?.tips) return;
+  fn(snap); snap.at = new Date().toISOString();
+  await env.TIPPS.put(`tipsnap:${day}`, JSON.stringify(snap));
+}
+// Hoechster Spieltag, fuer den es schon Regeln, Haken oder Berichte geben kann (naechster offener plus einer).
+const lastDay = days => Math.min(34, (days.find(d => d.status === 'upcoming')?.day || 34) + 1);
 // Code pruefen; ohne gespeicherten Code wird er bei set=true festgelegt. Hoechstens 5 Fehlversuche in 15 Minuten.
 async function checkCode(env, day, id, code, set) {
   if (!/^\d{4,8}$/.test(String(code || ''))) return { error: 'Bitte einen Code aus 4 bis 8 Ziffern eingeben.', status: 400 };
@@ -158,11 +186,11 @@ async function vapidHeader(env, keys, endpoint) {
 async function sendPush(env, keys, sub, msg) {
   const body = await encryptPayload(sub, JSON.stringify(msg));
   const r = await fetch(sub.e, { method: 'POST', body, headers: { Authorization: await vapidHeader(env, keys, sub.e), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: String(msg.ttl || 6 * 3600), Urgency: 'normal', ...(msg.tag ? { Topic: String(msg.tag).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32) } : {}) } });
-  if (r.status === 404 || r.status === 410) { await env.TIPPS.delete(sub.key); return 'gone'; }
+  if (r.status === 404 || r.status === 410) { await subDrop(env, sub.key); return 'gone'; }
   return r.ok ? 'ok' : `HTTP ${r.status}`;
 }
 async function subKey(endpoint) { return 'sub:' + hex(await crypto.subtle.digest('SHA-256', enc.encode(endpoint))).slice(0, 40); }
-async function listSubs(env) {
+async function kvSubs(env) {
   const out = []; let cursor;
   do {
     const page = await env.TIPPS.list({ prefix: 'sub:', cursor });
@@ -171,6 +199,17 @@ async function listSubs(env) {
   } while (cursor);
   return out;
 }
+// Abos stehen weiter einzeln in KV (sub:<hash>), die Liste fuer den Versand kommt aber aus D1 (kein KV list(), siehe oben).
+// Beim ersten Mal werden die vorhandenen KV-Abos einmalig nach D1 uebernommen.
+async function listSubs(env) {
+  const db = await d1(env);
+  if (!db) return kvSubs(env);
+  await d1Import(env, db, 'subs', async () => kvSubs(env).then(list => list.map(m => db.prepare('INSERT OR IGNORE INTO subs (key, meta) VALUES (?, ?)').bind(m.key, JSON.stringify(m)))));
+  const rows = (await db.prepare('SELECT key, meta FROM subs').all()).results || [];
+  return rows.map(r => { try { return { ...JSON.parse(r.meta), key: r.key }; } catch { return null; } }).filter(m => m?.e);
+}
+async function subSave(env, key, meta) { const db = await d1(env); if (db) await db.prepare('INSERT OR REPLACE INTO subs (key, meta) VALUES (?, ?)').bind(key, JSON.stringify(meta)).run(); }
+async function subDrop(env, key) { await env.TIPPS.delete(key); const db = await d1(env); if (db) await db.prepare('DELETE FROM subs WHERE key = ?').bind(key).run(); }
 async function freshSite(env, file) {
   const base = String(env.SITE_URL || '').replace(/\/+$/, '');
   const r = await fetch(`${base}/data/${file}?t=${Math.floor(Date.now() / 60e3)}`, { cf: { cacheTtl: 0 } });
@@ -197,7 +236,7 @@ async function pushTick(env) {
   // 1. Tippschluss in einer Stunde (nur wer noch nicht getippt hat).
   const next = days.find(d => d.status === 'upcoming'), kick = next?.firstKickoffUTC ? Date.parse(next.firstKickoffUTC) : NaN;
   if (Number.isFinite(kick) && kick - now > 0 && kick - now <= 61 * 60e3 && !(await env.TIPPS.get(`push:done:tipp:${next.day}`))) {
-    const [tips, rule] = await Promise.all([listTips(env, next.day), env.TIPPS.get(`rule:${next.day}`, 'json')]);
+    const [tips, rule] = await Promise.all([siteJson(env, 'mvp-tipps.json').then(info => listTips(env, next.day, mgrIds(info))), env.TIPPS.get(`rule:${next.day}`, 'json')]);
     const mins = Math.max(1, Math.round((kick - now) / 60e3));
     outbox.push({ pref: 'tipp', skip: id => !!tips[id], done: async () => env.TIPPS.put(`push:done:tipp:${next.day}`, '1', { expirationTtl: 14 * 86400 }),
       msg: () => ({ title: `⏰ Tippschluss in ${mins} Minuten`, body: `Du hast für Spieltag ${next.day} noch keinen MVP-Tipp. Anstoß ${fmtTime(kick)} Uhr: ${next.firstMatch || ''}${rule?.text ? `\nTippregel: ${rule.text}` : ''}`.trim(), url: './#mvp', tag: `tipp${next.day}`, ttl: Math.max(60, Math.round((kick - now) / 1000)) }) });
@@ -374,9 +413,10 @@ async function handlePush(req, env, cors, parts, body) {
     for (const k of PUSH_PREFS) if (body.prefs?.[k]) pr[k] = 1;
     const meta = { e: endpoint, p, a, m, pr, k: keys.publicKey, at: new Date().toISOString() };
     await env.TIPPS.put(key, JSON.stringify(meta), { metadata: meta, expirationTtl: 400 * 86400 });
+    await subSave(env, key, meta);
     return json({ ok: true }, 200, cors);
   }
-  if (parts[1] === 'unsubscribe' && req.method === 'POST') { await env.TIPPS.delete(key); return json({ ok: true }, 200, cors); }
+  if (parts[1] === 'unsubscribe' && req.method === 'POST') { await subDrop(env, key); return json({ ok: true }, 200, cors); }
   if (parts[1] === 'test' && req.method === 'POST') {
     const sub = await env.TIPPS.get(key, 'json');
     if (!sub) return json({ error: 'Dieses Gerät ist nicht angemeldet.' }, 404, cors);
@@ -408,6 +448,29 @@ async function nzDb(env) {
     memo.set('nz:init', { at: Date.now(), value: 1 });
   }
   return env.NUTZUNG;
+}
+// Weitere Tabellen in derselben D1-Datenbank: Reaktionen und Push-Abos (D1 kann zaehlen und auflisten ohne Tageslimit wie KV list()).
+async function d1(env) {
+  const db = await nzDb(env);
+  if (!db || memo.get('d1:init')) return db;
+  await db.batch([
+    db.prepare('CREATE TABLE IF NOT EXISTS reakt (day INTEGER NOT NULL, vid TEXT NOT NULL, r TEXT NOT NULL, PRIMARY KEY (day, vid))'),
+    db.prepare('CREATE TABLE IF NOT EXISTS subs (key TEXT PRIMARY KEY, meta TEXT NOT NULL)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS kv_import (name TEXT PRIMARY KEY, at INTEGER)')
+  ]);
+  memo.set('d1:init', { at: Date.now(), value: 1 });
+  return db;
+}
+// Alte KV-Eintraege einmalig nach D1 uebernehmen (ein einziges list() je Bereich, danach nie wieder).
+async function d1Import(env, db, name, load) {
+  if (memo.get('imp:' + name)) return;
+  const f = memo.get('impfail:' + name); if (f && Date.now() - f.at < 10 * 60e3) return; // KV list() gerade gesperrt: spaeter erneut
+  if (!await db.prepare('SELECT 1 FROM kv_import WHERE name = ?').bind(name).first()) {
+    let stmts; try { stmts = await load(); } catch (e) { console.log('Import', name, e.message); memo.set('impfail:' + name, { at: Date.now(), value: 1 }); return; }
+    for (let i = 0; i < stmts.length; i += 50) await db.batch(stmts.slice(i, i + 50));
+    await db.prepare('INSERT OR IGNORE INTO kv_import (name, at) VALUES (?, ?)').bind(name, Date.now()).run();
+  }
+  memo.set('imp:' + name, { at: Date.now(), value: 1 });
 }
 async function handleNutzung(req, env, cors, parts, body) {
   if (parts[1] === 'melden' && req.method === 'POST') {
@@ -482,8 +545,8 @@ async function adminTry(env, code) {
 }
 async function handleHaken(req, env, cors, parts, body) {
   if (!parts[1] && req.method === 'GET') {
-    const out = {}; let cursor;
-    do { const page = await env.TIPPS.list({ prefix: 'haken:', cursor }); for (const k of page.keys) out[k.name.slice(6)] = await env.TIPPS.get(k.name, 'json'); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+    const out = {}, upTo = lastDay(await matchdays());
+    await Promise.all(Array.from({ length: upTo }, (_, i) => i + 1).map(async d => { const v = await env.TIPPS.get(`haken:${d}`, 'json'); if (v) out[d] = v; }));
     return json({ days: out }, 200, cors);
   }
   if (parts[1] === 'login' && req.method === 'POST') {
@@ -510,9 +573,9 @@ async function handleHaken(req, env, cors, parts, body) {
 // der Admin liest, ändert und gibt ihn in der App frei. KV bericht:<day> = {day, title, text, model, vorgaben, createdAt, status: entwurf|frei, editedAt?, approvedAt?}.
 // Öffentlich (GET /bericht) gibt es nur freigegebene Berichte; Entwürfe nur mit Admin-Code (POST /bericht/admin).
 async function berichtList(env, onlyFree) {
-  const out = []; let cursor;
-  do { const page = await env.TIPPS.list({ prefix: 'bericht:', cursor }); for (const k of page.keys) { const b = await env.TIPPS.get(k.name, 'json'); if (b && (!onlyFree || b.status === 'frei')) out.push(b); } cursor = page.list_complete ? null : page.cursor; } while (cursor);
-  return out.sort((a, b) => b.day - a.day);
+  const upTo = lastDay(await matchdays());
+  const all = await cached('berichte', onlyFree ? 60e3 : 0, async () => (await Promise.all(Array.from({ length: upTo }, (_, i) => env.TIPPS.get(`bericht:${i + 1}`, 'json')))).filter(Boolean));
+  return all.filter(b => !onlyFree || b.status === 'frei').sort((a, b) => b.day - a.day);
 }
 async function handleBericht(req, env, cors, parts, body) {
   if (!parts[1] && req.method === 'GET') return json({ berichte: await berichtList(env, true) }, 200, cors);
@@ -526,7 +589,7 @@ async function handleBericht(req, env, cors, parts, body) {
     if (old?.status === 'frei') return json({ ok: true, skipped: 'schon freigegeben', bericht: old }, 200, cors);
     if (!text) return json({ error: 'Text fehlt.' }, 400, cors);
     const b = { day, title: title || `Spieltag ${day}`, text, model: String(body.model || '').slice(0, 60), vorgaben: Number(body.vorgaben) || 1, createdAt: body.createdAt || now, status: 'entwurf' };
-    await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
+    await env.TIPPS.put(key, JSON.stringify(b)); memo.delete('berichte'); return json({ ok: true, bericht: b }, 200, cors);
   }
   if (!old) return json({ error: 'Kein Bericht zu diesem Spieltag.' }, 404, cors);
   const action = String(body.action || 'speichern');
@@ -535,7 +598,7 @@ async function handleBericht(req, env, cors, parts, body) {
   if (action === 'freigeben') { b.status = 'frei'; b.approvedAt = now; }
   else if (action === 'zurueckziehen') { b.status = 'entwurf'; delete b.approvedAt; }
   else if (action !== 'speichern') return json({ error: 'Unbekannte Aktion.' }, 400, cors);
-  await env.TIPPS.put(key, JSON.stringify(b)); return json({ ok: true, bericht: b }, 200, cors);
+  await env.TIPPS.put(key, JSON.stringify(b)); memo.delete('berichte'); return json({ ok: true, bericht: b }, 200, cors);
 }
 
 // Reaktionen auf den Spieltagsbericht (Kevin-Wunsch 28.10.): Jeder Besucher kann unter jedem Absatz (durchgezählt ab 0,
@@ -544,15 +607,28 @@ async function handleBericht(req, env, cors, parts, body) {
 // darum reicht zum Zählen ein list() ohne einzelne Abrufe. Nur für freigegebene Berichte.
 const REAKT_EMOJI = ['😂', '🔥', '👏', '🤡', '😱', '🍺', '💀', '🤮', '👎', '👀', '⛺', '💦', '🍆', '😮', '🤯']; // nur hinten anhängen, die Nummern stehen in KV (je Emoji ein Zeichen, Basis 36)
 const REAKT_VID = /^[a-z0-9]{8,32}$/;
-async function reaktState(env, day, vid, own) {
-  const counts = {}; let mine = {}, cursor;
-  const add = r => { for (const [sec, ix] of Object.entries(r || {})) for (const c of String(ix)) { const e = REAKT_EMOJI[parseInt(c, 36)]; if (e) { counts[sec] ??= {}; counts[sec][e] = (counts[sec][e] || 0) + 1; } } };
+// Seit 31.10. in D1 (Tabelle reakt), weil das Zaehlen per KV list() das Tageslimit aufgebraucht hat. Alte KV-Eintraege
+// werden je Spieltag einmalig uebernommen. Ohne D1 bleibt es bei KV.
+async function kvReakt(env, day) {
+  const out = []; let cursor;
   do {
     const page = await env.TIPPS.list({ prefix: `reakt:${day}:`, cursor });
-    for (const k of page.keys) { const v = k.name.slice(`reakt:${day}:`.length); if (v === vid) { if (!own) mine = k.metadata?.r || {}; continue; } add(k.metadata?.r); }
+    for (const k of page.keys) if (k.metadata?.r) out.push({ vid: k.name.slice(`reakt:${day}:`.length), r: k.metadata.r });
     cursor = page.list_complete ? null : page.cursor;
   } while (cursor);
-  if (own) mine = own; // list() ist erst nach bis zu 60 s aktuell, die eigene Auswahl darum direkt nehmen
+  return out;
+}
+async function reaktRows(env, day) {
+  const db = await d1(env);
+  if (!db) return cached(`reakt:${day}`, 30e3, () => kvReakt(env, day));
+  await d1Import(env, db, `reakt:${day}`, async () => (await kvReakt(env, day)).map(x => db.prepare('INSERT OR IGNORE INTO reakt (day, vid, r) VALUES (?, ?, ?)').bind(day, x.vid, JSON.stringify(x.r))));
+  return ((await db.prepare('SELECT vid, r FROM reakt WHERE day = ?').bind(day).all()).results || []).map(x => { try { return { vid: x.vid, r: JSON.parse(x.r) }; } catch { return null; } }).filter(Boolean);
+}
+async function reaktState(env, day, vid, own) {
+  const counts = {}; let mine = {};
+  const add = r => { for (const [sec, ix] of Object.entries(r || {})) for (const c of String(ix)) { const e = REAKT_EMOJI[parseInt(c, 36)]; if (e) { counts[sec] ??= {}; counts[sec][e] = (counts[sec][e] || 0) + 1; } } };
+  for (const x of await reaktRows(env, day)) { if (x.vid === vid) { if (!own) mine = x.r || {}; continue; } add(x.r); }
+  if (own) mine = own; // die eigene, gerade gespeicherte Auswahl direkt nehmen
   add(mine);
   const out = {}; for (const [sec, ix] of Object.entries(mine)) out[sec] = [...String(ix)].map(c => REAKT_EMOJI[parseInt(c, 36)]).filter(Boolean);
   return { day, emojis: REAKT_EMOJI, counts, mine: out };
@@ -565,11 +641,16 @@ async function handleReaktion(req, env, cors, parts, body, url) {
   const vid = String(body.vid || ''), sec = String(Number(body.sec)), ix = REAKT_EMOJI.indexOf(String(body.emoji || ''));
   if (!REAKT_VID.test(vid) || !/^\d{1,2}$/.test(sec) || Number(sec) > 99 || body.sec == null || ix < 0) return json({ error: 'Ungültige Angabe.' }, 400, cors);
   if ((await env.TIPPS.get(`bericht:${day}`, 'json'))?.status !== 'frei') return json({ error: 'Dieser Bericht ist nicht veröffentlicht.' }, 409, cors);
-  const key = `reakt:${day}:${vid}`, old = (await env.TIPPS.getWithMetadata(key)).metadata?.r || {};
+  const db = await d1(env), key = `reakt:${day}:${vid}`;
+  if (db) await reaktRows(env, day); // alte KV-Eintraege zuerst uebernehmen
+  const old = db ? JSON.parse((await db.prepare('SELECT r FROM reakt WHERE day = ? AND vid = ?').bind(day, vid).first())?.r || '{}') : (await env.TIPPS.getWithMetadata(key)).metadata?.r || {};
   const r = { ...old }, cur = String(r[sec] || ''), c = ix.toString(36);
   r[sec] = cur.includes(c) ? cur.replace(c, '') : [...cur + c].sort((a, b) => parseInt(a, 36) - parseInt(b, 36)).join('');
   if (!r[sec]) delete r[sec];
-  if (Object.keys(r).length) await env.TIPPS.put(key, '1', { metadata: { r }, expirationTtl: 400 * 86400 });
+  if (db) {
+    if (Object.keys(r).length) await db.prepare('INSERT OR REPLACE INTO reakt (day, vid, r) VALUES (?, ?, ?)').bind(day, vid, JSON.stringify(r)).run();
+    else await db.prepare('DELETE FROM reakt WHERE day = ? AND vid = ?').bind(day, vid).run();
+  } else if (Object.keys(r).length) await env.TIPPS.put(key, '1', { metadata: { r }, expirationTtl: 400 * 86400 });
   else await env.TIPPS.delete(key);
   return json({ ok: true, ...(await reaktState(env, day, vid, r)) }, 200, cors);
 }
@@ -586,14 +667,12 @@ async function handle(req, env, cors) {
 
   // Alle Regeln und die aufgedeckten Tipps (nur angepfiffene Spieltage) fuer den GitHub-Export.
   if (parts[0] === 'export' && req.method === 'GET') {
-    const days = await matchdays(), out = {};
-    let cursor;
-    const ruleDays = new Set();
-    do { const page = await env.TIPPS.list({ prefix: 'rule:', cursor }); for (const k of page.keys) ruleDays.add(Number(k.name.slice(5))); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+    const [days, info] = await Promise.all([matchdays(), siteJson(env, 'mvp-tipps.json')]), out = {}, ids = mgrIds(info), upTo = lastDay(days);
     for (const d of days) {
-      const st = dayState(days, d.day), rule = ruleDays.has(d.day) ? await env.TIPPS.get(`rule:${d.day}`, 'json') : null;
+      if (d.day > upTo) continue;
+      const st = dayState(days, d.day), rule = await env.TIPPS.get(`rule:${d.day}`, 'json');
       const reveal = st.locked && st.status !== 'upcoming';
-      const tips = reveal ? await listTips(env, d.day) : {};
+      const tips = reveal ? (await dayTips(env, d.day, st, ids)).tips : {};
       if (rule || Object.keys(tips).length) out[d.day] = { ...(rule ? { rule } : {}), ...(reveal ? { tips } : {}) };
     }
     return json({ exportedAt: new Date().toISOString(), days: out }, 200, cors);
@@ -604,6 +683,7 @@ async function handle(req, env, cors) {
     const cday = Number(url.searchParams.get('day'));
     if (!/^\d{1,15}$/.test(parts[1]) || !Number.isInteger(cday) || cday < 1 || cday > 34) return json({ error: 'Ungültiger Manager oder Spieltag.' }, 400, cors);
     await env.TIPPS.delete(`code:${cday}:${parts[1]}`); await env.TIPPS.delete(`code:${parts[1]}`); await env.TIPPS.delete(`fail:${parts[1]}`);
+    await snapUpdate(env, cday, s => { s.codes = (s.codes || []).filter(x => x !== parts[1]); });
     return json({ ok: true }, 200, cors);
   }
 
@@ -645,7 +725,7 @@ async function handle(req, env, cors) {
     if (!player) return json({ error: 'Spieler nicht gefunden.' }, 400, cors);
     const c = await checkCode(env, day, String(me.id), body.code, true); if (!c.ok) return json({ error: c.error }, c.status, cors);
     const tip = { name: me.name, playerId, player: player.name, team: player.team, points, updatedAt: new Date().toISOString() };
-    await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
+    await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip)); memo.delete(`tips:${day}`);
     return json({ ok: true, codeCreated: !!c.created, tip }, 200, cors);
   }
   // Wertung der Tippregel (nur Admin), auch nach dem Anpfiff. Danach richten sich "fuehrend" und der Gewinner-Vorschlag.
@@ -675,14 +755,15 @@ async function handle(req, env, cors) {
     if (!player) return json({ error: 'Spieler nicht gefunden.' }, 400, cors);
     const tip = { name: me.name, playerId, player: player.name, team: player.team, points, late: true, updatedAt: new Date().toISOString() };
     await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip));
+    await snapUpdate(env, day, s => { s.tips[String(me.id)] = tip; });
     return json({ ok: true, tip }, 200, cors);
   }
   if (!parts[2] && req.method === 'GET') {
-    const [tips, codes, rule] = await Promise.all([listTips(env, day), codeIds(env, day), env.TIPPS.get(`rule:${day}`, 'json')]);
+    const [{ tips, codes }, rule] = await Promise.all([dayTips(env, day, st, managers.map(m => String(m.id))), env.TIPPS.get(`rule:${day}`, 'json')]);
     const reveal = st.locked && st.status !== 'upcoming';
     return json({ day, ...st, reveal, rule: rule || null, rules: info.rules || [], wertungen: info.wertungen || [], managers: managers.map(m => {
       const t = tips[m.id];
-      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id), !!t), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
+      return { id: String(m.id), name: m.name, tipped: !!t, hasCode: codes.has(String(m.id)), ...(t && reveal ? { tip: { playerId: t.playerId, player: t.player, team: t.team, points: t.points, updatedAt: t.updatedAt, ...(t.late ? { late: true } : {}) } } : {}) };
     }), me: null, admin: false, result: null, online: true }, 200, cors);
   }
   return json({ error: 'Nicht gefunden.' }, 404, cors);
