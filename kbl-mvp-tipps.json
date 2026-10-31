@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T15:38:35.115Z",
+      "at": "2026-10-31T15:53:06.307Z",
       "points": 115,
       "players": [
         {
@@ -393,20 +393,38 @@
           "points": 115
         },
         {
+          "id": "7158",
+          "name": "Undav",
+          "team": "Stuttgart",
+          "points": 101
+        },
+        {
+          "id": "11631",
+          "name": "Burger",
+          "team": "Hoffenheim",
+          "points": 98
+        },
+        {
+          "id": "2373",
+          "name": "Kabak",
+          "team": "Hoffenheim",
+          "points": 95
+        },
+        {
           "id": "6148",
           "name": "Pinckert",
           "team": "Elversberg",
           "points": 92
         },
         {
-          "id": "2373",
-          "name": "Kabak",
+          "id": "11161",
+          "name": "Machida",
           "team": "Hoffenheim",
-          "points": 84
+          "points": 81
         },
         {
-          "id": "7158",
-          "name": "Undav",
+          "id": "3190",
+          "name": "Chabot",
           "team": "Stuttgart",
           "points": 77
         },
@@ -417,34 +435,16 @@
           "points": 77
         },
         {
-          "id": "11631",
-          "name": "Burger",
-          "team": "Hoffenheim",
+          "id": "9642",
+          "name": "Matsima",
+          "team": "Augsburg",
           "points": 77
         },
         {
-          "id": "3026",
-          "name": "Günther",
-          "team": "Elversberg",
-          "points": 72
-        },
-        {
-          "id": "3158",
-          "name": "Asllani",
-          "team": "Hoffenheim",
-          "points": 72
-        },
-        {
-          "id": "2897",
-          "name": "Reitz",
-          "team": "Leipzig",
-          "points": 72
-        },
-        {
-          "id": "3471",
-          "name": "Hložek",
-          "team": "Hoffenheim",
-          "points": 71
+          "id": "2764",
+          "name": "Keitel",
+          "team": "Augsburg",
+          "points": 76
         }
       ],
       "checked": 470,
