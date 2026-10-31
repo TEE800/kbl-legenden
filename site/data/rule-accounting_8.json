@@ -1,1 +1,1 @@
-{"day":8,"ready":false,"status":"not-finished","message":"Spieltag noch nicht vollständig beendet. Keine Abrechnung."}
+{"__status":502,"error":"Abrechnung fehlgeschlagen.","detail":"The operation was aborted due to timeout"}
