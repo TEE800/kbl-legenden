@@ -280,31 +280,30 @@
  const pxLoad=src=>PX_IMG.get(src)||(PX_IMG.set(src,new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;})),PX_IMG.get(src));
  const pxRgb=c=>{const m=String(c).match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);if(m){let v=m[1];if(v.length===3)v=v.split('').map(q=>q+q).join('');return [0,2,4].map(i=>parseInt(v.slice(i,i+2),16));}
   const h=String(c).match(/hsl\((\d+)\s+(\d+)%\s+(\d+)%\)/);if(h){const [H,S,L]=[+h[1],h[2]/100,h[3]/100],k=n=>(n+H/30)%12,a=S*Math.min(L,1-L),f=n=>L-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));return [f(0),f(8),f(4)].map(v=>Math.round(v*255));}return [90,100,110];};
- // Augen zu: im großen, ungedrehten Bild je Seite die dunkelste Zeile im Augenband suchen, mit Wangenfarbe übermalen und einen Lidstrich ziehen.
+ // Augen finden: im großen, ungedrehten Bild je Seite die dunkelste Zeile im Augenband (Augen zu malt pxHead im Pixelbild).
  function pxCloseEyes(x,W,H){let d;const eyes=[];try{d=x.getImageData(0,0,W,H).data;}catch{return eyes;}
   const lum=(px,py)=>{const i=(py*W+px)*4;return d[i+3]<200?null:d[i]*.3+d[i+1]*.59+d[i+2]*.11;};
   for(const [a,b] of [[.22,.46],[.54,.78]]){const x0=Math.round(W*a),x1=Math.round(W*b);let best=null,by=0;
    for(let py=Math.round(H*.46);py<Math.round(H*.62);py++){let s=0,n=0;for(let px=x0;px<x1;px++){const l=lum(px,py);if(l!==null){s+=l;n++;}}if(n>(x1-x0)/2&&(best===null||s/n<best)){best=s/n;by=py;}}
    if(best===null)continue;
-   let r=0,g=0,bb=0,n=0;for(let py=Math.round(H*.64);py<Math.round(H*.7);py++)for(let px=x0;px<x1;px++){const i=(py*W+px)*4;if(d[i+3]>200){r+=d[i];g+=d[i+1];bb+=d[i+2];n++;}}
-   if(!n)continue;eyes.push({x:(x0+x1)/2,y:by,w:x1-x0});x.fillStyle=`rgb(${r/n|0},${g/n|0},${bb/n|0})`;const hh=Math.round(H*.045);x.beginPath();x.ellipse((x0+x1)/2,by,(x1-x0)/2,hh*1.4,0,0,Math.PI*2);x.fill();
-   x.strokeStyle='#2a1a12';x.lineWidth=Math.max(2,H*.03);x.lineCap='round';x.beginPath();x.moveTo(x0+(x1-x0)*.12,by);x.quadraticCurveTo((x0+x1)/2,by+hh*1.3,x1-(x1-x0)*.12,by);x.stroke();}
+   let n=0;for(let py=Math.round(H*.64);py<Math.round(H*.7);py++)for(let px=x0;px<x1;px++){if(d[(py*W+px)*4+3]>200)n++;}
+   if(!n)continue;eyes.push({x:(x0+x1)/2,y:by,w:x1-x0});}
   return eyes;}
  // Kopf verpixeln: groß zeichnen (ggf. Augen zu, kippen), in zwei Schritten verkleinern, Farben auf Stufen.
  function pxHead(img,w,sleep){const BW=w*4,BH=Math.round(BW*img.height/img.width),pad=Math.round(BW*.2);
   const a=document.createElement('canvas');a.width=BW;a.height=BH;const x=a.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(img,0,0,BW,BH);
   const eyes=sleep?pxCloseEyes(x,BW,BH):[];
   const r=document.createElement('canvas');r.width=BW+pad*2;r.height=BH+pad*2;const rx=r.getContext('2d');rx.imageSmoothingQuality='high';
-  rx.translate(r.width/2,r.height/2);if(sleep)rx.rotate(.28);rx.drawImage(a,-BW/2,-BH/2);
+  rx.translate(r.width/2,r.height/2);if(sleep)rx.rotate(.18);rx.drawImage(a,-BW/2,-BH/2);
   const ow=Math.round(r.width/4),oh=Math.round(r.height/4);
   const m=document.createElement('canvas');m.width=ow*2;m.height=oh*2;const mx=m.getContext('2d');mx.imageSmoothingQuality='high';mx.drawImage(r,0,0,ow*2,oh*2);
   const b=document.createElement('canvas');b.width=ow;b.height=oh;const y=b.getContext('2d',{willReadFrequently:true});y.imageSmoothingQuality='high';y.drawImage(m,0,0,ow,oh);
   try{const dd=y.getImageData(0,0,ow,oh),p=dd.data,L=12;for(let i=0;i<p.length;i+=4){if(p[i+3]<120){p[i+3]=0;continue}p[i+3]=255;for(let c=0;c<3;c++)p[i+c]=Math.round(p[i+c]/255*(L-1))*255/(L-1);}y.putImageData(dd,0,0);}catch{}
-  // Augen zu auch im kleinen Bild deutlich: je Auge ein Lidstrich ◡ in Pixeln (Position mitgedreht).
-  if(eyes.length){const ang=.28,cs=Math.cos(ang),sn=Math.sin(ang);
-   for(const e of eyes){const dx=e.x-BW/2,dy=e.y-BH/2,ex=Math.round((r.width/2+dx*cs-dy*sn)/4),ey=Math.round((r.height/2+dx*sn+dy*cs)/4),half=Math.max(2,Math.round(e.w/4/2));
-    let sk=[240,185,143];try{const q=y.getImageData(ex,Math.min(oh-1,ey+2),1,1).data;if(q[3])sk=[q[0],q[1],q[2]];}catch{}
-    y.fillStyle=`rgb(${sk})`;y.fillRect(ex-half,ey-1,half*2,2);const lum=.3*sk[0]+.59*sk[1]+.11*sk[2];y.fillStyle=lum<85?`rgb(${sk.map(v=>Math.min(255,Math.round(v*1.6+25)))})`:'#1d120c';y.fillRect(ex-half,ey-1,1,1);y.fillRect(ex+half-1,ey-1,1,1);y.fillRect(ex-half+1,ey,half*2-2,1);}}
+  // Augen zu (Kevin: friedlich schlafend): je Auge ein Fleck in Hautfarbe über das Foto-Auge, darauf ein dunkler Bogen ‿ (Position mitgedreht).
+  if(eyes.length){const ang=.18,cs=Math.cos(ang),sn=Math.sin(ang),sv=(skinOf(img)||'rgb(240,185,143)').match(/\d+/g).map(Number),lid=`rgb(${sv.map(v=>Math.round(v*.38))})`;
+   for(const e of eyes){const dx=e.x-BW/2,dy=e.y-BH/2,ex=Math.round((r.width/2+dx*cs-dy*sn)/4),ey=Math.round((r.height/2+dx*sn+dy*cs)/4),half=2;
+    y.fillStyle=`rgb(${sv})`;y.fillRect(ex-half-1,ey-2,half*2+2,4);
+    y.fillStyle=lid;y.fillRect(ex-half,ey-1,1,1);y.fillRect(ex+half-1,ey-1,1,1);y.fillRect(ex-half+1,ey,half*2-2,1);}}
   return {c:b,pad:Math.round(pad/4)};}
  function pxOutline(x,W,H){let d;try{d=x.getImageData(0,0,W,H);}catch{return;}const p=d.data,o=new Uint8ClampedArray(p),A=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&p[(b*W+a)*4+3]>0;
   for(let b=0;b<H;b++)for(let a=0;a<W;a++){const i=(b*W+a)*4;if(p[i+3])continue;if(A(a-1,b)||A(a+1,b)||A(a,b-1)||A(a,b+1)){o[i]=o[i+1]=o[i+2]=17;o[i+3]=255;}}d.data.set(o);x.putImageData(d,0,0);}
@@ -325,7 +324,7 @@
   else{P(5,4,14,16,SK);P(5,2,14,4,'#3b2a1a');if(mode==='sit'){P(8,12,3,1,'#222');P(13,12,3,1,'#222');}else{P(8,11,2,2,'#222');P(14,11,2,2,'#222');}P(10,16,4,1,'#a55');}
   pxOutline(x,W,H);
   // Wappen: echtes Bild als kleines Element auf der Brust (nicht in den Canvas, Kickbase-Bilder dürfen ihn nicht sperren)
-  const cr=cv.parentElement?.querySelector('.pxr-crest');if(cr){cr.style.top=(ty+2)*2+'px';cr.style.left=(mode==='sit'?24:26)+'px';cr.hidden=mode==='sit';}}
+  const cr=cv.parentElement?.querySelector('.pxr-crest');if(cr){cr.style.top=(ty*2+3+Math.max(0,84-H*2))+'px';cr.style.left='17px';cr.hidden=mode==='sit';}}
  function pxDrawAll(){document.querySelectorAll('canvas.pxr-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';pxDraw(cv);});}
  // Hose/Stutzen je Verein (sonst Trikotfarbe); nur grob, die Trikotfarbe kommt aus clubColor.
  const PX_KIT=[['bayern','#fff','#dc052d'],['leverkusen','#111','#e32221'],['leipzig','#fff','#fff'],['frankfurt','#111','#111'],['bremen','#fff','#1d9053'],['werder','#fff','#1d9053'],['dortmund','#111','#fde100'],['stuttgart','#fff','#fff'],['freiburg','#111','#e2001a'],['gladbach','#fff','#fff'],['wolfsburg','#fff','#65b32e'],['union','#fff','#d4011d'],['hoffenheim','#1961b5','#1961b5'],['mainz','#fff','#c3141e'],['augsburg','#fff','#ba3733'],['köln','#fff','#fff'],['heidenheim','#003b79','#e2001a'],['hamburg','#fff','#fff'],['pauli','#5c3a21','#5c3a21']];
@@ -351,9 +350,10 @@
   const GAP=27,rowsP=[];runners.forEach(r=>{r.x=Math.min(88,Math.max(10,+pos(r.pts)*1.18));const row=rowsP.find(rr=>rr.every(o=>Math.abs(o.x-r.x)>=GAP));row?row.push(r):rowsP.push([r]);});
   const lane=rr=>`<div class="pxr-row">${rr.map(r=>`<div class="pxr-run" style="left:${r.x.toFixed(1)}%">${pxFig(r)}
     <div class="pxr-tag${r.best?' lead':''}"><b class="pxr-p">${r.pts===null||r.pts===undefined?'–':fmt(r.pts)}</b> <b class="pxr-n">${esc(r.name)}</b>${r.g&&r.g.rs.length>1?` <small>×${r.g.rs.length}</small>`:''}${r.g?.state==='live'?' <span class="pxr-live"></span>':r.g&&(r.g.state==='open'||r.g.state==='wait')?' ⏳':''}<br>${r.ghost?'<small class="muted">keiner getippt</small>':fans(r.g)}</div></div>`).join('')}</div>`;
-  const benchG=groups.filter(ko).sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9)),nB=Math.ceil(benchG.length/5),PER=Math.max(3,Math.ceil(benchG.length/(nB||1))),benches=[];for(let i=0;i<benchG.length;i+=PER)benches.push(benchG.slice(i,i+PER));
-  const bench=benchG.length?`<div class="pxr-bench"><div class="pxr-bt">💤 Ersatzbank · kann nicht mehr gewinnen</div>${benches.map(bb=>`<div class="pxr-dug"><i class="pxr-back"></i><i class="pxr-seat"></i>${bb.map((g,i)=>`<div class="pxr-sit" style="left:${((i+.5)*100/PER).toFixed(1)}%">${pxFig({id:g.t.playerId,team:g.t.team,teamImg:byId.get(String(g.t.playerId))?.teamImg,mode:'sit'})}</div>`).join('')}</div>
-    <div class="pxr-bl">${bb.map(g=>`<div style="width:${(100/PER).toFixed(1)}%"><b>${esc(g.t.player)}</b><br>${g.pts===null?'–':fmt(g.pts)}${g.rs.length>1?` · ×${g.rs.length}`:''}<br>${fans(g)}</div>`).join('')}</div>`).join('')}</div>`:'';
+  // Eine Ersatzbank für alle (Kevin-Wunsch): kompakt unter dem Rasen, Figuren kleiner, je mehr draufsitzen.
+  const benchG=groups.filter(ko).sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9)),bs=Math.max(.5,Math.min(.8,6.4/Math.max(1,benchG.length))).toFixed(2);
+  const bench=benchG.length?`<div class="pxr-bench" style="--s:${bs}"><div class="pxr-bt">💤 Ersatzbank · kann nicht mehr gewinnen</div><div class="pxr-dug"><i class="pxr-back"></i><i class="pxr-seat"></i><div class="pxr-sits">${benchG.map(g=>`<div class="pxr-sit">${pxFig({id:g.t.playerId,team:g.t.team,teamImg:byId.get(String(g.t.playerId))?.teamImg,mode:'sit'})}</div>`).join('')}</div></div>
+    <div class="pxr-bl">${benchG.map(g=>`<div><b>${esc(g.t.player)}</b><br>${g.pts===null?'–':fmt(g.pts)}${g.rs.length>1?` · ×${g.rs.length}`:''}</div>`).join('')}</div></div>`:'';
   const pitch=`<div class="pxr"><div class="pxr-pitch"><i class="pxr-mid"></i><i class="pxr-circle"></i><i class="pxr-box"></i><i class="pxr-goal"></i>${rowsP.map(lane).join('')}</div>${bench}</div>`;
   setTimeout(pxDrawAll,0);
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.

@@ -1144,7 +1144,7 @@ body.zr-on .mobilenav{display:none}
 .pxr-fig{position:relative;height:84px;display:flex;align-items:flex-end;cursor:default}
 .pxr-fig[data-mvp]{cursor:pointer}
 .pxr-c{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
-.pxr-crest{position:absolute;width:11px;height:11px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 0 1px #000)}
+.pxr-crest{position:absolute;width:14px;height:14px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 0 1px #000)}
 .pxr-crown{position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:16px;z-index:3;animation:pxrCrown 1s infinite alternate}
 @keyframes pxrCrown{to{transform:translateX(-50%) translateY(-3px) rotate(6deg)}}
 .pxr-fig.run{animation:pxrStep .3s steps(1) infinite}@keyframes pxrStep{50%{transform:translateY(-2px)}}
@@ -1162,15 +1162,30 @@ body.zr-on .mobilenav{display:none}
 .pxr-fan.lead .mgr-av{box-shadow:0 0 0 1.5px var(--gold)}.pxr-fan.me .mgr-av{box-shadow:0 0 0 1.5px #7fd3a6}
 .pxr-bench{background:linear-gradient(#20262e,#14191f);border:2px solid rgba(255,255,255,.55);border-top:0;border-radius:0 0 10px 10px;padding:6px 6px 8px}
 .pxr-bt{font-size:10.5px;font-weight:800;color:var(--bad);letter-spacing:.4px;margin-bottom:2px}
-.pxr-dug{position:relative;height:104px;border-radius:40px 40px 6px 6px;background:linear-gradient(rgba(127,176,214,.2),rgba(42,58,74,.33));border:2px solid #9fb6c8;border-bottom:none}
-.pxr-dug+.pxr-bl+.pxr-dug{margin-top:8px}
-.pxr-seat{position:absolute;left:6px;right:6px;bottom:14px;height:9px;background:#c9282d;border-radius:3px;box-shadow:0 6px 0 #6b1418}
-.pxr-back{position:absolute;left:10px;right:10px;bottom:42px;height:7px;background:#8f1d22;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
-.pxr-sit{position:absolute;bottom:6px;transform:translateX(-50%);z-index:2;filter:saturate(.75)}
-.pxr-bl{display:flex;margin-top:3px}
-.pxr-bl>div{text-align:center;font-size:10px;color:var(--muted);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pxr-dug{position:relative;height:calc(86px * var(--s,.8) + 14px);border-radius:28px 28px 6px 6px;background:linear-gradient(rgba(127,176,214,.2),rgba(42,58,74,.33));border:2px solid #9fb6c8;border-bottom:none}
+.pxr-seat{position:absolute;left:6px;right:6px;bottom:8px;height:7px;background:#c9282d;border-radius:3px;box-shadow:0 4px 0 #6b1418}
+.pxr-back{position:absolute;left:10px;right:10px;bottom:calc(32px * var(--s,.8) + 8px);height:6px;background:#8f1d22;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.pxr-sits{position:absolute;inset:0 4px 2px;display:flex;align-items:flex-end;z-index:2}
+.pxr-sits>.pxr-sit,.pxr-bl>div{flex:1 1 0;min-width:0}
+.pxr-sit{display:flex;justify-content:center;filter:saturate(.75)}
+.pxr-sit .pxr-fig{transform:scale(var(--s,.8));transform-origin:50% 100%}
+.pxr-bl{display:flex;margin-top:3px;padding:0 4px}
+.pxr-bl>div{text-align:center;font-size:9.5px;color:var(--muted);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pxr-bl b{color:var(--text)}
 /* Wischen zwischen den Reitern (wischen.js): kurzes Hereingleiten des neuen Reiters */
 @keyframes kblSwipeL{from{opacity:.35;transform:translateX(28px)}to{opacity:1;transform:none}}
 @keyframes kblSwipeR{from{opacity:.35;transform:translateX(-28px)}to{opacity:1;transform:none}}
 .kbl-view.kbl-swipe-l{animation:kblSwipeL .2s ease-out}.kbl-view.kbl-swipe-r{animation:kblSwipeR .2s ease-out}
+/* Dauerregeln (dauerregeln.js) */
+.bums-r-FV{--c:#e6a0a0}
+.dr-group .acc-sub{display:grid;gap:10px}
+.dr-item{border:1px solid #594c35;border-radius:8px;padding:10px 12px}
+.dr-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dr-text{margin:6px 0 0}
+.dr-pen{margin:8px 0 0;padding-left:18px;display:grid;gap:4px}
+.dr-state{font-size:12px;font-weight:700;padding:1px 7px;border-radius:999px;white-space:nowrap}
+.dr-bad{background:rgba(237,139,133,.18);color:#f19a94}
+.dr-ok{background:rgba(127,211,166,.16);color:#7fd3a6}
+.dr-wait{background:rgba(216,192,102,.16);color:#d8c066}
+.dr-pill-bad{color:#f19a94}
+.dr-group .acc-sub>p{margin:0}
