@@ -176,7 +176,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .acc-todo-box[open]>summary strong::before{content:"▾ "}
 .acc-todo-box[open]>summary{margin-bottom:10px}
 /* Vorschau: Admin-Werkzeuge für Gäste ausblenden */
-.kbl-guest .admin-only{display:none!important}
+.kbl-guest .admin-only,.kbl-no-admin .admin-only{display:none!important}
+.acc-daypick{margin:4px 0 12px}
 /* Übersicht: einklappbare Bereiche */
 .kbl-foldhead{cursor:pointer;user-select:none}
 .kbl-foldhead h3::before{content:"▾ ";color:var(--gold)}
