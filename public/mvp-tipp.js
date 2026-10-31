@@ -272,46 +272,97 @@
     <div class="stk-baby"><span class="stk-crown">👑</span><svg class="stk-swad" viewBox="0 0 26 14" preserveAspectRatio="none" aria-hidden="true"><path d="M1 8 Q1 2 9 2 L19 2 Q25 4 24 9 Q23 13 14 13 L6 13 Q1 12 1 8Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/><path d="M4.5 3.5 L4.5 12" stroke="${trim}" stroke-width="2"/><g class="stk-bface"><circle cx="20" cy="4" r="5" fill="#f8d4b4" stroke="#111" stroke-width="1"/><path d="M17.5 3.5 q1 1 2 0 M20.5 3.5 q1 1 2 0" stroke="#111" stroke-width=".7" fill="none"/><circle cx="20" cy="6.6" r="1.1" fill="#ff8fb1"/></g></svg>${toonPhoto(o.crest,'stk-crest',o.team)}<img class="stk-bhead" src="${esc(headSrc(o.pid))}" alt="${esc(o.pname)}" onload="this.closest('.stk')?.classList.add('has-bhead')" onerror="this.remove()"></div></div>
    <span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span><div class="stk-tag">${o.tag}</div></div>`;
  }
+ // ---------- 8-Bit-Rennen (Kevin-Wunsch 31.10., ersetzt die Strichmännchen im Rennen) ----------
+ // Jeder getippte Spieler läuft einmal als Pixel-Fußballer (Kopf aus dem Wackelkopf-Foto verpixelt, Trikot/Hose/Stutzen in Vereinsfarben,
+ // echtes Wappen als kleines Bild auf der Brust), darunter die Profilbilder seiner Tipper. Ganz vorn mit Krone der gerade Beste nach der Tippregel.
+ // Wer nicht mehr gewinnen kann, sitzt schlafend (Augen zu) auf der Ersatzbank. Gezeichnet wird nach dem Einfügen (pxDrawAll).
+ const PX_IMG=new Map();
+ const pxLoad=src=>PX_IMG.get(src)||(PX_IMG.set(src,new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;})),PX_IMG.get(src));
+ const pxRgb=c=>{const m=String(c).match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);if(m){let v=m[1];if(v.length===3)v=v.split('').map(q=>q+q).join('');return [0,2,4].map(i=>parseInt(v.slice(i,i+2),16));}
+  const h=String(c).match(/hsl\((\d+)\s+(\d+)%\s+(\d+)%\)/);if(h){const [H,S,L]=[+h[1],h[2]/100,h[3]/100],k=n=>(n+H/30)%12,a=S*Math.min(L,1-L),f=n=>L-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));return [f(0),f(8),f(4)].map(v=>Math.round(v*255));}return [90,100,110];};
+ // Augen zu: im großen, ungedrehten Bild je Seite die dunkelste Zeile im Augenband suchen, mit Wangenfarbe übermalen und einen Lidstrich ziehen.
+ function pxCloseEyes(x,W,H){let d;const eyes=[];try{d=x.getImageData(0,0,W,H).data;}catch{return eyes;}
+  const lum=(px,py)=>{const i=(py*W+px)*4;return d[i+3]<200?null:d[i]*.3+d[i+1]*.59+d[i+2]*.11;};
+  for(const [a,b] of [[.22,.46],[.54,.78]]){const x0=Math.round(W*a),x1=Math.round(W*b);let best=null,by=0;
+   for(let py=Math.round(H*.46);py<Math.round(H*.62);py++){let s=0,n=0;for(let px=x0;px<x1;px++){const l=lum(px,py);if(l!==null){s+=l;n++;}}if(n>(x1-x0)/2&&(best===null||s/n<best)){best=s/n;by=py;}}
+   if(best===null)continue;
+   let r=0,g=0,bb=0,n=0;for(let py=Math.round(H*.64);py<Math.round(H*.7);py++)for(let px=x0;px<x1;px++){const i=(py*W+px)*4;if(d[i+3]>200){r+=d[i];g+=d[i+1];bb+=d[i+2];n++;}}
+   if(!n)continue;eyes.push({x:(x0+x1)/2,y:by,w:x1-x0});x.fillStyle=`rgb(${r/n|0},${g/n|0},${bb/n|0})`;const hh=Math.round(H*.045);x.beginPath();x.ellipse((x0+x1)/2,by,(x1-x0)/2,hh*1.4,0,0,Math.PI*2);x.fill();
+   x.strokeStyle='#2a1a12';x.lineWidth=Math.max(2,H*.03);x.lineCap='round';x.beginPath();x.moveTo(x0+(x1-x0)*.12,by);x.quadraticCurveTo((x0+x1)/2,by+hh*1.3,x1-(x1-x0)*.12,by);x.stroke();}
+  return eyes;}
+ // Kopf verpixeln: groß zeichnen (ggf. Augen zu, kippen), in zwei Schritten verkleinern, Farben auf Stufen.
+ function pxHead(img,w,sleep){const BW=w*4,BH=Math.round(BW*img.height/img.width),pad=Math.round(BW*.2);
+  const a=document.createElement('canvas');a.width=BW;a.height=BH;const x=a.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(img,0,0,BW,BH);
+  const eyes=sleep?pxCloseEyes(x,BW,BH):[];
+  const r=document.createElement('canvas');r.width=BW+pad*2;r.height=BH+pad*2;const rx=r.getContext('2d');rx.imageSmoothingQuality='high';
+  rx.translate(r.width/2,r.height/2);if(sleep)rx.rotate(.28);rx.drawImage(a,-BW/2,-BH/2);
+  const ow=Math.round(r.width/4),oh=Math.round(r.height/4);
+  const m=document.createElement('canvas');m.width=ow*2;m.height=oh*2;const mx=m.getContext('2d');mx.imageSmoothingQuality='high';mx.drawImage(r,0,0,ow*2,oh*2);
+  const b=document.createElement('canvas');b.width=ow;b.height=oh;const y=b.getContext('2d',{willReadFrequently:true});y.imageSmoothingQuality='high';y.drawImage(m,0,0,ow,oh);
+  try{const dd=y.getImageData(0,0,ow,oh),p=dd.data,L=12;for(let i=0;i<p.length;i+=4){if(p[i+3]<120){p[i+3]=0;continue}p[i+3]=255;for(let c=0;c<3;c++)p[i+c]=Math.round(p[i+c]/255*(L-1))*255/(L-1);}y.putImageData(dd,0,0);}catch{}
+  // Augen zu auch im kleinen Bild deutlich: je Auge ein Lidstrich ◡ in Pixeln (Position mitgedreht).
+  if(eyes.length){const ang=.28,cs=Math.cos(ang),sn=Math.sin(ang);
+   for(const e of eyes){const dx=e.x-BW/2,dy=e.y-BH/2,ex=Math.round((r.width/2+dx*cs-dy*sn)/4),ey=Math.round((r.height/2+dx*sn+dy*cs)/4),half=Math.max(2,Math.round(e.w/4/2));
+    let sk=[240,185,143];try{const q=y.getImageData(ex,Math.min(oh-1,ey+2),1,1).data;if(q[3])sk=[q[0],q[1],q[2]];}catch{}
+    y.fillStyle=`rgb(${sk})`;y.fillRect(ex-half,ey-1,half*2,2);const lum=.3*sk[0]+.59*sk[1]+.11*sk[2];y.fillStyle=lum<85?`rgb(${sk.map(v=>Math.min(255,Math.round(v*1.6+25)))})`:'#1d120c';y.fillRect(ex-half,ey-1,1,1);y.fillRect(ex+half-1,ey-1,1,1);y.fillRect(ex-half+1,ey,half*2-2,1);}}
+  return {c:b,pad:Math.round(pad/4)};}
+ function pxOutline(x,W,H){let d;try{d=x.getImageData(0,0,W,H);}catch{return;}const p=d.data,o=new Uint8ClampedArray(p),A=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&p[(b*W+a)*4+3]>0;
+  for(let b=0;b<H;b++)for(let a=0;a<W;a++){const i=(b*W+a)*4;if(p[i+3])continue;if(A(a-1,b)||A(a+1,b)||A(a,b-1)||A(a,b+1)){o[i]=o[i+1]=o[i+2]=17;o[i+3]=255;}}d.data.set(o);x.putImageData(d,0,0);}
+ // Sprite: 24 Pixel breit, Kopf 20 breit; angezeigt doppelt so groß. mode: run | stand | cheer | sit (Seitenansicht auf der Bank)
+ async function pxDraw(cv){const o=JSON.parse(cv.dataset.px),[s,t]=clubColor(o.team),h=o.h||'#fff',so=o.so||s,mode=o.mode,W=24;
+  const hi=await pxLoad(headSrc(o.id)),HW=20,head=hi?pxHead(hi,HW,mode==='sit'):null,hh=head?head.c.height-head.pad*2:24,ty=hh-3,sy=ty+8,H=sy+10;
+  cv.width=W;cv.height=H;cv.style.width=W*2+'px';cv.style.height=H*2+'px';
+  const x=cv.getContext('2d',{willReadFrequently:true}),P=(a,b,w,hgt,c)=>{x.fillStyle=c;x.fillRect(a,b,w,hgt);},sk0=(hi&&skinOf(hi))||'rgb(240,185,143)',sv=sk0.match(/\d+/g).map(Number),SK=sk0,SK2=`rgb(${sv.map(v=>Math.round(v*.85))})`,BT='#151515';
+  x.clearRect(0,0,W,H);
+  if(mode==='sit'){P(8,ty,8,9,s);P(8,ty,8,1,t);P(13,ty,3,9,'#0002');P(8,sy,10,3,h);P(18,sy,4,3,SK);P(20,sy+3,3,5,so);P(20,sy+3,3,1,SK);P(20,sy+8,4,2,BT);P(12,ty+2,3,5,s);P(13,ty+7,2,2,SK);P(14,ty+8,4,2,SK);}
+  else{if(mode==='cheer'){P(1,ty-9,2,10,SK);P(21,ty-9,2,10,SK);}
+   P(6,ty,12,8,s);P(4,ty,2,3,s);P(18,ty,2,3,s);P(10,ty,4,1,t);P(15,ty,3,8,'#0002');
+   if(mode!=='cheer'){P(4,ty+3,2,4,SK);P(18,ty+3,2,4,SK);P(4,ty+6,2,1,SK2);P(18,ty+6,2,1,SK2);}
+   P(6,sy,12,3,h);P(11,sy+2,2,1,'#0004');
+   if(mode==='run'){P(5,sy+3,3,2,SK);P(4,sy+5,3,3,so);P(2,sy+8,5,2,BT);P(15,sy+3,3,2,SK);P(16,sy+5,3,2,so);P(17,sy+7,3,1,so);P(17,sy+8,6,2,BT);}
+   else{P(7,sy+3,3,2,SK);P(14,sy+3,3,2,SK);P(7,sy+5,3,3,so);P(14,sy+5,3,3,so);P(6,sy+8,4,2,BT);P(14,sy+8,4,2,BT);}}
+  if(head){x.imageSmoothingEnabled=false;x.drawImage(head.c,(mode==='sit'?1:2)-head.pad,-head.pad);}
+  else{P(5,4,14,16,SK);P(5,2,14,4,'#3b2a1a');if(mode==='sit'){P(8,12,3,1,'#222');P(13,12,3,1,'#222');}else{P(8,11,2,2,'#222');P(14,11,2,2,'#222');}P(10,16,4,1,'#a55');}
+  pxOutline(x,W,H);
+  // Wappen: echtes Bild als kleines Element auf der Brust (nicht in den Canvas, Kickbase-Bilder dürfen ihn nicht sperren)
+  const cr=cv.parentElement?.querySelector('.pxr-crest');if(cr){cr.style.top=(ty+2)*2+'px';cr.style.left=(mode==='sit'?24:26)+'px';cr.hidden=mode==='sit';}}
+ function pxDrawAll(){document.querySelectorAll('canvas.pxr-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';pxDraw(cv);});}
+ // Hose/Stutzen je Verein (sonst Trikotfarbe); nur grob, die Trikotfarbe kommt aus clubColor.
+ const PX_KIT=[['bayern','#fff','#dc052d'],['leverkusen','#111','#e32221'],['leipzig','#fff','#fff'],['frankfurt','#111','#111'],['bremen','#fff','#1d9053'],['werder','#fff','#1d9053'],['dortmund','#111','#fde100'],['stuttgart','#fff','#fff'],['freiburg','#111','#e2001a'],['gladbach','#fff','#fff'],['wolfsburg','#fff','#65b32e'],['union','#fff','#d4011d'],['hoffenheim','#1961b5','#1961b5'],['mainz','#fff','#c3141e'],['augsburg','#fff','#ba3733'],['köln','#fff','#fff'],['heidenheim','#003b79','#e2001a'],['hamburg','#fff','#fff'],['pauli','#5c3a21','#5c3a21']];
+ const pxKit=team=>{const t=String(team||'').toLowerCase(),k=PX_KIT.find(([n])=>t.includes(n));return k?{h:k[1],so:k[2]}:{};};
+ function pxFig(o){const crest=kbImg(o.teamImg);
+  return `<div class="pxr-fig${o.mode==='run'?' run':''}${o.best?' best':''}" data-pid="${esc(o.id)}"${o.best?' data-mvp="1"':''}>${o.best?'<span class="pxr-crown">👑</span>':''}<canvas class="pxr-c" data-px="${esc(JSON.stringify({id:String(o.id),team:o.team,mode:o.mode,...pxKit(o.team)}))}" width="24" height="40"></canvas>${crest?`<img class="pxr-crest" src="${esc(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}${o.mode==='run'?'<span class="pxr-ball">⚽</span>':''}${o.mode==='sit'?'<span class="pxr-zz">Zz</span>':''}</div>`;}
  function toonRace(live,groups,leadIds,bestIds,me,best,pool,auto=false){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
   const vals=[...groups.map(g=>g.pts??0),...(best?[best.points]:[])],lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
   const pos=v=>(4+72*((v??0)-lo)/span).toFixed(1);
-  // Alle Figuren auf einem Platz (Kevin-Wunsch): x nach Punkten, je Spieler eine eigene Höhe, damit sich niemand verdeckt.
-  // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
-  // Je Manager eine eigene Zeile (Kevin-Wunsch: Manager laufen mit ihrem Tipp als Baby), x nach den Punkten des getippten Spielers.
-  // Oben, wenn ihn keiner getippt hat, der gerade Beste als Spieler-Männchen mit Krone. TOP: Platz für das hochgestemmte Baby.
-  const ROW=74,Y=row=>(/ champ/.test(figs[0]?.cls||'')?150:104)+row*ROW;
-  const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner leader champ${x>50?' flip':''}${crest?' has-crest':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
-    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>
-    <div class="toon-tag">${esc(o.name)} <b>${fmt(o.pts)}</b> <small>keiner getippt</small></div></div>`;};
-  const figs=[];
   const tipped=new Set(groups.map(g=>String(g.t.playerId)));
-  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({ghost:true,id:p.id,name:p.name,team:p.team,pts:best.points}));
-  // K.O. auf dem Rasen (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
-  // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist.
+  // K.O. (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
+  // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist. Diese sitzen schlafend auf der Ersatzbank.
   const ko=g=>!bestIds.has(String(g.t.playerId))&&(offRule(pool,g.t.team,g.t.playerId)||(!!best&&g.state==='done'&&g.pts!==null&&g.pts<best.points));
-  // Kevin-Wunsch: Wer den Sieger-Spieler getippt hat und nach der Wertung vorne liegt, tanzt (hier: stemmt sein Baby hoch).
-  // Wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Ohne erkannte Wertung tanzen alle seine Tipper.
-  groups.forEach(g=>{const k=ko(g),neg=g.pts!==null&&g.pts<0,isBest=bestIds.has(String(g.t.playerId));
-   const st=k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':'';
-   [...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)||a.m.name.localeCompare(b.m.name,'de')).forEach(r=>{
-    const champ=isBest&&(!auto||leadIds.has(r.m.id)),mourn=isBest&&auto&&!leadIds.has(r.m.id);
-    figs.push({g,r,k,cls:st+(isBest?' best':'')+(champ?' champ':'')+(mourn?' mourn':'')+(leadIds.has(r.m.id)?' lead':'')+(r.m.id===me?' me':'')});});});
-  // Kevin-Wunsch 31.10.: Wer K.O. ist, rutscht nach unten; oben stehen nur noch die, die gewinnen können (Reihenfolge sonst gleich).
-  figs.sort((a,b)=>!!a.k-!!b.k);
-  const man=(o,row)=>{const g=o.g,r=o.r,x=pos(g.pts),crest=kbImg(byId.get(String(g.t.playerId))?.teamImg);
-   return stick({cls:o.cls+(x>50?' flip':''),x,top:Y(row)-60,z:row+2,team:g.t.team,mname:r.m.name,mid:r.m.id,pid:g.t.playerId,pname:g.t.player,crest,
-    tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
-  const pitch=`<div class="toon-pitch stk-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.ghost?runner(o,row):man(o,row)).join('')}</div>`;
+  const fans=g=>`<span class="pxr-fans">${[...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)).map(r=>`<span class="pxr-fan${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}" title="${esc(r.m.name)} · Tipp ${fmt(r.t.points)}">${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):esc(String(r.m.name||'?')[0])}</span>`).join('')}</span>`;
+  // Läufer: der gerade Beste ohne Tipper (Krone) plus jeder getippte Spieler, der noch gewinnen kann.
+  const runners=[];
+  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>{const info=byId.get(String(p.id));runners.push({id:p.id,name:p.name,team:p.team,teamImg:info?.teamImg,pts:best.points,mode:'cheer',best:true,ghost:true});});
+  groups.filter(g=>!ko(g)).forEach(g=>{const isBest=bestIds.has(String(g.t.playerId));runners.push({id:g.t.playerId,name:g.t.player,team:g.t.team,teamImg:byId.get(String(g.t.playerId))?.teamImg,pts:g.pts,g,best:isBest,mode:isBest&&g.state!=='live'?'cheer':g.state==='live'?'run':'stand'});});
+  runners.sort((a,b)=>b.best-a.best||(b.pts??-1e9)-(a.pts??-1e9));
+  // Zeilen packen (wie im Zeitraffer): von vorn nach hinten, nebeneinander nur mit genug Abstand für Figur und Schild.
+  const GAP=27,rowsP=[];runners.forEach(r=>{r.x=Math.min(88,Math.max(10,+pos(r.pts)*1.18));const row=rowsP.find(rr=>rr.every(o=>Math.abs(o.x-r.x)>=GAP));row?row.push(r):rowsP.push([r]);});
+  const lane=rr=>`<div class="pxr-row">${rr.map(r=>`<div class="pxr-run" style="left:${r.x.toFixed(1)}%">${pxFig(r)}
+    <div class="pxr-tag${r.best?' lead':''}"><b class="pxr-p">${r.pts===null||r.pts===undefined?'–':fmt(r.pts)}</b> <b class="pxr-n">${esc(r.name)}</b>${r.g&&r.g.rs.length>1?` <small>×${r.g.rs.length}</small>`:''}${r.g?.state==='live'?' <span class="pxr-live"></span>':r.g&&(r.g.state==='open'||r.g.state==='wait')?' ⏳':''}<br>${r.ghost?'<small class="muted">keiner getippt</small>':fans(r.g)}</div></div>`).join('')}</div>`;
+  const benchG=groups.filter(ko).sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9)),nB=Math.ceil(benchG.length/5),PER=Math.max(3,Math.ceil(benchG.length/(nB||1))),benches=[];for(let i=0;i<benchG.length;i+=PER)benches.push(benchG.slice(i,i+PER));
+  const bench=benchG.length?`<div class="pxr-bench"><div class="pxr-bt">💤 Ersatzbank · kann nicht mehr gewinnen</div>${benches.map(bb=>`<div class="pxr-dug"><i class="pxr-back"></i><i class="pxr-seat"></i>${bb.map((g,i)=>`<div class="pxr-sit" style="left:${((i+.5)*100/PER).toFixed(1)}%">${pxFig({id:g.t.playerId,team:g.t.team,teamImg:byId.get(String(g.t.playerId))?.teamImg,mode:'sit'})}</div>`).join('')}</div>
+    <div class="pxr-bl">${bb.map(g=>`<div style="width:${(100/PER).toFixed(1)}%"><b>${esc(g.t.player)}</b><br>${g.pts===null?'–':fmt(g.pts)}${g.rs.length>1?` · ×${g.rs.length}`:''}<br>${fans(g)}</div>`).join('')}</div>`).join('')}</div>`:'';
+  const pitch=`<div class="pxr"><div class="pxr-pitch"><i class="pxr-mid"></i><i class="pxr-circle"></i><i class="pxr-box"></i><i class="pxr-goal"></i>${rowsP.map(lane).join('')}</div>${bench}</div>`;
+  setTimeout(pxDrawAll,0);
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&!offRule(pool,g.t.team,g.t.playerId)),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
   const ghostLine=tops.length?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">Gerade bester getippter Spieler:</span> <b>${tops.map(g=>esc(g.t.player)).join(', ')}</b> <small class="muted">${esc([...new Set(tops.map(g=>g.t.team))].join(', '))}</small><span class="toon-pts">${fmt(top)}<small> Pkt.</small></span></div>`:'';
   const rows=groups.map(g=>`<div class="toon-row${bestIds.has(String(g.t.playerId))?' best':''}"><span class="mvp-rank">${g.place??'–'}</span><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${mn(r.m.name,r.m.id)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div></div>`).join('');
   // Während des Spieltags gleich offen und ohne Erklärtext (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel: kbl-keep-open).
-  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Jeder Manager trägt seinen getippten Spieler als Baby im Arm. Je mehr Punkte das Baby hat, desto weiter rechts. 👑 auf dem Baby: der gerade Beste nach der Tippregel. Wer nach der Wertung vorne liegt, stemmt sein Baby hoch und tanzt; wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wessen Baby gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
+  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Jeder getippte Spieler läuft einmal als Pixel-Fußballer, darunter die Profilbilder seiner Tipper (gold = vorne nach der Wertung). Je mehr Punkte, desto näher am Tor. 👑 = der gerade Beste nach der Tippregel. Wessen Spiel läuft, sprintet mit Ball. Wer nicht mehr gewinnen kann, schläft auf der Ersatzbank. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
  }
  // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
  // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
@@ -737,7 +788,7 @@
   mvpdModal.innerHTML=`<div class="push-box mvpd-box" role="dialog" aria-modal="true" aria-label="Punkte einzeln"><div class="push-head"><h3>📊 Punkte einzeln</h3><button type="button" class="push-x" data-mvpd-close aria-label="Schließen">✕</button></div>${body}<p class="muted tiny">Zusammengezählt je Kickbase-Kategorie, Rücknahmen (z. B. nach VAR) sind schon abgezogen.${data.status==='finished'?'':` Stand ${esc(clock(at))} Uhr.`}</p></div>`;
   mvpdModal.hidden=false;mvpdModal.querySelector('[data-mvpd-close]').focus();
  }
- document.addEventListener('click',e=>{if(e.target.closest?.('[data-mvp-detail], .toon-race .stk.best .stk-baby, .toon-race .stk.best .stk-pl, .toon-race .toon-runner.leader'))mvpDetailOpen();});
+ document.addEventListener('click',e=>{if(e.target.closest?.('[data-mvp-detail], .toon-race .stk.best .stk-baby, .toon-race .stk.best .stk-pl, .toon-race .toon-runner.leader, .toon-race .pxr-fig[data-mvp]'))mvpDetailOpen();});
  document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('li[data-mvp-detail]')){e.preventDefault();mvpDetailOpen();}});
  function top10(d,rows,pool,bestIds,fin){
   const t=d.tracking?.top10,list=t?.players||[];
