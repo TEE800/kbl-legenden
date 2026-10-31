@@ -376,16 +376,28 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T15:53:06.307Z",
-      "points": 115,
+      "at": "2026-10-31T16:07:41.423Z",
+      "points": 126,
       "players": [
         {
-          "id": "3284",
-          "name": "Rohr",
-          "team": "Elversberg"
+          "id": "2373",
+          "name": "Kabak",
+          "team": "Hoffenheim"
         }
       ],
       "top10": [
+        {
+          "id": "2373",
+          "name": "Kabak",
+          "team": "Hoffenheim",
+          "points": 126
+        },
+        {
+          "id": "11631",
+          "name": "Burger",
+          "team": "Hoffenheim",
+          "points": 121
+        },
         {
           "id": "3284",
           "name": "Rohr",
@@ -393,22 +405,16 @@
           "points": 115
         },
         {
-          "id": "7158",
-          "name": "Undav",
+          "id": "3190",
+          "name": "Chabot",
           "team": "Stuttgart",
-          "points": 101
+          "points": 108
         },
         {
-          "id": "11631",
-          "name": "Burger",
+          "id": "11161",
+          "name": "Machida",
           "team": "Hoffenheim",
-          "points": 98
-        },
-        {
-          "id": "2373",
-          "name": "Kabak",
-          "team": "Hoffenheim",
-          "points": 95
+          "points": 100
         },
         {
           "id": "6148",
@@ -417,34 +423,40 @@
           "points": 92
         },
         {
-          "id": "11161",
-          "name": "Machida",
+          "id": "15193",
+          "name": "Rots",
           "team": "Hoffenheim",
-          "points": 81
-        },
-        {
-          "id": "3190",
-          "name": "Chabot",
-          "team": "Stuttgart",
-          "points": 77
-        },
-        {
-          "id": "2928",
-          "name": "Petkov",
-          "team": "Elversberg",
-          "points": 77
+          "points": 92
         },
         {
           "id": "9642",
           "name": "Matsima",
           "team": "Augsburg",
-          "points": 77
+          "points": 90
         },
         {
-          "id": "2764",
-          "name": "Keitel",
-          "team": "Augsburg",
-          "points": 76
+          "id": "1671",
+          "name": "Prömel",
+          "team": "Stuttgart",
+          "points": 89
+        },
+        {
+          "id": "3158",
+          "name": "Asllani",
+          "team": "Hoffenheim",
+          "points": 88
+        },
+        {
+          "id": "2294",
+          "name": "Pieper",
+          "team": "Bremen",
+          "points": 88
+        },
+        {
+          "id": "3281",
+          "name": "Reis",
+          "team": "Bremen",
+          "points": 88
         }
       ],
       "checked": 470,
