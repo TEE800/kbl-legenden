@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T14:54:49.076Z",
+      "at": "2026-10-31T15:09:36.801Z",
       "points": 115,
       "players": [
         {
@@ -411,40 +411,40 @@
           "points": 72
         },
         {
+          "id": "3190",
+          "name": "Chabot",
+          "team": "Stuttgart",
+          "points": 70
+        },
+        {
+          "id": "7158",
+          "name": "Undav",
+          "team": "Stuttgart",
+          "points": 68
+        },
+        {
           "id": "7278",
           "name": "Poreba",
           "team": "Elversberg",
           "points": 67
         },
         {
-          "id": "3190",
-          "name": "Chabot",
-          "team": "Stuttgart",
-          "points": 62
-        },
-        {
-          "id": "7158",
-          "name": "Undav",
-          "team": "Stuttgart",
-          "points": 55
-        },
-        {
-          "id": "8301",
-          "name": "Sirch",
-          "team": "Elversberg",
-          "points": 54
+          "id": "1811",
+          "name": "Gouweleeuw",
+          "team": "Augsburg",
+          "points": 66
         },
         {
           "id": "11631",
           "name": "Burger",
           "team": "Hoffenheim",
-          "points": 54
+          "points": 65
         },
         {
-          "id": "1639",
-          "name": "Amiri",
-          "team": "Mainz",
-          "points": 52
+          "id": "11886",
+          "name": "Rômulo",
+          "team": "Leipzig",
+          "points": 59
         }
       ],
       "checked": 470,
