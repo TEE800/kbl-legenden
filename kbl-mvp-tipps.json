@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T19:20:41.118Z",
+      "at": "2026-10-31T19:35:13.102Z",
       "points": 168,
       "players": [
         {
@@ -433,6 +433,12 @@
           "name": "Regeer",
           "team": "Bremen",
           "points": 133
+        },
+        {
+          "id": "8329",
+          "name": "Olise",
+          "team": "Bayern",
+          "points": 126
         },
         {
           "id": "7224",
