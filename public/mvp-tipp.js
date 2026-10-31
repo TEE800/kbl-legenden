@@ -285,6 +285,8 @@
    [...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)||a.m.name.localeCompare(b.m.name,'de')).forEach(r=>{
     const champ=isBest&&(!auto||leadIds.has(r.m.id)),mourn=isBest&&auto&&!leadIds.has(r.m.id);
     figs.push({g,r,k,cls:st+(isBest?' best':'')+(champ?' champ':'')+(mourn?' mourn':'')+(leadIds.has(r.m.id)?' lead':'')+(r.m.id===me?' me':'')});});});
+  // Kevin-Wunsch 31.10.: Wer K.O. ist, rutscht nach unten; oben stehen nur noch die, die gewinnen können (Reihenfolge sonst gleich).
+  figs.sort((a,b)=>!!a.k-!!b.k);
   const man=(o,row)=>{const g=o.g,r=o.r,x=pos(g.pts),crest=kbImg(byId.get(String(g.t.playerId))?.teamImg);
    return stick({cls:o.cls+(x>50?' flip':''),x,top:Y(row)-60,z:row+2,team:g.t.team,mname:r.m.name,mid:r.m.id,pid:g.t.playerId,pname:g.t.player,crest,
     tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
