@@ -2278,9 +2278,11 @@ app.get('/api/rule-live/:day',async(req,res)=>{
 // Letzte Abrechnung je Spieltag im Speicher, fuer die Dauerregeln (/api/dauerregeln), damit die BumsParade nicht doppelt rechnet.
 let ruleAccountingRoute=null;const accMemo=new Map();
 // 22:00 Uhr deutscher Zeit am Tag nach dem Zeitpunkt ms (Verkaufsfrist der BumsParade), als UTC-Millisekunden.
-function berlinNextDay22(ms){
+function berlinNextDay22(ms){return berlinNextDayAt(ms,22);}
+// Uhrzeit h:00 deutscher Zeit am Tag nach dem Zeitpunkt ms, als UTC-Millisekunden.
+function berlinNextDayAt(ms,h){
  const [y,m,d]=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms)).split('-').map(Number);
- const guess=Date.UTC(y,m-1,d+1,22,0);
+ const guess=Date.UTC(y,m-1,d+1,h,0);
  const wall=Date.parse(new Date(guess).toLocaleString('sv-SE',{timeZone:'Europe/Berlin'}).replace(' ','T')+'Z');
  return guess-(wall-guess);
 }
@@ -2771,6 +2773,24 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         }
       }
     }
+    // Dauerregeln als Teil der BumsParade (Kevin 31.10.): Verstoesse werden eigene Aufgaben und zaehlen als Bumsung.
+    // Nur mit vollstaendigen Daten (sonst fehlen Pflichtabgaben, die erlaubt waeren) und ab dem Spieltag, ab dem die Regel gilt.
+    if(!probe&&!testMode&&complete){
+      for(const r of DAUERREGELN.filter(x=>day>=(x.ab||1))){
+        try{
+          const win=await dayWindow(day);if(!win)continue;
+          const allChecks=readTodos(),luCache=new Map();
+          const ctx={token,day,acc:{ready:true,todos:todos.slice(),dd:{lastPlace:last.map(m=>({managerId:String(m.managerId)})),tie:!!tie}},start:bumsParadeStart(win,allChecks[day]||{}),win,now:Date.now(),
+            checksOf:d=>allChecks[d]||{},clubs:await dauerClubs(token),
+            lineups:d=>{if(!luCache.has(d))luCache.set(d,dauerLineups(token,d));return luCache.get(d);},
+            transfers:(id,since)=>transfersSince(token,id,since),playerName:id=>playerNames.get(String(id))||`Spieler-ID ${id}`};
+          for(const v of await r.check(ctx)){
+            if(!v.playerId)continue;
+            const t=todoForDauer(v);if(t&&!todos.some(x=>x.key===t.key))todos.push(t);
+          }
+        }catch(e){histNotes.push(`${r.code} (${r.name}) nicht prüfbar: ${e.message}`);}
+      }
+    }
     return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,pendingCorrections:centerConflicts.length?{count:centerConflicts.length,examples:centerConflicts.slice(0,5).map(c=>({playerName:playerNames.get(c.playerId)||c.playerId,performance:c.performance,center:c.center}))}:null,todos,saleDeadline:saleDeadline?new Date(saleDeadline).toISOString():null,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
       actions:bdActive.map(p=>({rule:'BD',managerId:p.managerId,manager:p.manager,playerId:p.playerId,playerName:p.playerName,points:p.points,action:'Spieler an den Markt verkaufen',status:'zu_pruefen',marketStatus:p.marketStatus})),
       mm:mm&&{...mm,values:mm.values.map(v=>({...v,negatives:v.negatives.map(n=>({...n,playerName:playerNames.get(String(n.playerId))||null}))}))},ah:{...ahFinal,affected:(ahFinal.affected||[]).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||null}))},autoEvents,bd:bdActive,bdDropped,conflicts,dd:{winners:complete?dd:[],lastPlace:complete?last.map(m=>({managerId:m.managerId,manager:m.manager||m.name,dayPoints:m.dayPoints})):[],tie:complete&&tie},
@@ -2795,32 +2815,13 @@ async function accountingFor(req,day){
   Promise.resolve(ruleAccountingRoute({headers:req.headers,params:{day:String(day)},query:{}},fake)).catch(()=>resolve(null));
  });
 }
-// Wann ist die BumsParade des Spieltags abgeschlossen? Das Fruehste von: 1) der Admin tippt „BumsParade abgeschlossen“
-// (Haken BPA:0 in kbl-todo-checks.json, Zeitpunkt = at), 2) alle Pflichtabgaben (BD, AH, RK, BN, UM, TL, DD, EZ) erledigt
-// (Zeitpunkt des letzten dieser Verkaeufe laut Transfer-Verlauf), 3) die Verkaufsfrist (22 Uhr am Tag nach dem Spieltag).
-const BPA_KEY='BPA:0';
-function bumsParadeClose(acc,checks,now=Date.now()){
- const deadline=acc?.saleDeadline?Date.parse(acc.saleDeadline):null,dl=deadline!=null?new Date(deadline).toISOString():null;
- const tap=checks[BPA_KEY]?.done&&!checks[BPA_KEY]?.removed?Date.parse(checks[BPA_KEY].at):NaN;
- const cand=[];
- if(Number.isFinite(tap))cand.push({at:tap,by:'admin'});
- let open=0,noTime=[],note=null;
- if(acc?.ready){
-  const tasks=(acc.todos||[]).filter(t=>DAUER_SALE_RULES.includes(t.rule)&&!checks[t.key]?.removed);
-  const isDone=t=>t.check?.state==='done'||checks[t.key]?.done===true;
-  open=tasks.filter(t=>!isDone(t)).length;
-  const times=tasks.map(t=>Date.parse(t.soldAt)).filter(Number.isFinite);
-  noTime=tasks.filter(t=>isDone(t)&&!Number.isFinite(Date.parse(t.soldAt)));
-  if(!open&&!acc.pendingCorrections&&times.length)cand.push({at:Math.max(...times),by:'letzter-verkauf'});
-  if(deadline!=null&&now>deadline)cand.push({at:deadline,by:'frist'});
-  note=open?`${open} Pflichtabgabe${open===1?'':'n'} noch offen.`:acc.pendingCorrections?'Kickbase korrigiert noch Punkte.':null;
- }else note=acc?.message||'BumsParade noch nicht berechnet.';
- const best=cand.filter(c=>c.at<=now||c.by!=='frist').sort((a,b)=>a.at-b.at)[0];
- if(!best)return {state:'offen',open,deadline:dl,note};
- const capAt=Math.min(...[tap,deadline].filter(Number.isFinite));
- return {state:'abgeschlossen',at:new Date(best.at).toISOString(),by:best.by,deadline:dl,open,
-  // Erledigte Aufgaben ohne Verkaufszeit (z. B. von Hand abgehakt): Verkaeufe bis Admin-Haken bzw. Frist sind dann „bitte pruefen“.
-  unsureUntil:best.by==='letzter-verkauf'&&noTime.length&&Number.isFinite(capAt)&&capAt>best.at?new Date(capAt).toISOString():null};
+// Beginn der BumsParade (Kevin 31.10.: aufgestellte Spieler muessen nur bis zum Beginn gehalten werden, ab da wird verkauft).
+// Tippt der Admin „BumsParade beginnt jetzt“ (Haken BPA:0, Zeit = at), gilt das; sonst wie ueblich 19 Uhr am Tag nach dem letzten Anstoss.
+const BPA_KEY='BPA:0',BPA_HOUR=19;
+function bumsParadeStart(win,checks,now=Date.now()){
+ const c=checks?.[BPA_KEY],tap=c?.done&&!c.removed?Date.parse(c.at):NaN;
+ const at=Number.isFinite(tap)?tap:berlinNextDayAt(win.end,BPA_HOUR);
+ return {at:new Date(at).toISOString(),by:Number.isFinite(tap)?'admin':'regel',begun:now>=at};
 }
 // Startelf je Manager an einem Spieltag: gespeicherte (eingefrorene) Startelf und Kickbase-Historie (ranking lp) zusammen.
 // Kickbase nimmt einen verkauften Spieler nachtraeglich aus lp, die eingefrorene Startelf behaelt ihn.
@@ -2851,9 +2852,9 @@ function dayAfter(ms,from){for(let d=from+1;d<=34;d++){const e=dayTimesCache?.by
 // abgeschlossen ist. Strafe: am naechsten Spieltag eine Position freilassen und Kaufsperre fuer alle Spieler des Vereins bis zum
 // naechsten Spieltag (erster Anstoss). Pflichtabgaben der BumsParade selbst sind erlaubt.
 async function dauerFruehverkauf(ctx){
- const {day,acc,close,win,now}=ctx;
+ const {day,acc,start,win,now}=ctx;
  const lineups=await ctx.lineups(day);
- const closeAt=close.state==='abgeschlossen'?Date.parse(close.at):null,unsureUntil=close.unsureUntil?Date.parse(close.unsureUntil):null;
+ const cutoff=Date.parse(start.at);
  // Pflichtabgaben (erlaubt) und was jemand in der BumsParade bekommt (zaehlt nicht gegen die Kaufsperre).
  const allowed=new Set(),incoming=new Set();
  const lastIds=new Set((acc?.dd?.lastPlace||[]).map(m=>String(m.managerId)));
@@ -2873,8 +2874,7 @@ async function dauerFruehverkauf(ctx){
   const seen=new Set();
   for(const s of sales){
    const pid=String(s.pi),at=Date.parse(s.dt);if(seen.has(pid))continue;seen.add(pid);
-   // Ohne Abschluss (noch offen oder nicht berechenbar) gilt spaetestens die Verkaufsfrist der BumsParade.
-   if(at>=(closeAt??berlinNextDay22(win.end))&&!(closeAt!=null&&unsureUntil&&at<unsureUntil))continue;
+   if(at>=cutoff)continue;
    const buyer=s.othnm?String(s.othnm):null;
    if(allowed.has(`${lu.managerId}:${pid}`))continue;
    // Drehtuer: Abgabe eines der drei besten Spieler an den Letzten ist die Pflicht, nicht ein Fruehverkauf.
@@ -2882,7 +2882,6 @@ async function dauerFruehverkauf(ctx){
    let state='verstoss',note=null;
    if(!acc?.ready){state='vorlaeufig';note='Die BumsParade ist noch nicht berechnet. Ist der Spieler dort eine Pflichtabgabe, entfällt das.';}
    else if(acc?.dd?.tie&&buyer&&byName.has(buyer)){state='unklar';note='Drehtür mit Gleichstand: Falls das die Drehtür-Abgabe war, entfällt das. Bitte prüfen.';}
-   else if(closeAt!=null&&at>=closeAt){state='unklar';note='Eine Pflichtabgabe wurde ohne Verkaufszeit abgehakt. Ob die BumsParade da schon abgeschlossen war, ist unklar. Bitte prüfen.';}
    out.push({rule:'FV',managerId:lu.managerId,manager:lu.manager,playerId:pid,playerName:s.pn||ctx.playerName(pid),clubId:s.tid!=null?String(s.tid):null,club:s.tid!=null?(ctx.clubs.get(String(s.tid))||null):null,
     at:new Date(at).toISOString(),buyer,price:Number.isFinite(Number(s.trp))?Number(s.trp):null,state,note,list});
   }
@@ -2922,6 +2921,21 @@ async function dauerFruehverkauf(ctx){
  }
  return out;
 }
+// Verstoss einer Dauerregel als Aufgabe der BumsParade (Schluessel FV:<Manager>:<Spieler>). Die Bumsung steht fest, sobald der
+// Verstoss feststeht (Zustand done); wird die Strafe nicht eingehalten, „bitte pruefen“ (unknown).
+function todoForDauer(v){
+ if(v.rule!=='FV')return null;
+ const when=x=>new Date(x).toLocaleString('de-DE',{timeZone:'Europe/Berlin',weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+' Uhr';
+ const club=v.club||'seinem Verein',leer=(v.penalties||[]).find(p=>p.kind==='leer'),ban=(v.penalties||[]).find(p=>p.kind==='kaufsperre');
+ const P=v.penaltyDay;
+ const text=`verkauft ${v.playerName} (${club}) vor Beginn der BumsParade (${when(v.at)}${v.buyer?`, an ${v.buyer}`:''})`+(P?`: am Spieltag ${P} eine Position freilassen, bis zum Anpfiff keine Spieler von ${club} kaufen`:'');
+ const st=p=>p?({offen:'steht an',laeuft:'läuft',eingehalten:'eingehalten',gebrochen:'nicht eingehalten',unklar:'unklar'}[p.state]||p.state):null;
+ const parts=[leer&&`Position frei: ${st(leer)}${leer.empty!=null?` (leer: ${leer.empty}, nötig: ${leer.need}${leer.mm?`, davon ${leer.mm} MM`:''})`:''}`,
+  ban&&`Kaufsperre: ${st(ban)}${(ban.buys||[]).length?` (gekauft: ${ban.buys.map(b=>b.playerName).join(', ')})`:''}`].filter(Boolean);
+ const broken=(v.penalties||[]).some(p=>p.state==='gebrochen');
+ const check=v.state==='unklar'?{state:'unknown',note:v.note||'bitte prüfen'}:broken?{state:'unknown',note:`Strafe nicht eingehalten · ${parts.join(' · ')}`}:{state:'done',note:parts.join(' · ')||'Verstoß festgestellt'};
+ return {key:`FV:${v.managerId}:${v.playerId}`,rule:'FV',managerId:String(v.managerId),manager:v.manager,text,check,fv:{at:v.at,buyer:v.buyer,club:v.club,penaltyDay:P,penalties:v.penalties}};
+}
 const DAUERREGELN=[
  // ab: erster Spieltag, an dem die Regel gilt (FV beschlossen am 31.10., vor Spieltag 9).
  {code:'FV',name:'Frühverkauf',ab:9,check:dauerFruehverkauf},
@@ -2941,10 +2955,10 @@ app.get('/api/dauerregeln/:day',async(req,res)=>{
   if(now<win.first)return res.set('Cache-Control','no-store').json({day,rules,started:false,violations:[],final:false});
   const acc=await accountingFor(req,day);
   const allChecks=readTodos(),checksOf=d=>allChecks[d]||{};
-  const close=bumsParadeClose(acc,checksOf(day),now);
+  const start=bumsParadeStart(win,checksOf(day),now);
   const luCache=new Map();
   let names=null;
-  const ctx={token,day,acc,close,win,now,checksOf,clubs:await dauerClubs(token),
+  const ctx={token,day,acc,start,win,now,checksOf,clubs:await dauerClubs(token),
    lineups:d=>{if(!luCache.has(d))luCache.set(d,dauerLineups(token,d));return luCache.get(d);},
    transfers:(id,since)=>transfersSince(token,id,since),
    playerName:id=>{try{names=names||new Map(Object.values(readSnapshots()).flatMap(s=>Object.entries(s.playerNames||{})));}catch{names=new Map();}return names.get(String(id))||`Spieler-ID ${id}`;}};
@@ -2952,8 +2966,8 @@ app.get('/api/dauerregeln/:day',async(req,res)=>{
   for(const r of active){try{violations.push(...await r.check(ctx));}catch(e){failures.push(`${r.code}: ${e.message}`);}}
   violations.sort((a,b)=>Date.parse(a.at||0)-Date.parse(b.at||0));
   // Fertig, wenn die BumsParade abgeschlossen ist und alle Strafen vorbei sind (dann laedt der Export den Spieltag nicht mehr nach).
-  const final=!failures.length&&close.state==='abgeschlossen'&&!close.unsureUntil&&violations.every(v=>v.state!=='vorlaeufig'&&(v.penalties||[]).every(p=>['eingehalten','gebrochen'].includes(p.state)));
-  const value={day,rules,started:true,close,violations,failures,final,updatedAt:new Date().toISOString()};
+  const final=!failures.length&&start.begun&&!!acc?.ready&&violations.every(v=>v.state!=='vorlaeufig'&&(v.penalties||[]).every(p=>['eingehalten','gebrochen'].includes(p.state)));
+  const value={day,rules,started:true,start,accReady:!!acc?.ready,violations,failures,final,updatedAt:new Date().toISOString()};
   dauerCache.set(day,{at:Date.now(),value});
   res.set('Cache-Control','no-store').json(value);
  }catch(e){res.status(e.status||502).json({error:'Dauerregeln nicht prüfbar.',detail:e.message});}
