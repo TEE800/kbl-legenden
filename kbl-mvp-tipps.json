@@ -376,8 +376,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T21:27:55.649Z",
-      "points": 168,
+      "at": "2026-10-31T21:47:31.730Z",
+      "points": 183,
       "players": [
         {
           "id": "2294",
@@ -390,7 +390,13 @@
           "id": "2294",
           "name": "Pieper",
           "team": "Bremen",
-          "points": 168
+          "points": 183
+        },
+        {
+          "id": "6292",
+          "name": "Hansen",
+          "team": "Paderborn",
+          "points": 145
         },
         {
           "id": "2522",
@@ -405,9 +411,9 @@
           "points": 141
         },
         {
-          "id": "6292",
-          "name": "Hansen",
-          "team": "Paderborn",
+          "id": "2373",
+          "name": "Kabak",
+          "team": "Hoffenheim",
           "points": 137
         },
         {
@@ -415,12 +421,6 @@
           "name": "Reis",
           "team": "Bremen",
           "points": 137
-        },
-        {
-          "id": "2373",
-          "name": "Kabak",
-          "team": "Hoffenheim",
-          "points": 134
         },
         {
           "id": "1996",
