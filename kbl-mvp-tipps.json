@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T14:40:21.988Z",
+      "at": "2026-10-31T14:54:49.076Z",
       "points": 115,
       "players": [
         {
@@ -417,9 +417,27 @@
           "points": 67
         },
         {
+          "id": "3190",
+          "name": "Chabot",
+          "team": "Stuttgart",
+          "points": 62
+        },
+        {
+          "id": "7158",
+          "name": "Undav",
+          "team": "Stuttgart",
+          "points": 55
+        },
+        {
           "id": "8301",
           "name": "Sirch",
           "team": "Elversberg",
+          "points": 54
+        },
+        {
+          "id": "11631",
+          "name": "Burger",
+          "team": "Hoffenheim",
           "points": 54
         },
         {
@@ -427,24 +445,6 @@
           "name": "Amiri",
           "team": "Mainz",
           "points": 52
-        },
-        {
-          "id": "2646",
-          "name": "Becker",
-          "team": "Mainz",
-          "points": 48
-        },
-        {
-          "id": "11665",
-          "name": "Potulski",
-          "team": "Mainz",
-          "points": 47
-        },
-        {
-          "id": "3470",
-          "name": "Caci",
-          "team": "Mainz",
-          "points": 45
         }
       ],
       "checked": 470,
