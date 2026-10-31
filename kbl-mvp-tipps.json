@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T19:06:18.611Z",
+      "at": "2026-10-31T19:20:41.118Z",
       "points": 168,
       "players": [
         {
@@ -393,16 +393,16 @@
           "points": 168
         },
         {
-          "id": "3190",
-          "name": "Chabot",
-          "team": "Stuttgart",
-          "points": 144
-        },
-        {
           "id": "2522",
           "name": "Raum",
           "team": "Leipzig",
           "points": 144
+        },
+        {
+          "id": "3190",
+          "name": "Chabot",
+          "team": "Stuttgart",
+          "points": 141
         },
         {
           "id": "6292",
