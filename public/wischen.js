@@ -4,7 +4,7 @@
 // Kein Wischen in waagerecht scrollbaren Bereichen (Tabellen, Schieberegler, Rennen …), in Eingabefeldern, Fenstern und im Vollbild.
 (function(){
  const nav=document.querySelector('.mobilenav');if(!nav)return;
- const SKIP='input,textarea,[contenteditable],canvas,video,.push-modal,.zer,.zer-akte,.zr-full,[role="dialog"],.pxr-pitch,.pxr-bench,.toon-pitch,.zr,.rdoor,.lu-pitch,.mobilemore,.mobilenav,.kbl-no-swipe';
+ const SKIP='input,textarea,[contenteditable],canvas,video,.push-modal,.zer,.zer-akte,.zr-full,[role="dialog"],.zr,.mobilemore,.mobilenav,.kbl-no-swipe';
  const order=()=>[...document.querySelectorAll('.mobilenav a[data-kbl-nav], #mobileMore a[data-kbl-nav]')]
   .filter((a,i,arr)=>arr.findIndex(b=>b.dataset.kblNav===a.dataset.kblNav)===i);
  const visibleTab=a=>!(a.dataset.kblNav==='admin'&&document.documentElement.matches('.kbl-guest,.kbl-no-admin'));
