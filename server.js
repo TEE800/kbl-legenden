@@ -1614,6 +1614,34 @@ async function tippTracking(token,day,tips,finished,kind,pool=[],conds=[]){
  tippTrackCache.set(day,{at:Date.now(),key,value});
  return value;
 }
+// Punkte-Aufschluesselung des gerade Besten (Kevin-Wunsch 31.10.): Antippen des MVP im MVP-Tipp zeigt seine Einzelpunkte,
+// zusammengezaehlt je Kickbase-Ereignisart (Titel aus kbl-event-types.json, deutsch ueber event-types-de.js). Quelle playercenter
+// (wie die Live-Punkte), Rücknahmen (z. B. VAR, Gegenbuchung) heben sich auf. Hoechstens 3 Spieler, je Spieler max. alle 2 Min. neu.
+const mvpDetailCache=new Map();
+async function mvpDetail(token,day,ids,finished){
+ const kb=await loadEventTypes(token).catch(()=>({})),out={};
+ for(const id of ids.slice(0,3)){
+  const key=day+':'+id,c=mvpDetailCache.get(key);
+  if(c&&Date.now()-c.at<(finished?60:2)*60e3){out[id]=c.v;continue;}
+  try{
+   const pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});
+   const g=new Map();let sum=0;
+   for(const e of (Array.isArray(pc?.events)?pc.events:[])){
+    const eti=Number(e.eti);if(!Number.isFinite(eti))continue;
+    const v=Number.isFinite(Number(e.p))?Number(e.p):0,kt=kb[eti]||null;
+    const t=EVENT_ETI_LABELS[ETI_PEN_MISSED_SET.has(eti)?4051:eti]||(kt&&(germanEventTitle(kt)||kt))||`Ereignis ${eti}`;
+    if(!g.has(t))g.set(t,{pos:0,neg:0,zero:0,p:0});
+    const x=g.get(t);if(v>0)x.pos++;else if(v<0)x.neg++;else x.zero++;x.p+=v;sum+=v;
+   }
+   const cats=[...g.entries()].map(([t,x])=>({t,n:Math.max(0,(x.p<0||(!x.p&&x.neg>x.pos)?x.neg-x.pos:x.pos-x.neg)+x.zero),p:x.p}))
+    .filter(x=>x.n||x.p).sort((a,b)=>b.p-a.p||b.n-a.n||a.t.localeCompare(b.t,'de'));
+   const total=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
+   const v={at:new Date().toISOString(),total,sum,cats};
+   mvpDetailCache.set(key,{at:Date.now(),v});out[id]=v;
+  }catch{}
+ }
+ return out;
+}
 // Zeitraffer im MVP-Tipp (Kevin-Wunsch): jeder neue Stand der getippten Spieler wird je Spieltag in kbl-mvp-verlauf.json angehaengt
 // (nur bei Aenderung, auch nach Spielende, so sieht man spaetere Kickbase-Korrekturen). Gehoert GitHub (Export alle 5 Min.), nie vom PC hochladen.
 // Bild je Stand: p = {Spieler-ID: [Punkte, Status d/l/o]}, mvp = Bester nach der Tippregel, fin = Wert nach Spieltagsende (Leistungsdaten).
@@ -1833,6 +1861,10 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   let tracking=null;
   if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule),tippConds(rule));}catch{}
   if(tracking)recordVerlauf(day,tracking,result,st.status==='finished');
+  // Punkte-Aufschluesselung des gerade Besten (Krone): MVP laut Tippregel, ohne MVP-Wertung der Erste der Top 10.
+  if(tracking){const mv=(st.status==='finished'?result?.mvp:tracking.mvp)?.players||[],t1=tracking.top10?.players||[];
+   const ids=mv.length?mv.map(p=>String(p.id)):t1.filter(p=>p.points===t1[0]?.points).map(p=>String(p.id));
+   if(ids.length)try{tracking.mvpDetail=await mvpDetail(token,day,ids,st.status==='finished');}catch{}}
   const verlauf=reveal?readVerlauf()[day]||[]:[];
   res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,korridor:TIPP_KORRIDOR,managers:list,
    me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking,verlauf});
