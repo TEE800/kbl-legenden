@@ -1841,7 +1841,7 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
-// Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
+// Übersicht (samt Liga-Tabelle, Tabellenplatz je Spieltag, Punkteentwicklung): Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
  for(const id of ['preview','overview','bericht','stats','table','rankHistory','progressPanel']){
   const sec=document.getElementById(id),head=sec?.querySelector(':scope>.sectionhead');if(!head)continue;
