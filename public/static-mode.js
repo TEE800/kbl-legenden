@@ -8,7 +8,10 @@
  // BumsParade-Haken online (Kevin-Wunsch): mit Admin-Code des Tippdienstes speichern. Der Tippdienst haelt sie,
  // hier werden sie sofort zum exportierten Stand gemischt (neuerer Zeitstempel gewinnt, done:false hebt einen Haken auf).
  const API=String(window.KBL_TIPP_API||'').replace(/\/+$/,''),CODE='kbl-admin-haken';
- const store={get(){try{return localStorage.getItem(CODE)||'';}catch{return '';}},set(v){try{v?localStorage.setItem(CODE,v):localStorage.removeItem(CODE);}catch{}}};
+ // Admin-Reiter (Prüfwerkzeuge) online nur nach Anmeldung mit Admin-Code (Klasse kbl-no-admin blendet .admin-only aus).
+ const adminMark=on=>document.documentElement.classList.toggle('kbl-no-admin',!on);
+ const store={get(){try{return localStorage.getItem(CODE)||'';}catch{return '';}},set(v){try{v?localStorage.setItem(CODE,v):localStorage.removeItem(CODE);}catch{}adminMark(!!v);}};
+ adminMark(!!(API&&store.get()));
  const mergeChecks=(base,over)=>{const out={...(base||{})};for(const [k,v] of Object.entries(over||{})){const b=out[k];if(b?.at&&v?.at&&b.at>=v.at)continue;if(v?.done){const {done,target,removed,at}=v;out[k]={done,at,...(target?{target}:{}),...(removed?{removed:true}:{})};}else delete out[k];}return out;};
  const remote=async(p,o)=>{const r=await orig(API+p,{cache:'no-store',...o});const d=await r.json().catch(()=>({}));if(!r.ok){const e=Error(d.error||'Tippdienst nicht erreichbar.');e.status=r.status;throw e;}return d;};
  window.kblHaken={on:!!API,admin:()=>!!(API&&store.get()),

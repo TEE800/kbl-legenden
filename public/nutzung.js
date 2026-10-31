@@ -39,7 +39,7 @@
   .observe(document.querySelector('.content')||document.body,{subtree:true,attributes:true,attributeFilter:['class']});
 
  // ===== Versteckter Bereich =====
- const TITLES={overview:'Übersicht',table:'Tabelle & Spieltage',profiles:'Managerprofile',accounting:'BumsParade',penalties:'BumsTabelle',rules:'Regeln',lineups:'Aufstellungen',challenges:'Challenges',points:'Punkteübersicht',arena:'Arena',transfers:'Transfers',mvp:'MVP-Tipp',meister:'Meisterecke'};
+ const TITLES={overview:'Übersicht',table:'Tabelle & Spieltage',profiles:'Managerprofile',accounting:'BumsParade',penalties:'BumsTabelle',rules:'Regeln',lineups:'Aufstellungen',challenges:'Challenges',points:'Punkteübersicht',arena:'Arena',transfers:'Transfers',mvp:'MVP-Tipp',admin:'Admin',meister:'Meisterecke'};
  const DEV={handy:'📱 Handy',tablet:'📱 Tablet',pc:'💻 PC','?':'Unbekannt'};
  let taps=[];
  document.addEventListener('click',e=>{
