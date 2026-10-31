@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T17:38:24.245Z",
+      "at": "2026-10-31T17:52:57.679Z",
       "points": 168,
       "players": [
         {
@@ -411,6 +411,12 @@
           "points": 143
         },
         {
+          "id": "1996",
+          "name": "Friedl",
+          "team": "Bremen",
+          "points": 139
+        },
+        {
           "id": "3281",
           "name": "Reis",
           "team": "Bremen",
@@ -423,34 +429,22 @@
           "points": 136
         },
         {
-          "id": "1996",
-          "name": "Friedl",
-          "team": "Bremen",
-          "points": 135
-        },
-        {
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
           "points": 134
         },
         {
+          "id": "7224",
+          "name": "Castello Jr.",
+          "team": "Leipzig",
+          "points": 126
+        },
+        {
           "id": "2084",
           "name": "Lienhart",
           "team": "Freiburg",
           "points": 125
-        },
-        {
-          "id": "1671",
-          "name": "Prömel",
-          "team": "Stuttgart",
-          "points": 122
-        },
-        {
-          "id": "14249",
-          "name": "El Aynaoui",
-          "team": "Leipzig",
-          "points": 122
         }
       ],
       "checked": 470,
