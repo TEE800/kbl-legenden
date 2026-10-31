@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T17:52:57.679Z",
+      "at": "2026-10-31T18:07:43.328Z",
       "points": 168,
       "players": [
         {
@@ -399,15 +399,15 @@
           "points": 149
         },
         {
-          "id": "6292",
-          "name": "Hansen",
-          "team": "Paderborn",
-          "points": 143
-        },
-        {
           "id": "2522",
           "name": "Raum",
           "team": "Leipzig",
+          "points": 144
+        },
+        {
+          "id": "6292",
+          "name": "Hansen",
+          "team": "Paderborn",
           "points": 143
         },
         {
