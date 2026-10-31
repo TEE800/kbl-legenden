@@ -1144,7 +1144,7 @@ body.zr-on .mobilenav{display:none}
 .pxr-fig{position:relative;height:84px;display:flex;align-items:flex-end;cursor:default}
 .pxr-fig[data-mvp]{cursor:pointer}
 .pxr-c{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
-.pxr-crest{position:absolute;width:11px;height:11px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 0 1px #000)}
+.pxr-crest{position:absolute;width:14px;height:14px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 0 1px #000)}
 .pxr-crown{position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:16px;z-index:3;animation:pxrCrown 1s infinite alternate}
 @keyframes pxrCrown{to{transform:translateX(-50%) translateY(-3px) rotate(6deg)}}
 .pxr-fig.run{animation:pxrStep .3s steps(1) infinite}@keyframes pxrStep{50%{transform:translateY(-2px)}}

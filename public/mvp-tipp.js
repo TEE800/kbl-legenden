@@ -324,7 +324,7 @@
   else{P(5,4,14,16,SK);P(5,2,14,4,'#3b2a1a');if(mode==='sit'){P(8,12,3,1,'#222');P(13,12,3,1,'#222');}else{P(8,11,2,2,'#222');P(14,11,2,2,'#222');}P(10,16,4,1,'#a55');}
   pxOutline(x,W,H);
   // Wappen: echtes Bild als kleines Element auf der Brust (nicht in den Canvas, Kickbase-Bilder dürfen ihn nicht sperren)
-  const cr=cv.parentElement?.querySelector('.pxr-crest');if(cr){cr.style.top=(ty+2)*2+'px';cr.style.left=(mode==='sit'?24:26)+'px';cr.hidden=mode==='sit';}}
+  const cr=cv.parentElement?.querySelector('.pxr-crest');if(cr){cr.style.top=(ty*2+3+Math.max(0,84-H*2))+'px';cr.style.left='17px';cr.hidden=mode==='sit';}}
  function pxDrawAll(){document.querySelectorAll('canvas.pxr-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';pxDraw(cv);});}
  // Hose/Stutzen je Verein (sonst Trikotfarbe); nur grob, die Trikotfarbe kommt aus clubColor.
  const PX_KIT=[['bayern','#fff','#dc052d'],['leverkusen','#111','#e32221'],['leipzig','#fff','#fff'],['frankfurt','#111','#111'],['bremen','#fff','#1d9053'],['werder','#fff','#1d9053'],['dortmund','#111','#fde100'],['stuttgart','#fff','#fff'],['freiburg','#111','#e2001a'],['gladbach','#fff','#fff'],['wolfsburg','#fff','#65b32e'],['union','#fff','#d4011d'],['hoffenheim','#1961b5','#1961b5'],['mainz','#fff','#c3141e'],['augsburg','#fff','#ba3733'],['köln','#fff','#fff'],['heidenheim','#003b79','#e2001a'],['hamburg','#fff','#fff'],['pauli','#5c3a21','#5c3a21']];
