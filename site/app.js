@@ -1311,7 +1311,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
 const centerAccounting={day:null,state:'idle',data:null,error:null,checks:{},probe:false};
 async function centerLoadAccounting(day,force=false){
  if(!force&&centerAccounting.day===day&&centerAccounting.state!=='idle')return;
- Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();
+ Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();window.kblDauerLoad?.(day);
  try{
   const [data,checks]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
   centerAccounting.data=data;centerAccounting.checks=checks.checks||{};centerAccounting.state='done';if(data?.ready)window.kblAccShow?.(data);
@@ -2001,6 +2001,7 @@ async function accLiveLoad(){
  const el=$('#accLive');if(!el||accLiveBusy)return;
  let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
  const day=kblLiveDay(st)?.day;
+ window.kblDauerLive?.(day||null);
  if(!day){accLive=null;el.innerHTML='';return;}
  accLiveBusy=true;if(!accLive||accLive.day!==day){accLive={day,state:'loading'};accLiveRender();}
  try{accLive={day,state:'done',data:await api(`/api/rule-live/${day}`)};}
