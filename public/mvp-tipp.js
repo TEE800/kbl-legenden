@@ -716,13 +716,36 @@
  addEventListener('resize',()=>zr.fit?.());
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&zr.full)zr.exit?.();});
  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&zr.full&&matchMedia('(pointer:fine)').matches)zr.exit?.();});
+ // Punkte-Aufschlüsselung des gerade Besten (Kevin-Wunsch 31.10.): Antippen des MVP (Krone im Rennen, Top 10, Knopf an der MVP-Zeile)
+ // öffnet ein Fenster mit seinen Einzelpunkten, zusammengezählt je Kickbase-Ereignisart (Server: tracking.mvpDetail aus playercenter).
+ const detBtn=d=>Object.keys(d?.tracking?.mvpDetail||{}).length?' <button type="button" class="mvpd-btn" data-mvp-detail>📊 Punkte einzeln</button>':'';
+ let mvpdModal=null;
+ function mvpDetailOpen(){
+  const det=data?.tracking?.mvpDetail||{},ids=Object.keys(det);if(!ids.length)return;
+  const names=new Map();
+  for(const p of [...(data.tracking.top10?.players||[]),...(data.tracking.mvp?.players||[]),...(data.result?.mvp?.players||[])])names.set(String(p.id),p);
+  const sg=n=>(n>0?'+':'')+fmt(n);
+  const body=ids.map(id=>{const x=det[id],p=names.get(id)||{},tot=x.total??x.sum;
+   const rows=x.cats.length?x.cats.map(c=>`<li><span class="mvpd-t">${esc(c.t)}</span><span class="mvpd-n">${c.n?fmt(c.n)+'×':''}</span><b class="mvpd-p ${c.p>0?'pos':c.p<0?'neg':''}">${sg(c.p)}</b></li>`).join(''):'<li class="muted">Das fehlt: Kickbase liefert für ihn noch keine Einzelpunkte.</li>';
+   const diff=x.total!==null&&x.total!==x.sum?`<p class="muted tiny">Die Einzelpunkte ergeben ${fmt(x.sum)}, Kickbase zeigt ${fmt(x.total)}. Den Unterschied (${sg(x.total-x.sum)}) führt Kickbase nicht einzeln auf.</p>`:'';
+   return `<div class="mvpd-player"><div class="mvpd-head"><b>👑 ${esc(p.name||'Spieler')}</b> <small class="muted">${esc(p.team||'')}</small><span class="mvpd-tot">${fmt(tot)} <small>Pkt.</small></span></div><ol class="mvpd-list">${rows}</ol>${diff}</div>`;}).join('');
+  const at=ids.map(id=>det[id].at).sort().pop();
+  if(!mvpdModal){mvpdModal=document.createElement('div');mvpdModal.className='push-modal mvpd-modal';
+   mvpdModal.addEventListener('click',e=>{if(e.target===mvpdModal||e.target.closest('[data-mvpd-close]'))mvpdModal.hidden=true;});
+   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&mvpdModal&&!mvpdModal.hidden)mvpdModal.hidden=true;});
+   document.body.appendChild(mvpdModal);}
+  mvpdModal.innerHTML=`<div class="push-box mvpd-box" role="dialog" aria-modal="true" aria-label="Punkte einzeln"><div class="push-head"><h3>📊 Punkte einzeln</h3><button type="button" class="push-x" data-mvpd-close aria-label="Schließen">✕</button></div>${body}<p class="muted tiny">Zusammengezählt je Kickbase-Kategorie, Rücknahmen (z. B. nach VAR) sind schon abgezogen.${data.status==='finished'?'':` Stand ${esc(clock(at))} Uhr.`}</p></div>`;
+  mvpdModal.hidden=false;mvpdModal.querySelector('[data-mvpd-close]').focus();
+ }
+ document.addEventListener('click',e=>{if(e.target.closest?.('[data-mvp-detail], .toon-race .stk.best .stk-baby, .toon-race .stk.best .stk-pl, .toon-race .toon-runner.leader'))mvpDetailOpen();});
+ document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches?.('li[data-mvp-detail]')){e.preventDefault();mvpDetailOpen();}});
  function top10(d,rows,pool,bestIds,fin){
   const t=d.tracking?.top10,list=t?.players||[];
   const fans=new Map();rows.forEach(r=>{const k=String(r.t.playerId);if(!fans.has(k))fans.set(k,[]);fans.get(k).push(r);});
   let place=0;
   const body=!list.length?`<p class="muted tiny">Das fehlt: ${fin?'Die Spieltagspunkte aller Spieler sind nicht abrufbar.':'Der Zwischenstand aller Spieler wird während der Spiele etwa alle 10 Minuten berechnet und ist noch nicht da.'}</p>`
    :`<ol class="mvp-top10">${list.map((p,i)=>{if(!i||list[i-1].points!==p.points)place=i+1;const f=fans.get(p.id)||[];
-     return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}"><span class="mvp-top10-pl">${place}.</span><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
+     return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}${d.tracking?.mvpDetail?.[p.id]?' mvpd-tap':''}"${d.tracking?.mvpDetail?.[p.id]?' data-mvp-detail role="button" tabindex="0" title="Punkte einzeln ansehen"':''}><span class="mvp-top10-pl">${place}.</span><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
     <p class="muted tiny">${pool.length?`Nur Spieler von ${esc(pool.join(', '))}${condsOf(d).length?`, ${esc(condText(condsOf(d)))}`:''}. `:condsOf(d).length?`Alle Bundesliga-Spieler, ${esc(condText(condsOf(d)))}. `:'Alle Bundesliga-Spieler. '}Darunter steht, wer den Spieler getippt hat.${fin?'':` Stand ${esc(clock(t.at))} Uhr, getippte Spieler aktueller.`}${t.reliable===false?' Nicht alle Spieler waren abrufbar.':''}</p>`;
   return `<details class="acc-group" style="margin-top:14px"><summary>Top 10 laut Tippregel</summary><div class="acc-sub">${body}</div></details>`;
  }
@@ -733,7 +756,7 @@
   const pct=v=>Math.max(0,Math.min(100,(v/max)*100)).toFixed(1);
   const done=fin&&!!d.result;// Ergebnis steht schon oben im Ergebnis-Kasten
   let h=`<h4 style="margin:22px 0 8px">Übersicht aller Tipps <small class="muted">${done?'':d.tracking?`Punkte Stand ${esc(clock(d.tracking.updatedAt))} Uhr`:'Punkte folgen'}</small></h4>`;
-  const mvpLine=needMvp&&mvp?.players?.length?`<div class="muted">${pool.length?'Bester der genannten Vereine':condsOf(d).length?'Bester laut Tippregel':'MVP'} ${fin?'am Spieltag':'gerade'}: ${mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(mvpPts)}</b> Punkten${fin?'':` · Stand ${esc(clock(mvp.at))} Uhr${mvp.reliable===false?', nicht alle Spieler abrufbar':''}`}</div>`:'';
+  const mvpLine=needMvp&&mvp?.players?.length?`<div class="muted">${pool.length?'Bester der genannten Vereine':condsOf(d).length?'Bester laut Tippregel':'MVP'} ${fin?'am Spieltag':'gerade'}: ${mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(mvpPts)}</b> Punkten${fin?'':` · Stand ${esc(clock(mvp.at))} Uhr${mvp.reliable===false?', nicht alle Spieler abrufbar':''}`}${detBtn(d)}</div>`:'';
   // Hat keiner den Besten getippt (Kevin-Wunsch): statt "niemand vorne" den besten getippten Spieler mit seinen Tippern zeigen.
   const tipBest=(()=>{const c=rows.filter(r=>r.pts!==null&&!offRule(pool,r.t.team,r.t.playerId));if(!c.length)return '';
    const top=Math.max(...c.map(r=>r.pts)),w=c.filter(r=>r.pts===top),pl=[...new Map(w.map(r=>[String(r.t.playerId),r.t])).values()];
@@ -788,7 +811,7 @@
   const {rows}=standings(d),pool=poolOf(d),tipOf=id=>rows.find(x=>x.m.id===id);
   const tipTxt=x=>x?` mit ${esc(x.t.player)} <small class="muted">${esc(x.t.team)}</small> (getippt ${fmt(x.t.points)}${x.pts===null?'':`, hatte ${fmt(x.pts)}`})`:'';
   let h='<div class="mvp-lead mvp-result"><div class="eyebrow">ERGEBNIS SPIELTAG '+d.day+'</div>';
-  if(r.mvp?.players?.length)h+=`<div>🏆 ${pool.length||condsOf(d).length?'Spieler':'MVP des Spieltags'}: ${r.mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(r.mvp.points)}</b> Punkten</div>`;
+  if(r.mvp?.players?.length)h+=`<div>🏆 ${pool.length||condsOf(d).length?'Spieler':'MVP des Spieltags'}: ${r.mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(r.mvp.points)}</b> Punkten${detBtn(d)}</div>`;
   if(r.rows?.length){
    const win=d.managers.filter(m=>r.winners.includes(m.id)),chk=r.status==='ok'?'':' (bitte prüfen)';
    const best=(r.best?.managers||[]).map(id=>d.managers.find(m=>m.id===id)).filter(Boolean);
