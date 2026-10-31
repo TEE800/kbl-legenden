@@ -949,6 +949,10 @@ $('#snapshotSaved')?.addEventListener('click',async e=>{
 });
 $('#snapshotDay')?.addEventListener('change',async()=>{await snapshotLoadSaved();await snapshotLoadSquad();});
 $('#snapshotManager')?.addEventListener('change',snapshotLoadSquad);
+// „Aufstellung von Hand erfassen“ steht im Reiter „Admin“ (Kevin-Wunsch 31.10.): dort gilt der Spieltag oben im Admin-Reiter.
+function snapshotSyncAdmin(){const a=$('#adminDay'),s=$('#snapshotDay');if(!a||!s||!a.value||s.value===a.value)return;s.value=a.value;s.dispatchEvent(new Event('change'));}
+$('#adminDay')?.addEventListener('change',()=>{if($('#snapshotInput')?.open)snapshotSyncAdmin();});
+$('#snapshotInput')?.addEventListener('toggle',e=>{if(e.target.open)snapshotSyncAdmin();});
 $('#snapshotReload')?.addEventListener('click',async()=>{await snapshotLoadSaved();await snapshotLoadSquad();});
 $('#snapshotPlayers')?.addEventListener('click',e=>{
  const button=e.target.closest('button');if(!button)return;
@@ -1017,9 +1021,11 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
 
 // KBL 4.9.5: Vollstaendigkeitskontrolle und nachvollziehbare Regelabrechnung.
 (function(){
- const day=$('#accountingDay'),button=$('#accountingRun'),probeButton=$('#accountingProbe'),status=$('#accountingStatus'),result=$('#accountingResults'),coverage=$('#accountingCoverage');
+ // Prüfwerkzeuge stehen im Reiter „Admin“ (Kevin-Wunsch 31.10.), die BumsParade hat nur noch die Spieltag-Auswahl.
+ const day=$('#adminDay'),button=$('#accountingRun'),probeButton=$('#accountingProbe'),status=$('#accountingStatus'),result=$('#accountingResults'),coverage=$('#accountingCoverage'),pick=$('#accountingDay');
  if(!day||!button)return;
- day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
+ const opts=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
+ day.innerHTML=opts;if(pick)pick.innerHTML=opts;
  const safe=x=>escapeHtml(String(x??''));
  const npcNames=new Map();
  const playerLabel=p=>safe(p.playerName||`Spieler-ID ${p.playerId}`);
@@ -1034,11 +1040,13 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    coverage.innerHTML=`<p style="margin:0"><span class="acc-badge ${ok?'ok':past?'':'warn'}">${ok?'✓':past?'ℹ':'!'} Aufstellungen: ${d.confirmed} von ${d.expected} bestätigt</span></p>${ok?'':past?'<p class="muted tiny" style="margin:8px 0 0">Spieltag ist vorbei: Fehlende Startelfen nimmt die Abrechnung aus dem Kickbase-Verlauf. Was dabei fehlt, steht unten in der Prüfung.</p>':'<p class="muted tiny" style="margin:8px 0 0">Ohne vollständige Aufstellungen ist keine verlässliche Abrechnung möglich.</p>'}<details><summary>Details je Manager</summary><div class="tablewrap"><table><thead><tr><th>MANAGER</th><th>STATUS</th><th>SPIELER</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }catch(e){coverage.textContent='Aufstellungsstatus nicht abrufbar: '+e.message;}
  }
- async function selectDay(){try{const d=await api('/api/matchday-status');day.value=String(Math.max(1,Math.min(34,Number(d.lastFinishedDay||0))));}catch{day.value='1';}await loadCoverage();}
+ async function selectDay(){try{const d=await api('/api/matchday-status');day.value=String(Math.max(1,Math.min(34,Number(d.lastFinishedDay||0))));}catch{day.value='1';}if(pick&&centerAccounting.day==null)pick.value=day.value;await loadCoverage();}
+ // BumsParade: Spieltag wählen lädt dessen BumsParade direkt (ohne „prüfen“).
+ pick?.addEventListener('change',()=>{const n=Number(pick.value);if(!n)return;day.value=pick.value;result.innerHTML='';status.textContent='';loadCoverage();centerLoadAccounting(n);});
  onConnected.push(selectDay);day.addEventListener('change',()=>{result.innerHTML='';status.textContent='';loadCoverage();});
  async function runAccounting(probe=false){
   button.disabled=true;if(probeButton)probeButton.disabled=true;status.textContent=probe?'Probelauf: lese alle Aufstellungen und Spielerpunkte aus Kickbase …':'Prüfe Spieltag und berechne Spielerpunkte …';result.innerHTML='';
-  Object.assign(centerAccounting,{day:Number(day.value),state:'loading',data:null,error:null,checks:{},probe});renderAccTodo();
+  Object.assign(centerAccounting,{day:Number(day.value),state:'loading',data:null,error:null,checks:{},probe});if(pick)pick.value=day.value;renderAccTodo();
   try{
    if(!probe)await loadCoverage();
    const d=await api(`/api/rule-accounting/${day.value}${probe?'?probe=1':''}`);
@@ -1071,28 +1079,9 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   probeButton?.addEventListener('click',()=>{if(confirm(`Probelauf für Spieltag ${day.value}: Die heutigen Aufstellungen werden als Startelf dieses Spieltags angenommen. Nur zum Testen, es wird nichts gespeichert. Fortfahren?`))runAccounting(true);});
 })();
 
-// KBL 4.10.1: manuelle NPC-Tippregel und Joker-Gewinner je Spieltag.
-(function(){
- const day=document.querySelector('#accountingDay'),rule=document.querySelector('#npcRule'),list=document.querySelector('#npcManagers'),save=document.querySelector('#npcSave'),msg=document.querySelector('#npcMessage');
- if(!day||!rule||!list||!save)return;
- const esc=x=>escapeHtml(String(x??''));
- let managers=[];
- async function load(){msg.textContent='Lade NPC-Regel …';save.disabled=true;
-  try{const d=await api(`/api/npc-jokers/${day.value}`);managers=d.managers;rule.value=d.record.rule||'';const winners=new Set(d.record.winners||[]);
-   list.innerHTML=managers.map(m=>`<label style="display:inline-flex;align-items:center;gap:6px;margin:6px 14px 6px 0"><input type="checkbox" data-npc-id="${esc(m.id)}" ${winners.has(m.id)?'checked':''}>${esc(m.name)}</label>`).join('');
-   msg.textContent='Joker-Gewinner manuell markieren; mehrere Gewinner sind möglich.';save.disabled=false;
-  }catch(e){msg.textContent='NPC-Daten nicht abrufbar: '+e.message;}
- }
- save.addEventListener('click',async()=>{const winners=[...list.querySelectorAll('input[data-npc-id]:checked')].map(e=>e.dataset.npcId);
-  if(!confirm(`Tippregel und ${winners.length} Joker-Gewinner für Spieltag ${day.value} speichern?`))return;
-  save.disabled=true;try{await api(`/api/npc-jokers/${day.value}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rule:rule.value,winners})});msg.textContent='NPC-Regel und Joker-Gewinner gespeichert.';}catch(e){msg.textContent='Fehler: '+e.message;}finally{save.disabled=false;}
- });
- day.addEventListener('change',load);onConnected.push(load);
-})();
-
 // Ereigniscodes entdecken: Karten pro Code, unbekannte zuerst.
 (function(){
- const day=document.querySelector('#accountingDay'),scope=document.querySelector('#codeScope'),btn=document.querySelector('#codeScan'),msg=document.querySelector('#codeScanMessage'),root=document.querySelector('#codeScanResults');
+ const day=document.querySelector('#adminDay'),scope=document.querySelector('#codeScope'),btn=document.querySelector('#codeScan'),msg=document.querySelector('#codeScanMessage'),root=document.querySelector('#codeScanResults');
  if(!day||!btn||!root)return;
  const safe=x=>escapeHtml(String(x??''));
  const where=(e,all)=>`${all?(e.season==='2025/26'?'Vorsaison ':''):''}ST ${safe(e.day??'?')}`;
@@ -1128,7 +1117,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  const day=document.querySelector('#pointsDay'),btn=document.querySelector('#etiScan'),msg=document.querySelector('#etiScanMessage'),root=document.querySelector('#etiScanResults');
  if(!day||!btn||!root)return;
  // Online sammelt der Export jeden abgeschlossenen Spieltag selbst; dort gibt es keinen Sammeln-Knopf.
- if(window.KBL_STATIC){btn.hidden=true;const h=btn.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
+ if(window.KBL_STATIC){btn.closest('details')?.remove();const h=day.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
  // Eigener Reiter „Punkteübersicht“; vorbelegt mit dem letzten beendeten Spieltag.
  day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
  let etiData=null,etiSort='count',etiFilter='';
@@ -1289,7 +1278,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  function showResult(d,fromStore){
   const warn=[d.failedPlayers?`${d.failedPlayers} Spieler nicht abrufbar`:'',(d.failedTeams&&d.failedTeams.length)?`Vereine nicht lesbar: ${d.failedTeams.join(', ')}`:''].filter(Boolean).join(' · ');
   msg.style.color=warn?'#f1a5aa':'';
-  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ holt den neuesten Stand.':''}`;
+  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ im Reiter Admin holt den neuesten Stand.':''}`;
   etiData=d.types;renderEti();
  }
  async function loadSaved(){
@@ -1302,11 +1291,14 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    for(const o of day.options)o.textContent=`Spieltag ${o.value}${have.has(o.value)?' ✓ gespeichert':''}`;}catch{}
  }
  btn.addEventListener('click',async()=>{
-  btn.disabled=true;root.innerHTML='';msg.style.color='';msg.textContent='Lese alle Spieler, das kann einige Minuten dauern …';
+  // Der Knopf steht im Reiter „Admin“ und sammelt den dort gewählten Spieltag; gezeigt wird er in der Punkteübersicht.
+  const ad=document.querySelector('#adminDay'),am=document.querySelector('#etiAdminMsg');
+  if(ad?.value&&day.value!==ad.value){day.value=ad.value;dayTouched=true;etiData=null;}
+  btn.disabled=true;root.innerHTML='';msg.style.color='';msg.textContent='Lese alle Spieler, das kann einige Minuten dauern …';if(am){am.style.color='';am.textContent=`Spieltag ${day.value}: `+msg.textContent;}
   try{
    const d=await api(`/api/playercenter-scan/${day.value}`);
-   showResult(d,false);markSaved();loadSeason();
-  }catch(e){msg.textContent='Fehlgeschlagen: '+e.message;msg.style.color='#f1a5aa';}
+   showResult(d,false);markSaved();loadSeason();if(am)am.textContent=msg.textContent+' Zu sehen in der Punkteübersicht.';
+  }catch(e){msg.textContent='Fehlgeschlagen: '+e.message;msg.style.color='#f1a5aa';if(am){am.textContent=msg.textContent;am.style.color='#f1a5aa';}}
   finally{btn.disabled=false;}
  });
  day.addEventListener('change',()=>{msg.textContent='';msg.style.color='';root.innerHTML='';etiData=null;loadSaved();});
@@ -1319,7 +1311,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
 const centerAccounting={day:null,state:'idle',data:null,error:null,checks:{},probe:false};
 async function centerLoadAccounting(day,force=false){
  if(!force&&centerAccounting.day===day&&centerAccounting.state!=='idle')return;
- Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});renderAccTodo();
+ Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();
  try{
   const [data,checks]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
   centerAccounting.data=data;centerAccounting.checks=checks.checks||{};centerAccounting.state='done';if(data?.ready)window.kblAccShow?.(data);
@@ -1841,7 +1833,7 @@ onConnected.push(renderBumsTabelle);
 ['focus','mousedown','touchstart'].forEach(ev=>$('#accountingDay')?.addEventListener(ev,()=>{try{kblAccDayLabels(bumsDays);}catch{}},{passive:true}));
 document.querySelectorAll('[data-kbl-nav="penalties"]').forEach(a=>a.addEventListener('click',()=>renderBumsTabelle()));
 
-// Übersicht und Tabelle & Spieltage: Bereiche per Klick auf die Überschrift ein- und ausklappen.
+// Übersicht (samt Liga-Tabelle, Tabellenplatz je Spieltag, Punkteentwicklung): Bereiche per Klick auf die Überschrift ein- und ausklappen.
 (function(){
  for(const id of ['preview','overview','bericht','stats','table','rankHistory','progressPanel']){
   const sec=document.getElementById(id),head=sec?.querySelector(':scope>.sectionhead');if(!head)continue;

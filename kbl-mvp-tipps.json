@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T22:26:19.801Z",
+      "at": "2026-10-31T22:45:58.882Z",
       "points": 183,
       "players": [
         {
@@ -405,12 +405,6 @@
           "points": 144
         },
         {
-          "id": "3190",
-          "name": "Chabot",
-          "team": "Stuttgart",
-          "points": 141
-        },
-        {
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
@@ -421,6 +415,12 @@
           "name": "Reis",
           "team": "Bremen",
           "points": 137
+        },
+        {
+          "id": "3190",
+          "name": "Chabot",
+          "team": "Stuttgart",
+          "points": 134
         },
         {
           "id": "1996",
