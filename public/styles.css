@@ -1170,3 +1170,7 @@ body.zr-on .mobilenav{display:none}
 .pxr-bl{display:flex;margin-top:3px}
 .pxr-bl>div{text-align:center;font-size:10px;color:var(--muted);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pxr-bl b{color:var(--text)}
+/* Wischen zwischen den Reitern (wischen.js): kurzes Hereingleiten des neuen Reiters */
+@keyframes kblSwipeL{from{opacity:.35;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes kblSwipeR{from{opacity:.35;transform:translateX(-28px)}to{opacity:1;transform:none}}
+.kbl-view.kbl-swipe-l{animation:kblSwipeL .2s ease-out}.kbl-view.kbl-swipe-r{animation:kblSwipeR .2s ease-out}
