@@ -95,7 +95,7 @@ Noch nicht an einem echten Spieltag erprobt: automatisches Einfrieren der Starte
 - Strafen-Tracker (offen/erledigt zum Abhaken) und Spieltags-Archiv.
 - Marktwerte für BN und RK anzeigen.
 - Für den Betrieb mit allen Managern: Rollen (nur der Admin rechnet ab), Datenbank statt JSON-Dateien, HTTPS und sichere Cookies, Sitzungsbereinigung, Konfiguration (Liga-ID, ausgeschlossener Manager) statt fest im Code, Zugangsdaten nur über geschützte Hoster-Einstellungen.
-- Bei Änderungen am Frontend: Handy-Breite (390 px) mitprüfen, Navigation unten ist `.mobilenav`. Reihenfolge unten (Kevin-Wunsch 31.10.): Übersicht, BumsTabelle, MVP-Tipp, Profile, Mehr; der Rest steht unter „Mehr“ (`#mobileMore`).
+- Bei Änderungen am Frontend: Handy-Breite (390 px) mitprüfen, Navigation unten ist `.mobilenav`. Reihenfolge unten (Kevin-Wunsch 31.10.): Übersicht, Profile, BumsParade, MVP-Tipp, Mehr (BumsTabelle unter „Mehr“, Kevin-Wunsch 31.10.); der Rest steht unter „Mehr“ (`#mobileMore`).
 
 ## Online-Ansicht (GitHub)
 - `tools/export-static.mjs` startet server.js, meldet sich mit dem Dienst-Login an, speichert alle Anzeige-Daten als JSON in `site/data/` und kopiert `public/` nach `site/` (absolute Pfade werden relativ). `public/static-mode.js` leitet im Export alle `/api/...`-Aufrufe auf diese Dateien um; Schreibzugriffe werden abgelehnt.
