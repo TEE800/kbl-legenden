@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T21:08:38.613Z",
+      "at": "2026-10-31T21:27:55.649Z",
       "points": 168,
       "players": [
         {
@@ -411,26 +411,26 @@
           "points": 137
         },
         {
+          "id": "3281",
+          "name": "Reis",
+          "team": "Bremen",
+          "points": 137
+        },
+        {
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
           "points": 134
         },
         {
-          "id": "3281",
-          "name": "Reis",
+          "id": "1996",
+          "name": "Friedl",
           "team": "Bremen",
-          "points": 134
+          "points": 130
         },
         {
           "id": "17288",
           "name": "Regeer",
-          "team": "Bremen",
-          "points": 133
-        },
-        {
-          "id": "1996",
-          "name": "Friedl",
           "team": "Bremen",
           "points": 130
         },
