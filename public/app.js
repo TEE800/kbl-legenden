@@ -949,6 +949,10 @@ $('#snapshotSaved')?.addEventListener('click',async e=>{
 });
 $('#snapshotDay')?.addEventListener('change',async()=>{await snapshotLoadSaved();await snapshotLoadSquad();});
 $('#snapshotManager')?.addEventListener('change',snapshotLoadSquad);
+// „Aufstellung von Hand erfassen“ steht im Reiter „Admin“ (Kevin-Wunsch 31.10.): dort gilt der Spieltag oben im Admin-Reiter.
+function snapshotSyncAdmin(){const a=$('#adminDay'),s=$('#snapshotDay');if(!a||!s||!a.value||s.value===a.value)return;s.value=a.value;s.dispatchEvent(new Event('change'));}
+$('#adminDay')?.addEventListener('change',()=>{if($('#snapshotInput')?.open)snapshotSyncAdmin();});
+$('#snapshotInput')?.addEventListener('toggle',e=>{if(e.target.open)snapshotSyncAdmin();});
 $('#snapshotReload')?.addEventListener('click',async()=>{await snapshotLoadSaved();await snapshotLoadSquad();});
 $('#snapshotPlayers')?.addEventListener('click',e=>{
  const button=e.target.closest('button');if(!button)return;
@@ -1113,7 +1117,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  const day=document.querySelector('#pointsDay'),btn=document.querySelector('#etiScan'),msg=document.querySelector('#etiScanMessage'),root=document.querySelector('#etiScanResults');
  if(!day||!btn||!root)return;
  // Online sammelt der Export jeden abgeschlossenen Spieltag selbst; dort gibt es keinen Sammeln-Knopf.
- if(window.KBL_STATIC){btn.hidden=true;const h=btn.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
+ if(window.KBL_STATIC){btn.closest('details')?.remove();const h=day.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
  // Eigener Reiter „Punkteübersicht“; vorbelegt mit dem letzten beendeten Spieltag.
  day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
  let etiData=null,etiSort='count',etiFilter='';
@@ -1274,7 +1278,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  function showResult(d,fromStore){
   const warn=[d.failedPlayers?`${d.failedPlayers} Spieler nicht abrufbar`:'',(d.failedTeams&&d.failedTeams.length)?`Vereine nicht lesbar: ${d.failedTeams.join(', ')}`:''].filter(Boolean).join(' · ');
   msg.style.color=warn?'#f1a5aa':'';
-  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ holt den neuesten Stand.':''}`;
+  msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ im Reiter Admin holt den neuesten Stand.':''}`;
   etiData=d.types;renderEti();
  }
  async function loadSaved(){
@@ -1287,11 +1291,14 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    for(const o of day.options)o.textContent=`Spieltag ${o.value}${have.has(o.value)?' ✓ gespeichert':''}`;}catch{}
  }
  btn.addEventListener('click',async()=>{
-  btn.disabled=true;root.innerHTML='';msg.style.color='';msg.textContent='Lese alle Spieler, das kann einige Minuten dauern …';
+  // Der Knopf steht im Reiter „Admin“ und sammelt den dort gewählten Spieltag; gezeigt wird er in der Punkteübersicht.
+  const ad=document.querySelector('#adminDay'),am=document.querySelector('#etiAdminMsg');
+  if(ad?.value&&day.value!==ad.value){day.value=ad.value;dayTouched=true;etiData=null;}
+  btn.disabled=true;root.innerHTML='';msg.style.color='';msg.textContent='Lese alle Spieler, das kann einige Minuten dauern …';if(am){am.style.color='';am.textContent=`Spieltag ${day.value}: `+msg.textContent;}
   try{
    const d=await api(`/api/playercenter-scan/${day.value}`);
-   showResult(d,false);markSaved();loadSeason();
-  }catch(e){msg.textContent='Fehlgeschlagen: '+e.message;msg.style.color='#f1a5aa';}
+   showResult(d,false);markSaved();loadSeason();if(am)am.textContent=msg.textContent+' Zu sehen in der Punkteübersicht.';
+  }catch(e){msg.textContent='Fehlgeschlagen: '+e.message;msg.style.color='#f1a5aa';if(am){am.textContent=msg.textContent;am.style.color='#f1a5aa';}}
   finally{btn.disabled=false;}
  });
  day.addEventListener('change',()=>{msg.textContent='';msg.style.color='';root.innerHTML='';etiData=null;loadSaved();});

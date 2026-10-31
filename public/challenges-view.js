@@ -247,7 +247,7 @@
   progSel.clear();progCleared=b.dataset.chProg==='none';if(b.dataset.chProg==='top')ids.sort((a,b)=>tot(b)-tot(a)).slice(0,5).forEach(id=>progSel.add(id));if(b.dataset.chProg==='all')ids.forEach(id=>progSel.add(id));render();
  });
  // Online-Seite ist nur lesend: dort kann man nicht nachladen, also Knopf weg (lädt nur der PC).
- if(window.KBL_STATIC)$('#challengeRefresh')?.closest('.controls')?.remove();
+ if(window.KBL_STATIC)$('#challengeRefresh')?.closest('details')?.remove();
  else $('#challengeRefresh')?.addEventListener('click',refresh);
  poll();
 })();
