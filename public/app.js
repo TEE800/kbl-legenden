@@ -845,7 +845,7 @@ async function snapshotLoadSaved(){
  try{const d=await api(`/api/lineup-snapshots/${day}`);snapshotState.saved=d.snapshots||[];
  const names=new Map(snapshotState.managers.map(m=>[String(m.id),m.name]));
  $('#snapshotSaved').innerHTML=snapshotState.saved.length?`<p class="muted tiny" style="margin:0 0 8px">Auf einen Manager tippen, um seine Elf auf dem Rasen zu sehen.</p><table><thead><tr><th>MANAGER</th><th>QUELLE</th><th>ERFASST</th><th>SPIELER</th><th>AKTION</th></tr></thead><tbody>${snapshotState.saved.map(s=>`<tr class="lu-row" data-snapshot-show="${escapeHtml(String(s.managerId))}" tabindex="0" aria-expanded="false"><td><span class="lu-caret" aria-hidden="true">▸</span>${mgrFace(names.get(String(s.managerId))||'','',s.managerId)}${escapeHtml(names.get(String(s.managerId))||s.managerId)}</td><td>${s.source==='kickbase-own-lineup'?'Eigene Kickbase-Elf':s.source==='kickbase-lo-frozen'?'Automatisch aus Kickbase':'Manuell bestätigt'}</td><td>${escapeHtml(new Date(s.capturedAt).toLocaleString('de-DE'))}</td><td>${s.playerIds?.length||0}</td><td><button type="button" class="ghost" data-snapshot-delete="${escapeHtml(String(s.managerId))}" title="Fehlerhafte Aufstellung löschen">Löschen</button></td></tr>`).join('')}</tbody></table>`:'<p class="muted">Noch keine Snapshots für diesen Spieltag.</p>';
- snapshotUpdateButtons();
+ snapshotUpdateButtons();luBansRender(day);
  }catch(e){snapshotMsg(e.message,true);}
 }
 async function snapshotLoadSquad(){
@@ -879,11 +879,34 @@ async function luData(day){
  const [players,pts]=await Promise.all([luPlayers,luPoints.get(day)]);
  return {players,pts};
 }
-function luPitchHtml(s,players,pts){
+// Gesperrte Spieler (Kevin-Wunsch 31.10.): RK-Fälle aus der BumsParade des Vorspieltags (Rot, Gelb-Rot, 5. Gelbe),
+// ohne entfernte Strafen. Nur der Vorspieltag, wie lange eine Rote Karte sperrt, weiß die BumsKI nicht.
+const luBanCache=new Map();
+function luBans(day){
+ const prev=day-1;if(prev<1)return Promise.resolve(null);
+ if(!luBanCache.has(prev))luBanCache.set(prev,Promise.all([api(`/api/rule-accounting/${prev}`),api(`/api/todo-checks/${prev}`).catch(()=>({checks:{}}))]).then(([d,c])=>{
+  if(!d?.ready)return null;
+  const checks=c.checks||{},todos=new Map((d.todos||[]).map(t=>[t.key,t])),map=new Map();
+  for(const a of d.autoEvents?.actions||[]){if(a.rule!=='RK')continue;const key=`RK:${a.managerId}:${a.playerId}`,ch=checks[key];if(ch?.removed)continue;
+   const t=todos.get(key),to=ch?.target||t?.to?.[0]?.manager||'';
+   map.set(String(a.playerId),{id:String(a.playerId),name:a.playerName||String(a.playerId),reason:a.reason||'Sperre',from:a.manager||'',to});}
+  return {day:prev,map};
+ }).catch(()=>{luBanCache.delete(prev);return null;}));
+ return luBanCache.get(prev);
+}
+async function luBansRender(day){
+ const box=$('#snapshotBans');if(!box)return;box.innerHTML='';
+ const b=await luBans(day);if(day!==snapshotDayValue()||!b?.map.size)return;
+ const names=new Map(snapshotState.managers.map(m=>[String(m.id),m.name]));
+ const items=[...b.map.values()].map(x=>{const by=snapshotState.saved.filter(s=>(s.playerIds||[]).map(String).includes(x.id)).map(s=>{const n=names.get(String(s.managerId))||String(s.managerId);return mgrLink(n,mgrName(n,'',s.managerId));});
+  return `<li><b>🟥 ${escapeHtml(x.name)}</b> <span class="muted">· ${escapeHtml(x.reason)}${x.from?` · bisher ${mgrLink(x.from,mgrName(x.from))}`:''}${x.to?` → ${x.to==='Markt'?'Markt':mgrLink(x.to,mgrName(x.to))}`:''}</span><br><span class="tiny">${by.length?`Aufgestellt von ${by.join(', ')}`:snapshotState.saved.length?'In keiner gespeicherten Startelf':'Noch keine Startelfen gespeichert'}</span></li>`;});
+ box.innerHTML=`<details class="acc-group lu-bans"><summary>🟥 Gesperrte Spieler <span class="pts-sub">BumsParade Spieltag ${b.day} · ${b.map.size}</span></summary><div class="acc-sub"><p class="muted tiny" style="margin:0 0 8px">Spieler mit Sperre (RK) aus der BumsParade von Spieltag ${b.day}. Wie viele Spiele eine Rote Karte sperrt, zeigt Kickbase nicht; gezählt wird nur der Spieltag danach.</p><ul class="lu-ban-list">${items.join('')}</ul></div></details>`;
+}
+function luPitchHtml(s,players,pts,bans){
  const K=window.kblToon,ids=(s.playerIds||[]).map(String);
- const ps=ids.map(id=>{const p=players.get(id),q=pts?.points?.[id];return {id,name:p?.name||s.playerNames?.[id]||id,team:p?.team||'',img:p?.img,teamImg:p?.teamImg,pos:Number(p?.pos)||null,points:q?.points??null,state:q?.state||''};});
+ const ps=ids.map(id=>{const p=players.get(id),q=pts?.points?.[id];return {id,name:p?.name||s.playerNames?.[id]||id,team:p?.team||'',img:p?.img,teamImg:p?.teamImg,pos:Number(p?.pos)||null,points:q?.points??null,state:q?.state||'',ban:bans?.map.get(id)||null};});
  const fig=p=>{const [shirt,trim]=K?K.clubColor(p.team):['#555','#fff'],crest=K&&p.teamImg?K.kbImg(p.teamImg):'',live=p.state==='live';
-  return `<div class="rd-fig toon-runner lu-fig${live?' run':''}${crest?' has-crest':''}" title="${escapeHtml(p.name)}${p.team?' · '+escapeHtml(p.team):''}"><div class="toon-body">${K?K.toon({},shirt,trim,p.points!=null&&p.points<0?'sad':'happy',''):''}${K&&p.img?`<img class="toon-face" src="${escapeHtml(K.headSrc(p.id))}" alt="" onload="this.closest('.toon-runner')?.classList.add('has-face');window.kblToon?.skin?.(this)" onerror="this.remove()">`:''}${crest?`<img class="toon-crest" src="${escapeHtml(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`:''}</div>${live?'<span class="toon-ball">⚽</span>':''}<div class="rd-tag lu-tag"><span>${escapeHtml(p.name)}</span>${p.points!=null?`<b>${fmt(p.points)}</b>`:''}</div></div>`;};
+  return `<div class="rd-fig toon-runner lu-fig${live?' run':''}${crest?' has-crest':''}${p.ban?' lu-ban':''}" title="${escapeHtml(p.name)}${p.team?' · '+escapeHtml(p.team):''}${p.ban?' · gesperrt ('+escapeHtml(p.ban.reason)+')':''}">${p.ban?'<span class="lu-ban-badge">gesperrt</span>':''}<div class="toon-body">${K?K.toon({},shirt,trim,p.points!=null&&p.points<0?'sad':'happy',''):''}${K&&p.img?`<img class="toon-face" src="${escapeHtml(K.headSrc(p.id))}" alt="" onload="this.closest('.toon-runner')?.classList.add('has-face');window.kblToon?.skin?.(this)" onerror="this.remove()">`:''}${crest?`<img class="toon-crest" src="${escapeHtml(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.closest('.toon-runner')?.classList.remove('has-crest');this.remove()">`:''}</div>${live?'<span class="toon-ball">⚽</span>':''}<div class="rd-tag lu-tag"><span>${escapeHtml(p.name)}</span>${p.points!=null?`<b>${fmt(p.points)}</b>`:''}</div></div>`;};
  const rows=[4,3,2,1].map(n=>ps.filter(p=>p.pos===n)).filter(r=>r.length);
  const unknown=ps.filter(p=>![1,2,3,4].includes(p.pos));
  const formation=[2,3,4].map(n=>ps.filter(p=>p.pos===n).length).join('-');
@@ -893,7 +916,9 @@ function luPitchHtml(s,players,pts){
  const head=`<div class="lu-head"><b>${unknown.length?'Formation unklar':escapeHtml(formation)}</b>${total?`<span>${total}</span>`:''}</div>`;
  const pitch=`<div class="lu-pitch">${rows.map(r=>`<div class="lu-line">${r.map(fig).join('')}</div>`).join('')}${empty?`<div class="lu-line"><div class="lu-empty">${empty}× leer</div></div>`:''}</div>`;
  const rest=unknown.length?`<p class="muted tiny" style="margin:8px 0 0">Position unbekannt (nicht mehr im Vereinsprofil): ${unknown.map(p=>`${escapeHtml(p.name)}${p.points!=null?` (${fmt(p.points)})`:''}`).join(', ')}</p>`:'';
- return head+pitch+rest;
+ const banned=ps.filter(p=>p.ban);
+ const banNote=banned.length?`<p class="lu-ban-note">🟥 Gesperrt laut BumsParade Spieltag ${bans.day}: ${banned.map(p=>`<b>${escapeHtml(p.name)}</b> (${escapeHtml(p.ban.reason)})`).join(', ')}</p>`:'';
+ return head+pitch+banNote+rest;
 }
 async function luToggle(row){
  const id=row.dataset.snapshotShow,next=row.nextElementSibling,open=next?.classList.contains('lu-detail');
@@ -902,8 +927,8 @@ async function luToggle(row){
  // Die Tabelle ist auf dem Handy breiter als der Bildschirm: der Rasen bleibt in der sichtbaren Breite stehen.
  const tr=document.createElement('tr');tr.className='lu-detail';tr.innerHTML=`<td colspan="5"><div class="lu-box" style="width:${$('#snapshotSaved').clientWidth}px"><p class="muted">Aufstellung wird geladen …</p></div></td>`;row.after(tr);
  const s=snapshotState.saved.find(x=>String(x.managerId)===id),day=snapshotDayValue();if(!s)return;
- const {players,pts}=await luData(day);
- if(tr.isConnected)tr.querySelector('.lu-box').innerHTML=luPitchHtml(s,players,pts);
+ const [{players,pts},bans]=await Promise.all([luData(day),luBans(day)]);
+ if(tr.isConnected)tr.querySelector('.lu-box').innerHTML=luPitchHtml(s,players,pts,bans);
 }
 $('#snapshotSaved')?.addEventListener('keydown',e=>{const row=e.target.closest('tr[data-snapshot-show]');if(row&&(e.key==='Enter'||e.key===' ')&&e.target===row){e.preventDefault();luToggle(row);}});
 $('#snapshotSaved')?.addEventListener('click',async e=>{
