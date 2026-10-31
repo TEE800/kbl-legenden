@@ -280,19 +280,29 @@
  const pxLoad=src=>PX_IMG.get(src)||(PX_IMG.set(src,new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;})),PX_IMG.get(src));
  const pxRgb=c=>{const m=String(c).match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);if(m){let v=m[1];if(v.length===3)v=v.split('').map(q=>q+q).join('');return [0,2,4].map(i=>parseInt(v.slice(i,i+2),16));}
   const h=String(c).match(/hsl\((\d+)\s+(\d+)%\s+(\d+)%\)/);if(h){const [H,S,L]=[+h[1],h[2]/100,h[3]/100],k=n=>(n+H/30)%12,a=S*Math.min(L,1-L),f=n=>L-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));return [f(0),f(8),f(4)].map(v=>Math.round(v*255));}return [90,100,110];};
- // Augen finden: im großen, ungedrehten Bild je Seite die dunkelste Zeile im Augenband (Augen zu malt pxHead im Pixelbild).
- function pxCloseEyes(x,W,H){let d;const eyes=[];try{d=x.getImageData(0,0,W,H).data;}catch{return eyes;}
-  const lum=(px,py)=>{const i=(py*W+px)*4;return d[i+3]<200?null:d[i]*.3+d[i+1]*.59+d[i+2]*.11;};
-  for(const [a,b] of [[.22,.46],[.54,.78]]){const x0=Math.round(W*a),x1=Math.round(W*b);let best=null,by=0;
-   for(let py=Math.round(H*.46);py<Math.round(H*.62);py++){let s=0,n=0;for(let px=x0;px<x1;px++){const l=lum(px,py);if(l!==null){s+=l;n++;}}if(n>(x1-x0)/2&&(best===null||s/n<best)){best=s/n;by=py;}}
-   if(best===null)continue;
-   let n=0;for(let py=Math.round(H*.64);py<Math.round(H*.7);py++)for(let px=x0;px<x1;px++){if(d[(py*W+px)*4+3]>200)n++;}
-   if(!n)continue;eyes.push({x:(x0+x1)/2,y:by,w:x1-x0});}
+ // Augen finden (Kevin 31.10.: Trefferquote): im Originalfoto je Zeile Augenweiß (hell, kaum farbig) UND Pupille/Wimpern (dunkel) zählen,
+ // Zeile mit beidem gewinnt; Augenbrauen haben kein Weiß, Stirnglanz nichts Dunkles. Von starken Kandidaten der unterste (Brauen liegen darüber).
+ // Ergebnis in Koordinaten des Bildes mit Breite BW.
+ function pxCloseEyes(img,BW){const W=img.naturalWidth||img.width,H=img.naturalHeight||img.height,k=BW/W,eyes=[];let d;
+  try{const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0);d=x.getImageData(0,0,W,H).data;}catch{return eyes;}
+  const L=i=>d[i]*.3+d[i+1]*.59+d[i+2]*.11,sat=i=>{const m=Math.max(d[i],d[i+1],d[i+2]);return (m-Math.min(d[i],d[i+1],d[i+2]))/(m+1);};
+  const sk=[];for(let y=Math.round(H*.6);y<Math.round(H*.7);y++)for(let x=Math.round(W*.3);x<Math.round(W*.7);x++){const i=(y*W+x)*4;if(d[i+3]>200)sk.push(L(i));}
+  if(!sk.length)return eyes;sk.sort((a,b)=>a-b);const S=sk[sk.length>>1];
+  const y0=Math.round(H*.34),y1=Math.round(H*.64),n=y1-y0,win=Math.max(2,Math.round(H*.012)),r2=Math.max(2,Math.round(H*.02));
+  const sum=(arr,i,w)=>{let s=0;for(let j=Math.max(0,i-w);j<=Math.min(arr.length-1,i+w);j++)s+=arr[j];return s;},mx=(arr,i,w)=>{let m=-1;for(let j=Math.max(0,i-w);j<=Math.min(arr.length-1,i+w);j++)m=Math.max(m,arr[j]);return m;};
+  const sides=[[.2,.48],[.52,.8]].map(([a,b])=>{const x0=Math.round(W*a),x1=Math.round(W*b),D=[],B=[];
+   for(let y=y0;y<y1;y++){let dk=0,br=0;for(let x=x0;x<x1;x++){const i=(y*W+x)*4;if(d[i+3]<200)continue;const l=L(i);if(sat(i)<.16&&l>S+8)br++;else if(l<S*.55)dk++;}D.push(dk);B.push(br);}
+   return {x0,x1,sc:D.map((_,i)=>sum(D,i,win)*sum(B,i,win))};});
+  const tot=sides[0].sc.map((_,i)=>mx(sides[0].sc,i,r2)+mx(sides[1].sc,i,r2)),top=Math.max(...tot);if(!top)return eyes;
+  let jc=-1;for(let i=0;i<n;i++)if(tot[i]>=.45*top&&tot[i]===mx(tot,i,r2))jc=i;if(jc<0)jc=tot.indexOf(top);
+  for(const s of sides){let bi=Math.max(0,jc-r2);for(let i=bi;i<=Math.min(n-1,jc+r2);i++)if(s.sc[i]>s.sc[bi])bi=i;const y=y0+bi;
+   let sx=0,c=0;for(let yy=y-3;yy<=y+3;yy++)for(let x=s.x0;x<s.x1;x++){const i=(yy*W+x)*4;if(d[i+3]>=200&&L(i)<S*.55){sx+=x;c++;}}
+   eyes.push({x:(c?sx/c:(s.x0+s.x1)/2)*k,y:y*k,w:W*.12*k});}
   return eyes;}
  // Kopf verpixeln: groß zeichnen (ggf. Augen zu, kippen), in zwei Schritten verkleinern, Farben auf Stufen.
  function pxHead(img,w,sleep){const BW=w*4,BH=Math.round(BW*img.height/img.width),pad=Math.round(BW*.2);
   const a=document.createElement('canvas');a.width=BW;a.height=BH;const x=a.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(img,0,0,BW,BH);
-  const eyes=sleep?pxCloseEyes(x,BW,BH):[];
+  const eyes=sleep?pxCloseEyes(img,BW):[];
   const r=document.createElement('canvas');r.width=BW+pad*2;r.height=BH+pad*2;const rx=r.getContext('2d');rx.imageSmoothingQuality='high';
   rx.translate(r.width/2,r.height/2);if(sleep)rx.rotate(.18);rx.drawImage(a,-BW/2,-BH/2);
   const ow=Math.round(r.width/4),oh=Math.round(r.height/4);
@@ -302,7 +312,7 @@
   // Augen zu (Kevin: friedlich schlafend): je Auge ein Fleck in Hautfarbe über das Foto-Auge, darauf ein dunkler Bogen ‿ (Position mitgedreht).
   if(eyes.length){const ang=.18,cs=Math.cos(ang),sn=Math.sin(ang),sv=(skinOf(img)||'rgb(240,185,143)').match(/\d+/g).map(Number),lid=`rgb(${sv.map(v=>Math.round(v*.38))})`;
    for(const e of eyes){const dx=e.x-BW/2,dy=e.y-BH/2,ex=Math.round((r.width/2+dx*cs-dy*sn)/4),ey=Math.round((r.height/2+dx*sn+dy*cs)/4),half=2;
-    y.fillStyle=`rgb(${sv})`;y.fillRect(ex-half-1,ey-2,half*2+2,4);
+    y.fillStyle=`rgb(${sv})`;y.fillRect(ex-half-1,ey-2,half*2+2,5);
     y.fillStyle=lid;y.fillRect(ex-half,ey-1,1,1);y.fillRect(ex+half-1,ey-1,1,1);y.fillRect(ex-half+1,ey,half*2-2,1);}}
   return {c:b,pad:Math.round(pad/4)};}
  function pxOutline(x,W,H){let d;try{d=x.getImageData(0,0,W,H);}catch{return;}const p=d.data,o=new Uint8ClampedArray(p),A=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&p[(b*W+a)*4+3]>0;
