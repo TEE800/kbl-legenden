@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-10-31T20:19:35.501Z",
+      "at": "2026-10-31T20:48:59.819Z",
       "points": 168,
       "players": [
         {
@@ -417,12 +417,6 @@
           "points": 137
         },
         {
-          "id": "1996",
-          "name": "Friedl",
-          "team": "Bremen",
-          "points": 135
-        },
-        {
           "id": "2373",
           "name": "Kabak",
           "team": "Hoffenheim",
@@ -433,6 +427,12 @@
           "name": "Regeer",
           "team": "Bremen",
           "points": 133
+        },
+        {
+          "id": "1996",
+          "name": "Friedl",
+          "team": "Bremen",
+          "points": 130
         },
         {
           "id": "8329",
