@@ -1319,6 +1319,7 @@ async function centerLoadAccounting(day,force=false){
  catch(e){centerAccounting.error=e.message;centerAccounting.state='error';}
  renderAccTodo();
 }
+window.kblAccReload=()=>{if(centerAccounting.day)centerLoadAccounting(centerAccounting.day,true);};
 function centerTodoHtml(){
  const a=centerAccounting,safe=x=>escapeHtml(String(x??''));
  if(a.state==='loading'||a.state==='idle')return '<p class="muted">Die BumsParade wird geprüft … Das kann beim ersten Öffnen etwas dauern.</p>';
@@ -1334,7 +1335,7 @@ function centerTodoHtml(){
  const ae=d.autoEvents&&!d.autoEvents.error?d.autoEvents:null;
  const pl=x=>safe(x.playerName||x.name||`Spieler-ID ${x.playerId}`);
  const same=(x,mid,pid)=>String(x.managerId)===String(mid)&&(pid==null||String(x.playerId)===String(pid));
- const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
+ const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
  const STATE={done:['ok','✓ erledigt'],progress:['half','läuft'],open:['open','offen'],unknown:['warn','? unklar'],manual:['','von Hand']};
  const detail=t=>{const [,mid,pid]=t.key.split(':');const out=[];
   if(t.rule==='BD'){const x=(d.bd||[]).find(x=>same(x,mid,pid));if(x)out.push(`Schnapszahl: ${pl(x)} hat ${fmt(x.points)} Punkte geholt.`);out.push('Der Spieler wird an den Markt verkauft, nicht an einen Manager.');}
@@ -1379,7 +1380,8 @@ function centerTodoHtml(){
  // Verkaufszeitpunkt (Kevin-Wunsch): Frist 22:00 Uhr am Tag nach dem Spieltag; danach rot.
  const when=iso=>new Date(iso).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
  const dl=d.saleDeadline?` (Frist ${when(d.saleDeadline)} Uhr)`:'';
- const saleInfo=(t,finished)=>t.soldAt?`<span class="center-sale${t.late?' late':''}">🕒 verkauft ${safe(when(t.soldAt))} Uhr${t.late?` · zu spät${safe(dl)}`:''}</span>`:t.overdue&&!finished?`<span class="center-sale late">🕒 Frist abgelaufen${safe(dl)}, noch nicht verkauft</span>`:'';
+ // 22 Uhr ist nur ein Richtwert, kein Verstoß (Kevin 31.10.): später Verkauftes nicht mehr rot.
+ const saleInfo=(t,finished)=>t.soldAt?`<span class="center-sale">🕒 verkauft ${safe(when(t.soldAt))} Uhr${t.late?' · nach 22 Uhr':''}</span>`:t.overdue&&!finished?`<span class="center-sale">🕒 noch nicht verkauft (Richtwert war${safe(dl.replace(' (Frist ',' ').replace(')',''))})</span>`:'';
  const rows=todos.map(t=>{
   // Von Hand entfernte Strafe (falsch berechnet): durchgestrichen, zählt nicht, lässt sich wiederherstellen.
   if(gone(t))return {key:t.key,mid:t.managerId,manager:t.manager,todo:false,removed:true,finished:true,html:`<li class="center-info center-done center-removed"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[t.rule]||'')}">${safe(t.rule)}</span><span class="center-text"><span><s>${safe(t.text)}</s></span><span class="center-status"><span class="center-state">✕ Strafe entfernt</span>${ro?'':` <button type="button" class="ghost center-undo" data-todo-restore="${safe(t.key)}">↺ wiederherstellen</button>`}</span></span></li>`};
@@ -1737,7 +1739,7 @@ async function renderBumsTabelle(){
   if(v.out===undefined)e.noDir+=v.count;else{e.out+=v.out+(v.other||0);e.in+=v.in||0;for(const x of (v.moves||[]))e.moves.push({...x,d:x.d==='x'?'o':x.d,day:d});}
   for(const [r,n] of Object.entries(v.rules||{}))e.rules[r]=(e.rules[r]||0)+n;tot.set(mid,e);}
  const rows=[...tot.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'de'));
- const RN={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
+ const RN={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
  const chips=r=>Object.entries(r).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="${escapeHtml(RN[k]||k)}: zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('');
  const top=rows.length?rows[0].count:0,rankOf=r=>1+rows.filter(x=>x.count>r.count).length;
  const hit=rows.filter(r=>r.count>0);
@@ -1784,7 +1786,7 @@ function bumsManualManagers(){
  const m=new Map();for(const d of Object.values(bumsDays))for(const [id,v] of Object.entries(d.managers||{}))if(isEligibleManager(v.name))m.set(id,v.name);
  return [...m].sort((a,b)=>a[1].localeCompare(b[1],'de'));
 }
-const BUMS_NAMES={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
+const BUMS_NAMES={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
 function bumsManualCell(id,name,codes){
  return `<div class="bums-mrow" data-bums-mid="${escapeHtml(id)}" data-bums-name="${escapeHtml(name)}" data-codes="${escapeHtml(codes.join(' '))}"><span class="bums-mname">${mgrName(name,'',id)}</span><span class="bums-mchips">${codes.map((c,i)=>`<button type="button" class="bums-rule bums-r-${escapeHtml(c)} bums-mdel" data-del="${i}" title="${escapeHtml(BUMS_NAMES[c]||c)} entfernen">${escapeHtml(c)} ✕</button>`).join('')||'<span class="muted tiny">keine</span>'}</span><select class="bums-madd" aria-label="Regel hinzufügen für ${escapeHtml(name)}"><option value="">+ Regel</option>${BUMS_CODES.map(c=>`<option value="${c}">${c} · ${escapeHtml(BUMS_NAMES[c])}</option>`).join('')}</select></div>`;
 }

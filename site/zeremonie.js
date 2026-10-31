@@ -3,7 +3,7 @@
 // Knopf „Vollstreckt ✅“, am Ende Abspann. Anklageschrift = Bild (PNG) je Sünder zum Posten in Discord.
 // Daten: dieselbe Abrechnung wie die BumsParade (centerAccounting aus app.js), nichts wird neu berechnet.
 (()=>{
- const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit'};
+ const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
  const ICON={BD:'🍺',DD:'🌀',MM:'🪄',AH:'🔨',RK:'🟥',BN:'🙈',UM:'🦵',EZ:'⚖️',TL:'🧮'};
  const COLOR={BD:'#ed8b85',DD:'#c79bf2',MM:'#7fb8f0',AH:'#f0a35e',RK:'#d8c066',BN:'#7fd3a6',UM:'#f28fc4',EZ:'#a8b8c4',TL:'#6fd6d6'};
  const VERDICT=n=>n>=4?'Komplett zerlegt.':n===3?'Dreifach dran.':n===2?'Doppelt dran.':'Erwischt.';
