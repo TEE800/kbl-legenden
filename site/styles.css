@@ -1046,7 +1046,14 @@ body.zr-on .mobilenav{display:none}
 .lu-tag{max-width:100%;font-size:11px}
 .lu-tag span{overflow:hidden;text-overflow:ellipsis}
 .lu-empty{padding:16px 12px;border:2px dashed rgba(255,255,255,.5);border-radius:8px;color:#fff;font-weight:700;font-size:12px;background:rgba(0,0,0,.25)}
-@media (max-width:480px){.lu-tag{font-size:10px;padding:1px 3px;gap:3px}.lu-pitch{gap:10px;padding-top:24px}}
+.lu-fig.lu-ban{position:relative}
+.lu-fig.lu-ban .toon-body{opacity:.55;filter:grayscale(.6)}
+.lu-ban-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;white-space:nowrap;font-size:10px;font-weight:800;color:#fff;background:#c62828;border:1px solid rgba(255,255,255,.6);border-radius:6px;padding:1px 5px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.lu-ban .lu-tag{background:#8e1c1c}
+.lu-ban-note{margin:8px 0 0;font-size:13px;color:#ff8a80}
+.lu-ban-list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.lu-ban-list li{padding:8px 10px;border:1px solid rgba(198,40,40,.5);border-radius:8px;background:rgba(198,40,40,.08)}
+@media (max-width:480px){.lu-ban-badge{font-size:9px;padding:0 3px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.lu-tag{font-size:10px;padding:1px 3px;gap:3px}.lu-pitch{gap:10px;padding-top:24px}}
 /* Managerprofil „Vergleichen mit“: beide Manager in jeder Kachel (profCmpRows) */
 .pcmp-title{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}.pcmp-title .pcmp-b{color:#6fd6d6}.pcmp-vs{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase}
 .pcmp-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:0 6px;margin:5px 0}
