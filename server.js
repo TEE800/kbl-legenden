@@ -2937,8 +2937,8 @@ function todoForDauer(v){
  return {key:`FV:${v.managerId}:${v.playerId}`,rule:'FV',managerId:String(v.managerId),manager:v.manager,text,check,fv:{at:v.at,buyer:v.buyer,club:v.club,penaltyDay:P,penalties:v.penalties}};
 }
 const DAUERREGELN=[
- // ab: erster Spieltag, an dem die Regel gilt (FV beschlossen am 31.10., vor Spieltag 9).
- {code:'FV',name:'Frühverkauf',ab:9,check:dauerFruehverkauf},
+ // ab: erster Spieltag, an dem die Regel gilt (FV gilt laut Kevin die ganze Saison).
+ {code:'FV',name:'Frühverkauf',ab:1,check:dauerFruehverkauf},
 ];
 const dauerCache=new Map();
 app.get('/api/dauerregeln/:day',async(req,res)=>{
