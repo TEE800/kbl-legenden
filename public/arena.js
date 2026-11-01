@@ -1,5 +1,5 @@
 // Ansicht "Arena" (Kevin-Wunsch): zweite Liga "Legenden Arena" im Head-to-Head-Modus. Je Spieltag Duelle zwischen zwei Managern,
-// als Cartoon-Rennen wie beim MVP-Tipp (Männchen aus public/mvp-tipp.js, window.kblToon). Daten von /api/arena und /api/arena/:day.
+// als Boxkampf mit Pixel-Boxern (Kevin-Wunsch 1.11.). Daten von /api/arena und /api/arena/:day.
 (()=>{
  const $=s=>document.querySelector(s);
  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -25,10 +25,10 @@
   if(d.status==='upcoming')return `<p class="arena-note">Anpfiff ${esc(when(d.firstKickoffUTC))} · <b data-arena-left="${esc(d.firstKickoffUTC||'')}">${esc(left(d.firstKickoffUTC))}</b>. Die Paarungen stehen schon, die Aufstellungen werden erst mit dem Anpfiff sichtbar.</p>`;
   const src=d.source==='datei'&&d.dataAt?` Paarungen und Aufstellungen: Stand Anpfiff ${esc(when(d.firstKickoffUTC||d.dataAt))}.`:'';
   // Ohne Aufstellungen kein Rennen (Kevin 1.11.: sonst stehen alle ohne Punkte am Start). Grund: Nur die App am PC (T800) darf die Arena lesen.
-  if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}, darum noch kein Duell-Rennen. Nur die App am PC (T800) darf die Arena lesen${d.dataAt?`, ihr letzter Abruf war ${esc(when(d.dataAt))}`:''}. Sobald sie am PC läuft (start.bat), kommen Aufstellungen und Punkte nach wenigen Minuten.</p>`;
+  if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}, darum noch kein Boxkampf. Nur die App am PC (T800) darf die Arena lesen${d.dataAt?`, ihr letzter Abruf war ${esc(when(d.dataAt))}`:''}. Sobald sie am PC läuft (start.bat), kommen Aufstellungen und Punkte nach wenigen Minuten.</p>`;
   return src?`<p class="arena-note muted tiny">${src.trim()}</p>`:'';
  }
- // Kevin-Wunsch: keine Anzeigetafel oben. Vor dem Anpfiff nur die Paarungen, danach steht alles auf dem Platz (Duell-Rennen).
+ // Kevin-Wunsch: keine Anzeigetafel oben. Vor dem Anpfiff nur die Paarungen, danach steht alles im Boxring.
  function pairings(d){
   return `<div class="arena-pairs">${d.duels.map(x=>`<div class="arena-pair"><span class="arena-side a">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span><span class="arena-vs">vs</span><span class="arena-side b"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span></div>`).join('')}</div>`;
  }
@@ -50,26 +50,64 @@
   const check=m=>d.status==='finished'&&m.calc!=null&&m.kbPoints!=null&&m.points===m.kbPoints&&m.calc!==m.kbPoints?`<small class="muted">Kickbase: ${fmt(m.kbPoints)}, Summe der Spieler: ${fmt(m.calc)}</small>`:'';
   return `<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
  }
- // Cartoon: je Duell eine Reihe auf dem Platz, beide Manager als Männchen mit ihrem Profilbild als Kopf, Position nach Punkten.
- // Ein Seil zwischen beiden zeigt den Abstand. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Führender mit Krone.
- function duelRace(d,duels,single){
-  const K=T();if(!K||d.status==='upcoming'||!duels.length)return '';
-  const vals=duels.flatMap(x=>[x.a.points,x.b.points]).filter(v=>v!=null),lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo||1;
-  const pos=v=>4+76*((v??0)-lo)/span;
-  const ROW=110,TOP=single?30:30;
-  const fig=(m,x,y,lead,place,up)=>{const [shirt,trim]=K.clubColor(m.name),neg=m.points!=null&&m.points<0,run=m.live?' run':m.open?' idle':neg?' fall':'';
-   return `<div class="toon-runner arena-runner${run}${x>50?' flip':''}${up?' tag-up':''}" style="left:${x.toFixed(1)}%;top:${y}px">${lead?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${K.toon({},shirt,trim,neg?'sad':lead?'wow':'happy',place??'')}${face(m,'arena-face')}</div>${m.live?'<span class="toon-ball">⚽</span>':''}<div class="toon-tag">${esc(m.name)} <b>${fmt(m.points)}</b></div></div>`;};
-  const place=id=>d.table?.find(r=>r.id===id)?.hhpl??'';
-  const rows=duels.map((x,i)=>{
-   const y=TOP+i*ROW,xa=pos(x.a.points),xb=pos(x.b.points),near=Math.abs(xa-xb)<28;
-   // Liegen beide nah beieinander, stehen sie versetzt übereinander, damit sich Namen nicht überdecken.
-   const ya=y,yb=y;
-   const l=Math.min(xa,xb),w=Math.abs(xa-xb),lead=x.winner;
-   return `<div class="arena-rope" style="left:${(l+2).toFixed(1)}%;width:${w.toFixed(1)}%;top:${y+30}px">${x.diff?`<span>${fmt(Math.abs(x.diff))}</span>`:''}</div>`+
-    fig(x.a,xa,ya,lead===x.a.id,place(x.a.id))+fig(x.b,xb,yb,lead===x.b.id,place(x.b.id),near);
-  }).join('');
-  const h=TOP+duels.length*ROW;
-  return `<div class="toon-pitch arena-pitch${single?' single':''}" style="height:${h}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i>${rows}</div>`;
+ // Boxkampf (Kevin-Wunsch 1.11., ersetzt das Duell-Rennen): oben ein großer Ring mit einem Duell (zuerst das eigene, Antippen
+ // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Pixel-Figuren wie im MVP-Rennen, Kopf = verpixeltes Profilbild.
+ // Lebensbalken: Führender voll, der andere = eigene Punkte / Punkte des Führenden. Ende: Sieger jubelt, Verlierer liegt K.O.
+ let pick=null;
+ const meId=()=>{try{const v=String(JSON.parse(localStorage.getItem('kbl-push')||'null')?.managerId||'')||localStorage.getItem('kblMvpManager')||'';return /^\d{1,15}$/.test(v)?v:'';}catch{return '';}};
+ const duelKey=x=>x.a.id+'-'+x.b.id;
+ const hp=(m,o)=>{const a=Math.max(0,m.points||0),b=Math.max(0,o.points||0);return b<=a?1:a/b;};
+ const ended=d=>d.status==='finished';
+ const pose=(d,x,m,o)=>ended(d)?(x.winner==='draw'||!x.winner?'guard':x.winner===m.id?'cheer':'ko'):(m.points??0)>(o.points??0)?'punch':(m.points??0)<(o.points??0)?'hurt':'guard';
+ const side=m=>m.live?`🥊 ${m.live} im Kampf`:m.open?`${m.open} ${m.open===1?'kommt':'kommen'} noch`:'fertig';
+ // Manager-Bilder: das Kickbase-CDN erlaubt kein CORS (Canvas), darum online aus site/faces/ (Export), am PC über /api/mgr-img.
+ const faceSrc=img=>{const k=/^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(img||''));
+  return !k?'':window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
+ const imgs=new Map();
+ const loadImg=src=>{if(!src)return Promise.resolve(null);if(!imgs.has(src))imgs.set(src,new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;setTimeout(()=>r(null),8000);}));return imgs.get(src);};
+ // Pixel-Boxer 26×36: rote bzw. blaue Ecke. pose: guard | punch | hurt | cheer | ko
+ async function boxDraw(cv){
+  const o=JSON.parse(cv.dataset.box),W=26,H=36,red=o.c==='a';cv.width=W;cv.height=H;
+  const x=cv.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=false;x.clearRect(0,0,W,H);
+  const P=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(a,b,w,h);};
+  const SK='#e9b48a',SK2='#c98f66',G=red?'#d6332a':'#2f6fe0',SH=red?'#b71c1c':'#1e4fb8';
+  const img=o.cpu?null:await loadImg(faceSrc(o.img));
+  if(o.p==='ko'){x.save();x.translate(W/2,H/2);x.rotate(-Math.PI/2);x.translate(-W/2,-H/2);}
+  P(8,27,4,7,SK);P(14,27,4,7,SK);P(7,33,6,3,'#111');P(13,33,6,3,'#111');
+  P(7,22,12,6,SH);P(7,22,12,1,'#fff');P(12,24,2,4,'#0004');
+  P(8,14,10,8,SK);P(14,14,4,8,SK2);
+  if(img){const t=document.createElement('canvas');t.width=12;t.height=12;const tx=t.getContext('2d');tx.imageSmoothingQuality='high';
+   const q=Math.min(img.width,img.height);tx.drawImage(img,(img.width-q)/2,(img.height-q)/2,q,q,0,0,12,12);x.drawImage(t,7,1);}
+  else if(o.cpu){P(7,1,12,12,'#9aa7b0');P(9,5,3,3,'#e33');P(14,5,3,3,'#e33');P(10,10,6,1,'#333');P(12,-1,2,2,'#9aa7b0');}
+  else{P(7,1,12,12,SK);P(7,1,12,3,'#3b2a1a');P(10,6,2,2,'#222');P(14,6,2,2,'#222');P(11,10,4,1,'#a55');}
+  if(o.p==='punch'){P(17,15,6,3,SK);P(21,13,5,6,G);P(21,13,5,1,'#fff6');P(4,15,4,3,SK);P(2,14,5,5,G);}
+  else if(o.p==='cheer'){P(4,4,3,10,SK);P(19,4,3,10,SK);P(3,0,5,5,G);P(18,0,5,5,G);}
+  else if(o.p==='hurt'||o.p==='ko'){P(5,16,3,5,SK);P(18,16,3,5,SK);P(4,20,5,5,G);P(17,20,5,5,G);}
+  else{P(5,15,3,5,SK);P(18,15,3,5,SK);P(4,11,5,5,G);P(17,11,5,5,G);P(4,11,5,1,'#fff6');P(17,11,5,1,'#fff6');}
+  if(o.p==='ko')x.restore();
+  try{const dd=x.getImageData(0,0,W,H),p=dd.data,n=new Uint8ClampedArray(p),A=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&p[(b*W+a)*4+3]>0;
+   for(let b=0;b<H;b++)for(let a=0;a<W;a++){const i=(b*W+a)*4;if(p[i+3])continue;if(A(a-1,b)||A(a+1,b)||A(a,b-1)||A(a,b+1)){n[i]=n[i+1]=n[i+2]=10;n[i+3]=255;}}
+   dd.data.set(n);x.putImageData(dd,0,0);}catch{}
+ }
+ const boxer=(m,c,p,flip)=>`<canvas class="box-c" data-box="${esc(JSON.stringify({img:m.img||'',cpu:!!m.cpu,c,p}))}" width="26" height="36"></canvas>`;
+ const bar=(v,cls='')=>`<div class="box-hb${v<.85?' low':''} ${cls}"><i style="width:${(v*100).toFixed(1)}%"></i></div>`;
+ function boxRing(d){
+  if(!d.duels.length)return '';
+  const me=meId(),def=d.duels.find(x=>x.a.id===me||x.b.id===me)||d.duels[0];
+  const x=d.duels.find(y=>duelKey(y)===pick)||def,a=x.a,b=x.b,pa=pose(d,x,a,b),pb=pose(d,x,b,a);
+  let crowd='';for(let i=0;i<64;i++)crowd+=`<i style="left:${(i*37)%100}%;top:${8+((i*53)%96)}px;background:hsl(${i*47%360} 30% ${25+i%3*8}%)"></i>`;
+  const ko=ended(d)&&x.winner&&x.winner!=='draw',draw=ended(d)&&x.winner==='draw';
+  const fig=(m,c,p)=>`<div class="box-f ${c} ${p}${!ended(d)&&m.live?' live':''}">${boxer(m,c,p)}</div>`;
+  const ring=`<div class="box-ring" data-arena-key="${esc(duelKey(x))}"><div class="box-crowd">${crowd}</div><i class="box-spot l"></i><i class="box-spot r"></i>
+   <div class="box-hud"><div class="s"><span class="box-nm">${esc(a.name)}</span>${bar(hp(a,b))}<span class="box-big">${fmt(a.points)}</span><span class="box-st">${side(a)}</span></div>
+   <div class="box-vs">VS<small>${x.diff?(ended(d)?'Sieg mit ':'+')+fmt(Math.abs(x.diff)):ended(d)?'':'gleich'}</small></div>
+   <div class="s r"><span class="box-nm">${esc(b.name)}</span>${bar(hp(b,a))}<span class="box-big">${fmt(b.points)}</span><span class="box-st">${side(b)}</span></div></div>
+   <div class="box-mat"></div><i class="box-post a"></i><i class="box-post b"></i><i class="box-rope" style="bottom:110px"></i><i class="box-rope" style="bottom:85px"></i><i class="box-rope" style="bottom:60px"></i>
+   ${fig(a,'a',pa)}${fig(b,'b',pb)}${ko?'<span class="box-stamp">K.O.</span>':draw?'<span class="box-stamp draw">UNENTSCHIEDEN</span>':''}</div>`;
+  const cards=`<div class="box-list">${d.duels.map(y=>{const on=y===x,w=m=>y.winner&&y.winner!=='draw'?(y.winner===m.id?' win':' lose'):'';
+   return `<button type="button" class="box-mini${on?' on':''}" data-arena-pick="${esc(duelKey(y))}"><span class="l"><span class="${w(y.a)}">${esc(y.a.name)}</span><span class="${w(y.b)}">${esc(y.b.name)}</span></span><span class="box-bars">${bar(hp(y.a,y.b),'flip')}${bar(hp(y.b,y.a))}</span><span class="l"><b>${fmt(y.a.points)}</b>${ended(d)&&y.winner&&y.winner!=='draw'?'<small>K.O.</small>':''}<b>${fmt(y.b.points)}</b></span></button>`;}).join('')}</div>`;
+  setTimeout(()=>document.querySelectorAll('canvas.box-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';boxDraw(cv);}),0);
+  return ring+cards;
  }
  function table(d){
   if(!d.table?.length)return '';
@@ -86,7 +124,7 @@
   const raceShut=!raceOpen&&!!root.querySelector('details.arena-race:not([open])');raceOpen=false;
   root.className='';
   const started=d.status!=='upcoming'&&!d.lineupsMissing;
-  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>Duell-Rennen</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`+lineups(d))+table(d);
+  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>🥊 Boxring</summary><div class="acc-sub">${boxRing(d)}<p class="muted tiny">Antippen einer Karte holt das Duell in den Ring. Der Führende hat den vollen Lebensbalken, beim anderen zeigt er seine Punkte im Verhältnis zum Gegner. „Im Kampf“ = Spieler im laufenden Spiel. Nach dem Spieltag jubelt der Sieger, der Verlierer liegt K.O.</p></div></details>`+lineups(d))+table(d);
   root.querySelectorAll('details.acc-group:not(.arena-race)').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
  async function loadDay(day){
@@ -110,6 +148,7 @@
   finally{loading=false;}
  }
  document.addEventListener('change',e=>{if(e.target.id==='arenaDay')loadDay(Number(e.target.value));});
+ document.addEventListener('click',e=>{const k=e.target.closest?.('[data-arena-pick]');if(!k)return;pick=k.dataset.arenaPick;render();document.querySelector('.box-ring')?.scrollIntoView({block:'nearest',behavior:'smooth'});});
  document.addEventListener('click',e=>{if(e.target.closest?.('[data-kbl-nav="arena"]'))load();});
  window.addEventListener('hashchange',()=>{if(location.hash==='#arena')load();});
  setInterval(()=>{for(const el of document.querySelectorAll('[data-arena-left]'))el.textContent=left(el.dataset.arenaLeft);},30000);
