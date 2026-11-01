@@ -53,7 +53,7 @@
  // Boxkampf (Kevin-Wunsch 1.11., ersetzt das Duell-Rennen): oben ein großer Ring mit einem Duell (zuerst das eigene, Antippen
  // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Pixel-Figuren wie im MVP-Rennen, Kopf = verpixeltes Profilbild.
  // Lebensbalken: Führender voll, der andere = eigene Punkte / Punkte des Führenden. Ende: Sieger jubelt, Verlierer liegt K.O.
- let pick=null;
+ let pick=null,rest=null; // rest: Seite (a/b), deren verbliebene Spieler unter dem Ring aufgeklappt sind (Kevin-Wunsch 1.11.)
  const meId=()=>{try{const v=String(JSON.parse(localStorage.getItem('kbl-push')||'null')?.managerId||'')||localStorage.getItem('kblMvpManager')||'';return /^\d{1,15}$/.test(v)?v:'';}catch{return '';}};
  const duelKey=x=>x.a.id+'-'+x.b.id;
  const hp=(m,o)=>{const a=Math.max(0,m.points||0),b=Math.max(0,o.points||0);return b<=a?1:a/b;};
@@ -98,12 +98,18 @@
   let crowd='';for(let i=0;i<64;i++)crowd+=`<i style="left:${(i*37)%100}%;top:${8+((i*53)%96)}px;background:hsl(${i*47%360} 30% ${25+i%3*8}%)"></i>`;
   const ko=ended(d)&&x.winner&&x.winner!=='draw',draw=ended(d)&&x.winner==='draw';
   const fig=(m,c,p)=>`<div class="box-f ${c} ${p}${!ended(d)&&m.live?' live':''}">${boxer(m,c,p)}</div>`;
+  const left=m=>(m.players||[]).filter(p=>p.playing||p.state==='open'||p.state==='wait');
+  const stBtn=(m,c)=>left(m).length&&!ended(d)?`<button type="button" class="box-st box-rest${rest===c?' on':''}" data-arena-rest="${c}">${side(m)} ${rest===c?'▴':'▾'}</button>`:`<span class="box-st">${side(m)}</span>`;
+  // Antippen der Punkte (Kevin-Wunsch 1.11.): ganze Aufstellung; Antippen von „im Kampf“: nur die verbliebenen Spieler.
+  const bigBtn=(m,c)=>m.players?`<button type="button" class="box-big box-lu${rest===c+'*'?' on':''}" data-arena-rest="${c}*" title="Aufstellung anzeigen">${fmt(m.points)}</button>`:`<span class="box-big">${fmt(m.points)}</span>`;
+  const rs=String(rest||''),all=rs.endsWith('*'),rc=rs[0],restM=rc==='a'?a:rc==='b'?b:null;
+  const restBox=!restM?'':all?`<div class="box-restlist ${rc}"><b>Aufstellung von ${esc(restM.name)}</b>${playerList(restM)}</div>`:!ended(d)&&left(restM).length?`<div class="box-restlist ${rc}"><b>Noch dabei bei ${esc(restM.name)}</b>${playerList({...restM,players:left(restM)})}</div>`:'';
   const ring=`<div class="box-ring" data-arena-key="${esc(duelKey(x))}"><div class="box-crowd">${crowd}</div><i class="box-spot l"></i><i class="box-spot r"></i>
-   <div class="box-hud"><div class="s"><span class="box-nm">${esc(a.name)}</span>${bar(hp(a,b))}<span class="box-big">${fmt(a.points)}</span><span class="box-st">${side(a)}</span></div>
+   <div class="box-hud"><div class="s"><span class="box-nm">${esc(a.name)}</span>${bar(hp(a,b))}${bigBtn(a,'a')}${stBtn(a,'a')}</div>
    <div class="box-vs">VS<small>${x.diff?(ended(d)?'Sieg mit ':'+')+fmt(Math.abs(x.diff)):ended(d)?'':'gleich'}</small></div>
-   <div class="s r"><span class="box-nm">${esc(b.name)}</span>${bar(hp(b,a))}<span class="box-big">${fmt(b.points)}</span><span class="box-st">${side(b)}</span></div></div>
+   <div class="s r"><span class="box-nm">${esc(b.name)}</span>${bar(hp(b,a))}${bigBtn(b,'b')}${stBtn(b,'b')}</div></div>
    <div class="box-mat"></div><i class="box-post a"></i><i class="box-post b"></i><i class="box-rope" style="bottom:110px"></i><i class="box-rope" style="bottom:85px"></i><i class="box-rope" style="bottom:60px"></i>
-   ${fig(a,'a',pa)}${fig(b,'b',pb)}${ko?'<span class="box-stamp">K.O.</span>':draw?'<span class="box-stamp draw">UNENTSCHIEDEN</span>':''}</div>`;
+   ${fig(a,'a',pa)}${fig(b,'b',pb)}${ko?'<span class="box-stamp">K.O.</span>':draw?'<span class="box-stamp draw">UNENTSCHIEDEN</span>':''}</div>${restBox}`;
   const cards=`<div class="box-list">${d.duels.map(y=>{const on=y===x,w=m=>y.winner&&y.winner!=='draw'?(y.winner===m.id?' win':' lose'):'';
    return `<button type="button" class="box-mini${on?' on':''}" data-arena-pick="${esc(duelKey(y))}"><span class="l"><span class="${w(y.a)}">${esc(y.a.name)}</span><span class="${w(y.b)}">${esc(y.b.name)}</span></span><span class="box-bars">${bar(hp(y.a,y.b),'flip')}${bar(hp(y.b,y.a))}</span><span class="l"><b>${fmt(y.a.points)}</b>${ended(d)&&y.winner&&y.winner!=='draw'?'<small>K.O.</small>':''}<b>${fmt(y.b.points)}</b></span></button>`;}).join('')}</div>`;
   setTimeout(()=>document.querySelectorAll('canvas.box-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';boxDraw(cv);}),0);
@@ -148,7 +154,8 @@
   finally{loading=false;}
  }
  document.addEventListener('change',e=>{if(e.target.id==='arenaDay')loadDay(Number(e.target.value));});
- document.addEventListener('click',e=>{const k=e.target.closest?.('[data-arena-pick]');if(!k)return;pick=k.dataset.arenaPick;render();document.querySelector('.box-ring')?.scrollIntoView({block:'nearest',behavior:'smooth'});});
+ document.addEventListener('click',e=>{const r=e.target.closest?.('[data-arena-rest]');if(!r)return;rest=rest===r.dataset.arenaRest?null:r.dataset.arenaRest;render();});
+ document.addEventListener('click',e=>{const k=e.target.closest?.('[data-arena-pick]');if(!k)return;if(pick!==k.dataset.arenaPick)rest=null;pick=k.dataset.arenaPick;render();document.querySelector('.box-ring')?.scrollIntoView({block:'nearest',behavior:'smooth'});});
  document.addEventListener('click',e=>{if(e.target.closest?.('[data-kbl-nav="arena"]'))load();});
  window.addEventListener('hashchange',()=>{if(location.hash==='#arena')load();});
  setInterval(()=>{for(const el of document.querySelectorAll('[data-arena-left]'))el.textContent=left(el.dataset.arenaLeft);},30000);
