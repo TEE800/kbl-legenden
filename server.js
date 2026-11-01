@@ -152,7 +152,12 @@ app.get('/api/ranking/:leagueId', async (req, res) => {
   const day = req.query.dayNumber;
   const qs = day ? `?dayNumber=${encodeURIComponent(day)}` : '';
   try {
-    const data = await kbFetch(`/v4/leagues/${leagueId}/ranking${qs}`, { token });
+    let data = await kbFetch(`/v4/leagues/${leagueId}/ranking${qs}`, { token });
+    // HuHo: genullte Bayern-Punkte aus Tabelle und Tagespunkten herausrechnen (nur Legenden-Liga).
+    if (String(req.params.leagueId) === '6422780') {
+      try { data = await huhoRanking(token, data, day ? Number(day) : null); }
+      catch (e) { data = { ...data, huhoError: 'Der hungrige Hoeneß konnte nicht eingerechnet werden: ' + e.message }; }
+    }
     res.json(data);
   } catch (err) {
     res.status(err.status || 502).json({ error: 'Ranking konnte nicht geladen werden.', detail: err.data || err.message });
@@ -532,7 +537,11 @@ app.get('/api/lineup-points/:day', async (req, res) => {
     for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
       try { const r = await dayPlayerPoints(token, id, day, st === 'finished'); points[id] = { points: r.points, state: r.state }; } catch { points[id] = { points: null, state: 'error' }; }
     }));
-    const value = { day, status: st, updatedAt: new Date().toISOString(), points };
+    // HuHo nur als Hinweis (Punkte bleiben wie bei Kickbase).
+    let huho = null;
+    try { huho = (await huhoApply(token, day, Object.values(readSnapshots()).filter(r => r.day === day).map(r => ({ managerId: r.managerId, name: r.managerId, ids: (r.playerIds || []).map(String) })), { ...points })).info; }
+    catch (e) { huho = { error: e.message }; }
+    const value = { day, status: st, updatedAt: new Date().toISOString(), points, ...(huho ? { huho } : {}) };
     lineupPointsCache.set(day, { at: Date.now(), status: st, value });
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(502).json({ error: 'Punkte nicht abrufbar.', detail: err.message }); }
@@ -599,6 +608,124 @@ function rankingLookup(d) {
     has: (id, name) => byId.has(String(id)) || byName.has(key(name)),
     get: (id, name) => byId.has(String(id)) ? byId.get(String(id)) : byName.get(key(name))
   };
+}
+
+// ---- HuHo: Der hungrige Hoeneß (Liga-Regel, Kevin 01.11.; Abkürzung immer HuHo) ----
+// Gewinnt Bayern sein Spiel nicht (Remis oder Niederlage), zählen die Spieltagspunkte aller aufgestellten Bayern-Spieler 0
+// (auch Minuspunkte). Gilt die ganze Saison (HUHO_AB). Läuft das Bayern-Spiel noch, gilt der aktuelle Spielstand (vorläufig).
+// Ergebnis aus /v4/competitions/1/matchdays (t1/t2 Verein, t1g/t2g Tore, il läuft, st 2 beendet), Verein aus dem Vereinsprofil.
+// Kevin 01.11.: Spieltage (Sieger, Letzter) und alle anderen Regeln (BD, DD-Kandidaten, MM, AH) zählen mit den Kickbase-Punkten
+// (66 Punkte bleiben BD). HuHo wird erst am Ende abgezogen: als Aufgabe der BumsParade (zählt als Bumsung, der Admin zieht die
+// Punkte in der Kickbase-App ab) und in der Gesamttabelle, solange Kickbase es noch nicht abgezogen hat. Nicht in Arena und MVP-Tipp.
+const HUHO_AB = 1, HUHO_TEAM = '2'; // ganze Saison (Kevin 01.11.)
+let huhoMdCache = null;
+async function huhoGame(token, day) {
+  if (!Number.isInteger(day) || day < HUHO_AB) return null;
+  if (!huhoMdCache || Date.now() - huhoMdCache.at > (huhoMdCache.live ? 2 : 15) * 60e3) {
+    const [md, table] = await Promise.all([kbFetch('/v4/competitions/1/matchdays', { token }), kbFetch('/v4/competitions/1/table', { token }).catch(() => null)]);
+    const names = new Map((table?.it || []).map(t => [String(t.tid), t.tn || null]));
+    huhoMdCache = { at: Date.now(), md, names, live: (md?.it || []).some(d => (d.it || []).some(m => m.il)) };
+  }
+  const d = (huhoMdCache.md?.it || []).find(x => Number(x.day) === day);
+  const m = (d?.it || []).find(x => String(x.t1) === HUHO_TEAM || String(x.t2) === HUHO_TEAM);
+  if (!m) return { day, applies: false, state: 'none' };
+  const home = String(m.t1) === HUHO_TEAM, oppId = String(home ? m.t2 : m.t1);
+  const state = m.il ? 'live' : m.st === 2 ? 'done' : 'open';
+  const base = { day, state, home, opp: huhoMdCache.names.get(oppId) || (home ? m.t2sy : m.t1sy) || oppId, kickoff: m.dt || null };
+  if (state === 'open') return { ...base, applies: false };
+  const g = home ? m.t1g : m.t2g, o = home ? m.t2g : m.t1g;
+  // Ohne Spielstand nichts nullen (nie raten).
+  if (!Number.isFinite(g) || !Number.isFinite(o)) return { ...base, applies: false, unknown: true };
+  const result = g > o ? 'win' : g === o ? 'draw' : 'loss';
+  return { ...base, applies: result !== 'win', final: state === 'done', result, score: `${g}:${o}`, minute: m.il && m.mtd ? String(m.mtd) : null };
+}
+const huhoIsBayern = (all, id) => String(all?.players.get(String(id))?.teamId ?? '') === HUHO_TEAM;
+// Kurzinfo für die Anzeige: Spiel und genullte Spieler je Manager (points = Punkte ohne HuHo).
+function huhoInfo(g, zeroed, note) {
+  if (!g || g.state === 'none' || g.state === 'open') return null;
+  return { day: g.day, applies: !!g.applies, final: !!g.final, state: g.state, result: g.result || null, score: g.score || null, home: g.home, opp: g.opp, minute: g.minute || null,
+    players: zeroed || [], ...(note ? { note } : {}) };
+}
+// Nullt in einer Punkteliste (playerId -> {points,...}) die aufgestellten Bayern-Spieler. lineups: [{managerId, name, ids}].
+// Liefert die genullten Spieler; points/state bleiben je Spieler im Original unter huhoFrom erhalten.
+async function huhoApply(token, day, lineups, pts, nameOf) {
+  const g = await huhoGame(token, day);
+  if (!g?.applies) return { game: g, info: huhoInfo(g, []), zeroed: new Set() };
+  const all = await loadAllPlayers(token);
+  if (all.failedTeams.some(t => /bayern/i.test(String(t)) || String(t) === HUHO_TEAM))
+    return { game: g, info: huhoInfo(g, [], 'Das fehlt: Bayern-Kader nicht lesbar, darum ist noch nichts genullt.'), zeroed: new Set() };
+  const list = [], zeroed = new Set();
+  for (const m of lineups) for (const id of m.ids.map(String)) {
+    if (!huhoIsBayern(all, id) || !pts[id] || !Number.isFinite(pts[id].points)) continue;
+    list.push({ managerId: String(m.managerId), manager: m.name, playerId: id, playerName: nameOf?.(id) || all.players.get(id)?.name || id, points: pts[id].points });
+    pts[id] = { ...pts[id], points: 0, huhoFrom: pts[id].points };
+    zeroed.add(id);
+  }
+  return { game: g, info: huhoInfo(g, list), zeroed };
+}
+// Abzug je Manager für einen beendeten HuHo-Spieltag (für das Ranking): Summe der Punkte seiner aufgestellten Bayern-Spieler.
+// Nur, wenn Kickbase die Punkte des Tages schon im Ranking hat (mdp nicht überall 0); sonst rechnen die Live-Punkte.
+const huhoDedCache = new Map();
+async function huhoDeductions(token, day) {
+  const c = huhoDedCache.get(day);
+  if (c && (c.closed || Date.now() - c.at < 10 * 60e3)) return c.value;
+  const g = await huhoGame(token, day);
+  let value = null, closed = false;
+  if (g?.applies && g.final) {
+    const r = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
+    closed = r?.il === false;
+    if ((r?.us || []).some(u => Number(u.mdp) !== 0)) {
+      const lineups = (r.us || []).map(u => ({ managerId: String(u.i), name: String(u.n || u.i), ids: (u.lp || []).filter(x => x != null).map(String) }));
+      const all = await loadAllPlayers(token), pts = {};
+      if (all.failedTeams.some(t => /bayern/i.test(String(t)) || String(t) === HUHO_TEAM)) throw new Error('Bayern-Kader nicht lesbar');
+      for (const id of lineups.flatMap(m => m.ids).filter(id => huhoIsBayern(all, id))) pts[id] = await dayPlayerPoints(token, id, day, true);
+      const { info } = await huhoApply(token, day, lineups, pts);
+      const by = new Map();
+      for (const p of info?.players || []) by.set(p.managerId, (by.get(p.managerId) || 0) + p.points);
+      value = { info, by };
+    }
+  }
+  huhoDedCache.set(day, { at: Date.now(), closed, value });
+  return value;
+}
+// Was Kickbase schon abgezogen hat (Admin-Punktabzug in der Kickbase-App, Kevin 01.11.): Gesamtpunkte ohne Abzug wären
+// sp von ST 1 plus die Spieltagspunkte (mdp) ab ST 2; was heute darunter liegt, ist abgezogen worden (bis 01.11. überall 0).
+const huhoDayRanks = new Map();
+async function huhoKbGap(token, current) {
+  const upTo = Number(current?.day), gap = new Map();
+  if (!Number.isInteger(upTo) || upTo < 1) return gap;
+  const days = [];
+  // Abgeschlossene Spieltage aendern sich kaum: 10 Min. merken, sonst kostet jede Tabelle bis zu 34 Abrufe.
+  for (let d = 1; d <= upTo; d++) { const c = huhoDayRanks.get(d);
+    if (c && Date.now() - c.at < 10 * 60e3) { days.push(c.r); continue; }
+    const r = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${d}`, { token }); huhoDayRanks.set(d, { at: Date.now(), r }); days.push(r); }
+  for (const u of current.us || []) {
+    const id = String(u.i), at = d => (days[d - 1]?.us || []).find(x => String(x.i) === id);
+    let exp = Number(at(1)?.sp);
+    for (let d = 2; d <= upTo; d++) exp += Number(at(d)?.mdp);
+    if (Number.isFinite(exp) && Number.isFinite(Number(u.sp))) gap.set(id, Math.max(0, exp - Number(u.sp)));
+  }
+  return gap;
+}
+// Gesamttabelle der Legenden-Liga mit HuHo (Kevin 01.11.): Die Spieltage zählen mit den Kickbase-Punkten, HuHo wird erst am Ende
+// von den Gesamtpunkten abgezogen. Darum nur das aktuelle Ranking (ohne dayNumber), mdp bleibt. Was Kickbase schon abgezogen hat,
+// zieht die BumsKI nicht noch einmal ab.
+async function huhoRanking(token, data, dayNumber) {
+  const upTo = Number(data?.day);
+  if (dayNumber || !Array.isArray(data?.us) || !Number.isInteger(upTo) || upTo < HUHO_AB) return data;
+  const days = [];
+  for (let d = HUHO_AB; d <= upTo; d++) { const v = await huhoDeductions(token, d); if (v?.by.size) days.push({ day: d, ...v }); }
+  if (!days.length) return data;
+  const gap = await huhoKbGap(token, data);
+  const us = data.us.map(u => {
+    const id = String(u.i), total = days.reduce((s, d) => s + (d.by.get(id) || 0), 0);
+    if (!total) return { ...u };
+    const kb = Math.min(Math.max(0, total), gap.get(id) || 0), open = total - kb;
+    return { ...u, sp: Number(u.sp) - open, huho: { total, kickbase: kb, open } };
+  });
+  [...us].sort((a, b) => Number(b.sp) - Number(a.sp)).forEach((u, i, a) => { u.spl = i && Number(a[i - 1].sp) === Number(u.sp) ? a[i - 1].spl : i + 1; });
+  us.sort((a, b) => Number(b.sp) - Number(a.sp));
+  return { ...data, us, huho: days.map(d => d.info) };
 }
 
 // Angeschossener Hoeler: MVP des Spieltags = Bundesliga-Spieler mit den meisten Spieltagspunkten (Annahme, an Spieltag 6 gegenpruefen).
@@ -900,6 +1027,10 @@ app.get('/api/live-points/:day', async (req, res) => {
     for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
       try { pts[id] = await dayPlayerPoints(token, id, day, st === 'finished'); } catch { pts[id] = { points: null, state: 'error' }; }
     }));
+    // HuHo nur als Hinweis: Die Spieltagspunkte zählen wie bei Kickbase, abgezogen wird erst am Ende von der Gesamtwertung.
+    let huho = null;
+    try { huho = (await huhoApply(token, day, users.map(u => ({ managerId: String(u.i), name: u.n, ids: (u.lp || []).filter(x => x != null) })), { ...pts }, id => all?.players.get(id)?.name)).info; }
+    catch (e) { huho = { error: 'Der hungrige Hoeneß nicht prüfbar: ' + e.message }; }
     const managers = users.map(u => {
       const lp = Array.isArray(u.lp) ? u.lp : [], empty = lp.length ? 11 - lp.filter(x => x != null).length : null;
       const players = lp.filter(x => x != null).map(String).map(id => ({ id, name: all?.players.get(id)?.name || null, team: all?.players.get(id)?.team || null, ...pts[id] }))
@@ -907,7 +1038,7 @@ app.get('/api/live-points/:day', async (req, res) => {
       const points = empty === null ? null : players.reduce((s, p) => s + (p.points || 0), 0) - 100 * empty;
       return { id: String(u.i), name: u.n, points, empty, open: players.filter(p => p.state === 'open').length, errors: players.filter(p => p.state === 'error').length, players };
     }).sort((a, b) => (b.points ?? -1e9) - (a.points ?? -1e9));
-    const value = { day, status: st, updatedAt: new Date().toISOString(), rankingLive: !!ranking.il, managers };
+    const value = { day, status: st, updatedAt: new Date().toISOString(), rankingLive: !!ranking.il, managers, ...(huho ? { huho } : {}) };
     livePointsCache.set(day, { at: Date.now(), value });
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Live-Punkte konnten nicht geladen werden.', detail: err.message }); }
@@ -2207,6 +2338,10 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   // Alle Spiele vorbei (closing): nichts laeuft mehr. Spieler nur aus playercenter (z. B. Pejcinovic) gelten als beendet,
   // Spieler ohne Punkte wurden nicht eingesetzt (Kevin: "1 im Spiel, 17 nicht angepfiffen" war nach Spielende unverstaendlich).
   if(closing)for(const id of ids){if(pts[id]?.state==='live')pts[id]={...pts[id],state:'done'};else if(pts[id]?.state==='open')pts[id]={...pts[id],state:'unused'};}
+  // HuHo: nur anzeigen, welche Bayern-Punkte genullt würden; BD, DD-Kandidaten, MM und AH bleiben bei den echten Punkten.
+  let huho=null;
+  try{huho=(await huhoApply(token,day,lineups,{...pts},pname)).info;}
+  catch(e){notes.push('Der hungrige Hoeneß nicht prüfbar: '+e.message);}
   const roster=lineups.filter(m=>m.ids.length).map(m=>{
    const players=m.ids.filter(id=>Number.isFinite(pts[id]?.points)).map(id=>({playerId:id,playerName:pname(id),points:pts[id].points,state:pts[id].state}));
    return {...m,players,dayPoints:players.reduce((s,p)=>s+p.points,0)-100*Math.max(0,11-m.ids.length),
@@ -2269,12 +2404,14 @@ app.get('/api/rule-live/:day',async(req,res)=>{
    mm=calculateMm(roster);
    for(const v of mm.affected)item('MM',v,`hat gerade die meisten Minuspunkte (${fmtNum(v.negativeSum)}): dürfte bestimmen, wer am nächsten Spieltag einen Spieler weniger aufstellt`);
   }
-  const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7};
+  // HuHo: würde nach aktuellem Stand am Ende genullt (Spieltagspunkte und die Regeln oben bleiben bei den Kickbase-Punkten).
+  if(huho?.applies)for(const z of huho.players||[])if(z.points)item('HuHo',z,`${z.playerName}: Bayern ${huho.final?'':'steht gerade '}${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}: ${fmtNum(z.points)} Punkte würden am Ende genullt`,{points:z.points});
+  const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7,HuHo:8};
   items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
   const value={day,status:'live',live:true,...(closing?{closing:true}:{}),...(settled?{settled:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
    standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
-   items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,
+   items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,...(huho?{huho}:{}),
    // Punkte aller Spieler mit beendetem Spiel: Push-Entwarnung, wenn eine gemeldete Schnapszahl korrigiert wird (worker.js).
    donePoints:Object.fromEntries(ids.filter(id=>pts[id]?.state==='done'&&Number.isFinite(pts[id].points)).map(id=>[id,pts[id].points]))};
   ruleLiveCache.set(day,{at:Date.now(),value});
@@ -2408,6 +2545,15 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         else if(Number(rec.p)!==cp) centerConflicts.push({playerId:String(id),performance:Number(rec.p),center:cp});
       }));
     }
+    // HuHo: Hat Bayern nicht gewonnen, werden die Punkte der aufgestellten Bayern-Spieler beim Manager genullt (Kevin 01.11.).
+    // Die übrigen Regeln (BD, DD-Kandidaten, MM, AH) rechnen weiter mit den echten Kickbase-Punkten. Hier nur die Liste.
+    let huho=null;
+    if(!probe&&!testMode){
+      try{
+        const pts={};for(const [id,v] of performances)pts[String(id)]={points:v};
+        huho=(await huhoApply(token,day,scored.map(m=>({managerId:m.managerId,name:m.name,ids:m.snapshot.playerIds.map(String)})),pts)).info;
+      }catch(e){huho={error:'Der hungrige Hoeneß nicht prüfbar: '+e.message};}
+    }
     const missingPoints=allIds.filter(id=>performances.get(id)===null||!performances.has(id));
     const failedIds=new Set(failures.map(f=>String(f.playerId)));
     const pointDiagnostics=missingPoints.map(id=>{
@@ -2431,6 +2577,13 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       return {...m,players};
     });
     if(!roster.length)return res.set('Cache-Control','no-store').json({day,ready:false,status:'missing-player-points',missingPoints,failures,message:'Keine gespeicherten Aufstellungen vorhanden.'});
+    // HuHo schon in Kickbase abgezogen (Admin-Punktabzug landet in den Tagespunkten): Für Sieger, Letzten und die Kontrolle
+    // zählen weiter die Kickbase-Punkte vor dem Abzug (Kevin 01.11.: HuHo wird erst am Ende abgezogen).
+    const huhoBy=new Map();for(const z of (huho?.players||[]))huhoBy.set(z.managerId,(huhoBy.get(z.managerId)||0)+z.points);
+    const huhoKbDay=new Set();
+    for(const m of roster){const h=huhoBy.get(m.managerId);if(!h||!Number.isFinite(m.dayPoints)||incompletePoints.some(x=>x.managerId===m.managerId))continue;
+      const exp=m.players.reduce((s,p)=>s+p.points,0)-Math.max(0,11-m.snapshot.playerIds.length)*100;
+      if(m.dayPoints===exp-h){m.dayPoints=exp;huhoKbDay.add(m.managerId);}}
     const ddRoster=roster.filter(m=>Number.isFinite(m.dayPoints));
     const computed=calculateBdDd(ddRoster);
     computed.bd=roster.flatMap(m=>m.players.filter(p=>isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
@@ -2780,6 +2933,21 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         }
       }
     }
+    // HuHo als Aufgabe der BumsParade (Kevin 01.11.: zaehlt als Bumsung). Erledigt, sobald der Admin die Punkte in der Kickbase-App
+    // abgezogen hat: im Tagesstand (huhoKbDay) oder in den Gesamtpunkten (huhoKbGap, alle HuHo-Tage bis hier zusammen).
+    if(!probe&&!testMode&&huho?.players?.length){
+      let gap=null,before=new Map();
+      try{gap=await huhoKbGap(token,ranking);
+        for(let d=HUHO_AB;d<day;d++){const v=await huhoDeductions(token,d);for(const [id,x] of (v?.by||[]))before.set(id,(before.get(id)||0)+x);}}catch{gap=null;}
+      const vs=`Bayern ${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}`;
+      for(const z of huho.players){
+        if(!z.points)continue;
+        const sum=huhoBy.get(z.managerId)||0,kbDone=huhoKbDay.has(z.managerId)||(gap&&sum>0&&(gap.get(z.managerId)||0)>=(before.get(z.managerId)||0)+sum);
+        const what=z.points>0?`${fmtNum(z.points)} Punkte abziehen`:`${fmtNum(-z.points)} Punkte gutschreiben`;
+        todo(`HuHo:${z.managerId}:${z.playerId}`,'HuHo',z.managerId,z.manager,`hatte ${z.playerName} (Bayern) aufgestellt, ${vs}: ${fmtNum(z.points)} Punkte werden genullt`,
+          kbDone?{state:'done',note:'in Kickbase abgezogen'}:{state:'open',note:`Admin: in der Kickbase-App ${what}`});
+      }
+    }
     // Dauerregeln als Teil der BumsParade (Kevin 31.10.): Verstoesse werden eigene Aufgaben und zaehlen als Bumsung.
     // Nur mit vollstaendigen Daten (sonst fehlen Pflichtabgaben, die erlaubt waeren) und ab dem Spieltag, ab dem die Regel gilt.
     if(!probe&&!testMode&&complete){
@@ -2798,7 +2966,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         }catch(e){histNotes.push(`${r.code} (${r.name}) nicht prüfbar: ${e.message}`);}
       }
     }
-    return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,pendingCorrections:centerConflicts.length?{count:centerConflicts.length,examples:centerConflicts.slice(0,5).map(c=>({playerName:playerNames.get(c.playerId)||c.playerId,performance:c.performance,center:c.center}))}:null,todos,saleDeadline:saleDeadline?new Date(saleDeadline).toISOString():null,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
+    return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,...(huho?{huho}:{}),pendingCorrections:centerConflicts.length?{count:centerConflicts.length,examples:centerConflicts.slice(0,5).map(c=>({playerName:playerNames.get(c.playerId)||c.playerId,performance:c.performance,center:c.center}))}:null,todos,saleDeadline:saleDeadline?new Date(saleDeadline).toISOString():null,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
       actions:bdActive.map(p=>({rule:'BD',managerId:p.managerId,manager:p.manager,playerId:p.playerId,playerName:p.playerName,points:p.points,action:'Spieler an den Markt verkaufen',status:'zu_pruefen',marketStatus:p.marketStatus})),
       mm:mm&&{...mm,values:mm.values.map(v=>({...v,negatives:v.negatives.map(n=>({...n,playerName:playerNames.get(String(n.playerId))||null}))}))},ah:{...ahFinal,affected:(ahFinal.affected||[]).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||null}))},autoEvents,bd:bdActive,bdDropped,conflicts,dd:{winners:complete?dd:[],lastPlace:complete?last.map(m=>({managerId:m.managerId,manager:m.manager||m.name,dayPoints:m.dayPoints})):[],tie:complete&&tie},
       warnings:[...histNotes,...(probe?[`PROBELAUF: Die heutigen Aufstellungen wurden als Startelf von Spieltag ${day} angenommen. Nur ein Funktionstest, keine echte Abrechnung, nichts gespeichert.`,...(probeUnreadable.length?[`Startelf nicht lesbar bei: ${probeUnreadable.join(', ')}.`]:[])]:[]),...(rankingWarning?[rankingWarning]:[]),...(inferredZero.size?[`${inferredZero.size} aufgestellte Spieler hatten keinen Spieltagseintrag und wurden mit 0 Punkten gewertet (nicht eingesetzt): ${[...inferredZero].map(id=>playerNames.get(String(id))||id).join(', ')}.`]:[]),...(fromCenter.size?[`${fromCenter.size} aufgestellte Spieler hatten keinen Eintrag in den Leistungsdaten; die Punkte stammen aus den Spieltagsdaten: ${[...fromCenter].map(([id,pt])=>(playerNames.get(String(id))||id)+' ('+pt+')').join(', ')}.`]:[]),...(centerConflicts.length?[`Abweichende Punkte in zwei Quellen (verwendet: Leistungsdaten): ${centerConflicts.map(c=>(playerNames.get(c.playerId)||c.playerId)+' '+c.performance+' statt '+c.center).join(', ')}.`]:[]),...(!complete?['Unvollständige Daten: BD zeigt alle nachgewiesenen Schnapszahlen; weitere BD-Fälle können fehlen. DD und MM sind nicht verbindlich berechenbar.']:[]),...incompletePoints.map(m=>m.name+': Spielerpunkte fehlen ('+m.playerIds.length+' Spieler-IDs: '+m.playerIds.map(id=>{if(failedIds.has(String(id)))return id+' [API-Fehler]';const rec=findDayRecord(performancePayloads.get(id),day);if(!rec)return id+' [kein Spieltagseintrag]';const keep={};for(const k of ['day','p','mp','st','cur','mdst','md','k'])if(rec[k]!==undefined)keep[k]=rec[k];return id+' [Eintrag ohne verwertbare Punkte: '+JSON.stringify(keep)+']';}).join(', ')+').'),...missing.map(m=>m.name+': Aufstellung fehlt.'),...invalid.map(m=>m.name+': '+m.reason),...scored.filter(m=>!Number.isFinite(m.dayPoints)).map(m=>m.name+': Spieltagspunkte laut Ranking nicht ermittelbar.'),...(ahFinal.mvp&&!ahFinal.mvp.error&&ahFinal.mvp.reliable?[]:['AH: Der Spieltags-MVP konnte nicht sicher ermittelt werden'+(ahFinal.mvp?.error?' ('+ahFinal.mvp.error+')':ahFinal.mvp?` (${ahFinal.mvp.failedPlayers} Spieler nicht abrufbar, ${(ahFinal.mvp.failedTeams||[]).length} Vereine nicht lesbar)`:'')+'. AH und die Ausschlüsse bei der Drehtür sind unsicher.']),
