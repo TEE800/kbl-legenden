@@ -19,7 +19,7 @@ const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
 const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
 // Bei Änderungen an SYSTEM oder den Fakten hochzählen: der Bericht des neuesten Spieltags wird dann einmal neu geschrieben.
 const VORGABEN = 5;
-const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit', FV: 'Frühverkauf', HuHo: 'Der hungrige Hoeneß' };
+const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit', FV: 'Frühverkauf', HuHö: 'Der hungrige Hoeneß' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
 const readStore = () => { try { return JSON.parse(fs.readFileSync(STORE, 'utf8')); } catch { return { berichte: {} }; } };
