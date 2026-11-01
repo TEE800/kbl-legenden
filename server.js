@@ -3373,7 +3373,7 @@ app.get('/api/arena/:day',async(req,res)=>{
    const base={id,name:id==='1'?'Kickbase CPU':info.n||`Manager ${id}`,img:info.uim||null,cpu:id==='1'};
    if(!started||!l)return {...base,points:kb??null,kbPoints:kb??null,players:null};
    const players=l.lp.map(pid=>{const q=pts[pid]||{points:null,state:'open'},p=all?.players.get(pid)||all?.players.get(Number(pid));
-    const cap=pid===l.cpt,kt=Date.parse(q.kick||''),playing=q.state==='live'&&Number.isFinite(kt)&&kt<=Date.now()&&Date.now()-kt<150*60e3;return {id:pid,playing,name:p?.name||`Spieler ${pid}`,team:p?.team||null,img:p?.img||null,teamImg:p?.teamImg||null,points:q.points,state:q.state,captain:cap,total:q.points==null?null:q.points*(cap?2:1)};})
+    const cap=pid===l.cpt,kt=Date.parse(q.kick||''),playing=q.state==='live'&&Number.isFinite(kt)&&kt<=Date.now()&&Date.now()-kt<150*60e3;return {id:pid,playing,name:p?.name||`Spieler ${pid}`,team:p?.team||null,tid:p?.teamId!=null?String(p.teamId):null,img:p?.img||null,teamImg:p?.teamImg||null,points:q.points,state:q.state,captain:cap,total:q.points==null?null:q.points*(cap?2:1)};})
     .sort((x,y)=>(y.total??-1e9)-(x.total??-1e9));
    const calc=players.reduce((s,p)=>s+(p.total||0),0);
    // Beendet: Kickbase-Punkte zaehlen (offiziell, korrigiert). Laufend: eigene Rechnung (Kickbase zeigt waehrend des Spieltags nicht immer den Stand).
