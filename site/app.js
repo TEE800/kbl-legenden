@@ -73,7 +73,11 @@ async function loadRanking(){if(!currentLeague)return;const day=$('#dayNumber').
 
 managers.forEach((m,i) => {
   m.pos = i + 1;
-});currentManagers=managers;rankingDay=day;renderProfiles();renderRankingTable();const scored=managers.filter(m=>m.score!==null);const total=scored.reduce((s,m)=>s+m.score,0);const sorted=[...scored].sort((a,b)=>b.score-a.score);const max=Math.max(1,...scored.map(m=>m.score));$('#bars').innerHTML=sorted.map(m=>`<div class="barline"><span>${mgrName(m.name)}</span><div class="track"><div class="fill" style="width:${Math.max(0,m.score)/max*100}%"></div></div><b>${fmt(m.score)}</b></div>`).join('')||'<p class="muted">Noch keine Punktedaten.</p>';}catch(e){$('#ranking').innerHTML=`<tr><td colspan="6" class="error">${escapeHtml(e.message)}</td></tr>`}}
+});currentManagers=managers;rankingDay=day;renderProfiles();renderRankingTable();huhoNote(items,day);const scored=managers.filter(m=>m.score!==null);const total=scored.reduce((s,m)=>s+m.score,0);const sorted=[...scored].sort((a,b)=>b.score-a.score);const max=Math.max(1,...scored.map(m=>m.score));$('#bars').innerHTML=sorted.map(m=>`<div class="barline"><span>${mgrName(m.name)}</span><div class="track"><div class="fill" style="width:${Math.max(0,m.score)/max*100}%"></div></div><b>${fmt(m.score)}</b></div>`).join('')||'<p class="muted">Noch keine Punktedaten.</p>';}catch(e){$('#ranking').innerHTML=`<tr><td colspan="6" class="error">${escapeHtml(e.message)}</td></tr>`}}
+// HuHo (Kevin 01.11.): In der Gesamtwertung zieht der Server die genullten Bayern-Punkte ab, solange Kickbase sie noch nicht abgezogen hat.
+function huhoNote(items,day){const el=$('#rankingHuho');if(!el)return;
+ const open=day?[]:items.filter(x=>x.huho&&x.huho.open).sort((a,b)=>b.huho.open-a.huho.open);
+ el.hidden=!open.length;el.innerHTML=open.length?`<span class="bums-rule bums-r-HuHo" data-rule="HuHo">HuHo</span> Der hungrige Hoeneß ist eingerechnet, in Kickbase noch nicht abgezogen: ${open.map(x=>`${mgrName(String(managerName(x)),'',x.i)} ${x.huho.open>0?'−':'+'}${fmt(Math.abs(x.huho.open))}`).join(' · ')}`:'';}
 // Liga-Tabelle: in der Gesamtwertung zusätzlich letzter Spieltag, Platzveränderung und Rückstand auf Platz 1.
 let rankingDay='';
 function renderRankingTable(){
@@ -1383,7 +1387,7 @@ function centerTodoHtml(){
  const ae=d.autoEvents&&!d.autoEvents.error?d.autoEvents:null;
  const pl=x=>safe(x.playerName||x.name||`Spieler-ID ${x.playerId}`);
  const same=(x,mid,pid)=>String(x.managerId)===String(mid)&&(pid==null||String(x.playerId)===String(pid));
- const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
+ const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf',HuHo:'Der hungrige Hoeneß'};
  const STATE={done:['ok','✓ erledigt'],progress:['half','läuft'],open:['open','offen'],unknown:['warn','? unklar'],manual:['','von Hand']};
  const detail=t=>{const [,mid,pid]=t.key.split(':');const out=[];
   if(t.rule==='BD'){const x=(d.bd||[]).find(x=>same(x,mid,pid));if(x)out.push(`Schnapszahl: ${pl(x)} hat ${fmt(x.points)} Punkte geholt.`);out.push('Der Spieler wird an den Markt verkauft, nicht an einen Manager.');}
@@ -1786,7 +1790,7 @@ async function renderBumsTabelle(){
   if(v.out===undefined)e.noDir+=v.count;else{e.out+=v.out+(v.other||0);e.in+=v.in||0;for(const x of (v.moves||[]))e.moves.push({...x,d:x.d==='x'?'o':x.d,day:d});}
   for(const [r,n] of Object.entries(v.rules||{}))e.rules[r]=(e.rules[r]||0)+n;tot.set(mid,e);}
  const rows=[...tot.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'de'));
- const RN={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
+ const RN={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf',HuHo:'Der hungrige Hoeneß'};
  const chips=r=>Object.entries(r).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([k,n])=>`<span class="bums-rule bums-r-${escapeHtml(k)}" data-rule="${escapeHtml(k)}" role="link" tabindex="0" title="${escapeHtml(RN[k]||k)}: zur Regel">${escapeHtml(k)}${n>1?` <b>×${n}</b>`:''}</span>`).join('');
  const top=rows.length?rows[0].count:0,rankOf=r=>1+rows.filter(x=>x.count>r.count).length;
  const hit=rows.filter(r=>r.count>0);
@@ -1828,12 +1832,12 @@ document.addEventListener('click',async e=>{
 });
 // BumsTabelle von Hand nachtragen (für Spieltage ohne gespeicherte Aufstellungen, z. B. ST 1–5).
 // Eingabe je Manager als Kürzel, z. B. "BD BD UM". Von Hand gespeicherte Spieltage überschreibt die Automatik nicht.
-const BUMS_CODES=['BD','DD','MM','AH','RK','BN','UM','EZ','TL'];
+const BUMS_CODES=['BD','DD','MM','AH','RK','BN','UM','EZ','TL','FV','HuHo'];
 function bumsManualManagers(){
  const m=new Map();for(const d of Object.values(bumsDays))for(const [id,v] of Object.entries(d.managers||{}))if(isEligibleManager(v.name))m.set(id,v.name);
  return [...m].sort((a,b)=>a[1].localeCompare(b[1],'de'));
 }
-const BUMS_NAMES={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf'};
+const BUMS_NAMES={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf',HuHo:'Der hungrige Hoeneß'};
 function bumsManualCell(id,name,codes){
  return `<div class="bums-mrow" data-bums-mid="${escapeHtml(id)}" data-bums-name="${escapeHtml(name)}" data-codes="${escapeHtml(codes.join(' '))}"><span class="bums-mname">${mgrName(name,'',id)}</span><span class="bums-mchips">${codes.map((c,i)=>`<button type="button" class="bums-rule bums-r-${escapeHtml(c)} bums-mdel" data-del="${i}" title="${escapeHtml(BUMS_NAMES[c]||c)} entfernen">${escapeHtml(c)} ✕</button>`).join('')||'<span class="muted tiny">keine</span>'}</span><select class="bums-madd" aria-label="Regel hinzufügen für ${escapeHtml(name)}"><option value="">+ Regel</option>${BUMS_CODES.map(c=>`<option value="${c}">${c} · ${escapeHtml(BUMS_NAMES[c])}</option>`).join('')}</select></div>`;
 }
