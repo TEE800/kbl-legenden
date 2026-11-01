@@ -320,7 +320,8 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .pv-head{margin:22px 0 12px;font-size:16px}
 .pv-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:12px}
 .pv-tile{background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--gold-dark);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
-.pv-tile small{color:var(--muted);font-size:11px;letter-spacing:1px}
+.pv-tile{position:relative}.pv-tile small{color:var(--muted);font-size:11px;letter-spacing:1px;padding-right:36px}
+.pv-copy{position:absolute;top:8px;right:8px;width:32px;height:32px;padding:0;border-radius:8px;border:1px solid var(--line-strong);background:transparent;color:var(--text-2);font-size:15px;line-height:1;opacity:.75}.pv-copy:hover{opacity:1;border-color:var(--gold-dark)}.pv-copy.done{opacity:1;color:var(--ok);border-color:var(--ok)}
 .pv-tile p{margin:0;font-size:16px;line-height:1.35;overflow-wrap:anywhere}
 .pv-tile p b{color:var(--gold)}
 .pv-tile span{color:var(--muted);font-size:13px}
