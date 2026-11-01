@@ -350,7 +350,7 @@
   // Eine Ersatzbank für alle (Kevin-Wunsch): kompakt unter dem Rasen, Figuren kleiner, je mehr draufsitzen.
   const benchG=groups.filter(ko).sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9)),bs=Math.max(.5,Math.min(.8,6.4/Math.max(1,benchG.length))).toFixed(2);
   const bench=benchG.length?`<div class="pxr-bench" style="--s:${bs}"><div class="pxr-bt">💤 Ersatzbank · kann nicht mehr gewinnen</div><div class="pxr-dug"><i class="pxr-back"></i><i class="pxr-seat"></i><div class="pxr-sits">${benchG.map(g=>`<div class="pxr-sit">${pxFig({id:g.t.playerId,team:g.t.team,teamImg:byId.get(String(g.t.playerId))?.teamImg,mode:'sit'})}</div>`).join('')}</div></div>
-    <div class="pxr-bl">${benchG.map(g=>`<div><b>${esc(g.t.player)}</b><br>${g.pts===null?'–':fmt(g.pts)}${g.rs.length>1?` · ×${g.rs.length}`:''}</div>`).join('')}</div></div>`:'';
+    <div class="pxr-bl">${benchG.map(g=>`<div><b>${esc(g.t.player)}</b><br>${g.pts===null?'–':fmt(g.pts)}</div>`).join('')}</div></div>`:'';
   const pitch=`<div class="pxr"><div class="pxr-pitch"><i class="pxr-mid"></i><i class="pxr-circle"></i><i class="pxr-box"></i><i class="pxr-goal"></i>${rowsP.map(lane).join('')}</div>${bench}</div>`;
   setTimeout(pxDrawAll,0);
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
@@ -503,7 +503,7 @@
     if(sits.dataset.key!==key){sits.dataset.key=key;
      sits.innerHTML=L.bench.length?L.bench.map(b=>{const o=ents[b.k];return `<div class="pxr-sit">${pxFig({id:o.id,team:o.team,teamImg:o.teamImg,mode:'sit'})}</div>`;}).join(''):'<div class="zr-bench-empty">noch keiner</div>';
      setTimeout(pxDrawAll,0);}
-    bl.innerHTML=L.bench.map(b=>{const o=ents[b.k];return `<div><b>${esc(o.name)}</b><br>${ptsTxt(i,o,b.pts)}${o.rs.length>1?` · ×${o.rs.length}`:''}</div>`;}).join('');}
+    bl.innerHTML=L.bench.map(b=>{const o=ents[b.k];return `<div><b>${esc(o.name)}</b><br>${ptsTxt(i,o,b.pts)}</div>`;}).join('');}
    // Kevin-Wunsch: Korrekturen in eigenem Kasten über dem Platz (nicht über den Gesichtern), Platz für die meisten Zeilen fest reserviert.
    fl.hidden=!maxFix;fl.classList.toggle('empty',!f.fixes.length);
    if(f.fixes.length){fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
@@ -682,7 +682,7 @@
     if(!nb){c.fillStyle='#728592';c.font=font(10,600);c.textAlign='center';c.fillText('noch keiner',LW/2,dy+dh/2);}
     Lb.bench.forEach((b,j)=>{const en=ents[b.k],cx=12+slot*(j+.5);sprite(en,'sit',cx,dy+dh-2,bs,time+j*.37,false);
      c.textAlign='center';c.fillStyle='#e9f0f4';c.font=font(9.5,800);c.fillText(fit(en.name,slot-4),cx,dy+dh+13);
-     c.fillStyle='#9db0bd';c.font=font(9.5,600);c.fillText(ptsTxt(ib,en,b.pts)+(en.rs.length>1?` · ×${en.rs.length}`:''),cx,dy+dh+25);});}
+     c.fillStyle='#9db0bd';c.font=font(9.5,600);c.fillText(ptsTxt(ib,en,b.pts),cx,dy+dh+25);});}
    c.restore();
    // Korrektur-Hinweis
    // Kevin-Wunsch: je Spieler eine Zeile, untereinander.

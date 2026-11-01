@@ -1521,15 +1521,22 @@ function tippState(md,day){
  const locked=!d||d.status!=='upcoming'||!Number.isFinite(kickoff)||Date.now()>=kickoff;
  return {status:d?.status||'unknown',deadline:d?.firstKickoffUTC||null,firstMatch:d?.firstMatch||null,locked,open:!locked&&day===next,next};
 }
+// Gleiche Quelle wie das Rennen (dayPlayerPoints, beendet): fehlt in performance das Punktefeld, zählt playercenter
+// (Kevin, ST 8: Koch fehlte, darum war der beste Tipper „noch nicht bestimmbar“).
 async function tippPlayerPoints(token,playerId,day){
- try{const rec=findDayRecord(await kbFetch(`/v4/competitions/1/players/${playerId}/performance`,{token}),day);
-  return rec&&rec.p!==undefined&&rec.p!==null&&rec.p!==''&&Number.isFinite(Number(rec.p))?Number(rec.p):null;}catch{return null;}
+ try{const r=await dayPlayerPoints(token,playerId,day,true);return r.points??null;}catch{return null;}
 }
 // Spieltagspunkte eines Spielers, auch waehrend des Spiels. "performance" hat Punkte erst nach Spielende;
 // laeuft das Spiel (mdst 1), stehen die Live-Punkte nur in "playercenter" (an ST 7 geprueft: Hendriks 25 Punkte in der 36. Minute).
 // state: done = Spiel beendet, live = Spiel laeuft, open = noch nicht angepfiffen oder keine Daten (points null).
 async function dayPlayerPoints(token,id,day,finished=false,get=p=>kbFetch(p,{token})){
  const data=await get(`/v4/competitions/1/players/${id}/performance`),rec=findDayRecord(data,day),points=pointFromPerformance(data,day,finished);
+ // Spiel beendet, aber kein Punktefeld in performance (gilt sonst als nicht eingesetzt = 0): erst playercenter fragen.
+ // Kevin, ST 8: Koch stand nach Spieltagsende auf 0, hatte aber gespielt (live 89, Abrechnung 112 aus playercenter).
+ const noP=!!rec&&(rec.p===null||rec.p===undefined||rec.p==='');
+ if(points!==null&&finished&&noP){const pc=await get(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`).catch(()=>null);
+  const q=pc&&pc.p!==undefined&&pc.p!==null&&pc.p!==''&&Number.isFinite(Number(pc.p))?Number(pc.p):null;
+  return {points:q??points,state:'done',...(q!==null&&q!==points?{why:'nur playercenter'}:{})};}
  if(points!==null&&finished)return {points,state:'done'};
  // Laeuft der Spieltag noch, zaehlt nach dem Anstoss playercenter zuerst: direkt nach Abpfiff steht in performance
  // schon mdst 2 mit 0 Punkten, die echten Punkte kommen erst spaeter (ST 7, Stuttgart-Gladbach: alle auf 0 gefallen).
