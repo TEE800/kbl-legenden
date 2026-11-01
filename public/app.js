@@ -2035,10 +2035,49 @@ function pvQuestions(){
  if(wild)q('🎲 WUNDERTÜTE',`Top oder Flop: Welcher ${b(wild.n)} kommt diesmal?`,`Bisher zwischen ${f(wild.lo)} und ${f(wild.hi)} Punkten alles dabei`);
  return out;
 }
+// Fragen-Kachel als Bild (Kevin-Wunsch 1.11.): zum Einfuegen in Discord. Gezeichnet auf einer Leinwand aus dem Text der Kachel
+// (Namen gold), ohne Profilbilder, damit die Leinwand nie gesperrt ist. PC: Zwischenablage; Handy: Teilen-Menue; sonst Download.
+function pvTileCanvas(tile){
+ const W=1080,P=56,sans='"Segoe UI",Arial,sans-serif',c=document.createElement('canvas'),x=c.getContext('2d');
+ const runs=node=>{const out=[];const walk=(n,b)=>{for(const ch of n.childNodes){if(ch.nodeType===3)out.push({t:ch.textContent,b});else if(ch.nodeType===1&&!ch.classList.contains('mgr-av'))walk(ch,b||ch.tagName==='B'||ch.tagName==='STRONG');}};walk(node,false);return out;};
+ const wrap=(rs,size,weight,max)=>{const lines=[[]];let w=0;
+  for(const r of rs)for(const word of r.t.split(/(\s+)/)){if(!word)continue;x.font=`${r.b?800:weight} ${size}px ${sans}`;const ww=x.measureText(word).width,sp=/^\s+$/.test(word);
+   if(sp){if(lines.at(-1).length)lines.at(-1).push({t:' ',b:r.b,w:x.measureText(' ').width});continue;}
+   const cur=lines.at(-1).reduce((s,q)=>s+q.w,0);if(cur+ww>max&&lines.at(-1).length){while(lines.at(-1).length&&lines.at(-1).at(-1).t===' ')lines.at(-1).pop();lines.push([]);}
+   lines.at(-1).push({t:word,b:r.b,w:ww});w=0;}
+  return lines.filter(l=>l.length);};
+ const tag=tile.querySelector('small')?.textContent||'',q=wrap(runs(tile.querySelector('p')),54,700,W-2*P-40),sub=wrap(runs(tile.querySelector('span')),34,400,W-2*P-40);
+ const day=(historyData.filter(h=>h.status==='finished').map(h=>h.day).reduce((a,b)=>Math.max(a,b),0)||0)+1;
+ const H=P+60+q.length*68+24+sub.length*46+80+P;c.width=W;c.height=H;
+ x.fillStyle='#081118';x.fillRect(0,0,W,H);
+ const r=22,bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,r):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
+ x.save();x.clip();x.fillStyle='#b48633';x.fillRect(bx,by,10,bh);x.restore();
+ let y=P+44;const L=P+30;x.textBaseline='alphabetic';
+ x.font=`600 28px ${sans}`;x.fillStyle='#9db0bd';x.textAlign='left';x.fillText(tag,L,y);
+ x.font=`900 26px Georgia,serif`;x.fillStyle='#ebc768';x.textAlign='right';x.fillText('KBL LEGENDEN',W-P-20,y);x.textAlign='left';
+ y+=16;
+ const draw=(lines,size,weight,col,colB,lh)=>{for(const l of lines){y+=lh;let px=L;for(const w of l){x.font=`${w.b?800:weight} ${size}px ${sans}`;x.fillStyle=w.b?colB:col;x.fillText(w.t,px,y);px+=w.w;}}};
+ draw(q,54,700,'#e9f0f4','#ebc768',68);y+=24;draw(sub,34,400,'#9db0bd','#cfd9e0',46);
+ x.font=`26px ${sans}`;x.fillStyle='#728592';x.fillText(`Die großen Fragen vor Spieltag ${day} · BumsKI 🤡`,L,H-P-6);
+ return {c,day};
+}
+async function pvTileCopy(btn){
+ const tile=btn.closest('.pv-tile');if(!tile)return;
+ const flash=t=>{btn.textContent=t;btn.classList.add('done');setTimeout(()=>{btn.textContent='📋';btn.classList.remove('done');},1800);};
+ let c,day;try{({c,day}=pvTileCanvas(tile));}catch{flash('✕');return;}
+ // Synchron in eine Datei umwandeln, damit Teilen/Kopieren noch als Klick des Nutzers gilt (Safari).
+ const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+ const blob=new Blob([u],{type:'image/png'}),name=`kbl-frage-st${day}.png`;
+ const touch=matchMedia('(pointer:coarse)').matches;let file=null;try{file=new File([blob],name,{type:'image/png'});}catch{}
+ if(touch&&file&&navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file]});return;}catch(e){if(e?.name==='AbortError')return;}}
+ if(navigator.clipboard?.write&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);flash('✓');return;}catch{}}
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇');
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-pv-copy]');if(b){e.preventDefault();e.stopPropagation();pvTileCopy(b);}},true);
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
  const qs=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
- el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
  openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
