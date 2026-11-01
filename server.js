@@ -153,7 +153,7 @@ app.get('/api/ranking/:leagueId', async (req, res) => {
   const qs = day ? `?dayNumber=${encodeURIComponent(day)}` : '';
   try {
     let data = await kbFetch(`/v4/leagues/${leagueId}/ranking${qs}`, { token });
-    // HuHö: genullte Bayern-Punkte aus Tabelle und Tagespunkten herausrechnen (nur Legenden-Liga).
+    // HuHo: genullte Bayern-Punkte aus Tabelle und Tagespunkten herausrechnen (nur Legenden-Liga).
     if (String(req.params.leagueId) === '6422780') {
       try { data = await huhoRanking(token, data, day ? Number(day) : null); }
       catch (e) { data = { ...data, huhoError: 'Der hungrige Hoeneß konnte nicht eingerechnet werden: ' + e.message }; }
@@ -537,7 +537,7 @@ app.get('/api/lineup-points/:day', async (req, res) => {
     for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
       try { const r = await dayPlayerPoints(token, id, day, st === 'finished'); points[id] = { points: r.points, state: r.state }; } catch { points[id] = { points: null, state: 'error' }; }
     }));
-    // HuHö nur als Hinweis (Punkte bleiben wie bei Kickbase).
+    // HuHo nur als Hinweis (Punkte bleiben wie bei Kickbase).
     let huho = null;
     try { huho = (await huhoApply(token, day, Object.values(readSnapshots()).filter(r => r.day === day).map(r => ({ managerId: r.managerId, name: r.managerId, ids: (r.playerIds || []).map(String) })), { ...points })).info; }
     catch (e) { huho = { error: e.message }; }
@@ -610,12 +610,12 @@ function rankingLookup(d) {
   };
 }
 
-// ---- HuHö: Der hungrige Hoeneß (Liga-Regel, Kevin 01.11.; Abkürzung immer HuHö) ----
+// ---- HuHo: Der hungrige Hoeneß (Liga-Regel, Kevin 01.11.; Abkürzung immer HuHo) ----
 // Gewinnt Bayern sein Spiel nicht (Remis oder Niederlage), zählen die Spieltagspunkte aller aufgestellten Bayern-Spieler 0
 // (auch Minuspunkte). Gilt die ganze Saison (HUHO_AB). Läuft das Bayern-Spiel noch, gilt der aktuelle Spielstand (vorläufig).
 // Ergebnis aus /v4/competitions/1/matchdays (t1/t2 Verein, t1g/t2g Tore, il läuft, st 2 beendet), Verein aus dem Vereinsprofil.
 // Kevin 01.11.: Spieltage (Sieger, Letzter) und alle anderen Regeln (BD, DD-Kandidaten, MM, AH) zählen mit den Kickbase-Punkten
-// (66 Punkte bleiben BD). HuHö wird erst am Ende abgezogen: als Aufgabe der BumsParade (zählt als Bumsung, der Admin zieht die
+// (66 Punkte bleiben BD). HuHo wird erst am Ende abgezogen: als Aufgabe der BumsParade (zählt als Bumsung, der Admin zieht die
 // Punkte in der Kickbase-App ab) und in der Gesamttabelle, solange Kickbase es noch nicht abgezogen hat. Nicht in Arena und MVP-Tipp.
 const HUHO_AB = 1, HUHO_TEAM = '2'; // ganze Saison (Kevin 01.11.)
 let huhoMdCache = null;
@@ -640,7 +640,7 @@ async function huhoGame(token, day) {
   return { ...base, applies: result !== 'win', final: state === 'done', result, score: `${g}:${o}`, minute: m.il && m.mtd ? String(m.mtd) : null };
 }
 const huhoIsBayern = (all, id) => String(all?.players.get(String(id))?.teamId ?? '') === HUHO_TEAM;
-// Kurzinfo für die Anzeige: Spiel und genullte Spieler je Manager (points = Punkte ohne HuHö).
+// Kurzinfo für die Anzeige: Spiel und genullte Spieler je Manager (points = Punkte ohne HuHo).
 function huhoInfo(g, zeroed, note) {
   if (!g || g.state === 'none' || g.state === 'open') return null;
   return { day: g.day, applies: !!g.applies, final: !!g.final, state: g.state, result: g.result || null, score: g.score || null, home: g.home, opp: g.opp, minute: g.minute || null,
@@ -663,7 +663,7 @@ async function huhoApply(token, day, lineups, pts, nameOf) {
   }
   return { game: g, info: huhoInfo(g, list), zeroed };
 }
-// Abzug je Manager für einen beendeten HuHö-Spieltag (für das Ranking): Summe der Punkte seiner aufgestellten Bayern-Spieler.
+// Abzug je Manager für einen beendeten HuHo-Spieltag (für das Ranking): Summe der Punkte seiner aufgestellten Bayern-Spieler.
 // Nur, wenn Kickbase die Punkte des Tages schon im Ranking hat (mdp nicht überall 0); sonst rechnen die Live-Punkte.
 const huhoDedCache = new Map();
 async function huhoDeductions(token, day) {
@@ -707,7 +707,7 @@ async function huhoKbGap(token, current) {
   }
   return gap;
 }
-// Gesamttabelle der Legenden-Liga mit HuHö (Kevin 01.11.): Die Spieltage zählen mit den Kickbase-Punkten, HuHö wird erst am Ende
+// Gesamttabelle der Legenden-Liga mit HuHo (Kevin 01.11.): Die Spieltage zählen mit den Kickbase-Punkten, HuHo wird erst am Ende
 // von den Gesamtpunkten abgezogen. Darum nur das aktuelle Ranking (ohne dayNumber), mdp bleibt. Was Kickbase schon abgezogen hat,
 // zieht die BumsKI nicht noch einmal ab.
 async function huhoRanking(token, data, dayNumber) {
@@ -1027,7 +1027,7 @@ app.get('/api/live-points/:day', async (req, res) => {
     for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
       try { pts[id] = await dayPlayerPoints(token, id, day, st === 'finished'); } catch { pts[id] = { points: null, state: 'error' }; }
     }));
-    // HuHö nur als Hinweis: Die Spieltagspunkte zählen wie bei Kickbase, abgezogen wird erst am Ende von der Gesamtwertung.
+    // HuHo nur als Hinweis: Die Spieltagspunkte zählen wie bei Kickbase, abgezogen wird erst am Ende von der Gesamtwertung.
     let huho = null;
     try { huho = (await huhoApply(token, day, users.map(u => ({ managerId: String(u.i), name: u.n, ids: (u.lp || []).filter(x => x != null) })), { ...pts }, id => all?.players.get(id)?.name)).info; }
     catch (e) { huho = { error: 'Der hungrige Hoeneß nicht prüfbar: ' + e.message }; }
@@ -2338,7 +2338,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   // Alle Spiele vorbei (closing): nichts laeuft mehr. Spieler nur aus playercenter (z. B. Pejcinovic) gelten als beendet,
   // Spieler ohne Punkte wurden nicht eingesetzt (Kevin: "1 im Spiel, 17 nicht angepfiffen" war nach Spielende unverstaendlich).
   if(closing)for(const id of ids){if(pts[id]?.state==='live')pts[id]={...pts[id],state:'done'};else if(pts[id]?.state==='open')pts[id]={...pts[id],state:'unused'};}
-  // HuHö: nur anzeigen, welche Bayern-Punkte genullt würden; BD, DD-Kandidaten, MM und AH bleiben bei den echten Punkten.
+  // HuHo: nur anzeigen, welche Bayern-Punkte genullt würden; BD, DD-Kandidaten, MM und AH bleiben bei den echten Punkten.
   let huho=null;
   try{huho=(await huhoApply(token,day,lineups,{...pts},pname)).info;}
   catch(e){notes.push('Der hungrige Hoeneß nicht prüfbar: '+e.message);}
@@ -2404,9 +2404,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
    mm=calculateMm(roster);
    for(const v of mm.affected)item('MM',v,`hat gerade die meisten Minuspunkte (${fmtNum(v.negativeSum)}): dürfte bestimmen, wer am nächsten Spieltag einen Spieler weniger aufstellt`);
   }
-  // HuHö: würde nach aktuellem Stand am Ende genullt (Spieltagspunkte und die Regeln oben bleiben bei den Kickbase-Punkten).
-  if(huho?.applies)for(const z of huho.players||[])if(z.points)item('HuHö',z,`${z.playerName}: Bayern ${huho.final?'':'steht gerade '}${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}: ${fmtNum(z.points)} Punkte würden am Ende genullt`,{points:z.points});
-  const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7,HuHö:8};
+  // HuHo: würde nach aktuellem Stand am Ende genullt (Spieltagspunkte und die Regeln oben bleiben bei den Kickbase-Punkten).
+  if(huho?.applies)for(const z of huho.players||[])if(z.points)item('HuHo',z,`${z.playerName}: Bayern ${huho.final?'':'steht gerade '}${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}: ${fmtNum(z.points)} Punkte würden am Ende genullt`,{points:z.points});
+  const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7,HuHo:8};
   items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
   const value={day,status:'live',live:true,...(closing?{closing:true}:{}),...(settled?{settled:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
@@ -2545,7 +2545,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         else if(Number(rec.p)!==cp) centerConflicts.push({playerId:String(id),performance:Number(rec.p),center:cp});
       }));
     }
-    // HuHö: Hat Bayern nicht gewonnen, werden die Punkte der aufgestellten Bayern-Spieler beim Manager genullt (Kevin 01.11.).
+    // HuHo: Hat Bayern nicht gewonnen, werden die Punkte der aufgestellten Bayern-Spieler beim Manager genullt (Kevin 01.11.).
     // Die übrigen Regeln (BD, DD-Kandidaten, MM, AH) rechnen weiter mit den echten Kickbase-Punkten. Hier nur die Liste.
     let huho=null;
     if(!probe&&!testMode){
@@ -2577,8 +2577,8 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       return {...m,players};
     });
     if(!roster.length)return res.set('Cache-Control','no-store').json({day,ready:false,status:'missing-player-points',missingPoints,failures,message:'Keine gespeicherten Aufstellungen vorhanden.'});
-    // HuHö schon in Kickbase abgezogen (Admin-Punktabzug landet in den Tagespunkten): Für Sieger, Letzten und die Kontrolle
-    // zählen weiter die Kickbase-Punkte vor dem Abzug (Kevin 01.11.: HuHö wird erst am Ende abgezogen).
+    // HuHo schon in Kickbase abgezogen (Admin-Punktabzug landet in den Tagespunkten): Für Sieger, Letzten und die Kontrolle
+    // zählen weiter die Kickbase-Punkte vor dem Abzug (Kevin 01.11.: HuHo wird erst am Ende abgezogen).
     const huhoBy=new Map();for(const z of (huho?.players||[]))huhoBy.set(z.managerId,(huhoBy.get(z.managerId)||0)+z.points);
     const huhoKbDay=new Set();
     for(const m of roster){const h=huhoBy.get(m.managerId);if(!h||!Number.isFinite(m.dayPoints)||incompletePoints.some(x=>x.managerId===m.managerId))continue;
@@ -2933,8 +2933,8 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         }
       }
     }
-    // HuHö als Aufgabe der BumsParade (Kevin 01.11.: zaehlt als Bumsung). Erledigt, sobald der Admin die Punkte in der Kickbase-App
-    // abgezogen hat: im Tagesstand (huhoKbDay) oder in den Gesamtpunkten (huhoKbGap, alle HuHö-Tage bis hier zusammen).
+    // HuHo als Aufgabe der BumsParade (Kevin 01.11.: zaehlt als Bumsung). Erledigt, sobald der Admin die Punkte in der Kickbase-App
+    // abgezogen hat: im Tagesstand (huhoKbDay) oder in den Gesamtpunkten (huhoKbGap, alle HuHo-Tage bis hier zusammen).
     if(!probe&&!testMode&&huho?.players?.length){
       let gap=null,before=new Map();
       try{gap=await huhoKbGap(token,ranking);
@@ -2944,7 +2944,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         if(!z.points)continue;
         const sum=huhoBy.get(z.managerId)||0,kbDone=huhoKbDay.has(z.managerId)||(gap&&sum>0&&(gap.get(z.managerId)||0)>=(before.get(z.managerId)||0)+sum);
         const what=z.points>0?`${fmtNum(z.points)} Punkte abziehen`:`${fmtNum(-z.points)} Punkte gutschreiben`;
-        todo(`HuHö:${z.managerId}:${z.playerId}`,'HuHö',z.managerId,z.manager,`hatte ${z.playerName} (Bayern) aufgestellt, ${vs}: ${fmtNum(z.points)} Punkte werden genullt`,
+        todo(`HuHo:${z.managerId}:${z.playerId}`,'HuHo',z.managerId,z.manager,`hatte ${z.playerName} (Bayern) aufgestellt, ${vs}: ${fmtNum(z.points)} Punkte werden genullt`,
           kbDone?{state:'done',note:'in Kickbase abgezogen'}:{state:'open',note:`Admin: in der Kickbase-App ${what}`});
       }
     }
