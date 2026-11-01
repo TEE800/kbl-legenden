@@ -1167,7 +1167,9 @@ body.zr-on .mobilenav{display:none}
 .kbl-view.kbl-swipe-l{animation:kblSwipeL .2s ease-out}.kbl-view.kbl-swipe-r{animation:kblSwipeR .2s ease-out}
 /* Dauerregeln (dauerregeln.js) */
 .bums-r-FV{--c:#e6a0a0}
-.dr-group .acc-sub{display:grid;gap:10px}
+.dr-part{display:grid;gap:10px;margin:14px 0 4px;padding-top:12px;border-top:1px solid #3a3326}
+.dr-part-head{margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dr-part p{margin:0}
 .dr-item{border:1px solid #594c35;border-radius:8px;padding:10px 12px}
 .dr-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dr-text{margin:6px 0 0}

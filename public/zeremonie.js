@@ -78,7 +78,7 @@
  const orig=window.renderAccTodo;
  if(typeof orig==='function')window.renderAccTodo=function(){const r=orig.apply(this,arguments);try{renderBox();}catch(e){console.warn('Zeremonie',e);}return r;};
  const origCollapse=window.kblCollapseView;
- window.kblCollapseView=v=>{if(v==='accounting')boxOpen=false;return origCollapse?.(v);};
+ window.kblCollapseView=v=>{if(v==='accounting'||v==='archiv')boxOpen=false;return origCollapse?.(v);};
 
  // ---------- Ton: Trommelwirbel und Becken (WebAudio, ohne Dateien) ----------
  let ac=null,muted=false;try{muted=localStorage.getItem('kbl-zer-mute')==='1';}catch{}
