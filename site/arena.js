@@ -35,7 +35,7 @@
  function playerList(m){
   if(!m.players)return '<p class="muted tiny">Keine Aufstellung.</p>';
   const K=T();
-  return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.playing?'live':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.state==='open'?'<small class="muted">noch nicht</small>':p.playing?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
+  return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.playing?'live':''}${p.why?' arena-out':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.why==='ban'?'<small class="arena-ban">🟥 gesperrt</small>':p.why==='out'?`<small class="muted">${p.whyLive?'nicht im Spiel':'nicht eingesetzt'}</small>`:p.state==='open'?'<small class="muted">noch nicht</small>':p.playing?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
  }
  // Boxkampf (Kevin-Wunsch 1.11., ersetzt das Duell-Rennen): oben ein großer Ring mit einem Duell (zuerst das eigene, Antippen
  // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Pixel-Figuren wie im MVP-Rennen, Kopf = verpixeltes Profilbild.
@@ -47,6 +47,27 @@
  const ended=d=>d.status==='finished';
  const pose=(d,x,m,o)=>ended(d)?(x.winner==='draw'||!x.winner?'guard':x.winner===m.id?'cheer':'ko'):(m.points??0)>(o.points??0)?'punch':(m.points??0)<(o.points??0)?'hurt':'guard';
  const side=m=>m.live?`🥊 ${m.live} im Kampf`:m.open?`${m.open} ${m.open===1?'kommt':'kommen'} noch`:'fertig';
+ // Gesperrte und nicht eingesetzte Spieler (Kevin-Wunsch 1.11.): zählen nicht als „kommen noch“.
+ // Gesperrt = RK aus der BumsParade des Vorspieltags (gleiche Quelle wie in den Aufstellungen, window.kblLuBans).
+ // Nicht eingesetzt = keine Punkte, obwohl das Spiel seines Vereins schon angepfiffen ist (Anstoß aus der Ligenübersicht
+ // oder ein Mitspieler desselben Vereins hat schon Punkte). Nur der Spieltag danach, wie lange Rot sperrt, liefert Kickbase nicht.
+ const extra=new Map();
+ function loadExtra(day){
+  if(extra.has(day))return;extra.set(day,{bans:null,kicks:null});
+  const bansP=window.kblLuBans?window.kblLuBans(day).catch(()=>null):Promise.resolve(null);
+  const kicksP=get('/api/ligen').then(l=>{const bl=(l.leagues||[]).find(x=>x.key==='bl1'),dd=bl?.days?.find(x=>x.day===day),m=new Map();
+   for(const g of dd?.matches||[])for(const t of [g.t1,g.t2])m.set(String(t),{dt:Date.parse(g.dt),state:g.state});return m;}).catch(()=>null);
+  Promise.all([bansP,kicksP]).then(([b,k])=>{extra.set(day,{bans:b?.map||null,kicks:k});if(data?.day===day)render();});
+ }
+ function annot(d){
+  const ex=extra.get(d.day)||{},now=Date.now(),all=d.duels.flatMap(x=>[x.a,x.b]).flatMap(m=>m.players||[]);
+  const teamOn=new Set(all.filter(p=>p.state==='done'||p.state==='live').map(p=>p.team).filter(Boolean));
+  for(const m of d.duels.flatMap(x=>[x.a,x.b])){if(!m.players)continue;
+   for(const p of m.players){delete p.why;delete p.whyLive;if(p.state!=='open')continue;
+    const k=p.tid?ex.kicks?.get(String(p.tid)):null,started=k?k.dt<=now:teamOn.has(p.team);
+    if(ex.bans?.has(String(p.id)))p.why='ban';else if(started){p.why='out';p.whyLive=!!k&&k.state!=='done';}}
+   m.open=m.players.filter(p=>p.state==='open'&&!p.why).length;}
+ }
  // Manager-Bilder: das Kickbase-CDN erlaubt kein CORS (Canvas), darum online aus site/faces/ (Export), am PC über /api/mgr-img.
  const faceSrc=img=>{const k=/^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(img||''));
   return !k?'':window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
@@ -80,12 +101,13 @@
  const bar=(v,cls='')=>`<div class="box-hb${v<.85?' low':''} ${cls}"><i style="width:${(v*100).toFixed(1)}%"></i></div>`;
  function boxRing(d){
   if(!d.duels.length)return '';
+  if(d.status!=='finished')loadExtra(d.day);annot(d);
   const me=meId(),def=d.duels.find(x=>x.a.id===me||x.b.id===me)||d.duels[0];
   const x=d.duels.find(y=>duelKey(y)===pick)||def,a=x.a,b=x.b,pa=pose(d,x,a,b),pb=pose(d,x,b,a);
   let crowd='';for(let i=0;i<64;i++)crowd+=`<i style="left:${(i*37)%100}%;top:${8+((i*53)%96)}px;background:hsl(${i*47%360} 30% ${25+i%3*8}%)"></i>`;
   const ko=ended(d)&&x.winner&&x.winner!=='draw',draw=ended(d)&&x.winner==='draw';
   const fig=(m,c,p)=>`<div class="box-f ${c} ${p}${!ended(d)&&m.live?' live':''}">${boxer(m,c,p)}</div>`;
-  const left=m=>(m.players||[]).filter(p=>p.playing||p.state==='open'||p.state==='wait');
+  const left=m=>(m.players||[]).filter(p=>p.playing||(p.state==='open'||p.state==='wait')&&!p.why);
   const stBtn=(m,c)=>left(m).length&&!ended(d)?`<button type="button" class="box-st box-rest${rest===c?' on':''}" data-arena-rest="${c}">${side(m)} ${rest===c?'▴':'▾'}</button>`:`<span class="box-st">${side(m)}</span>`;
   // Antippen der Punkte (Kevin-Wunsch 1.11.): ganze Aufstellung; Antippen von „im Kampf“: nur die verbliebenen Spieler.
   const bigBtn=(m,c)=>m.players?`<button type="button" class="box-big box-lu${rest===c+'*'?' on':''}" data-arena-rest="${c}*" title="Aufstellung anzeigen">${fmt(m.points)}</button>`:`<span class="box-big">${fmt(m.points)}</span>`;

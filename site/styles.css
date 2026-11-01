@@ -1211,6 +1211,7 @@ body.zr-on .mobilenav{display:none}
 .box-restlist{max-width:640px;margin:6px 0 0;padding:8px;border:2px solid #000;border-radius:8px;background:#14102a;font-size:13px}
 .box-restlist.a{border-left:4px solid #d6332a}.box-restlist.b{border-left:4px solid #2f6fe0}
 .box-restlist .arena-players{margin-top:6px}
+.arena-ban{color:var(--bad);font-weight:700}.arena-players li.arena-out{opacity:.6}
 .box-vs{font:900 18px ui-monospace,Menlo,Consolas,monospace;color:#fff;text-shadow:2px 2px 0 #c0392b;text-align:center;padding-top:4px}
 .box-vs small{display:block;font-size:10px;color:var(--gold);text-shadow:none;white-space:nowrap}
 .box-hb{position:relative;height:12px;width:100%;background:#3a0d12;border:2px solid #000;box-shadow:0 0 0 1px #fff3}

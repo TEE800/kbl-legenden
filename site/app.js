@@ -894,6 +894,7 @@ function luBans(day){
  }).catch(()=>{luBanCache.delete(prev);return null;}));
  return luBanCache.get(prev);
 }
+window.kblLuBans=luBans; // auch für die Arena (gesperrte Spieler im Boxring, Kevin-Wunsch 1.11.)
 async function luBansRender(day){
  const box=$('#snapshotBans');if(!box)return;box.innerHTML='';
  const b=await luBans(day);if(day!==snapshotDayValue()||!b?.map.size)return;

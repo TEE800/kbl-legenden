@@ -376,7 +376,7 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-01T16:08:57.430Z",
+      "at": "2026-11-01T16:23:23.807Z",
       "points": 183,
       "players": [
         {
@@ -391,6 +391,12 @@
           "name": "Pieper",
           "team": "Bremen",
           "points": 183
+        },
+        {
+          "id": "2358",
+          "name": "Krauß",
+          "team": "Köln",
+          "points": 156
         },
         {
           "id": "6292",
@@ -439,18 +445,6 @@
           "name": "Olise",
           "team": "Bayern",
           "points": 126
-        },
-        {
-          "id": "7224",
-          "name": "Castello Jr.",
-          "team": "Leipzig",
-          "points": 125
-        },
-        {
-          "id": "2084",
-          "name": "Lienhart",
-          "team": "Freiburg",
-          "points": 125
         }
       ],
       "checked": 470,
