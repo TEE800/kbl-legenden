@@ -211,6 +211,10 @@ try {
   try {
     const FACES = path.join(SITE, 'faces'); fs.mkdirSync(FACES, { recursive: true });
     const us = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8')).us || [];
+    // Arena-Boxring (pixelt die Profilbilder im Canvas): auch die Arena-Manager, die nicht in der Liga sind
+    for (const f of fs.readdirSync(DATA).filter(f => /^arena(_\d+)?\.json$/.test(f))) {
+      try { const a = JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); for (const m of [...(a.duels || []).flatMap(x => [x.a, x.b]), ...(a.table || [])]) if (m?.img) us.push({ uim: m.img }); } catch {}
+    }
     let neu = 0;
     for (const u of us) {
       const m = /^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(u.uim || ''));
