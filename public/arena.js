@@ -32,23 +32,10 @@
  function pairings(d){
   return `<div class="arena-pairs">${d.duels.map(x=>`<div class="arena-pair"><span class="arena-side a">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span><span class="arena-vs">vs</span><span class="arena-side b"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span></div>`).join('')}</div>`;
  }
- // Elfen je Duell: eingeklappt (Feste Regel), je Duell noch einmal aufklappbar.
- function lineups(d){
-  return `<details class="acc-group arena-lineups"><summary>Aufstellungen der Duelle</summary><div class="acc-sub">${d.duels.map((x,i)=>{
-   const lead=x.winner,cls=m=>lead&&lead!=='draw'?(lead===m.id?'win':'lose'):'';
-   return `<details class="acc-group arena-duel" data-arena-duel="${i}"><summary><span class="arena-side a ${cls(x.a)}">${face(x.a,'arena-ava')}<span class="arena-name">${esc(x.a.name)}</span></span><span class="arena-score"><b class="${cls(x.a)}">${fmt(x.a.points)}</b><i>:</i><b class="${cls(x.b)}">${fmt(x.b.points)}</b></span><span class="arena-side b ${cls(x.b)}"><span class="arena-name">${esc(x.b.name)}</span>${face(x.b,'arena-ava')}</span></summary><div class="acc-sub">${duelDetail(d,x)}</div></details>`;
-  }).join('')}</div></details>`;
- }
  function playerList(m){
   if(!m.players)return '<p class="muted tiny">Keine Aufstellung.</p>';
   const K=T();
   return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.playing?'live':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.state==='open'?'<small class="muted">noch nicht</small>':p.playing?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
- }
- function duelDetail(d,x){
-  if(d.status==='upcoming')return `<p class="muted">Die Aufstellungen von ${esc(x.a.name)} und ${esc(x.b.name)} sind bis zum Anpfiff geheim.</p>`;
-  const extra=m=>m.open||m.live?`<small class="muted">${m.live?`${m.live} spielen gerade`:''}${m.live&&m.open?', ':''}${m.open?`${m.open} noch nicht gespielt`:''}</small>`:'';
-  const check=m=>d.status==='finished'&&m.calc!=null&&m.kbPoints!=null&&m.points===m.kbPoints&&m.calc!==m.kbPoints?`<small class="muted">Kickbase: ${fmt(m.kbPoints)}, Summe der Spieler: ${fmt(m.calc)}</small>`:'';
-  return `<div class="arena-cols">${[x.a,x.b].map(m=>`<div class="arena-col"><div class="arena-colhead">${face(m,'arena-ava')}<b>${esc(m.name)}</b><span class="arena-colpts">${fmt(m.points)}</span></div>${extra(m)}${check(m)}${playerList(m)}</div>`).join('')}</div>`;
  }
  // Boxkampf (Kevin-Wunsch 1.11., ersetzt das Duell-Rennen): oben ein großer Ring mit einem Duell (zuerst das eigene, Antippen
  // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Pixel-Figuren wie im MVP-Rennen, Kopf = verpixeltes Profilbild.
@@ -130,7 +117,7 @@
   const raceShut=!raceOpen&&!!root.querySelector('details.arena-race:not([open])');raceOpen=false;
   root.className='';
   const started=d.status!=='upcoming'&&!d.lineupsMissing;
-  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>🥊 Arena</summary><div class="acc-sub">${boxRing(d)}<p class="muted tiny">Antippen einer Karte holt das Duell in den Ring. Der Führende hat den vollen Lebensbalken, beim anderen zeigt er seine Punkte im Verhältnis zum Gegner. „Im Kampf“ = Spieler im laufenden Spiel. Nach dem Spieltag jubelt der Sieger, der Verlierer liegt K.O.</p></div></details>`+lineups(d))+table(d);
+  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>🥊 Arena</summary><div class="acc-sub">${boxRing(d)}<p class="muted tiny">Antippen einer Karte holt das Duell in den Ring. Der Führende hat den vollen Lebensbalken, beim anderen zeigt er seine Punkte im Verhältnis zum Gegner. „Im Kampf“ = Spieler im laufenden Spiel. Nach dem Spieltag jubelt der Sieger, der Verlierer liegt K.O.</p></div></details>`)+table(d);
   root.querySelectorAll('details.acc-group:not(.arena-race)').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
  async function loadDay(day){
