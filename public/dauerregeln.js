@@ -1,5 +1,6 @@
 // Dauerregeln (Kevin-Wunsch 31.10.): Regeln, die dauerhaft überwacht werden, z. B. FV – Frühverkauf.
-// Anzeige in der BumsParade unter den Aufgaben (#dauerBox), eingeklappt. Daten: /api/dauerregeln/:day (Server rechnet alles). Abgerechnete Spieltage: Verstöße stehen als Aufgaben in der BumsParade.
+// Anzeige in der BumsParade ohne eigenen Kasten (Kevin 1.11.): im LIVE-Kasten und im Aufgaben-Kasten des Spieltags (Platzhalter [data-dauer]).
+// Daten: /api/dauerregeln/:day (Server rechnet alles). Abgerechnete Spieltage: Verstöße stehen als Aufgaben (FV) in der BumsParade.
 // Neue Dauerregeln brauchen hier nichts Neues: Jeder Verstoß bringt Text, Zustand und Strafen mit.
 (()=>{
  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -52,30 +53,31 @@
    await window.kblDauerLoad(day,true);window.kblAccReload?.();
   }catch(err){alert(err.message);b.disabled=false;}
  });
- function groupHtml(day,d,live){
-  if(d.error)return `<details class="acc-group dr-group" data-day="${day}${live?'L':''}"><summary>🛡️ Dauerregeln · Spieltag ${day}${live?' LIVE':''}</summary><div class="acc-sub"><p class="muted">Nicht prüfbar: ${esc(d.error)}</p></div></details>`;
-  // Ist der Spieltag abgerechnet, stehen Verstöße als Aufgaben (FV) in der BumsParade, hier nicht doppelt.
-  const vs=d.accReady?[]:(d.violations||[]),n=vs.filter(v=>v.state==='verstoss').length,maybe=vs.length-n;
-  const nAll=d.accReady?(d.violations||[]).length:n;
-  const pill=!d.started?'noch nicht angepfiffen':nAll?`${nAll} Verstoß${nAll===1?'':'e'}`:n?`${n} Verstoß${n===1?'':'e'}`:maybe?`${maybe} zu prüfen`:'alles sauber';
-  if(d.rules?.length&&!d.rules.some(r=>r.active!==false))return `<details class="acc-group dr-group" data-day="${day}${live?'L':''}"><summary>🛡️ Dauerregeln · Spieltag ${day} <span class="pill">noch nicht gültig</span></summary><div class="acc-sub"><p class="muted">${d.rules.map(r=>`${esc(r.code)} ${esc(r.name)} gilt ab Spieltag ${esc(r.ab)}.`).join(' ')}</p></div></details>`;
-  const rules=(d.rules||[]).filter(r=>r.active!==false).map(r=>`<span class="bums-rule bums-r-${esc(r.code)}" data-rule="${esc(r.code)}" role="button" tabindex="0">${esc(r.code)}</span> ${esc(r.name)}`).join(' · ');
-  return `<details class="acc-group dr-group" data-day="${day}${live?'L':''}"><summary>🛡️ Dauerregeln · Spieltag ${day}${live?' LIVE':''} <span class="pill${nAll?' dr-pill-bad':''}">${esc(pill)}</span></summary><div class="acc-sub">
-   <p class="muted tiny">Überwacht: ${rules}</p>${startHtml(d.start)}${live?'':adminHtml(day,d)}
-   ${!d.started?'':d.accReady?`<p class="muted tiny">${(d.violations||[]).length?`${d.violations.length} Verstoß${d.violations.length===1?'':'e'}: steht oben bei den Aufgaben als FV und zählt als Bumsung.`:'✓ Niemand hat einen aufgestellten Spieler zu früh verkauft.'}</p>`:vs.length?vs.map(vHtml).join(''):'<p>✓ Bisher hat niemand einen aufgestellten Spieler zu früh verkauft.</p>'}
-   ${(d.failures||[]).length?`<p class="error tiny">Nicht vollständig geprüft: ${esc(d.failures.join('; '))}</p>`:''}</div></details>`;
+ // Kevin-Wunsch 1.11.: keine eigenen Klappkästen mehr. Die Dauerregeln stehen mit in der BumsParade: beim laufenden Spieltag
+ // im LIVE-Kasten (vorläufig), beim abgeschlossenen Spieltag im Aufgaben-Kasten. Ist er abgerechnet, sind Verstöße dort
+ // schon Aufgaben (FV), hier dann nichts doppelt. Gilt eine Regel noch nicht (ab Spieltag X), steht hier nichts.
+ function partHtml(day,d,live,closing){
+  if(!d)return '';
+  if(d.error)return `<div class="dr-part"><p class="muted tiny">🛡️ Dauerregeln für Spieltag ${day} nicht prüfbar: ${esc(d.error)}</p></div>`;
+  const act=(d.rules||[]).filter(r=>r.active!==false);
+  if(d.rules?.length&&!act.length)return '';
+  const fails=(d.failures||[]).length?`<p class="error tiny">Nicht vollständig geprüft: ${esc(d.failures.join('; '))}</p>`:'';
+  const admin=live&&!closing?'':adminHtml(day,d); // LIVE: Start-Knopf erst, wenn alle Spiele vorbei sind
+  if(d.accReady)return fails||admin?`<div class="dr-part">${admin}${fails}</div>`:'';
+  const vs=d.violations||[],n=vs.filter(v=>v.state==='verstoss').length,maybe=vs.length-n;
+  const rules=act.map(r=>`<span class="bums-rule bums-r-${esc(r.code)}" data-rule="${esc(r.code)}" role="button" tabindex="0" title="Regel ansehen">${esc(r.code)}</span> ${esc(r.name)}`).join(' · ');
+  const head=!d.started?'noch nicht angepfiffen':n?`${n} Verstoß${n===1?'':'e'}${live?' (vorläufig)':''}`:maybe?`${maybe} zu prüfen`:'alles sauber';
+  return `<div class="dr-part"><p class="dr-part-head">🛡️ <b>Dauerregeln</b> · ${rules} <span class="dr-state ${n?'dr-bad':maybe||!d.started?'dr-wait':'dr-ok'}">${esc(head)}</span></p>${startHtml(d.start)}${admin}
+   ${!d.started?'':vs.length?vs.map(vHtml).join(''):'<p class="muted tiny">✓ Bisher hat niemand einen aufgestellten Spieler zu früh verkauft.</p>'}${fails}</div>`;
  }
  function render(){
-  const el=document.getElementById('dauerBox');if(!el)return;
-  const parts=[];
-  if(state.live&&state.live.data&&state.live.day!==state.sel?.day)parts.push(groupHtml(state.live.day,state.live.data,true));
-  if(state.sel?.data)parts.push(groupHtml(state.sel.day,state.sel.data,false));
-  // Neu zeichnen ohne Zuklappen (nur innerhalb des offenen Reiters; beim Öffnen des Reiters ist alles zu).
-  const wasOpen=new Set([...el.querySelectorAll('details.dr-group[open]')].map(x=>x.dataset.day));
-  el.innerHTML=parts.join('');
-  el.querySelectorAll('details.dr-group').forEach(x=>{if(wasOpen.has(x.dataset.day))x.open=true;});
-  window.kblFillMgrFaces?.(el);
+  const put=(slot,html)=>{const el=document.querySelector(`[data-dauer="${slot}"]`);if(!el)return;el.innerHTML=html;window.kblFillMgrFaces?.(el);};
+  const same=state.live&&state.sel&&state.live.day===state.sel.day;
+  put('live',state.live&&!same?partHtml(state.live.day,state.live.data,true,state.live.closing):'');
+  put('sel',state.sel?.data?partHtml(state.sel.day,state.sel.data,false):'');
  }
+ // Nach jedem Neuzeichnen der Kästen (app.js) die Dauerregeln wieder einsetzen.
+ window.kblDauerRender=render;
  async function load(day,fresh=false){
   try{const r=await fetch(`/api/dauerregeln/${day}${fresh?'?neu=1':''}`,{cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)return {error:d.error||`HTTP ${r.status}`};return d;}
   catch(e){return {error:e.message};}
@@ -83,5 +85,5 @@
  // Ausgewählter Spieltag der BumsParade (aufgerufen von centerLoadAccounting in app.js).
  window.kblDauerLoad=async(day,fresh=false)=>{if(!day)return;if(!fresh)state.sel={day,data:null};const data=await load(day,fresh);if(state.sel?.day===day){state.sel.data=data;render();}};
  // Laufender Spieltag (aufgerufen von accLiveLoad in app.js): Verkäufe während des Spieltags sofort sehen.
- window.kblDauerLive=async day=>{if(!day){if(state.live){state.live=null;render();}return;}const data=await load(day);state.live={day,data};render();};
+ window.kblDauerLive=async(day,closing)=>{if(!day){if(state.live){state.live=null;render();}return;}const data=await load(day);state.live={day,data,closing:!!closing};render();};
 })();
