@@ -124,7 +124,7 @@
   const raceShut=!raceOpen&&!!root.querySelector('details.arena-race:not([open])');raceOpen=false;
   root.className='';
   const started=d.status!=='upcoming'&&!d.lineupsMissing;
-  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>🥊 Boxring</summary><div class="acc-sub">${boxRing(d)}<p class="muted tiny">Antippen einer Karte holt das Duell in den Ring. Der Führende hat den vollen Lebensbalken, beim anderen zeigt er seine Punkte im Verhältnis zum Gegner. „Im Kampf“ = Spieler im laufenden Spiel. Nach dem Spieltag jubelt der Sieger, der Verlierer liegt K.O.</p></div></details>`+lineups(d))+table(d);
+  root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>🥊 Arena</summary><div class="acc-sub">${boxRing(d)}<p class="muted tiny">Antippen einer Karte holt das Duell in den Ring. Der Führende hat den vollen Lebensbalken, beim anderen zeigt er seine Punkte im Verhältnis zum Gegner. „Im Kampf“ = Spieler im laufenden Spiel. Nach dem Spieltag jubelt der Sieger, der Verlierer liegt K.O.</p></div></details>`+lineups(d))+table(d);
   root.querySelectorAll('details.acc-group:not(.arena-race)').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
  async function loadDay(day){
