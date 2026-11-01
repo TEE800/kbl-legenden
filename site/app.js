@@ -1025,7 +1025,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  const day=$('#adminDay'),button=$('#accountingRun'),probeButton=$('#accountingProbe'),status=$('#accountingStatus'),result=$('#accountingResults'),coverage=$('#accountingCoverage'),pick=$('#accountingDay');
  if(!day||!button)return;
  const opts=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
- day.innerHTML=opts;if(pick)pick.innerHTML=opts;
+ day.innerHTML=opts;
  const safe=x=>escapeHtml(String(x??''));
  const npcNames=new Map();
  const playerLabel=p=>safe(p.playerName||`Spieler-ID ${p.playerId}`);
@@ -1314,10 +1314,57 @@ async function centerLoadAccounting(day,force=false){
  Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();window.kblDauerLoad?.(day);
  try{
   const [data,checks]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
+  if(centerAccounting.day!==day)return;
   centerAccounting.data=data;centerAccounting.checks=checks.checks||{};centerAccounting.state='done';if(data?.ready)window.kblAccShow?.(data);
+  // Abgerechnet? Nur beim Laden festgestellt, nicht bei jedem Haken: So verschwindet der Spieltag nicht mitten in der BumsParade.
+  const p=data?.ready?accProgressOf(data,centerAccounting.checks):null;
+  accSettledAt[day]=!!(p&&data.complete&&!data.pendingCorrections&&p.done>=p.total&&!p.unclear);
  }
- catch(e){centerAccounting.error=e.message;centerAccounting.state='error';}
- renderAccTodo();
+ catch(e){if(centerAccounting.day!==day)return;centerAccounting.error=e.message;centerAccounting.state='error';}
+ renderAccTodo();accDaysRender();
+}
+// BumsParade und BumsArchiv (Kevin-Wunsch 1.11.): Die BumsParade zeigt nur den neuesten abgeschlossenen Spieltag, solange er
+// nicht abgerechnet ist (wie „✓ abgerechnet“: alle Aufgaben erledigt, nichts unklar, keine offenen Kickbase-Korrekturen).
+// Alles andere steht im Reiter „BumsArchiv“. Beide nutzen denselben Block (Auswahl, Aufgaben, Zeremonie), er wird umgehängt.
+function accProgressOf(d,checks){
+ const todos=(d.todos||[]).filter(t=>!checks?.[t.key]?.removed);
+ return {done:todos.filter(t=>t.check?.state==='done'||checks?.[t.key]?.done).length,total:todos.length,unclear:(d.autoEvents?.error?[]:(d.autoEvents?.unclear||[])).filter(u=>!checks?.[unclearKey(u)]?.target).length};
+}
+const accSettledAt={};
+let accMode='parade';
+function accDaySettled(day){
+ if(bumsDays[day]?.manual)return true;
+ if(day in accSettledAt)return accSettledAt[day];
+ const p=bumsDays[day]?.progress;return p?p.done>=p.total&&!p.unclear:null;
+}
+// Spieltag der BumsParade (null = keine offen). Unbekannt zählt als offen, bis die Abrechnung geladen ist.
+function accParadeDay(){
+ const L=historyData.filter(h=>h.status==='finished').map(h=>Number(h.day)).sort((a,b)=>a-b).at(-1);
+ return L!=null&&accDaySettled(L)!==true?L:null;
+}
+function accEnter(mode){
+ accMode=mode;accTodoOpen=false;
+ const block=$('#accBlock'),slot=$(mode==='archiv'?'#archivSlot':'#accSlot');
+ if(block&&slot&&block.parentElement!==slot)slot.appendChild(block);
+ accDaysRender();
+}
+function accDaysRender(){
+ const sel=$('#accountingDay'),block=$('#accBlock');if(!sel||!block)return;
+ const fin=historyData.filter(h=>h.status==='finished').map(h=>Number(h.day)).sort((a,b)=>a-b);
+ const open=accParadeDay(),arch=accMode==='archiv';
+ const days=arch?fin.filter(d=>d!==open).reverse():open!=null?[open]:[];
+ const cur=centerAccounting.day;
+ if(sel.dataset.days!==days.join()){sel.innerHTML=days.map(d=>`<option value="${d}">Spieltag ${d}</option>`).join('');sel.dataset.days=days.join();}
+ try{kblAccDayLabels(bumsDays);}catch{}
+ const pick=$('#accDayPick');if(pick)pick.hidden=!arch||!days.length;
+ block.hidden=!days.length;
+ const pe=$('#accEmpty'),ae=$('#archivEmpty');
+ if(pe)pe.innerHTML=!arch&&fin.length&&!days.length?`<p class="muted">${$('#accLive')?.childElementCount?'':'Gerade ist keine BumsParade offen. '}Spieltag ${fin.at(-1)} ist abgerechnet und steht im BumsArchiv.</p><p><a href="#archiv" class="ghost center-link">Zum BumsArchiv →</a></p>`:'';
+ if(ae)ae.innerHTML=arch&&fin.length&&!days.length?'<p class="muted">Noch kein Spieltag abgerechnet. Der laufende steht in der BumsParade.</p>':'';
+ if(!days.length)return;
+ const target=days.includes(cur)?cur:days[0];
+ if(String(sel.value)!==String(target))sel.value=String(target);
+ if(target!==cur&&!centerAccounting.probe)centerLoadAccounting(target);
 }
 window.kblAccReload=()=>{if(centerAccounting.day)centerLoadAccounting(centerAccounting.day,true);};
 function centerTodoHtml(){
@@ -1461,8 +1508,9 @@ function renderAccTodo(){
  // Gesamtzahl der Bumsungen (Kevin-Wunsch), gleiche Zählung wie in der BumsTabelle.
  const nBums=d&&!a.probe?Object.values(bumsCounts(d,a.checks||{})).reduce((n,m)=>n+m.count,0):0;
  const bumsTxt=nBums?` · ${nBums} Bumsung${nBums===1?'':'en'}`:'';
- el.innerHTML=`<details class="center-box acc-todo-box"${accTodoOpen?' open':''}><summary class="center-boxhead"><strong>Spieltag ${a.day} · ${sum}${bumsTxt}</strong><span class="pill">${a.probe?'PROBELAUF · nur Test':'vorläufig'}</span></summary>${centerTodoHtml()}</details>`;
+ el.innerHTML=`<details class="center-box acc-todo-box"${accTodoOpen?' open':''}><summary class="center-boxhead"><strong>Spieltag ${a.day} · ${sum}${bumsTxt}</strong><span class="pill">${a.probe?'PROBELAUF · nur Test':accDaySettled(a.day)?'✓ abgerechnet':'vorläufig'}</span></summary>${centerTodoHtml()}${a.probe?'':'<div class="dr-slot" data-dauer="sel"></div>'}</details>`;
  el.querySelector('details').addEventListener('toggle',e=>{accTodoOpen=e.target.open;});
+ window.kblDauerRender?.();
 }
 let accTodoOpen=false;
 // Weitere Fakten zum letzten abgeschlossenen Spieltag (nur aus der geladenen Historie).
@@ -1547,7 +1595,7 @@ function renderCenter(){
    const short=list=>list.length>2?`${names(list.slice(0,2))} +${list.length-2}`:names(list);
    moveCard=card('BEWEGUNG IN DER TABELLE',ups.length?`▲ ${short(ups)}`:'Keine',`${ups.length?`+${up} Plätze`:'Niemand ist geklettert'}${downs.length?` · <span class="rank-down">▼ ${names(downs)} (−${-down})</span>`:''}`);
   }
-  html+=`<div class="center-head"><h3>Spieltag ${last.day} · abgeschlossen</h3><a href="#accounting" class="ghost center-link">Zur BumsParade →</a></div>`;
+  html+=`<div class="center-head"><h3>Spieltag ${last.day} · abgeschlossen</h3>${accDaySettled(last.day)?'<a href="#archiv" class="ghost center-link">Zum BumsArchiv →</a>':'<a href="#accounting" class="ghost center-link">Zur BumsParade →</a>'}</div>`;
   html+=`<div class="rank-cards">${
    card('SPIELTAGSSIEGER',winners.length?names(winners):'–',best===null?'':`${fmt(best)} Punkte`)}${
    card('LETZTER',losers.length?names(losers):'–',worst===null?'':`${fmt(worst)} Punkte${avg!==null?` · Schnitt ${fmt(Math.round(avg))}`:''}`)}${
@@ -1557,7 +1605,7 @@ function renderCenter(){
  }
  el.innerHTML=html;
  if(last)benchLoad(last.day);
- renderAccTodo();
+ renderAccTodo();accDaysRender();
  if(last&&centerAccounting.day==null)centerLoadAccounting(last.day);
 }
 document.addEventListener('change',async e=>{
@@ -1633,8 +1681,7 @@ function kblAccDayLabels(days){
 }
 function bumsSave(){
  const a=centerAccounting;if(a.probe||a.state!=='done'||!a.data?.ready||!a.data?.complete||a.data?.pendingCorrections||bumsDays[a.day]?.manual)return;
- const managers=bumsCounts(a.data,a.checks),todos=(a.data.todos||[]).filter(t=>!a.checks?.[t.key]?.removed);
- const progress={done:todos.filter(t=>t.check?.state==='done'||a.checks?.[t.key]?.done).length,total:todos.length,unclear:(a.data.autoEvents?.error?[]:(a.data.autoEvents?.unclear||[])).filter(u=>!a.checks?.[unclearKey(u)]?.target).length};
+ const managers=bumsCounts(a.data,a.checks),progress=accProgressOf(a.data,a.checks);
  const sig=a.day+JSON.stringify(managers)+JSON.stringify(progress);if(sig===bumsLastSaved)return;bumsLastSaved=sig;
  // Online (nur lesend): nichts speichern, aber Spieltag-Auswahl und BumsTabelle mit den neuen Haken neu rechnen (Kevin: stand „1 offen“ trotz 20 von 20).
  if(window.KBL_STATIC){bumsDays[a.day]={...(bumsDays[a.day]||{}),managers,progress,derived:true};bumsDerived.delete(a.day);try{kblAccDayLabels(bumsDays);}catch{}try{renderBumsTabelle();}catch{}return;}
@@ -1702,10 +1749,10 @@ function bumsDaysHtml(days,inHalf,RN){
   const src=D.manual?'von Hand nachgetragen':'automatisch aus der BumsParade';
   const body=ms.length?ms.map(v=>{const mv=(v.moves||[]);
     return `<div class="bd-man"><div class="bd-head"><b>${mgrLink(v.name)}</b> <span class="bums-num-s">${v.count}×</span> ${Object.entries(v.rules||{}).map(([k,n])=>chip(k)+(n>1?`<b class="muted"> ×${n}</b>`:'')).join(' ')}</div>${mv.length?`<ul>${mv.map(x=>`<li class="bums-mv-${x.d==='i'?'i':'o'}"><b>${DIRL[x.d]||'•'}</b> ${chip(x.r)} ${esc(x.t||'')}</li>`).join('')}</ul>`:`<p class="muted tiny">${D.manual?'Von Hand eingetragen, ohne Angabe wer an wen.':'Keine Einzelheiten gespeichert.'}</p>`}</div>`;}).join(''):'<p class="muted">An diesem Spieltag gab es keine Bumsung.</p>';
-  return `<details class="bd-day"><summary><b>ST ${d}</b><span>${sum} Bumsung${sum===1?'':'en'}</span><span class="bd-rules">${Object.keys(rules).map(k=>`<span class="bums-rule bums-r-${esc(k)}">${esc(k)}</span>`).join('')}</span><span class="muted tiny">${src}${when?' · '+esc(when):''}</span></summary><div class="bd-body">${body}${D.manual?'':`<p><button type="button" class="ghost bd-open" data-bums-day="${d}">In der BumsParade öffnen</button></p>`}</div></details>`;}).join('');
+  return `<details class="bd-day"><summary><b>ST ${d}</b><span>${sum} Bumsung${sum===1?'':'en'}</span><span class="bd-rules">${Object.keys(rules).map(k=>`<span class="bums-rule bums-r-${esc(k)}">${esc(k)}</span>`).join('')}</span><span class="muted tiny">${src}${when?' · '+esc(when):''}</span></summary><div class="bd-body">${body}${D.manual?'':`<p><button type="button" class="ghost bd-open" data-bums-day="${d}">Abrechnung öffnen</button></p>`}</div></details>`;}).join('');
  return `<details class="hall-section prof-sec bums-statsbox" id="bumsDays"${bumsDaysOpen?' open':''}><summary><h4>🗓️ SPIELTAGE</h4></summary><p class="muted tiny">Jeder Spieltag einzeln zum Nachvollziehen: wer betroffen war, nach welcher Regel und wer an wen abgegeben hat. ↑ = abgegeben (bumst), ↓ = bekommen (gebumst).</p>${items||'<p class="muted">Noch keine Spieltage erfasst.</p>'}</details>`;
 }
-document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b)return;const d=b.dataset.bumsDay;location.hash='#accounting';setTimeout(()=>{const s=$('#accountingDay');if(s&&[...s.options].some(o=>o.value===d)){s.value=d;s.dispatchEvent(new Event('change',{bubbles:true}));}},150);});
+document.addEventListener('click',e=>{const b=e.target.closest('.bd-open');if(!b)return;const d=b.dataset.bumsDay;location.hash=Number(d)===accParadeDay()?'#accounting':'#archiv';setTimeout(()=>{const s=$('#accountingDay');if(s&&[...s.options].some(o=>o.value===d)){s.value=d;s.dispatchEvent(new Event('change',{bubbles:true}));}},150);});
 // Online-Seite (nur lesend, Kevin-Meldung ST 1 „bitte einmal öffnen“): Die gespeicherte BumsTabelle kommt vom PC und kann
 // älter sein als der heutige Rechenstand. Darum rechnet die Seite je abgeschlossenem Spieltag aus der exportierten Abrechnung
 // und den Haken dasselbe nach wie bumsSave am PC. Von Hand nachgetragene Spieltage bleiben unverändert.
@@ -1716,16 +1763,15 @@ async function bumsStaticDerive(days){
   if(!bumsDerived.has(day))bumsDerived.set(day,(async()=>{
    const [d,c]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
    if(!d?.ready||!d?.complete||d?.pendingCorrections)return null;
-   const checks=c.checks||{},todos=(d.todos||[]).filter(t=>!checks[t.key]?.removed);
-   const progress={done:todos.filter(t=>t.check?.state==='done'||checks[t.key]?.done).length,total:todos.length,unclear:(d.autoEvents?.error?[]:(d.autoEvents?.unclear||[])).filter(u=>!checks[unclearKey(u)]?.target).length};
-   return {managers:bumsCounts(d,checks),progress};})().catch(()=>null));
+   const checks=c.checks||{};
+   return {managers:bumsCounts(d,checks),progress:accProgressOf(d,checks)};})().catch(()=>null));
   const r=await bumsDerived.get(day);if(r)days[day]={...(days[day]||{}),...r,derived:true};}));
 }
 async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
  if(window.KBL_STATIC)try{await bumsStaticDerive(days);}catch{}
- try{kblAccDayLabels(days);}catch{}
+ try{kblAccDayLabels(days);}catch{}try{accDaysRender();}catch{}
  try{showProfile();}catch{}try{renderPreview();}catch{}
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day);
  const ref=Math.max(0,...finished,...Object.keys(days).map(Number));
@@ -1854,7 +1900,8 @@ window.kblCollapseView=view=>{
  const root=document.querySelector(`.kbl-view[data-view="${view}"]`);if(!root)return;
  root.querySelectorAll('details[open]:not(.kbl-keep-open)').forEach(d=>{d.open=false;});
  root.querySelectorAll('.kbl-foldhead').forEach(h=>{h.parentElement.classList.add('kbl-folded');h.setAttribute('aria-expanded','false');});
- if(view==='accounting'){accTodoOpen=false;accLiveOpen=false;accRadarOpen=true;accLiveLoad();}
+ if(view==='accounting'){accLiveOpen=false;accRadarOpen=true;accEnter('parade');accLiveLoad();}
+ if(view==='archiv')accEnter('archiv');
  if(view==='profiles')profOpen.clear();
  if(view==='penalties'){bumsDaysOpen=false;bumsStatsOpen=false;bumsTabOpen=false;bumsPairOpen=false;}
 };
@@ -2002,8 +2049,8 @@ let accLive=null,accLiveOpen=false,accLiveBusy=false,accRadarOpen=true,accRadarP
 async function accLiveLoad(){
  const el=$('#accLive');if(!el||accLiveBusy)return;
  let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
- const day=kblLiveDay(st)?.day;
- window.kblDauerLive?.(day||null);
+ const ld=kblLiveDay(st),day=ld?.day;
+ window.kblDauerLive?.(day||null,ld?.closing);
  if(!day){accLive=null;el.innerHTML='';return;}
  accLiveBusy=true;if(!accLive||accLive.day!==day){accLive={day,state:'loading'};accLiveRender();}
  try{accLive={day,state:'done',data:await api(`/api/rule-live/${day}`)};}
@@ -2039,12 +2086,13 @@ function accLiveRender(){
   body=`<p class="muted tiny" style="margin:0 0 10px"><b>Vorläufig:</b> So sähe die BumsParade aus, wenn der Spieltag jetzt vorbei wäre. Punkte, Karten und Elfmeter können sich bis zum Abpfiff (und danach) noch ändern. Stand ${safe(when)} Uhr · ${d.closing?'alle Spiele beendet':`${d.running||0} Spieler im Spiel · ${d.open||0} noch nicht angepfiffen`}.</p>`+
    (d.notes||[]).map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+
    (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${mgrLink(g.name,mgrName(g.name,'',mid))}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
-   '<p class="muted tiny">Schnapszahlen (BD) werden erst nach dem jeweiligen Spielende geprüft, danach alle 30 Minuten (wegen Korrekturen). Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p>';
+   '<p class="muted tiny">Schnapszahlen (BD) werden erst nach dem jeweiligen Spielende geprüft, danach alle 30 Minuten (wegen Korrekturen). Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p><div class="dr-slot" data-dauer="live"></div>';
  }else body=`<p class="muted">${safe(d?.message||'')}</p>`;
  el.innerHTML=(a.state==='done'&&d?.live?accRadarHtml(d):'')+`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`;
  // Spielerbilder und Vereine für die Drehtür-Kandidaten (wie im MVP-Tipp), einmal laden und neu zeichnen.
  if(a.state==='done'&&d?.live&&!accRadarPlayers){accRadarPlayers=new Map();api('/api/mvp-tipps/players').then(r=>{accRadarPlayers=new Map((r.players||[]).map(p=>[String(p.id),p]));accLiveRender();}).catch(()=>{});}
- el.querySelector('details').addEventListener('toggle',e=>{accLiveOpen=e.target.open;});
+ el.querySelector('.acc-live-box')?.addEventListener('toggle',e=>{accLiveOpen=e.target.open;});
+ window.kblDauerRender?.();
  el.querySelector('.bradar')?.addEventListener('toggle',e=>{accRadarOpen=e.target.open;});
 }
 // Bums-Radar (Kevin-Wunsch): provokante Bildübersicht zum LIVE-Stand, wer gerade wie gebumst würde. Steht ganz oben und ist
