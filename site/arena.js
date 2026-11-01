@@ -24,7 +24,8 @@
  function stateText(d){
   if(d.status==='upcoming')return `<p class="arena-note">Anpfiff ${esc(when(d.firstKickoffUTC))} · <b data-arena-left="${esc(d.firstKickoffUTC||'')}">${esc(left(d.firstKickoffUTC))}</b>. Die Paarungen stehen schon, die Aufstellungen werden erst mit dem Anpfiff sichtbar.</p>`;
   const src=d.source==='datei'&&d.dataAt?` Paarungen und Aufstellungen: Stand Anpfiff ${esc(when(d.firstKickoffUTC||d.dataAt))}.`:'';
-  if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}. Sie kommen mit dem nächsten Abruf über ein Arena-Konto (T800 am PC).${src}</p>`;
+  // Ohne Aufstellungen kein Rennen (Kevin 1.11.: sonst stehen alle ohne Punkte am Start). Grund: Nur die App am PC (T800) darf die Arena lesen.
+  if(d.lineupsMissing)return `<p class="arena-note error">Das fehlt: die Aufstellungen von Spieltag ${d.day}, darum noch kein Duell-Rennen. Nur die App am PC (T800) darf die Arena lesen${d.dataAt?`, ihr letzter Abruf war ${esc(when(d.dataAt))}`:''}. Sobald sie am PC läuft (start.bat), kommen Aufstellungen und Punkte nach wenigen Minuten.</p>`;
   return src?`<p class="arena-note muted tiny">${src.trim()}</p>`:'';
  }
  // Kevin-Wunsch: keine Anzeigetafel oben. Vor dem Anpfiff nur die Paarungen, danach steht alles auf dem Platz (Duell-Rennen).
@@ -84,7 +85,7 @@
   const wasOpen=new Set([...root.querySelectorAll('details.acc-group[open]')].map(x=>x.dataset.arenaDuel??x.className));
   const raceShut=!raceOpen&&!!root.querySelector('details.arena-race:not([open])');raceOpen=false;
   root.className='';
-  const started=d.status!=='upcoming';
+  const started=d.status!=='upcoming'&&!d.lineupsMissing;
   root.innerHTML=stateText(d)+(!started?pairings(d):`<details class="acc-group arena-race kbl-keep-open"${raceShut?'':' open'}><summary>Duell-Rennen</summary><div class="acc-sub">${duelRace(d,d.duels,false)}<p class="muted tiny">Je mehr Punkte, desto weiter rechts. Das Seil zeigt den Abstand im Duell, die Krone den Führenden. Wer gerade einen Spieler im laufenden Spiel hat, rennt mit Ball. Die Zahl auf dem Trikot ist der Tabellenplatz.</p></div></details>`+lineups(d))+table(d);
   root.querySelectorAll('details.acc-group:not(.arena-race)').forEach(x=>{if(wasOpen.has(x.dataset.arenaDuel??x.className))x.open=true;});
  }
