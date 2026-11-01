@@ -52,13 +52,27 @@ jobs:
           node tools/kinn-linien.mjs --pruefen && exit 0
           npm i --no-save --no-package-lock --no-audit --no-fund @vladmandic/face-api@1.7.15 @tensorflow/tfjs@4.22.0 @tensorflow/tfjs-backend-wasm@4.22.0
           node tools/kinn-linien.mjs
+      # Der Voll-Lauf nach einem Programm-Push wird oft abgebrochen, weil ein wartender Live-Lauf ihn in der Warteschlange ersetzt
+      # (concurrency, 1.11.: Koch blieb an ST 8 auf 0). Darum merkt sich jeder Voll-Lauf den Programmstand (Hash der Dateien);
+      # weicht er ab, laeuft auch ein Live-Lauf einmal voll.
+      - id: mode
+        name: Live oder voll?
+        if: steps.gate.outputs.aktiv == 'true'
+        run: |
+          m=${{ (github.event.schedule == '*/5 * * * *' || github.event.inputs.live == 'true') && 'live' || 'full' }}
+          code=$(git ls-files -s public server.js challenges.js event-types-de.js tools | sha1sum | cut -c1-40)
+          alt=$(node -e "try{console.log(require('./kbl-voll-code.json').code)}catch{console.log('')}")
+          if [ "$m" = "live" ] && [ "$alt" != "$code" ]; then m=full; echo "Programm seit dem letzten Voll-Lauf geaendert: dieser Lauf ist voll"; fi
+          echo "mode=$m" >> "$GITHUB_OUTPUT"; echo "code=$code" >> "$GITHUB_OUTPUT"
       - name: Daten abrufen und Seite bauen
         if: steps.gate.outputs.aktiv == 'true'
         env:
           KBL_AUTO_EMAIL: ${{ secrets.KBL_AUTO_EMAIL }}
           KBL_AUTO_PASSWORD: ${{ secrets.KBL_AUTO_PASSWORD }}
           KBL_TIPP_DIENST: ${{ vars.KBL_TIPP_DIENST }}
-        run: node tools/export-static.mjs ${{ (github.event.schedule == '*/5 * * * *' || github.event.inputs.live == 'true') && 'live' || 'full' }}
+        run: |
+          node tools/export-static.mjs ${{ steps.mode.outputs.mode }}
+          if [ "${{ steps.mode.outputs.mode }}" = "full" ]; then echo '{"code":"${{ steps.mode.outputs.code }}"}' > kbl-voll-code.json; fi
       - name: Spieltagsbericht (Claude, nur nach der Abrechnung, einmal je Spieltag)
         if: steps.gate.outputs.aktiv == 'true'
         continue-on-error: true
