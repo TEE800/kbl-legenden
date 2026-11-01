@@ -259,19 +259,6 @@
  const skin=img=>{const c=skinOf(img);if(c)img.closest('.toon-runner')?.style.setProperty('--skin',c);};
  // Auch für die Arena (public/arena.js): gleiche Männchen, Trikotfarben und Wackelköpfe.
  window.kblToon={toon,clubColor,kbImg,headSrc,skin};
- const toonHead=(id,alt)=>`<img class="toon-face" src="${esc(headSrc(id))}" alt="${esc(alt)}" onload="this.closest('.toon-runner')?.classList.add('has-face');window.kblToon.skin(this)" onerror="this.remove()">`;
- // Kevin-Wunsch: Die Manager laufen als Strichmännchen über den Platz (Profilbild als Kopf) und tragen ihren getippten Spieler als Baby im Arm.
- // Baby = Wackelkopf des Spielers auf einer Decke im Vereinstrikot, ohne Kopf ein gezeichnetes Babygesicht.
- // Klassen: best = Baby hat die Krone, champ = Manager liegt nach der Wertung vorne und stemmt sein Baby hoch, mourn = richtiger Spieler, andere Zahl (weint),
- // run = Spiel läuft, idle = noch nicht angepfiffen (wiegt das Baby), fall = Minuspunkte, ko = kann nicht mehr gewinnen.
- const STK_FIG='<svg class="stk-fig" viewBox="0 0 48 60" aria-hidden="true"><g class="stk-legs"><path class="stk-leg l" d="M18 39 L18 57"/><path class="stk-leg r" d="M18 39 L18 57"/></g><path class="stk-line" d="M18 19 L18 40"/><g class="stk-hold"><path class="stk-line" d="M18 27 L28 38 L44 37"/><path class="stk-line" d="M18 28 L31 31 L42 28"/></g><g class="stk-up"><path class="stk-line" d="M18 27 L-4 13 L2 -20"/><path class="stk-line" d="M18 27 L40 13 L34 -20"/></g><circle class="stk-headc" cx="18" cy="10" r="9"/></svg>';
- function stick(o){
-  const [shirt,trim]=clubColor(o.team),face=window.kblMgrFace?window.kblMgrFace(o.mname,'',o.mid):'';
-  return `<div class="stk${o.cls||''}"${o.attr||''} style="left:${o.x}%;top:${o.top}px;z-index:${o.z}">
-   <div class="stk-body">${STK_FIG}<span class="stk-face">${face||`<span class="mgr-av mgr-av-txt">${esc(String(o.mname||'?')[0].toUpperCase())}</span>`}</span><span class="stk-tear">💧</span>
-    <div class="stk-baby"><span class="stk-crown">👑</span><svg class="stk-swad" viewBox="0 0 26 14" preserveAspectRatio="none" aria-hidden="true"><path d="M1 8 Q1 2 9 2 L19 2 Q25 4 24 9 Q23 13 14 13 L6 13 Q1 12 1 8Z" fill="${shirt}" stroke="#111" stroke-width="1.2"/><path d="M4.5 3.5 L4.5 12" stroke="${trim}" stroke-width="2"/><g class="stk-bface"><circle cx="20" cy="4" r="5" fill="#f8d4b4" stroke="#111" stroke-width="1"/><path d="M17.5 3.5 q1 1 2 0 M20.5 3.5 q1 1 2 0" stroke="#111" stroke-width=".7" fill="none"/><circle cx="20" cy="6.6" r="1.1" fill="#ff8fb1"/></g></svg>${toonPhoto(o.crest,'stk-crest',o.team)}<img class="stk-bhead" src="${esc(headSrc(o.pid))}" alt="${esc(o.pname)}" onload="this.closest('.stk')?.classList.add('has-bhead')" onerror="this.remove()"></div></div>
-   <span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span><div class="stk-tag">${o.tag}</div></div>`;
- }
  // ---------- 8-Bit-Rennen (Kevin-Wunsch 31.10., ersetzt die Strichmännchen im Rennen) ----------
  // Jeder getippte Spieler läuft einmal als Pixel-Fußballer (Kopf aus dem Wackelkopf-Foto verpixelt, Trikot/Hose/Stutzen in Vereinsfarben,
  // echtes Wappen als kleines Bild auf der Brust), darunter die Profilbilder seiner Tipper. Ganz vorn mit Krone der gerade Beste nach der Tippregel.
@@ -320,7 +307,7 @@
  // Sprite: 24 Pixel breit, Kopf 20 breit; angezeigt doppelt so groß. mode: run | stand | cheer | sit (Seitenansicht auf der Bank)
  async function pxDraw(cv){const o=JSON.parse(cv.dataset.px),[s,t]=clubColor(o.team),h=o.h||'#fff',so=o.so||s,mode=o.mode,W=24;
   const hi=await pxLoad(headSrc(o.id)),HW=20,head=hi?pxHead(hi,HW,mode==='sit'):null,hh=head?head.c.height-head.pad*2:24,ty=hh-3,sy=ty+8,H=sy+10;
-  cv.width=W;cv.height=H;cv.style.width=W*2+'px';cv.style.height=H*2+'px';
+  cv.width=W;cv.height=H;cv.dataset.ty=ty;cv.style.width=W*2+'px';cv.style.height=H*2+'px';
   const x=cv.getContext('2d',{willReadFrequently:true}),P=(a,b,w,hgt,c)=>{x.fillStyle=c;x.fillRect(a,b,w,hgt);},sk0=(hi&&skinOf(hi))||'rgb(240,185,143)',sv=sk0.match(/\d+/g).map(Number),SK=sk0,SK2=`rgb(${sv.map(v=>Math.round(v*.85))})`,BT='#151515';
   x.clearRect(0,0,W,H);
   if(mode==='sit'){P(8,ty,8,9,s);P(8,ty,8,1,t);P(13,ty,3,9,'#0002');P(8,sy,10,3,h);P(18,sy,4,3,SK);P(20,sy+3,3,5,so);P(20,sy+3,3,1,SK);P(20,sy+8,4,2,BT);P(12,ty+2,3,5,s);P(13,ty+7,2,2,SK);P(14,ty+8,4,2,SK);}
@@ -340,7 +327,7 @@
  const PX_KIT=[['bayern','#fff','#dc052d'],['leverkusen','#111','#e32221'],['leipzig','#fff','#fff'],['frankfurt','#111','#111'],['bremen','#fff','#1d9053'],['werder','#fff','#1d9053'],['dortmund','#111','#fde100'],['stuttgart','#fff','#fff'],['freiburg','#111','#e2001a'],['gladbach','#fff','#fff'],['wolfsburg','#fff','#65b32e'],['union','#fff','#d4011d'],['hoffenheim','#1961b5','#1961b5'],['mainz','#fff','#c3141e'],['augsburg','#fff','#ba3733'],['köln','#fff','#fff'],['heidenheim','#003b79','#e2001a'],['hamburg','#fff','#fff'],['pauli','#5c3a21','#5c3a21']];
  const pxKit=team=>{const t=String(team||'').toLowerCase(),k=PX_KIT.find(([n])=>t.includes(n));return k?{h:k[1],so:k[2]}:{};};
  function pxFig(o){const crest=kbImg(o.teamImg);
-  return `<div class="pxr-fig${o.mode==='run'?' run':''}${o.best?' best':''}" data-pid="${esc(o.id)}"${o.best?' data-mvp="1"':''}>${o.best?'<span class="pxr-crown">👑</span>':''}<canvas class="pxr-c" data-px="${esc(JSON.stringify({id:String(o.id),team:o.team,mode:o.mode,...pxKit(o.team)}))}" width="24" height="40"></canvas>${crest?`<img class="pxr-crest" src="${esc(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}${o.mode==='run'?'<span class="pxr-ball">⚽</span>':''}${o.mode==='sit'?'<span class="pxr-zz">Zz</span>':''}</div>`;}
+  return `<div class="pxr-fig${o.mode==='run'?' run':''}${o.best?' best':''}" data-pid="${esc(o.id)}"${o.best?' data-mvp="1"':''}>${o.best||o.zr?'<span class="pxr-crown">👑</span>':''}<canvas class="pxr-c" data-px="${esc(JSON.stringify({id:String(o.id),team:o.team,mode:o.mode,...pxKit(o.team)}))}" width="24" height="40"></canvas>${crest?`<img class="pxr-crest" src="${esc(crest)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">`:''}${o.mode==='run'||o.zr?'<span class="pxr-ball">⚽</span>':''}${o.mode==='sit'?'<span class="pxr-zz">Zz</span>':''}</div>`;}
  function toonRace(live,groups,leadIds,bestIds,me,best,pool,auto=false){
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
   if(!groups.length)return '';
@@ -423,13 +410,13 @@
   const moments=zrMoments(frames),n=frames.length;
   return `<details class="acc-group zr" data-zr data-zr-ghosts="${esc(JSON.stringify(ghosts))}" style="margin-top:14px"><summary>🎬 Spieltag im Zeitraffer</summary><div class="acc-sub">
    <div class="zr-hud"><div class="zr-clock" data-zr-clock></div><div class="zr-lead" data-zr-lead></div><button type="button" class="ghost zr-close" data-zr-close aria-label="Vollbild schließen">✕</button></div>
-   <div class="zr-flash empty" data-zr-flash hidden></div><div class="zr-pitch-wrap"><div class="toon-pitch zr-pitch" data-zr-pitch></div></div>
+   <div class="zr-flash empty" data-zr-flash hidden></div><div class="zr-pitch-wrap"><div class="pxr zr-pxr" data-zr-pitch></div></div>
    <div class="zr-ctrl"><button type="button" class="gold zr-play" data-zr-play aria-label="Abspielen">▶</button>
     <div class="zr-track"><input type="range" min="0" max="${n-1}" value="0" data-zr-seek aria-label="Zeitpunkt"><div class="zr-marks">${moments.filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>`<i class="${m.ico==='🏁'?'fin':m.fix?'fix':'lead'}" style="left:${(m.i/(n-1)*100).toFixed(1)}%"></i>`).join('')}</div></div>
     <button type="button" class="ghost zr-speed" data-zr-speed>1×</button><button type="button" class="ghost zr-fullbtn" data-zr-full aria-label="Vollbild">⛶</button></div>
    <div class="zr-vid"><button type="button" class="ghost" data-zr-video>⬇ Video herunterladen</button><span class="muted tiny" data-zr-vstat></span></div>
    <details class="acc-group zr-list"><summary>Wichtige Momente (${moments.length})</summary><ol class="zr-moments">${moments.map(m=>`<li data-zr-go="${m.i}"${m.fix?' class="fix"':''}><span class="zr-t">${esc(zrWhen(frames[m.i].at))}</span><span>${m.ico}</span><span>${m.txt}</span></li>`).join('')}</ol></details>
-   <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Je mehr Punkte, desto weiter rechts; 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 10 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
+   <p class="muted tiny">Aus ${(d.verlauf||[]).length} gespeicherten Zwischenständen (während der Spiele etwa alle 5 bis 30 Minuten). Gleiche Pixel-Fußballer wie im Rennen: je mehr Punkte, desto näher am Tor, darunter die Tipper (gold = vorne nach der Wertung); wer nicht mehr gewinnen kann, schläft auf der Ersatzbank. 👑 = Bester nach der Tippregel zu dem Zeitpunkt (Zwischenstand aller Spieler höchstens alle 10 Min., getippte Spieler frischer). ✏️ = Punkte haben sich nach Abpfiff noch geändert (Kickbase-Korrektur). 🏁 = Wert nach Spieltagsende aus den Kickbase-Leistungsdaten. Gelbe Striche auf der Zeitleiste: Führungswechsel, rote: Korrekturen.</p>
   </div></details>`;
  }
  // Sichtbarer Bereich der Seite: unter fester Kopfzeile/Hinweisleiste, über der Handy-Navigation.
@@ -444,85 +431,79 @@
   if(zr.day!==d.day){zr.day=d.day;zr.i=n-1;zrStop();zr.full=false;document.body.classList.remove('zr-on');}
   zr.i=Math.min(zr.i,n-1);
   const byId=new Map((players||[]).map(p=>[String(p.id),p]));
-  const final=frames[n-1].players;
-  // Je Manager eine Zeile mit seinem Tipp als Baby (wie im Rennen), oben der Beste, wenn ihn keiner getippt hat.
-  // Kevin: Der spätere Regel-MVP (Bester am Ende, keiner getippt) läuft von Anfang an mit; andere Beste ohne Tipper nur, solange sie vorn sind.
+  // Kevin-Wunsch 01.11.: gleiche Optik wie das Rennen. Jeder getippte Spieler einmal als Pixel-Fußballer, darunter seine Tipper;
+  // dazu der Beste ohne Tipper. Der spätere Regel-MVP (Bester am Ende, keiner getippt) läuft von Anfang an mit (always).
   const finIds=new Set((frames[n-1].best?.players||[]).map(p=>p.id));
-  const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true,always:finIds.has(p.id)})),
-   ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
-  const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
-  const pos=v=>(4+72*((v??0)-lo)/(hi-lo));
-  // Kevin: Männchen nach Punkten sortiert. Maßstab je Stand (Bester ganz vorn), sonst stehen am Anfang alle dicht an der Startlinie
-  // und müssten zum Packen auch vor Stärkere rücken.
-  const fScale=frames.map(f=>{const v=[...Object.values(f.players).map(x=>x.points),f.best?.points??0,...rowsList.filter(o=>o.always).map(o=>f.others?.[o.id])].filter(x=>x!=null);return [Math.min(0,...v),Math.max(1,...v)];});
+  const ents=[...ghosts.map(p=>({id:String(p.id),name:p.name,team:p.team,ghost:true,always:finIds.has(String(p.id)),rs:[]})),
+   ...groups.map(g=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,rs:g.rs}))];
+  ents.forEach(o=>o.teamImg=byId.get(o.id)?.teamImg);
+  // Maßstab je Stand (Bester ganz vorn), sonst stehen am Anfang alle dicht an der Startlinie.
+  const fScale=frames.map(f=>{const v=[...Object.values(f.players).map(x=>x.points),f.best?.points??0,...ents.filter(o=>o.always).map(o=>f.others?.[o.id])].filter(x=>x!=null);return [Math.min(0,...v),Math.max(1,...v)];});
   const posF=(i,v)=>{const [a,b]=fScale[i];return 4+72*((v??0)-a)/(b-a);};
-  // Vollbild (Kevin-Wunsch: ein Feld, halb so viele Zeilen, dafür große Figuren): Wer weniger Punkte hat, fällt in derselben Zeile
-  // hinter die Stärkeren zurück, notfalls weiter links als seine Punkte, damit sich Figur und Name nicht überdecken.
-  // LW = Breite des Platzes in px, 0 = normale Ansicht (je Manager eine Zeile); ROWS = Zeilen im Vollbild (halb so viele, auf schmalen Bildschirmen mehr).
-  const ROW0=74,N=rowsList.length;let TOP=150,ROW=ROW0,LW=0,ROWS=N,ext=[];
-  const Y=r=>TOP+r*ROW;
-  const pitch=box.querySelector('[data-zr-pitch]');
-  pitch.style.height=Y(N-1)+40+'px';
-  pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
-   const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
-   if(!o.ghost)return stick({cls:' zr-runner',attr:` data-zr-i="${r}"`,x:4,top:Y(r)-60,z:r+2,team:o.team,mname:o.m.name,mid:o.m.id,pid:o.id,pname:o.name,crest,
-    tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
-   return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader zr-ghost" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
-    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy','★')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
-    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
-  const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
-  const flMin=`calc(${maxFix+1}*1.4em + 12px)`;box.querySelector('[data-zr-flash]').style.minHeight=flMin;
   const isBestIn=(f,o)=>(f.best?.players||[]).some(p=>p.id===o.id);
   // Punkte des späteren MVP je Stand: aus den Top 10 oder als Bester; dazwischen unbekannt (steht dann beim letzten bekannten Wert, ohne Zahl).
-  const ghostPts=new Map(rowsList.filter(o=>o.always).map(o=>{let last=0;return [o.id,frames.map(f=>{
+  const ghostPts=new Map(ents.filter(o=>o.always).map(o=>{let last=0;return [o.id,frames.map(f=>{
    const v=f.start?0:f.others?.[o.id]??(isBestIn(f,o)?f.best.points:undefined);if(v!==undefined)last=v;return {v:last,known:v!==undefined};})];}));
-  const fIdx=new Map(frames.map((f,i)=>[f,i]));
   const visIn=(f,o)=>!o.ghost||o.always||isBestIn(f,o);
-  const ptsOf=(f,o)=>o.always?ghostPts.get(o.id)[fIdx.get(f)].v:o.ghost?(isBestIn(f,o)?f.best.points:null):f.players[o.id]?.points??null;
-  // Zeilen packen: von den meisten Punkten abwärts in die oberste Zeile, in der Figur samt Namensschild an ihren Punkten Platz hat;
-  // passt es nirgends, in die Zeile, in der man am wenigsten weit hinter den Vordermann zurückfallen muss. Ist links kein Platz mehr
-  // (alle gleich auf, z. B. beim Anpfiff), stellt er sich rechts daneben. ok = false: Es passt nicht ohne Überdecken.
-  const packRows=(f,lw,rows)=>{
-   const span=(x,r)=>{const e=ext[r]?.[x/lw>.5?1:0]||[-15,285];return [x+e[0],x+e[1]];},x0=.04*lw,G=12;
-   const fi=fIdx.get(f),items=rowsList.map((o,r)=>{if(!visIn(f,o))return null;const p=ptsOf(f,o);return {r,v:p??-1e9,x:posF(fi,p)/100*lw};})
-    .filter(Boolean).sort((a,b)=>b.v-a.v||a.r-b.r);
-   const L=Array.from({length:rows},()=>[]),row=rowsList.map((o,r)=>r%rows),xs=rowsList.map(()=>x0);let ok=true;
-   const free=(k,iv)=>L[k].every(([a,b])=>iv[1]+G<=a+.5||iv[0]>=b+G-.5);
-   // Niemand steht vor (rechts von) einem mit mehr Punkten, auch nicht in einer anderen Zeile; Gleichstände dürfen nebeneinander.
-   const placed=[];
-   for(const it of items){let best=null;const cap=Math.min(lw,...placed.filter(q=>q.v>it.v).map(q=>q.x-2));it.x=Math.min(it.x,cap);
-    for(let k=0;k<rows;k++){
-     if(it.x>=x0&&free(k,span(it.x,it.r))){best={k,x:it.x,d:0};break;}
-     // zurückfallen: links an den am weitesten links stehenden dieser Zeile anschließen (beide Ausrichtungen probieren)
-     const m=Math.min(...L[k].map(([a])=>a))-G,c=ext[it.r].map(e=>Math.min(it.x,m-e[1])).filter(c=>c>=x0&&span(c,it.r)[1]<=m&&free(k,span(c,it.r)));
-     if(c.length){const x=Math.max(...c);if(!best||it.x-x<best.d)best={k,x,d:it.x-x};continue;}
-     // daneben: rechts an den am weitesten rechts stehenden anschließen
-     const e=Math.max(...L[k].map(([,b])=>b))+G,c2=ext[it.r].map(z=>e-z[0]).filter(c=>c<=cap&&span(c,it.r)[0]>=e&&span(c,it.r)[1]<=lw);
-     if(c2.length){const x=Math.min(...c2),d=1e6+x;if(!best||d<best.d)best={k,x,d};}}
-    if(!best){ok=false;best={k:0,x:x0};}
-    L[best.k].push(span(best.x,it.r));row[it.r]=best.k;xs[it.r]=best.x;placed.push({v:it.v,x:best.x});}
-   return {row,x:xs.map(x=>x/lw*100),ok};};
+  const ptsOf=(i,o)=>{const f=frames[i];return o.always?ghostPts.get(o.id)[i].v:o.ghost?(isBestIn(f,o)?f.best.points:null):f.players[o.id]?.points??null;};
+  // Aufstellung je Stand wie im Rennen: K.O. (Spiel vorbei und weniger als der gerade Beste, oder nicht aus den genannten Vereinen) sitzt
+  // schlafend auf der Ersatzbank; die anderen stehen nach Punkten auf dem Rasen, nebeneinander nur mit genug Abstand (GAP).
+  const GAP=27,CAP=Math.max(2,Math.ceil(ents.length/3));
+  const lay=frames.map((f,i)=>{const run=[],bench=[];
+   ents.forEach((o,k)=>{if(!visIn(f,o))return;const x=f.players[o.id],isBest=isBestIn(f,o),pts=ptsOf(i,o);
+    const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
+    const live=x?.state==='live';
+    (out?bench:run).push({k,pts,isBest,live,mode:out?'sit':isBest&&!live?'cheer':live?'run':'stand'});});
+   run.sort((a,b)=>b.isBest-a.isBest||(b.pts??-1e9)-(a.pts??-1e9)||a.k-b.k);
+   // Höchstens CAP Zeilen (etwa drei Figuren je Zeile): passt einer nirgends an seine Punkte, fällt er in der Zeile mit dem kleinsten Abstand
+   // hinter den Hintersten zurück; bei Gleichstand (z. B. Anpfiff, alle bei 0) stellt er sich daneben. Erst wenn auch das nicht geht, neue Zeile.
+   const rows=[],fits=(rr,x)=>rr.every(q=>Math.abs(q.x-x)>=GAP);
+   run.forEach(r=>{const x0=Math.min(88,Math.max(10,posF(i,r.pts)*1.18));let w=rows.findIndex(rr=>fits(rr,x0)),x=x0;
+    if(w<0&&rows.length>=CAP){let best=null;rows.forEach((rr,j)=>{const back=Math.min(...rr.map(q=>q.x))-GAP,side=Math.max(...rr.map(q=>q.x))+GAP;
+      if(back>=10&&fits(rr,back)&&(!best||x0-back<best.d))best={j,x:back,d:x0-back};
+      else if(side<=88&&fits(rr,side)&&rr.every(q=>q.pts===r.pts)&&(!best||1e3+side<best.d))best={j,x:side,d:1e3+side};});
+     if(best){w=best.j;x=best.x;}}
+    if(w<0){w=rows.length;rows.push([]);}r.x=x;rows[w].push(r);r.row=w;});
+   bench.sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9)||a.k-b.k);
+   return {run,bench,byK:new Map(run.map(r=>[r.k,r]))};});
+  const maxRows=Math.max(1,...lay.map(l=>Math.max(0,...l.run.map(r=>r.row+1)))),maxBench=Math.max(0,...lay.map(l=>l.bench.length));
+  const PT=18,RH=122,bs=Math.max(.5,Math.min(.8,6.4/Math.max(1,maxBench))).toFixed(2);
+  const ptsTxt=(i,o,v)=>v===null||v===undefined||(o.always&&!ghostPts.get(o.id)[i].known)?'–':fmt(v);
+  const fans=o=>`<span class="pxr-fans">${o.rs.map(r=>`<span class="pxr-fan${r.m.id===d.me?' me':''}" data-mid="${esc(r.m.id)}" title="${esc(r.m.name)} · Tipp ${fmt(r.t.points)}">${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):esc(String(r.m.name||'?')[0])}</span>`).join('')}</span>`;
+  const pitch=box.querySelector('[data-zr-pitch]');
+  pitch.innerHTML=`<div class="pxr-pitch" style="padding-top:0;height:${PT+maxRows*RH}px"><i class="pxr-mid"></i><i class="pxr-circle"></i><i class="pxr-box"></i><i class="pxr-goal"></i>${ents.map((o,k)=>
+   `<div class="pxr-run zr-runner zr-off" data-zr-i="${k}" style="left:10%;top:${PT+2}px">${pxFig({id:o.id,team:o.team,teamImg:o.teamImg,mode:'stand',zr:true})}
+    <div class="pxr-tag"><b class="pxr-p" data-zr-pts>–</b> <b class="pxr-n">${esc(o.name)}</b>${o.rs.length>1?` <small>×${o.rs.length}</small>`:''} <span class="pxr-live"></span><span class="zr-fix" data-zr-fix></span><br>${o.ghost?'<small class="muted">keiner getippt</small>':fans(o)}</div></div>`).join('')}</div>
+   ${maxBench?`<div class="pxr-bench" style="--s:${bs}"><div class="pxr-bt">💤 Ersatzbank · kann nicht mehr gewinnen</div><div class="pxr-dug"><i class="pxr-back"></i><i class="pxr-seat"></i><div class="pxr-sits" data-zr-sits></div></div><div class="pxr-bl" data-zr-bl></div></div>`:''}`;
+  setTimeout(pxDrawAll,0);
+  const sits=pitch.querySelector('[data-zr-sits]'),bl=pitch.querySelector('[data-zr-bl]');
+  // Haltung wechseln = Figur neu zeichnen (Köpfe sind zwischengespeichert)
+  const setMode=(cv,mode)=>{const o=JSON.parse(cv.dataset.px);if(o.mode===mode)return;o.mode=mode;cv.dataset.px=JSON.stringify(o);cv.dataset.done='1';pxDraw(cv);};
+  const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
+  const flMin=`calc(${maxFix+1}*1.4em + 12px)`;box.querySelector('[data-zr-flash]').style.minHeight=flMin;
   const show=i=>{
-   zr.i=i;const f=frames[i],bestIds=new Set((f.best?.players||[]).map(p=>p.id)),leadIds=new Set(f.lead.map(r=>r.m.id));
+   zr.i=i;const f=frames[i],L=lay[i],leadIds=new Set(f.lead.map(r=>r.m.id));
    const sk=box.querySelector('[data-zr-seek]');sk.value=String(i);sk.style.setProperty('--f',String(n>1?i/(n-1):0));
    box.querySelector('[data-zr-clock]').innerHTML=`<b>${esc(zrWhen(f.at))}</b> <small>${f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':i===n-1?'letzter Stand':`Stand ${i+1} von ${n}`}</small>`;
    box.querySelector('[data-zr-lead]').innerHTML=f.best?`👑 <b>${f.best.players.map(p=>esc(p.name)).join(', ')}</b> ${fmt(f.best.points)}${f.lead.length?` <span class="zr-sep">·</span> führend: ${f.lead.map(r=>mn(r.m.name,r.m.id)).join(', ')}`:f.ready?' <span class="zr-sep">·</span> keiner vorne':''}`:`<span class="muted">${f.start?'Alle starten bei 0':'Noch kein Zwischenstand'}</span>`;
-   const pk=LW?packRows(f,LW,ROWS):null;
    pitch.querySelectorAll('[data-zr-i]').forEach(el=>{
-    const o=rowsList[Number(el.dataset.zrI)],id=o.id,x=f.players[id],isBest=bestIds.has(id),pts=ptsOf(f,o);
-    const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
-    const r=Number(el.dataset.zrI),left=pk?pk.x[r]:posF(i,pts),row=pk?pk.row[r]:r;el.style.left=left.toFixed(2)+'%';
-    el.style.top=Y(row)-60+'px';el.style.zIndex=row+2;
-    el.classList.toggle('flip',left>50);el.classList.toggle('champ',isBest);el.classList.toggle('zr-off',!visIn(f,o));
-    el.classList.toggle('run',!out&&x?.state==='live');el.classList.toggle('idle',!o.ghost&&pts===null);el.classList.toggle('ko',out);
-    el.querySelector('[data-zr-pts]').textContent=pts===null||(o.always&&!ghostPts.get(id)[i].known)?'–':fmt(pts);
-    const fx=f.fixes.find(z=>z.id===id),fe=el.querySelector('[data-zr-fix]');
-    fe.textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';el.classList.toggle('zr-fixed',!!fx);
-    // Manager: Krone aufs Baby, Führende nach der Wertung stemmen es hoch, mit richtigem Spieler und anderer Zahl wird geweint.
-    if(o.m){const ld=leadIds.has(o.m.id);el.classList.toggle('best',isBest);el.classList.toggle('lead',ld);
-     el.classList.toggle('champ',isBest&&(!f.lead.length||ld));el.classList.toggle('mourn',isBest&&!!f.lead.length&&!ld);
-     el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
+    const k=Number(el.dataset.zrI),o=ents[k],r=L.byK.get(k);
+    el.classList.toggle('zr-off',!r);if(!r)return;
+    el.style.left=r.x.toFixed(1)+'%';el.style.top=(PT+2+r.row*RH)+'px';el.style.zIndex=String(2+maxRows-r.row);
+    const fig=el.querySelector('.pxr-fig');fig.classList.toggle('best',r.isBest);fig.classList.toggle('run',r.mode==='run');
+    setMode(fig.querySelector('canvas'),r.mode);
+    el.querySelector('.pxr-tag').classList.toggle('lead',r.isBest);
+    el.querySelector('.pxr-live').classList.toggle('on',r.live);
+    el.querySelector('[data-zr-pts]').textContent=ptsTxt(i,o,r.pts);
+    const fx=f.fixes.find(z=>z.id===o.id);el.querySelector('[data-zr-fix]').textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';
+    el.classList.toggle('zr-fixed',!!fx);
+    el.querySelectorAll('.pxr-fan').forEach(s=>s.classList.toggle('lead',leadIds.has(s.dataset.mid)));
    });
+   if(sits){const key=L.bench.map(b=>b.k).join();
+    if(sits.dataset.key!==key){sits.dataset.key=key;
+     sits.innerHTML=L.bench.length?L.bench.map(b=>{const o=ents[b.k];return `<div class="pxr-sit">${pxFig({id:o.id,team:o.team,teamImg:o.teamImg,mode:'sit'})}</div>`;}).join(''):'<div class="zr-bench-empty">noch keiner</div>';
+     setTimeout(pxDrawAll,0);}
+    bl.innerHTML=L.bench.map(b=>{const o=ents[b.k];return `<div><b>${esc(o.name)}</b><br>${ptsTxt(i,o,b.pts)}${o.rs.length>1?` · ×${o.rs.length}`:''}</div>`;}).join('');}
    // Kevin-Wunsch: Korrekturen in eigenem Kasten über dem Platz (nicht über den Gesichtern), Platz für die meisten Zeilen fest reserviert.
    fl.hidden=!maxFix;fl.classList.toggle('empty',!f.fixes.length);
    if(f.fixes.length){fl.innerHTML=`<div>✏️ ${f.fin?'Endwert nach Spieltagsende':'Kickbase-Korrektur'}:</div><div class="zr-fixes">${zrFixLines(f.fixes)}</div>`;fl.classList.remove('pop');void fl.offsetWidth;fl.classList.add('pop');}
@@ -544,51 +525,26 @@
   const vidLabel=()=>{const b=box.querySelector('[data-zr-video]');if(b)b.textContent=`⬇ Video herunterladen (${spLabel(zr.speed)})`;};
   box.querySelector('[data-zr-speed]').textContent=spLabel(zr.speed);vidLabel();
   box.querySelectorAll('[data-zr-go]').forEach(li=>li.onclick=()=>{zrStop();btn.textContent='▶';show(Number(li.dataset.zrGo));});
-  // Beim Aufklappen von vorn abspielen; Wackelköpfe und Wappen brauchen die Spielerliste.
-  // Vollbild (Kevin-Wunsch): alle Spieler, Zeit und Steuerung auf einem Bildschirm; der Platz wird passend verkleinert.
-  // Am PC zusätzlich Browser-Vollbild, am Handy nur über die ganze Seite (wie in der BumsParade, kein Browser-Hinweis).
+  // Aufgeklappt (Kevin-Wunsch): Rasen, Bank, Korrekturen und Abspielleiste passen zusammen auf den Bildschirm (zwischen Kopfzeile und
+  // Handy-Navigation); im Vollbild füllt das Feld den Rest des Bildschirms, Figuren dürfen dort größer werden.
   const pw=box.querySelector('.zr-pitch-wrap');
   const fl=box.querySelector('[data-zr-flash]');
   zr.fit=()=>{if(!box.isConnected)return;
-   pitch.style.transform='';pitch.style.width='';
-   if(!box.open){fl.style.minHeight=flMin;box.classList.remove('zr-narrow','zr-fit');pw.style.height='';if(LW){LW=0;ROW=ROW0;TOP=150;pitch.style.height=Y(N-1)+40+'px';show(zr.i);}return;}
+   pitch.style.transform='';pitch.style.width='';pw.style.height='';
+   if(!box.open){fl.style.minHeight=flMin;box.classList.remove('zr-fit');return;}
    box.classList.add('zr-fit');
    // Korrekturkasten nebeneinander statt untereinander, Höhe nach der längsten Korrektur fest, damit nichts springt.
    if(maxFix){const big=frames.reduce((a,f)=>f.fixes.length>a.fixes.length?f:a);fl.style.minHeight='';fl.classList.remove('empty','pop');
     fl.innerHTML=`<div>✏️ ${big.fin?"Endwert nach Spieltagsende":"Kickbase-Korrektur"}:</div><div class="zr-fixes">${zrFixLines(big.fixes)}</div>`;fl.style.minHeight=fl.offsetHeight+'px';}
-   // Maßstab: so wenige Zeilen wie möglich (mindestens halb so viele wie Manager) füllen die Höhe, ohne dass sich in einem Stand etwas überdeckt
-   // (gleich für den ganzen Spieltag, damit nichts springt).
-   // Aufgeklappt (Kevin-Wunsch): Feld mit allen Managern, Korrekturen und Abspielleiste passen zusammen auf den Bildschirm
-   // (zwischen Kopfzeile und Handy-Navigation); im Vollbild füllt das Feld den Rest des Bildschirms.
-   if(zr.full)pw.style.height='';
-   else{const [top,bot]=zrScreen(),ctrl=box.querySelector('.zr-ctrl'),out=e=>{if(!e||e.hidden)return 0;const c=getComputedStyle(e);return e.offsetHeight+parseFloat(c.marginTop)+parseFloat(c.marginBottom);};
-    pw.style.height=Math.max(300,Math.floor(bot-top-out(box.querySelector('.zr-hud'))-out(fl)-out(ctrl)-24))+'px';}
-   const W=pw.clientWidth,H=pw.clientHeight;
-   // Am Handy steht das Namensschild kompakt unter der Figur, die Zeilen sind dafür höher.
-   const narrow=W<600;box.classList.toggle('zr-narrow',narrow);let vt=0,vb=0;
-   // Breite je Figur samt Namensschild messen (links und rechts ausgerichtet, mit dem längsten Inhalt: dreistellige Punkte, Korrektur),
-   // damit sich auch später nichts überdeckt.
-   ext=[...pitch.querySelectorAll('[data-zr-i]')].sort((a,b)=>a.dataset.zrI-b.dataset.zrI).map(el=>{const o=rowsList[Number(el.dataset.zrI)];
-    const p=el.querySelector('[data-zr-pts]'),x=el.querySelector('[data-zr-fix]'),old=[p?.textContent,x?.textContent,el.className];
-    if(p)p.textContent='188';if(x)x.textContent=' ✏️ +88';el.classList.remove('ko','fall','champ','mourn','zr-off');
-    // liegend (K.O., Minuspunkte) rückt das Namensschild weiter weg: alle Haltungen zusammen messen
-    const res=[false,true].map(fl=>{el.classList.toggle('flip',fl);let a=0,b=60;
-     for(const st of ['','ko','fall']){if(st)el.classList.add(st);const x0=el.getBoundingClientRect().left;
-      const y0=el.getBoundingClientRect().top;
-      el.querySelectorAll('.stk-body,.stk-face,.stk-baby,.toon-body').forEach(c=>{const q=c.getBoundingClientRect();if(q.width){a=Math.min(a,q.left-x0);b=Math.max(b,q.right-x0);if(!o.ghost&&!st)vt=Math.min(vt,q.top-y0);}});
-      // Namensschild ohne Aufploppen messen (Animation verkleinert es kurz)
-      const t=el.querySelector('.stk-tag,.toon-tag');if(t){a=Math.min(a,t.offsetLeft);b=Math.max(b,t.offsetLeft+t.offsetWidth);if(!o.ghost)vb=Math.max(vb,t.offsetTop+t.offsetHeight);}
-      if(st)el.classList.remove(st);}
-     return [Math.floor(a)-2,Math.ceil(b)+2];});
-    if(p)p.textContent=old[0];if(x)x.textContent=old[1];el.className=old[2];return res;});
-   // Am Handy steht das Namensschild unter der Figur: Zeilenhöhe = Figur samt Schild (Kopf oben bis Schild unten).
-   const RH=narrow?Math.max(ROW0,Math.ceil(vb-vt)+6):ROW0,BOT=narrow?Math.max(40,Math.ceil(vb)-54):40;TOP=narrow?112:150;
-   let sc=1;for(ROWS=Math.max(1,Math.ceil(N/(narrow?4:2)));ROWS<N;ROWS++){sc=Math.min(2.2,H/(TOP+(ROWS-1)*RH+BOT));const lw=W/sc;if(frames.every(f=>packRows(f,lw,ROWS).ok))break;}
-   if(ROWS>=N)sc=Math.min(2.2,H/(TOP+(N-1)*RH+BOT));
-   const LH=H/sc;LW=W/sc;
-   ROW=Math.max(RH,Math.min(RH*2.2,(LH-TOP-BOT)/Math.max(ROWS-1,1)));
-   pitch.style.height=LH+'px';
-   pitch.style.transformOrigin='0 0';pitch.style.width=(100/sc)+'%';pitch.style.transform=`scale(${sc})`;show(zr.i);};
+   const W=pw.clientWidth;let H=pw.clientHeight;
+   if(!zr.full){const [top,bot]=zrScreen(),out=e=>{if(!e||e.hidden)return 0;const c=getComputedStyle(e);return e.offsetHeight+parseFloat(c.marginTop)+parseFloat(c.marginBottom);};
+    H=Math.max(260,Math.floor(bot-top-out(box.querySelector('.zr-hud'))-out(fl)-out(box.querySelector('.zr-ctrl'))-24));}
+   // Logische Breite mindestens 340 px (sonst überdecken sich Namensschilder), höchstens 2,2-fach (Vollbild) bzw. 1,3-fach vergrößert.
+   let sc=Math.min(zr.full?2.2:1.3,W/340);pitch.style.width=(100/sc)+'%';
+   sc=Math.max(.55,Math.min(sc,H/pitch.offsetHeight));pitch.style.width=(100/sc)+'%';
+   pitch.style.transformOrigin='0 0';pitch.style.transform=`scale(${sc})`;
+   if(!zr.full)pw.style.height=Math.ceil(pitch.offsetHeight*sc)+'px';
+   show(zr.i);};
   // Kopfzeile kann beim Abspielen umbrechen: dann neu einpassen, damit unten nichts abgeschnitten wird.
   if(window.ResizeObserver){let lastH=0;new ResizeObserver(()=>{if(zr.full&&pw.clientHeight!==lastH){lastH=pw.clientHeight;zr.fit();}}).observe(pw);}
   const setFull=on=>{zr.full=on;box.classList.toggle('zr-full',on);document.body.classList.toggle('zr-on',on);
@@ -605,7 +561,7 @@
   vb.onclick=async()=>{if(zr.video)return;zr.video=true;vb.disabled=true;zrStop();btn.textContent='▶';
    const stat=t=>{const el=document.querySelector('[data-zr-vstat]');if(el)el.textContent=t;};
    try{const marks=zrMoments(frames).filter(m=>m.fix||m.ico==='👑'||m.ico==='🏁').map(m=>({i:m.i,cls:m.ico==='🏁'?'fin':m.fix?'fix':'lead'}));
-    const {blob,ext}=await zrVideo({d,frames,rowsList,pos,pool,byId,marks,speed:zr.speed},stat);
+    const {blob,ext}=await zrVideo({d,frames,ents,lay,ptsTxt,maxRows,maxBench,bs:+bs,PT,RH,marks,speed:zr.speed},stat);
     const name=`MVP-Zeitraffer-Spieltag-${d.day}.${ext}`,url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
     stat(`Fertig: ${name} (${(blob.size/1e6).toFixed(1).replace('.',',')} MB).`);
@@ -626,9 +582,10 @@
  }
  // Zeitraffer als Video herunterladen (Kevin-Wunsch): im Browser auf einer Leinwand (1080×1920, Hochformat fürs Handy)
  // nachgezeichnet und mit MediaRecorder aufgenommen, MP4 wenn der Browser es kann, sonst WebM. Läuft in Echtzeit.
- // Bilder von fremden Servern (Kickbase-CDN) nur, wenn sie CORS erlauben; Manager-Bilder darum über den eigenen Server bzw. site/faces/.
+ // Gleiche Pixel-Fußballer wie in der App (Kevin-Wunsch 01.11.): je Spieler und Haltung einmal vorgezeichnet (eigene Köpfe, frei lesbar).
+ // Bilder von fremden Servern (Kickbase-CDN, Wappen) nur, wenn sie CORS erlauben; Manager-Bilder darum über den eigenen Server bzw. site/faces/.
  async function zrVideo(o,onStat){
-  const {d,frames,rowsList,pos,pool,byId}=o,n=frames.length,W=1080,H=1920;
+  const {d,frames,ents,lay,ptsTxt,maxRows,maxBench,bs,PT,RH}=o,n=frames.length,W=1080,H=1920;
   if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
   const mime=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mime)throw new Error('Dieser Browser kann keine Videos aufnehmen.');
@@ -637,9 +594,11 @@
   // Manager-Bilder: das Kickbase-CDN erlaubt kein CORS, darum online aus site/faces/ (Export), am PC über /api/mgr-img.
   const faceSrc=m=>{const h=(window.kblMgrFace||(()=>''))(m.name,'',m.id),x=/src="([^"]+)"/.exec(h),u=x?x[1].replace(/&amp;/g,'&'):'',k=/kickbase\.b-cdn\.net\/(user\/([\w.-]+))$/.exec(u);
    return !k?u:window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
-  const heads=new Map(),crests=new Map(),faces=new Map();
-  await Promise.all(rowsList.map(async r=>{heads.set(r.id,await load(headSrc(r.id)));crests.set(r.id,await load(kbImg(byId.get(r.id)?.teamImg)));
-   if(r.m&&!faces.has(r.m.id))faces.set(r.m.id,await load(faceSrc(r.m)));}));
+  const spr=new Map(),crests=new Map(),faces=new Map();
+  await Promise.all(ents.map(async e=>{
+   for(const m of ['stand','run','cheer','sit']){const cv=document.createElement('canvas');cv.dataset.px=JSON.stringify({id:e.id,team:e.team,mode:m,...pxKit(e.team)});await pxDraw(cv);spr.set(e.id+':'+m,cv);}
+   crests.set(e.id,await load(kbImg(e.teamImg)));
+   for(const r of e.rs)if(!faces.has(r.m.id)){faces.set(r.m.id,null);faces.set(r.m.id,await load(faceSrc(r.m)));}}));
   const cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
   // Ablauf: Start 1,5 s stehen, je Stand 1,2 s Bewegung und 0,8 s stehen (Korrekturen 2,4 s), am Ende 3 s.
   const seg=[];let T=1.5;
@@ -647,106 +606,83 @@
   const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
   // Korrektur-Kasten zwischen Kopf und Platz (Kevin-Wunsch: nicht über den Gesichtern), Höhe für die meisten Zeilen.
   const maxFix=Math.max(0,...frames.map(f=>f.fixes.length)),FY=264,FH=maxFix?(maxFix+1)*44+28:0;
-  const PX=40,PY=maxFix?FY+FH+16:300,PW=W-80,PH=1660-PY,rows=rowsList.length,RH=Math.min(150,(PH-70)/Math.max(rows,1)),S=Math.min(1,RH/115);
-  const font=(sz,w=700)=>`${w} ${Math.round(sz)}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
+  const PX=40,PY=maxFix?FY+FH+16:300,PW=W-80,PB=1680;
+  // Rasen und Bank in Einheiten der App (wie dort angezeigt), dann als Ganzes vergrößert.
+  const BH=maxBench?18+86*bs+14+3+28+10:0,LH=PT+maxRows*RH+BH,K=Math.min(PW/340,(PB-PY)/LH),LW=PW/K;
+  const font=(sz,w=700)=>`${w} ${sz}px system-ui,-apple-system,Segoe UI,Roboto,sans-serif`;
   const rr=(x,y,w,h,r)=>{c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();};
   const fit=(t,max)=>{if(c.measureText(t).width<=max)return t;while(t.length>1&&c.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
-  const ptsAt=(f,r)=>{const isBest=(f.best?.players||[]).some(p=>p.id===r.id);return r.ghost?(isBest?f.best.points:null):f.players[r.id]?.points??null;};
-  function figure(r,x,y,f,time,alphaGhost){
-   const x0=f.players[r.id],isBest=(f.best?.players||[]).some(p=>p.id===r.id),pts=ptsAt(f,r);
-   const ko=!isBest&&(offRule(pool,r.team,r.id)||(!!f.best&&x0?.state==='done'&&pts!==null&&pts<f.best.points));
-   const run=!ko&&x0?.state==='live',[shirt,trim]=clubColor(r.team),flip=(x-PX)/PW>.5;
-   const ld=!!r.m&&f.lead.some(q=>q.m.id===r.m.id),champ=isBest&&(!r.m||!f.lead.length||ld),mourn=!!r.m&&isBest&&!!f.lead.length&&!ld;
-   c.save();c.globalAlpha=r.ghost?alphaGhost:ko?.45:1;c.translate(x,y);c.scale(S,S);
-   if(ko){if(r.m)c.translate(0,-50);c.rotate(flip?Math.PI/2:-Math.PI/2);}
-   else if(r.m&&!run&&pts!==null&&pts<0){c.translate(0,-40);c.rotate(-1.3);}
-   const bob=run?Math.sin(time*16)*3:champ?Math.sin(time*8)*2:0,sw=run?Math.sin(time*16)*.5:0;
-   c.lineCap='round';c.lineJoin='round';
-   if(!r.m){
-    const hd=heads.get(r.id);
-    c.strokeStyle=(hd&&skinOf(hd))||SKIN;c.lineWidth=6;
-    [[-5,1],[5,-1]].forEach(([dx,dir])=>{c.save();c.translate(dx,-10);c.rotate(sw*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,26);c.stroke();c.restore();});
-    c.translate(0,bob);
-    const arm=champ?Math.sin(time*14)*.7:-sw;
-    [[-15,-50,1],[15,-50,-1]].forEach(([dx,dy,dir])=>{c.save();c.translate(dx,dy);c.rotate((dir>0?.5:-.5)+arm*dir);c.beginPath();c.moveTo(0,0);c.lineTo(0,24);c.stroke();c.restore();});
-    c.fillStyle=trim;rr(-14,-16,28,12,3);c.fill();
-    c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2;c.beginPath();c.moveTo(-18,-56);c.quadraticCurveTo(0,-64,18,-56);c.lineTo(16,-14);c.lineTo(-16,-14);c.closePath();c.fill();c.stroke();
-    const cr=crests.get(r.id);if(cr)c.drawImage(cr,-9,-46,18,18);
-    if(hd){const h=96,w=Math.min(110,h*hd.width/hd.height);c.drawImage(hd,-w/2,-56-h+4,w,h);}
-    else{c.fillStyle='#f5c9a0';c.beginPath();c.arc(0,-82,22,0,7);c.fill();c.stroke();c.fillStyle='#111';c.beginPath();c.arc(-7,-84,3,0,7);c.arc(7,-84,3,0,7);c.fill();}
-    if(isBest){c.font='44px serif';c.textAlign='center';c.fillText('👑',0,-150);}
-    if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',18,6);}
-    c.restore();
-    return {pts,ko,isBest,flip,ld};
-   }
-   // Strichmännchen (Kevin-Wunsch): weiß umrandete schwarze Linien, Kopf = Manager-Profilbild, Baby = Wackelkopf des getippten Spielers.
-   const line=pts2=>{for(const [w,col] of [[11,'rgba(255,255,255,.75)'],[6,'#111']]){c.strokeStyle=col;c.lineWidth=w;c.beginPath();pts2.forEach(([a,b],i)=>i?c.lineTo(a,b):c.moveTo(a,b));c.stroke();}};
-   [[-1],[1]].forEach(([dir])=>{const a=sw*dir;line([[0,-42],[Math.sin(a+dir*.28)*44,-42+Math.cos(a+dir*.28)*44]]);});
-   c.translate(0,bob);
-   line([[0,-42],[0,-84]]);
-   const lift=champ?Math.sin(time*9)*6:0,rock=!run&&!champ&&pts===null?Math.sin(time*3)*.15:0;
-   const bx=champ?0:50,by=champ?-190+lift:-62;
-   if(champ){line([[0,-76],[-44,-104],[-18,-174+lift]]);line([[0,-76],[44,-104],[18,-174+lift]]);}
-   else{line([[0,-74],[22,-52],[48,-54]]);line([[0,-72],[26,-68],[44,-76]]);}
-   // Kopf
-   const im=faces.get(r.m.id);
-   c.save();c.beginPath();c.arc(0,-116,34,0,7);c.fillStyle='#fff';c.fill();c.clip();
-   if(im)c.drawImage(im,-34,-150,68,68);else{c.fillStyle='#17242e';c.fillRect(-34,-150,68,68);c.fillStyle='#9db0bd';c.font=font(30,800);c.textAlign='center';c.fillText((r.m.name||'?')[0].toUpperCase(),0,-99);}
-   c.restore();c.strokeStyle=ld?'#ebc768':'#111';c.lineWidth=5;c.beginPath();c.arc(0,-116,34,0,7);c.stroke();
-   if(mourn){c.font='28px serif';c.textAlign='center';c.fillText('💧',-34,-96+((time*40)%24));}
-   // Baby: Decke im Vereinstrikot, darauf der Kopf des Spielers
-   c.save();c.translate(bx,by);c.rotate(rock);
-   c.fillStyle=shirt;c.strokeStyle='#111';c.lineWidth=2.5;c.beginPath();c.ellipse(0,0,26,13,0,0,7);c.fill();c.stroke();
-   c.fillStyle=trim;c.fillRect(-21,-8,4,16);
-   // Wappen mittig auf dem Körper, 90° nach rechts gedreht (Kevin-Wunsch, wie im Rennen)
-   const cr=crests.get(r.id);if(cr){c.save();c.translate(0,1);c.rotate(Math.PI/2);c.drawImage(cr,-12,-12,24,24);c.restore();}
-   const hd=heads.get(r.id);
-   if(hd){const h=70,w=Math.min(82,h*hd.width/hd.height);c.drawImage(hd,24-w/2,-6-h,w,h);}
-   else{c.fillStyle='#f8d4b4';c.beginPath();c.arc(24,-16,12,0,7);c.fill();c.lineWidth=2;c.stroke();c.fillStyle='#ff8fb1';c.beginPath();c.arc(24,-10,2.5,0,7);c.fill();}
-   if(isBest){c.font='34px serif';c.textAlign='center';c.fillText('👑',24,hd?-80:-32);}
-   c.restore();
-   if(run){c.font='26px serif';c.textAlign='left';c.fillText('⚽',22,6-bob);}
-   c.restore();
-   return {pts,ko,isBest,flip,ld};
+  const circ=(x,y,r)=>{c.beginPath();c.arc(x,y,r,0,7);};
+  // Figur wie .pxr-fig: Kasten 48×84, Sprite doppelt groß unten bündig, Wappen auf der Brust, Krone, Ball, Zz.
+  function sprite(e,mode,cx,bottom,s,time,best){
+   const sp=spr.get(e.id+':'+mode);if(!sp)return;const w=sp.width*2*s,h=sp.height*2*s,bob=mode==='run'&&Math.floor(time/.15)%2?-2*s:0,x0=cx-w/2,y0=bottom-h+bob;
+   c.imageSmoothingEnabled=false;c.drawImage(sp,x0,y0,w,h);c.imageSmoothingEnabled=true;
+   const cr=crests.get(e.id),ty=Number(sp.dataset.ty||0);if(cr&&mode!=='sit')c.drawImage(cr,x0+17*s,y0+(ty*2+3)*s,14*s,14*s);
+   c.textAlign='center';c.textBaseline='alphabetic';
+   if(best){c.font=font(16*s,400);c.fillText('👑',cx,y0-1*s+Math.sin(time*6)*1.5*s);}
+   if(mode==='run'){c.save();c.translate(x0+w+6*s,bottom-6*s);c.rotate(time*12);c.font=font(11*s,400);c.textBaseline='middle';c.fillText('⚽',0,0);c.restore();}
+   if(mode==='sit'){const q=(time%2)/2;c.save();c.globalAlpha*=Math.sin(q*Math.PI);c.fillStyle='#cfe3ff';c.font=font(11*s,900);c.fillText('Zz',x0+w-2*s+q*10*s,y0+14*s-q*18*s);c.restore();}
+  }
+  function runner(e,r,i,cx,top,time,fx,leadIds,v){
+   sprite(e,r.mode,cx,top+84,1,time,r.isBest);
+   // Namensschild: Punkte (gold = Bester, rot = Korrektur), Name, ×N, darunter die Tipper (gold = vorne nach der Wertung)
+   const pt=ptsTxt(i,e,v===undefined?r.pts:v)+(fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:''),nm=e.name,xn=e.rs.length>1?` ×${e.rs.length}`:'';
+   c.font=font(12,800);const pw=c.measureText(pt).width+8;c.font=font(10.5,800);const nmF=fit(nm,62),nw=c.measureText(nmF).width;c.font=font(9,700);const xw=xn?c.measureText(xn).width:0;
+   const tot=pw+4+nw+xw,x=cx-tot/2,y=top+86;
+   c.fillStyle=fx?'#c0392b':r.isBest?'#f4d777':'rgba(0,0,0,.65)';rr(x,y,pw,15,5);c.fill();
+   c.fillStyle=r.isBest&&!fx?'#1a1300':'#fff';c.textAlign='left';c.font=font(12,800);c.fillText(pt,x+4,y+12);
+   c.shadowColor='#000';c.shadowBlur=2;c.fillStyle='#fff';c.font=font(10.5,800);c.fillText(nmF,x+pw+4,y+12);
+   if(xn){c.font=font(9,700);c.fillText(xn,x+pw+4+nw,y+12);}c.shadowBlur=0;
+   if(r.live){c.fillStyle='#ff4d5e';circ(x+tot+6,y+8,3.5);c.fill();}
+   const fy=y+19;
+   if(e.ghost){c.font=font(9,600);c.fillStyle='#c9d6df';c.textAlign='center';c.fillText('keiner getippt',cx,fy+10);return;}
+   const fs=e.rs.slice(0,6),fw=fs.length*12+3,fx0=cx-fw/2;
+   fs.forEach((q,j)=>{const ax=fx0+j*12+7.5,ay=fy+7.5,im=faces.get(q.m.id),ld=leadIds.has(q.m.id);
+    c.save();circ(ax,ay,7.5);c.fillStyle='#17242e';c.fill();c.clip();if(im)c.drawImage(im,ax-7.5,ay-7.5,15,15);else{c.fillStyle='#9db0bd';c.font=font(8,800);c.textAlign='center';c.fillText((q.m.name||'?')[0].toUpperCase(),ax,ay+3);}c.restore();
+    c.strokeStyle=ld?'#f4d777':q.m.id===d.me?'#7fd3a6':'#000';c.lineWidth=ld||q.m.id===d.me?1.8:1;circ(ax,ay,7.5);c.stroke();});
+   if(e.rs.length>6){c.font=font(8,700);c.fillStyle='#fff';c.textAlign='left';c.fillText('+'+(e.rs.length-6),fx0+fw+2,fy+10);}
   }
   function draw(time){
    let k=0,p=1;for(const s of seg){if(time>=s.t0){k=s.k;p=Math.min(1,(time-s.t0)/1.2);}}
-   const f=frames[k],prev=frames[Math.max(0,k-1)],e=ease(p);
+   const f=frames[k],kp=Math.max(0,k-1),e=ease(p),Lc=lay[k],Lp=lay[kp];
    c.fillStyle='#081118';c.fillRect(0,0,W,H);
    // Kopf: Titel, Uhrzeit, Krone und Führende
-   c.textAlign='left';c.fillStyle='#9db0bd';c.font=font(34,800);c.fillText(`MVP-TIPP · SPIELTAG ${d.day} · ZEITRAFFER`,PX,80);
+   c.textAlign='left';c.textBaseline='alphabetic';c.fillStyle='#9db0bd';c.font=font(34,800);c.fillText(`MVP-TIPP · SPIELTAG ${d.day} · ZEITRAFFER`,PX,80);
    c.fillStyle='#f4d777';c.font=font(80,900);c.fillText(zrWhen(f.at),PX,170);
    const cw=c.measureText(zrWhen(f.at)).width;c.fillStyle='#9db0bd';c.font=font(36,600);
    c.fillText(f.start?'Anpfiff':f.fin?'🏁 nach Spieltagsende':`Stand ${k+1} von ${n}`,PX+cw+24,170);
    c.fillStyle='#e9f0f4';c.font=font(40,700);
    const lead=f.best?`👑 ${f.best.players.map(x=>x.name).join(', ')} ${fmt(f.best.points)}${f.lead.length?` · führend: ${f.lead.map(r=>r.m.name).join(', ')}`:f.ready?' · keiner vorne':''}`:f.start?'Alle starten bei 0':'Noch kein Zwischenstand';
    c.fillText(fit(lead,PW),PX,240);
-   // Platz
-   c.save();rr(PX,PY,PW,PH,18);c.clip();
-   for(let i=0;i*60<PW;i++){c.fillStyle=i%2?'#348a40':'#2f7d3a';c.fillRect(PX+i*60,PY,60,PH);}
-   c.strokeStyle='rgba(255,255,255,.4)';c.lineWidth=3;c.beginPath();c.moveTo(PX+PW*.04,PY);c.lineTo(PX+PW*.04,PY+PH);c.moveTo(PX+PW/2,PY);c.lineTo(PX+PW/2,PY+PH);c.stroke();
-   c.beginPath();c.arc(PX+PW/2,PY+PH/2,90,0,7);c.stroke();
-   for(let y=0;y<PH;y+=16){c.fillStyle='#fff';c.fillRect(PX+PW-16+((y/16)%2?8:0),PY+y,8,8);c.fillStyle='#111';c.fillRect(PX+PW-16+((y/16)%2?0:8),PY+y,8,8);}
+   // Rasen (wie .pxr-pitch) und Ersatzbank, in App-Einheiten
+   c.save();c.translate(PX,PY);c.scale(K,K);
+   const PH=PT+maxRows*RH;
+   c.save();rr(0,0,LW,PH+(BH?0:10),10);c.clip();
+   for(let x=0;x<LW;x+=66){c.fillStyle='#2f8a45';c.fillRect(x,0,33,PH);c.fillStyle='#2a7d3e';c.fillRect(x+33,0,33,PH);}
+   c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=2;c.beginPath();c.moveTo(LW/2,0);c.lineTo(LW/2,PH);c.stroke();circ(LW/2,PH/2,38);c.stroke();
+   const bh=Math.min(170,PH*.8);c.strokeRect(LW*.84,PH/2-bh/2,LW*.16+2,bh);
+   c.fillStyle='rgba(255,255,255,.25)';c.fillRect(LW-12,PH/2-30,12,60);c.strokeStyle='#fff';c.lineWidth=3;c.strokeRect(LW-12,PH/2-30,14,60);
    const leadIds=new Set(f.lead.map(r=>r.m.id));
-   rowsList.forEach((r,i)=>{
-    const a=ptsAt(prev,r),b=ptsAt(f,r),va=a??(r.ghost?b:0),vb=b??(r.ghost?a:0);
-    const v=(va??0)+((vb??0)-(va??0))*e,x=PX+PW*pos(v)/100,y=PY+70+(i+.5)*RH+RH*.38;
-    const pb=(prev.best?.players||[]).some(q=>q.id===r.id),fb=(f.best?.players||[]).some(q=>q.id===r.id);
-    const ga=r.ghost?(pb&&fb?1:fb?e:pb?1-e:0):1;if(r.ghost&&ga<=0.01)return;
-    const st=figure(r,x,y,f,time,ga*.9);
-    // Name und Punkte daneben, darunter die Tipper (Gold = führend)
-    c.save();c.globalAlpha=r.ghost?ga:st.ko?.6:1;c.font=font(30*S,800);
-    const fx=f.fixes.find(z=>z.id===r.id)&&p>=1;
-    const label=`${r.m?r.m.name+' · ':''}${r.name} ${b===null&&!r.ghost?'–':fmt(Math.round(v))}${fx?` ✏️ ${f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from>0?'+':''}${fmt(f.fixes.find(z=>z.id===r.id).to-f.fixes.find(z=>z.id===r.id).from)}`:''}`;
-    const tw=c.measureText(label).width+20*S,th=40*S,tx=st.flip?x-(r.m?50:34)*S-tw:x+(r.m?116:34)*S,ty=y-(r.m?100:70)*S;
-    c.fillStyle=fx?'#c0392b':st.ld?'#8a6d1f':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
-    if(st.ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
-    c.fillStyle='#fff';c.textAlign='left';c.fillText(label,tx+10*S,ty+29*S);
-    const sub=r.m?`Tipp ${fmt(r.t.points)}`:'keiner getippt';c.font=font(22*S,700);
-    const sw2=c.measureText(sub).width+16*S,sx=st.flip?tx+tw-sw2:tx;
-    c.fillStyle='rgba(0,0,0,.5)';rr(sx,ty+th+6*S,sw2,30*S,15*S);c.fill();c.fillStyle='#e9f0f4';c.fillText(sub,sx+8*S,ty+th+28*S);
-    c.restore();
-   });
+   const draws=[];
+   ents.forEach((en,i)=>{const a=Lp.byK.get(i),b=Lc.byK.get(i);if(!a&&!b)return;
+    const ax=a?a.x:b.x,bx=b?b.x:a.x,ay=a?a.row:b.row,by=b?b.row:a.row;
+    const x=(ax+(bx-ax)*e)/100*LW,top=PT+2+(ay+(by-ay)*e)*RH,alpha=a&&b?1:b?e:1-e;
+    const r=b||a,va=a?.pts??b?.pts,vb=b?.pts??a?.pts,v=va==null||vb==null?(b||a).pts:Math.round(va+(vb-va)*e);
+    draws.push({en,r,x,top,alpha,v,i:b?k:kp});});
+   draws.sort((q,w)=>w.top-q.top);
+   for(const q of draws){c.save();c.globalAlpha=q.alpha;const fx=p>=1?f.fixes.find(z=>z.id===q.en.id):null;runner(q.en,q.r,q.i,q.x,q.top,time,fx,leadIds,q.v);c.restore();}
+   c.restore();
+   c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=2;c.beginPath();c.moveTo(0,PH);c.lineTo(0,0);c.lineTo(LW,0);c.lineTo(LW,PH);c.stroke();
+   if(BH){const y0=PH,Lb=e<.5?Lp:Lc,ib=e<.5?kp:k;
+    c.fillStyle='#181e25';rr(0,y0,LW,BH,10);c.fill();c.fillRect(0,y0,LW,10);c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=2;c.beginPath();c.moveTo(0,y0);c.lineTo(0,y0+BH-10);c.arcTo(0,y0+BH,10,y0+BH,10);c.lineTo(LW-10,y0+BH);c.arcTo(LW,y0+BH,LW,y0+BH-10,10);c.lineTo(LW,y0);c.stroke();
+    c.fillStyle='#ff6b6b';c.font=font(10.5,800);c.textAlign='left';c.fillText('💤 Ersatzbank · kann nicht mehr gewinnen',8,y0+15);
+    const dy=y0+20,dh=86*bs+14;c.fillStyle='rgba(60,85,110,.35)';rr(8,dy,LW-16,dh,6);c.fill();
+    c.fillStyle='#8f1d22';c.fillRect(18,dy+dh-(32*bs+8)-6,LW-36,6);c.fillStyle='#6b1418';c.fillRect(14,dy+dh-11,LW-28,11);c.fillStyle='#c9282d';c.fillRect(14,dy+dh-15,LW-28,7);
+    const nb=Lb.bench.length,slot=(LW-24)/Math.max(1,nb);
+    if(!nb){c.fillStyle='#728592';c.font=font(10,600);c.textAlign='center';c.fillText('noch keiner',LW/2,dy+dh/2);}
+    Lb.bench.forEach((b,j)=>{const en=ents[b.k],cx=12+slot*(j+.5);sprite(en,'sit',cx,dy+dh-2,bs,time+j*.37,false);
+     c.textAlign='center';c.fillStyle='#e9f0f4';c.font=font(9.5,800);c.fillText(fit(en.name,slot-4),cx,dy+dh+13);
+     c.fillStyle='#9db0bd';c.font=font(9.5,600);c.fillText(ptsTxt(ib,en,b.pts)+(en.rs.length>1?` · ×${en.rs.length}`:''),cx,dy+dh+25);});}
    c.restore();
    // Korrektur-Hinweis
    // Kevin-Wunsch: je Spieler eine Zeile, untereinander.

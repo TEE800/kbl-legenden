@@ -1189,3 +1189,14 @@ body.zr-on .mobilenav{display:none}
 .dr-wait{background:rgba(216,192,102,.16);color:#d8c066}
 .dr-pill-bad{color:#f19a94}
 .dr-group .acc-sub>p{margin:0}
+
+/* Zeitraffer in Pixel-Optik (Kevin-Wunsch 01.11.): gleiche Figuren wie das Rennen, Krone/Ball nur bei Bedarf */
+.zr-pxr{margin:0}
+.zr-pxr .pxr-fig:not(.best)>.pxr-crown,.zr-pxr .pxr-fig:not(.run)>.pxr-ball{display:none}
+.zr-pxr .pxr-live:not(.on){display:none}
+.zr-pxr .zr-runner{top:0;transition:left 1.1s cubic-bezier(.3,1.3,.6,1),top .7s ease,opacity .5s}
+.zr-pxr .zr-runner.zr-off{opacity:0;pointer-events:none}
+.zr-pxr .zr-runner.zr-fixed .pxr-p{background:#c0392b;color:#fff}
+.zr-pxr .pxr-bl{min-height:2.5em}
+.zr-bench-empty{flex:1;align-self:center;text-align:center;font-size:11px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.zr-pxr .zr-runner{transition:none}}
