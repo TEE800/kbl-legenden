@@ -721,7 +721,7 @@ async function huhoRanking(token, data, dayNumber) {
     const id = String(u.i), total = days.reduce((s, d) => s + (d.by.get(id) || 0), 0);
     if (!total) return { ...u };
     const kb = Math.min(Math.max(0, total), gap.get(id) || 0), open = total - kb;
-    return { ...u, sp: Number(u.sp) - open, huho: { total, kickbase: kb, open } };
+    return { ...u, sp: Number(u.sp) - open, huho: { total, kickbase: kb, open, spKickbase: Number(u.sp) } };
   });
   [...us].sort((a, b) => Number(b.sp) - Number(a.sp)).forEach((u, i, a) => { u.spl = i && Number(a[i - 1].sp) === Number(u.sp) ? a[i - 1].spl : i + 1; });
   us.sort((a, b) => Number(b.sp) - Number(a.sp));
