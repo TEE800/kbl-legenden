@@ -689,13 +689,11 @@ async function huhoDeductions(token, day) {
   return value;
 }
 // Was Kickbase schon abgezogen hat (Admin-Punktabzug in der Kickbase-App, Kevin 01.11.): Gesamtpunkte ohne Abzug wären
-// sp von ST 1 plus die Spieltagspunkte (mdp) ab ST 2; was heute darunter liegt, ist abgezogen worden.
-// Am 02.11. gesehen (erste echte Abzüge an ST 8): Kickbase verschiebt einen Abzug in ALLEN Ranglisten um denselben Betrag, auch in
-// ranking?dayNumber=1 und alten Spieltagen; mdp bleibt. Darum taugt sp von ST 1 aus Kickbase nicht als Basis (Lücke war immer 0,
-// HuHo wurde doppelt abgezogen). Basis = sp von ST 1 vor jedem Abzug (Export 02.11. 05:23); neue Manager ohne Eintrag wie bisher.
-const HUHO_SP1 = { '699062': -284, '841764': -115, '1165589': 129, '1386995': 53, '1403991': 586, '1450470': 418, '1631136': -274,
-  '1631954': 244, '1646647': 329, '1906625': 182, '1927404': 504, '1929473': 0, '1981519': 1082, '2038365': 431, '2710049': 463,
-  '2789934': 79, '3783040': -1100 };
+// die Spieltagspunkte (mdp) aller Spieltage; was heute darunter liegt, ist abgezogen worden.
+// Kickbase schreibt einen Abzug in ALLE Ranglisten (auch ranking?dayNumber=1 und alte Spieltage), mdp bleibt. Darum ist sp von
+// ST 1 kein Ausgangswert: Dort stecken schon die Abzüge für ST 2 und 5 (Kevin 02.11.: „nach den Spieltagen abgezogen“; sp ST 1
+// minus mdp ST 1 war bei allen 16 Managern genau minus HuHo von ST 2 und 5). ST 1 mit −1100 (keine Startelf) hat der Admin
+// auf 0 gesetzt, das zählt nicht als HuHo-Abzug.
 const huhoDayRanks = new Map();
 async function huhoKbGap(token, current) {
   const upTo = Number(current?.day), gap = new Map();
@@ -707,7 +705,8 @@ async function huhoKbGap(token, current) {
     const r = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${d}`, { token }); huhoDayRanks.set(d, { at: Date.now(), r }); days.push(r); }
   for (const u of current.us || []) {
     const id = String(u.i), at = d => (days[d - 1]?.us || []).find(x => String(x.i) === id);
-    let exp = Object.hasOwn(HUHO_SP1, id) ? HUHO_SP1[id] : Number(at(1)?.sp);
+    const m1 = Number(at(1)?.mdp);
+    let exp = m1 === -1100 ? 0 : m1;
     for (let d = 2; d <= upTo; d++) exp += Number(at(d)?.mdp);
     if (Number.isFinite(exp) && Number.isFinite(Number(u.sp))) gap.set(id, Math.max(0, exp - Number(u.sp)));
   }
