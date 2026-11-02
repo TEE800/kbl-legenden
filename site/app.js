@@ -616,12 +616,13 @@ async function loadHistory(){
    // Spiele beendet, aber Kickbase rechnet noch (il = true): noch nicht als abgeschlossen werten, sonst zählt ein Zwischenstand.
    if(!isLive&&day===completed&&data?.il===true)isLive=true;
    const list=rankingItems(data).filter(x=>isEligibleManager(managerName(x))).map(x=>{
-    const name=String(managerName(x)),score=number(points(x));
+    const name=String(managerName(x)),score=number(points(x)),raw=number(x?.huho?.spOhne??points(x));
+    // HuHo (Kevin 02.11.): score = Gesamtpunkte mit HuHo-Abzug ab dessen Spieltag (wie die Liga-Tabelle), Tagespunkte ohne (raw).
     const prior=day===1?0:previous.get(name);
     // ST 1 (Kevin 28.10.): Die Gesamtpunkte passen dort nicht zu den Spieltagspunkten der Kickbase-App, es gilt mdp.
     // Wer −1100 hatte (keine Startelf), wurde auf 0 gesetzt und zählt in den Statistiken mit 0 (Kevin 28.10., z. B. Totalausfall).
-    if(day===1){const mdp=number(x?.mdp);return {name,score,dayPoints:mdp===null?null:mdp===-1100?0:mdp};}
-    return {name,score,dayPoints:score===null||prior==null?null:score-prior};
+    if(day===1){const mdp=number(x?.mdp);return {name,score,raw,dayPoints:mdp===null?null:mdp===-1100?0:mdp};}
+    return {name,score,raw,dayPoints:raw===null||prior==null?null:raw-prior};
    }).filter(x=>x.score!==null);
    if(!list.length)continue;
    list.sort((a,b)=>(b.dayPoints??-Infinity)-(a.dayPoints??-Infinity));
@@ -631,7 +632,7 @@ async function loadHistory(){
     const best=eligible[0].dayPoints;
     eligible.filter(m=>m.dayPoints===best).forEach(m=>wins.set(m.name,(wins.get(m.name)||0)+1));
    }
-   previous=new Map(list.map(m=>[m.name,m.score]));
+   previous=new Map(list.map(m=>[m.name,m.raw??m.score]));
   }
   const winners=[...wins.entries()].sort((a,b)=>b[1]-a[1]);
   const awards=winners.length?winners.slice(0,5).map(([name,n])=>`<span>🏆 ${escapeHtml(name)}: <b>${n}</b> Spieltagssieg${n===1?'':'e'}</span>`).join(''):'Noch keine offiziellen Spieltagssiege.';
