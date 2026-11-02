@@ -1582,7 +1582,7 @@ function condChecker(token,day,conds){
   let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
   const types=await loadEventTypes(token),ev=Array.isArray(pc?.events)?pc.events:[];
   // Pro (eti, Minute) mit Summe 0 bei mehreren Eintraegen = zurueckgenommen (VAR).
-  const g=new Map();for(const e of ev){const k=e.eti+'|'+e.mt,x=g.get(k)||{eti:e.eti,n:0,p:0};x.n++;x.p+=Number(e.p)||0;g.set(k,x);}
+  const g=new Map();for(const e of ev){const k=e.eti+'|'+e.mt,x=g.get(k)||{eti:e.eti,mt:e.mt,n:0,p:0};x.n++;x.p+=Number(e.p)||0;g.set(k,x);}
   const titles=[...g.values()].filter(x=>!(x.n>1&&x.p===0)).map(x=>String(types[x.eti]||''));
   if(conds.includes('field')){
    const pos=(await loadAllPlayers(token)).players.get(id)?.pos;
@@ -1593,7 +1593,13 @@ function condChecker(token,day,conds){
   if(conds.includes('noGoal')){
    if(!pc)return {ok:null,why:'Ereignisse nicht abrufbar'};
    const k=Array.isArray(pc.k)?pc.k.map(Number):[];
-   if(titles.some(t=>GOAL_INVOLVED.test(t))||k.some(x=>x===1||x===2||x===3))return {ok:false,why:'direkte Torbeteiligung'};
+   if(titles.some(t=>GOAL_INVOLVED.test(t))||k.some(x=>x===1||x===2||x===3)){
+    // Ungefaehre Uhrzeit der ersten Torbeteiligung (Anstoss + Minute, ab der 46. plus 17 Min. Halbzeit) fuer den Zeitraffer:
+    // dort sitzt der Spieler erst danach auf der Bank (Kevin, ST 8: Upamecano und Garcia sassen ab Anpfiff dort).
+    const kick=Date.parse(pc.md||''),mins=[...g.values()].filter(x=>!(x.n>1&&x.p===0)&&GOAL_INVOLVED.test(String(types[x.eti]||''))).map(x=>parseInt(String(x.mt??''),10)).filter(Number.isFinite);
+    const at=Number.isFinite(kick)&&mins.length?new Date(kick+(Math.min(...mins)+(Math.min(...mins)>45?17:0))*60e3).toISOString():null;
+    return {ok:false,why:'direkte Torbeteiligung',...(at?{at}:{})};
+   }
   }
   return {ok:true};
  })());return memo.get(id);};
@@ -1746,7 +1752,7 @@ async function tippTracking(token,day,tips,finished,kind,pool=[],conds=[]){
  const value={updatedAt:new Date().toISOString(),players,...(pool.length?{pool}:{}),...(conds.length?{conds}:{})};
  // Getippte Spieler, die die Bedingungen der Tippregel nicht erfuellen (z. B. Torwart, Tor oder Vorlage): out = {Spieler-ID: Grund}.
  const chk=condChecker(token,day,conds),bad=new Set();
- if(chk){value.out={};for(const id of ids){const r=await chk(id);if(!r.ok){value.out[id]=r.why;if(r.ok===false)bad.add(id);}}}
+ if(chk){value.out={};for(const id of ids){const r=await chk(id);if(!r.ok){value.out[id]=r.why;if(r.at)(value.outAt||(value.outAt={}))[id]=r.at;if(r.ok===false)bad.add(id);}}}
  // Wertungen mit MVP brauchen den MVP-Zwischenstand aller Bundesliga-Spieler: teuer, darum hoechstens alle 10 Minuten (gespeichert in kbl-mvp-tipps.json;
  // bis 30.10. alle 30 Min., Kevin: Livestand im MVP-Rennen zu alt; dafuer zaehlen nur noch Vereine, deren Spiel schon begonnen hat).
  // Die Top 10 (Kevin-Wunsch) brauchen ihn bei jeder Wertung.
