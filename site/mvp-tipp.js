@@ -187,7 +187,8 @@
  const STATE={done:'Spiel vorbei',live:'Spiel läuft',open:'noch nicht gespielt',error:'nicht abrufbar',wait:'Punkte folgen'};
  const clock=s=>s?new Date(s).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'';
  // Rangfolge nach der Wertung des Spieltags. Während des Spieltags vorläufig (Punkte und MVP-Zwischenstand aus dem letzten Abgleich).
- function standings(d){
+ // off: im Zeitraffer die je Stand schon ausgeschlossenen Spieler (sonst gilt tracking.out).
+ function standings(d,off=null){
   const kind=kindOf(d),tr=d.tracking?.players||{},auto=!!kind&&kind!=='keine',pool=poolOf(d);
   const mvp=d.status==='finished'?d.result?.mvp:d.tracking?.mvp;
   const mvpIds=new Set((mvp?.players||[]).map(p=>String(p.id))),mvpPts=mvp?.players?.length&&Number.isFinite(mvp.points)?mvp.points:null;
@@ -203,7 +204,7 @@
     else if(kind==='korridor'&&diff>KORRIDOR){ok=false;why=`mehr als ${KORRIDOR} daneben`;}
    }
    if(ready&&pool.length&&!pool.includes(m.tip.team)){ok=false;why='nicht von den genannten Vereinen';}
-   else if(ready&&d.tracking?.out?.[m.tip.playerId]){ok=false;why=d.tracking.out[m.tip.playerId];}
+   else if(ready&&d.tracking?.out?.[m.tip.playerId]&&(!off||off.has(String(m.tip.playerId)))){ok=false;why=d.tracking.out[m.tip.playerId];}
    return {m,t:m.tip,pts,state:x?.state||'wait',diff,hit,ok,why};
   });
   // Schlüssel: kleiner ist besser. "Name reicht" und "Korridor": alle Treffer gleichauf.
@@ -372,20 +373,32 @@
   // Kevin: das Rennen beginnt beim Anpfiff bei 0, erst danach kommen die gespeicherten Stände.
   const raw=d.verlauf||[],t0=d.deadline&&raw.length&&Date.parse(d.deadline)<Date.parse(raw[0].at)?d.deadline:null;
   const start=t0?[{at:t0,start:true,players:Object.fromEntries([...tipped.keys()].map(id=>[id,{points:0,state:'open'}])),others:{},best:null,fixes:[],lead:[],ready:false}]:[];
+  // Bedingung verletzt (z. B. Tor oder Vorlage, Server tracking.out) gilt erst ab dem Stand, in dem es passiert ist (Kevin, ST 8: Upamecano
+  // und García saßen sonst ab Anpfiff auf der Bank). Zeit ungefähr vom Server (outAt): im Fenster −10/+20 Min. der Stand mit dem größten
+  // Punktesprung (dann kamen die Torpunkte), sonst der erste danach; ohne Zeit erst ab Spielende.
+  const pts=(f,id)=>f?.p?.[id]?.[0],offFrom=new Map();
+  for(const id of ruleOut){const t=Date.parse(d.tracking?.outAt?.[id]||'');let k=-1;
+   if(Number.isFinite(t)){let jump=0;raw.forEach((f,i)=>{const a=Date.parse(f.at);if(a<t-10*60e3||a>t+20*60e3||!i)return;
+     const j=(pts(f,id)??0)-(pts(raw[i-1],id)??0);if(j>jump){jump=j;k=i;}});
+    if(k<0)k=raw.findIndex(f=>Date.parse(f.at)>=t);}
+   else k=raw.findIndex(f=>f.p?.[id]?.[1]==='d');
+   offFrom.set(id,k<0?raw.length:k);}
+  const offAt=(i,team,id)=>(pool.length&&!pool.includes(team))||(offFrom.has(String(id))&&i>=offFrom.get(String(id)));
   return start.concat(raw.map((f,i,all)=>{
    const players={};for(const [id,[points,s]] of Object.entries(f.p||{}))players[id]={points,state:s==='d'?'done':s==='l'?'live':'open'};
+   const off=new Set([...offFrom].filter(([,k])=>i>=k).map(([id])=>id));
    // Wie auf dem Server (freshBest): getippte Spieler haben frischere Punkte als der Zwischenstand aller Spieler.
    let best=f.mvp?{points:f.mvp.points,players:f.mvp.players.map(p=>({...p}))}:null;
-   for(const [id,x] of Object.entries(players)){const t=tipped.get(id);if(!t||offRule(pool,t.team,id))continue;
+   for(const [id,x] of Object.entries(players)){const t=tipped.get(id);if(!t||offAt(i,t.team,id))continue;
     if(!best||x.points>best.points)best={points:x.points,players:[{id,name:t.player,team:t.team}]};
     else if(x.points===best.points&&!best.players.some(p=>p.id===id))best.players.push({id,name:t.player,team:t.team});}
    if(best&&f.mvp)best.players=best.players.filter(p=>f.mvp.players.some(m=>m.id===p.id)||players[p.id]?.points===best.points);
    const prev=all[i-1],fixes=[];
    if(prev)for(const [id,x] of Object.entries(players)){const o=prev.p?.[id];if(o&&o[1]==='d'&&o[0]!==x.points)fixes.push({id,from:o[0],to:x.points,name:tipped.get(id)?.player||id});}
-   const st=standings({...d,status:'live',result:null,tracking:{players,pool,mvp:best}});
+   const st=standings({...d,status:'live',result:null,tracking:{players,pool,mvp:best,out:d.tracking?.out}},off);
    // t = Top 10 laut Tippregel (seit 28.10. gespeichert): Punkte des späteren MVP, auch wenn ihn keiner getippt hat.
    const others={};for(const [id,v] of Object.entries(f.t||{}))others[id]=v[0];
-   return {at:f.at,fin:!!f.fin,players,others,best,fixes,lead:st.ready?st.lead:[],ready:st.ready};
+   return {at:f.at,fin:!!f.fin,players,others,best,fixes,lead:st.ready?st.lead:[],ready:st.ready,off};
   }));
  }
  // Kevin-Wunsch: Punkteänderungen untereinander, je Spieler eine Zeile mit der Differenz.
@@ -451,7 +464,7 @@
   const GAP=27,CAP=Math.max(2,Math.ceil(ents.length/3));
   const lay=frames.map((f,i)=>{const run=[],bench=[];
    ents.forEach((o,k)=>{if(!visIn(f,o))return;const x=f.players[o.id],isBest=isBestIn(f,o),pts=ptsOf(i,o);
-    const out=!isBest&&(offRule(pool,o.team,o.id)||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
+    const out=!isBest&&((pool.length&&!pool.includes(o.team))||f.off?.has(String(o.id))||(!!f.best&&x?.state==='done'&&pts!==null&&pts<f.best.points));
     const live=x?.state==='live';
     (out?bench:run).push({k,pts,isBest,live,mode:out?'sit':isBest&&!live?'cheer':live?'run':'stand'});});
    run.sort((a,b)=>b.isBest-a.isBest||(b.pts??-1e9)-(a.pts??-1e9)||a.k-b.k);
