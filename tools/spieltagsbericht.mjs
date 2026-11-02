@@ -103,7 +103,9 @@ function facts(day) {
   // Tagespunkte = Differenz der kumulierten Gesamtpunkte (CLAUDE.md). Ausnahme Spieltag 1 (Kevin 28.10.): Dort stimmt die Gesamtpunktzahl
   // nicht mit den Spieltagspunkten der Kickbase-App überein, es gilt mdp; wer −1100 hatte (keine Startelf), wurde auf 0 gesetzt und zählt mit 0.
   const dayPts = (i, d) => { if (d === 1) { const m = u(1, i)?.mdp; return Number.isFinite(m) ? (m === -1100 ? 0 : m) : null; }
-    const a = u(d, i)?.sp, b = u(d - 1, i)?.sp; return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; };
+    // HuHo: sp enthält den Abzug ab dem HuHo-Spieltag, die Tagespunkte zählen ohne (huho.spOhne, Kevin 01.11.).
+    const raw = x => x?.huho?.spOhne ?? x?.sp;
+    const a = raw(u(d, i)), b = raw(u(d - 1, i)); return Number.isFinite(a) && Number.isFinite(b) ? a - b : null; };
   const name = i => u(day, i).n;
   const days = Array.from({ length: day }, (_, k) => k + 1);
   const leagueAvg = d => round(mean(ids.map(i => dayPts(i, d)).filter(Number.isFinite)));

@@ -689,7 +689,13 @@ async function huhoDeductions(token, day) {
   return value;
 }
 // Was Kickbase schon abgezogen hat (Admin-Punktabzug in der Kickbase-App, Kevin 01.11.): Gesamtpunkte ohne Abzug wären
-// sp von ST 1 plus die Spieltagspunkte (mdp) ab ST 2; was heute darunter liegt, ist abgezogen worden (bis 01.11. überall 0).
+// sp von ST 1 plus die Spieltagspunkte (mdp) ab ST 2; was heute darunter liegt, ist abgezogen worden.
+// Am 02.11. gesehen (erste echte Abzüge an ST 8): Kickbase verschiebt einen Abzug in ALLEN Ranglisten um denselben Betrag, auch in
+// ranking?dayNumber=1 und alten Spieltagen; mdp bleibt. Darum taugt sp von ST 1 aus Kickbase nicht als Basis (Lücke war immer 0,
+// HuHo wurde doppelt abgezogen). Basis = sp von ST 1 vor jedem Abzug (Export 02.11. 05:23); neue Manager ohne Eintrag wie bisher.
+const HUHO_SP1 = { '699062': -284, '841764': -115, '1165589': 129, '1386995': 53, '1403991': 586, '1450470': 418, '1631136': -274,
+  '1631954': 244, '1646647': 329, '1906625': 182, '1927404': 504, '1929473': 0, '1981519': 1082, '2038365': 431, '2710049': 463,
+  '2789934': 79, '3783040': -1100 };
 const huhoDayRanks = new Map();
 async function huhoKbGap(token, current) {
   const upTo = Number(current?.day), gap = new Map();
@@ -701,31 +707,36 @@ async function huhoKbGap(token, current) {
     const r = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${d}`, { token }); huhoDayRanks.set(d, { at: Date.now(), r }); days.push(r); }
   for (const u of current.us || []) {
     const id = String(u.i), at = d => (days[d - 1]?.us || []).find(x => String(x.i) === id);
-    let exp = Number(at(1)?.sp);
+    let exp = Object.hasOwn(HUHO_SP1, id) ? HUHO_SP1[id] : Number(at(1)?.sp);
     for (let d = 2; d <= upTo; d++) exp += Number(at(d)?.mdp);
     if (Number.isFinite(exp) && Number.isFinite(Number(u.sp))) gap.set(id, Math.max(0, exp - Number(u.sp)));
   }
   return gap;
 }
-// Gesamttabelle der Legenden-Liga mit HuHo (Kevin 01.11.): Die Spieltage zählen mit den Kickbase-Punkten, HuHo wird erst am Ende
-// von den Gesamtpunkten abgezogen. Darum nur das aktuelle Ranking (ohne dayNumber), mdp bleibt. Was Kickbase schon abgezogen hat,
-// zieht die BumsKI nicht noch einmal ab.
+// Tabellen der Legenden-Liga mit HuHo (Kevin 01.11./02.11.): Die Tagespunkte zählen mit den Kickbase-Punkten (mdp bleibt),
+// HuHo wird von den Gesamtpunkten abgezogen, ab dem HuHo-Spieltag. So passen Liga-Tabelle, Spieltagszusammenfassung und
+// Tabellenplatz je Spieltag zusammen. Was Kickbase schon abgezogen hat, wird nicht noch einmal abgezogen; weil Kickbase den Abzug
+// auch in alte Ranglisten schreibt, wird er dort erst zurückgerechnet (spOhne = Gesamtpunkte ganz ohne HuHo).
 async function huhoRanking(token, data, dayNumber) {
-  const upTo = Number(data?.day);
-  if (dayNumber || !Array.isArray(data?.us) || !Number.isInteger(upTo) || upTo < HUHO_AB) return data;
+  if (!Array.isArray(data?.us)) return data;
+  const cur = dayNumber ? await kbFetch('/v4/leagues/6422780/ranking', { token }) : data;
+  const upTo = Number(cur?.day), n = dayNumber ? Number(dayNumber) : upTo;
+  if (!Number.isInteger(upTo) || !Number.isInteger(n) || upTo < HUHO_AB || n < 1) return data;
   const days = [];
   for (let d = HUHO_AB; d <= upTo; d++) { const v = await huhoDeductions(token, d); if (v?.by.size) days.push({ day: d, ...v }); }
   if (!days.length) return data;
-  const gap = await huhoKbGap(token, data);
+  const gap = await huhoKbGap(token, cur);
+  const sum = (id, to) => days.filter(d => d.day <= to).reduce((s, d) => s + (d.by.get(id) || 0), 0);
   const us = data.us.map(u => {
-    const id = String(u.i), total = days.reduce((s, d) => s + (d.by.get(id) || 0), 0);
-    if (!total) return { ...u };
-    const kb = Math.min(Math.max(0, total), gap.get(id) || 0), open = total - kb;
-    return { ...u, sp: Number(u.sp) - open, huho: { total, kickbase: kb, open, spKickbase: Number(u.sp) } };
+    const id = String(u.i), all = sum(id, upTo), total = sum(id, n);
+    const kb = Math.min(Math.max(0, all), gap.get(id) || 0);
+    if (!total && !kb) return { ...u };
+    const ohne = Number(u.sp) + kb;
+    return { ...u, sp: ohne - total, huho: { total, kickbase: kb, ...(dayNumber ? {} : { open: total - kb }), spKickbase: Number(u.sp), spOhne: ohne } };
   });
   [...us].sort((a, b) => Number(b.sp) - Number(a.sp)).forEach((u, i, a) => { u.spl = i && Number(a[i - 1].sp) === Number(u.sp) ? a[i - 1].spl : i + 1; });
   us.sort((a, b) => Number(b.sp) - Number(a.sp));
-  return { ...data, us, huho: days.map(d => d.info) };
+  return { ...data, us, huho: days.filter(d => d.day <= n).map(d => d.info) };
 }
 
 // Angeschossener Hoeler: MVP des Spieltags = Bundesliga-Spieler mit den meisten Spieltagspunkten (Annahme, an Spieltag 6 gegenpruefen).
@@ -2953,11 +2964,13 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       }
     }
     // HuHo als Aufgabe der BumsParade (Kevin 01.11.: zaehlt als Bumsung). Erledigt, sobald der Admin die Punkte in der Kickbase-App
-    // abgezogen hat: im Tagesstand (huhoKbDay) oder in den Gesamtpunkten (huhoKbGap, alle HuHo-Tage bis hier zusammen).
+    // abgezogen hat: im Tagesstand (huhoKbDay) oder in den Gesamtpunkten (huhoKbGap, alle HuHo-Tage zusammen).
     if(!probe&&!testMode&&huho?.players?.length){
       let gap=null,before=new Map();
       try{gap=await huhoKbGap(token,ranking);
-        for(let d=HUHO_AB;d<day;d++){const v=await huhoDeductions(token,d);for(const [id,x] of (v?.by||[]))before.set(id,(before.get(id)||0)+x);}}catch{gap=null;}
+        // Kevin zieht den neuesten HuHo-Spieltag zuerst ab (02.11.: ST 8 vor ST 2 und 5). Ein Abzug zählt darum zuerst für die
+        // späteren HuHo-Spieltage, dann für diesen (before = Abzüge der Spieltage nach diesem).
+        for(let d=day+1;d<=34;d++){const v=await huhoDeductions(token,d);for(const [id,x] of (v?.by||[]))before.set(id,(before.get(id)||0)+x);}}catch{gap=null;}
       const vs=`Bayern ${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}`;
       for(const z of huho.players){
         if(!z.points)continue;
