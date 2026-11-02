@@ -5,7 +5,7 @@
 (()=>{
  const RULE={BD:'Besoffener Davies',DD:'Dämonische Drehtür',MM:'Magic Miyoshi',AH:'Angeschossener Höler',RK:'Räudiger Kohr',BN:'Blinder Niklas',UM:'Upamaguire',EZ:'Einzelfallentscheidung',TL:'Teamlimit',FV:'Frühverkauf',HuHo:'Der hungrige Hoeneß'};
  const ICON={BD:'🍺',DD:'🌀',MM:'🪄',AH:'🔨',RK:'🟥',BN:'🙈',UM:'🦵',EZ:'⚖️',TL:'🧮'};
- const COLOR={BD:'#ed8b85',DD:'#c79bf2',MM:'#7fb8f0',AH:'#f0a35e',RK:'#d8c066',BN:'#7fd3a6',UM:'#f28fc4',EZ:'#a8b8c4',TL:'#6fd6d6'};
+ const COLOR={BD:'#ed8b85',DD:'#c79bf2',MM:'#7fb8f0',AH:'#f0a35e',RK:'#d8c066',BN:'#7fd3a6',UM:'#f28fc4',EZ:'#a8b8c4',TL:'#6fd6d6',FV:'#b9a4ec',HuHo:'#e48f6a'};
  const VERDICT=n=>n>=4?'Komplett zerlegt.':n===3?'Dreifach dran.':n===2?'Doppelt dran.':'Erwischt.';
  const safe=x=>escapeHtml(String(x??''));
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -69,7 +69,7 @@
   const el=document.getElementById('zeremonieBox');if(!el)return;
   const m=model();if(!m){el.innerHTML='';return;}
   const rows=m.defendants.map((x,i)=>`<li><span class="zer-row-name">${mgrName(x.name,'',x.id)}<span class="muted tiny">${x.charges.length} Anklagepunkt${x.charges.length===1?'':'e'}</span></span><span class="zer-row-rules">${x.charges.map(c=>`<span class="bums-rule bums-r-${safe(c.rule)}">${safe(c.rule)}</span>`).join('')}</span><button type="button" class="ghost" data-zer-akte="${i}">📜 Anklageschrift</button></li>`).join('');
-  el.innerHTML=`<details class="center-box acc-todo-box zer-box"${boxOpen?' open':''}><summary class="center-boxhead"><strong>🎺 BumsParade · Spieltag ${m.day} · ${m.defendants.length} Angeklagte</strong><span class="pill">für Discord</span></summary>
+  el.innerHTML=`<p style="margin:0 0 10px"><button type="button" class="ghost" data-zer-overview title="Alle Bumsungen dieses Spieltags als ein Bild (z. B. für Discord)">📷 Alle Bumsungen als Bild</button></p><details class="center-box acc-todo-box zer-box"${boxOpen?' open':''}><summary class="center-boxhead"><strong>🎺 BumsParade · Spieltag ${m.day} · ${m.defendants.length} Angeklagte</strong><span class="pill">für Discord</span></summary>
   <p class="muted" style="margin-top:0">Für den Montagabend: Bildschirm in Discord teilen und die Strafen einzeln vollstrecken. Mit Trommelwirbel, Drehtür und Abspann. Leertaste oder → geht weiter, Esc beendet.</p>
   <p><button type="button" class="gold" data-zer-start>▶ BumsParade starten</button> <button type="button" class="ghost" data-zer-alltext>📝 Alle Anklagen als Text kopieren</button></p>
   ${m.defendants.length?`<p class="muted tiny" style="margin:14px 0 6px"><b>Anklageschriften</b> · je Sünder ein Bild zum Posten in Discord</p><ul class="zer-rows">${rows}</ul>`:'<p>Keine Angeklagten. Die Parade fällt aus. 😴</p>'}</details>`;
@@ -214,18 +214,91 @@
   const box=document.createElement('div');box.className='zer-akte';box.setAttribute('role','dialog');box.setAttribute('aria-label',`Anklageschrift ${x.name}`);
   box.innerHTML=`<div class="zer-akte-in"><div class="zer-akte-img"><p class="muted">Anklageschrift wird geschrieben …</p></div><div class="zer-akte-btns"><button type="button" class="gold" data-a="copy">📋 Bild kopieren</button><button type="button" class="ghost" data-a="save">⬇ Bild speichern</button><button type="button" class="ghost" data-a="text">📝 Text kopieren</button><button type="button" class="ghost" data-a="close">Schließen</button></div><p class="muted tiny">In Discord einfügen (Strg+V) oder das gespeicherte Bild hochladen.</p></div>`;
   document.body.appendChild(box);
-  const cv=await akteCanvas(m,x);let url=null,blob=null;
+  imgDialog(box,await akteCanvas(m,x),`anklageschrift-st${m.day}-${x.name}.png`,()=>akteText(m,x));
+ }
+ // Fenster mit Vorschau: Bild kopieren, speichern, Text kopieren.
+ async function imgDialog(box,cv,file,text){let url=null,blob=null;
   try{blob=await new Promise(r=>cv.toBlob(r,'image/png'));url=URL.createObjectURL(blob);}catch{}
-  box.querySelector('.zer-akte-img').innerHTML=url?`<img src="${url}" alt="Anklageschrift ${safe(x.name)}">`:'<p class="error">Bild nicht möglich (Profilbild gesperrt). Text kopieren geht.</p>';
+  box.querySelector('.zer-akte-img').innerHTML=url?`<img src="${url}" alt="${safe(box.getAttribute('aria-label'))}">`:'<p class="error">Bild nicht möglich (Profilbild gesperrt). Text kopieren geht.</p>';
   box.addEventListener('click',async e=>{const a=e.target.closest('[data-a]')?.dataset.a;if(e.target===box||a==='close'){box.remove();if(url)URL.revokeObjectURL(url);return;}
-   if(a==='text')copyText(akteText(m,x),e.target);
-   if(a==='save'&&url){const l=document.createElement('a');l.href=url;l.download=`anklageschrift-st${m.day}-${x.name}.png`;l.click();}
+   if(a==='text')copyText(text(),e.target);
+   if(a==='save'&&url){const l=document.createElement('a');l.href=url;l.download=file;document.body.appendChild(l);l.click();l.remove();}
    if(a==='copy'&&blob){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);flash(e.target,'✓ kopiert');}catch{flash(e.target,'geht hier nicht, bitte speichern');}}});
+ }
+
+ // ---------- Übersicht: alle Bumsungen eines Spieltags auf einem Bild (Kevin-Wunsch 2.11.) ----------
+ // Gleiche Daten wie die Anklageschriften (model), also genau die Bumsungen der BumsTabelle.
+ const faceUrl=x=>{const s=faceSrc(x);if(!s)return null;try{return (typeof rsFaceSrc==='function'&&rsFaceSrc(s))||s;}catch{return s;}};
+ function chargeLine(c){const t=String(c.text||'');
+  const extra=(c.recv||[]).filter(r=>{const n=r.replace(/^→ an /,'');return !t.includes(n);});
+  return [t,...extra].join('  ·  ');}
+ function sorted(m){return [...m.defendants].sort((a,b)=>b.charges.length-a.charges.length||(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));}
+ async function overviewCanvas(m){
+  const W=1080,P=56,cw=W-2*P,c=document.createElement('canvas'),ctx=c.getContext('2d');
+  const sans='"Segoe UI",Arial,sans-serif',serif='Georgia,"Times New Roman",serif';
+  const list=sorted(m),CX=P+124,TX=P+206,TW=W-P-28-TX;
+  // Erst messen.
+  ctx.font=`500 27px ${sans}`;
+  const cards=list.map(x=>{const lines=x.charges.map(ch=>{ctx.font=`500 27px ${sans}`;return {ch,l:wrap(ctx,chargeLine(ch),TW)};});
+   return {x,lines,h:Math.max(124,88+lines.reduce((n,b)=>n+b.l.length*36+10,0)+12)};});
+  ctx.font=`600 26px ${sans}`;const cleanTxt=m.clean.map(x=>x.name).join('  ·  ');const cleanL=m.clean.length?wrap(ctx,cleanTxt,cw-40):[];
+  const kingTxt=m.kings.length?m.kings.map(k=>k.name).join(', ')+` (${m.kings[0].count}×)`:'';
+  const H=300+cards.reduce((n,b)=>n+b.h+16,0)+(cleanL.length?90+cleanL.length*36:0)+120;
+  c.width=W;c.height=H;
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#14212b');g.addColorStop(1,'#081118');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#b48633';ctx.lineWidth=5;ctx.strokeRect(20,20,W-40,H-40);
+  ctx.textAlign='center';ctx.fillStyle='#ebc768';ctx.font=`700 26px ${sans}`;ctx.fillText('KBL LEGENDEN',W/2,84);
+  ctx.font=`700 70px ${serif}`;ctx.fillStyle='#f4d777';ctx.fillText(`BumsParade · Spieltag ${m.day}`,W/2,166,cw);
+  ctx.font=`600 30px ${sans}`;ctx.fillStyle='#e9f0f4';
+  ctx.fillText(`${m.total} Bumsung${m.total===1?'':'en'}  ·  ${list.length} Manager gebumst${m.clean.length?`  ·  ${m.clean.length} davongekommen`:''}`,W/2,218,cw);
+  if(kingTxt){ctx.font=`600 26px ${sans}`;ctx.fillStyle='#f1a5aa';ctx.fillText(`👑 Bumskönig: ${kingTxt}`,W/2,260,cw);}
+  let y=292;const imgs=await Promise.all(list.map(x=>loadImg(faceUrl(x))));
+  cards.forEach((b,i)=>{const x=b.x,top=y;
+   ctx.fillStyle='rgba(255,255,255,.045)';ctx.beginPath();ctx.roundRect?ctx.roundRect(P,top,cw,b.h,16):ctx.rect(P,top,cw,b.h);ctx.fill();
+   // Profilbild
+   const R=40,cx=P+24+R,cy=top+20+R,img=imgs[i];
+   ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#22313c';ctx.fill();ctx.clip();
+   if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{ctx.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-R,cy-R,2*R,2*R);}catch{}}
+   else{ctx.fillStyle='#ebc768';ctx.font=`700 38px ${sans}`;ctx.textAlign='center';ctx.fillText((x.name[0]||'?').toUpperCase(),cx,cy+14);}
+   ctx.restore();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='#ebc768';ctx.lineWidth=2;ctx.stroke();
+   // Anzahl unter dem Bild
+   ctx.textAlign='center';ctx.fillStyle='#f1a5aa';ctx.font=`900 34px ${sans}`;ctx.fillText(`${x.charges.length}×`,cx,cy+R+40);
+   // Name und Platz
+   ctx.textAlign='left';ctx.fillStyle='#e9f0f4';ctx.font=`800 34px ${sans}`;ctx.fillText(x.name,CX,top+52,W-P-28-CX-230);
+   ctx.textAlign='right';ctx.fillStyle='#9db0bd';ctx.font=`500 22px ${sans}`;
+   ctx.fillText([x.place?`Platz ${x.place}`:'',x.pts!=null?`${fmt(x.pts)} Pkt.`:''].filter(Boolean).join(' · '),W-P-28,top+50);
+   // Anklagepunkte
+   let yy=top+88;ctx.textAlign='left';
+   for(const {ch,l} of b.lines){const col=COLOR[ch.rule]||'#ebc768';
+    ctx.font=`900 20px ${sans}`;const tag=ch.rule,tw=ctx.measureText(tag).width+18;
+    const cw2=Math.max(62,tw);ctx.fillStyle=col;ctx.beginPath();ctx.roundRect?ctx.roundRect(CX,yy-21,cw2,28,6):ctx.rect(CX,yy-21,cw2,28);ctx.fill();
+    ctx.fillStyle='#081118';ctx.textAlign='center';ctx.fillText(tag,CX+cw2/2,yy);ctx.textAlign='left';
+    ctx.fillStyle=ch.in?'#cfd9e0':'#e9f0f4';ctx.font=`${ch.in?'italic ':''}500 27px ${sans}`;
+    l.forEach((s,k)=>ctx.fillText(s,TX,yy+k*36));
+    yy+=l.length*36+10;}
+   y+=b.h+16;});
+  if(!list.length){ctx.textAlign='center';ctx.fillStyle='#9db0bd';ctx.font=`600 32px ${sans}`;ctx.fillText('Keine Bumsungen. Die Parade fällt aus. 😴',W/2,y+40);y+=80;}
+  if(cleanL.length){y+=30;ctx.textAlign='left';ctx.fillStyle='#7fd3a6';ctx.font=`800 26px ${sans}`;ctx.fillText(`😇 DAVONGEKOMMEN (${m.clean.length})`,P+20,y+24);
+   ctx.fillStyle='#cfd9e0';ctx.font=`600 26px ${sans}`;cleanL.forEach((s,k)=>ctx.fillText(s,P+20,y+66+k*36));y+=60+cleanL.length*36;}
+  const d=new Date(),p2=v=>String(v).padStart(2,'0');
+  ctx.textAlign='center';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
+  ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,W/2,H-48);
+  return c;
+ }
+ function overviewText(m){const L=sorted(m);
+  return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n😇 Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
+ async function openOverview(){
+  const m=model();if(!m)return;
+  const box=document.createElement('div');box.className='zer-akte';box.setAttribute('role','dialog');box.setAttribute('aria-label',`Alle Bumsungen Spieltag ${m.day}`);
+  box.innerHTML=`<div class="zer-akte-in"><div class="zer-akte-img"><p class="muted">Bild wird gemalt …</p></div><div class="zer-akte-btns"><button type="button" class="gold" data-a="save">⬇ Bild speichern</button><button type="button" class="ghost" data-a="copy">📋 Bild kopieren</button><button type="button" class="ghost" data-a="text">📝 Text kopieren</button><button type="button" class="ghost" data-a="close">Schließen</button></div><p class="muted tiny">In Discord einfügen (Strg+V) oder das gespeicherte Bild hochladen.</p></div>`;
+  document.body.appendChild(box);
+  imgDialog(box,await overviewCanvas(m),`bumsparade-st${m.day}.png`,()=>overviewText(m));
  }
 
  // ---------- Bedienung ----------
  document.addEventListener('click',e=>{
   if(e.target.closest('[data-zer-start]'))return start();
+  if(e.target.closest('[data-zer-overview]'))return openOverview();
   const ak=e.target.closest('[data-zer-akte]');if(ak)return openAkte(Number(ak.dataset.zerAkte));
   if(e.target.closest('[data-zer-alltext]')){const m=model();if(m)copyText(m.defendants.map(x=>akteText(m,x)).join('\n\n'),e.target);return;}
   const ex=e.target.closest('[data-zer-exec]');if(ex)return execute(ex.dataset.zerExec);
