@@ -115,7 +115,73 @@ function renderRankingTable(){
   const gap=leader===null||m.score===null||m.pos===1?'':`−${fmt(leader-m.score)}`;
   return `<tr class="${cls}"><td>${escapeHtml(m.pos)}</td><td class="center">${move}</td><td><button class="manager-link" data-profile="${currentManagers.findIndex(x=>x.name===m.name)}">${mgrName(m.name)}</button></td><td class="right muted">${last?fmt(lastPoints.get(m.name)):'–'}</td><td class="right muted">${avgOf.has(m.name)?fmt(Math.round(avgOf.get(m.name).s/avgOf.get(m.name).n)):'–'}</td><td class="right muted">${last?(winsOf.get(m.name)||0):'–'}</td><td class="right muted">${gap}</td><td class="right">${fmt(m.score)}</td></tr>`;
  }).join('');
+ rsPreload();
 }
+// Liga-Tabelle als Bild (Kevin-Wunsch 2.11., wie 📋 an den Fragen-Kacheln): zeichnet alle Zeilen der gerade angezeigten Tabelle
+// (auch die nicht sichtbaren) auf eine Leinwand und lädt sie als PNG herunter. Profilbilder: Kickbase-CDN erlaubt kein CORS,
+// darum online aus site/faces/, am PC über /api/mgr-img; sie werden nach jedem Neuzeichnen der Tabelle vorgeladen,
+// damit der Klick selbst ohne Warten auskommt (Teilen am Handy gilt sonst nicht mehr als Klick).
+var rsFaces=null;
+function rsFaceSrc(src){const k=/^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(src||''));
+ return !k?'':window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);}
+function rsImgOf(name){try{return KBL_MGR_IMG.get(mgrKey(name))||'';}catch{return '';}}
+function rsPreload(){rsFaces||=new Map();for(const av of document.querySelectorAll('#ranking .mgr-av[data-mgr]')){const s=rsFaceSrc(rsImgOf(av.dataset.mgr));if(!s||rsFaces.has(s))continue;
+ const i=new Image();rsFaces.set(s,null);i.onload=()=>rsFaces.set(s,i);i.src=s;}}
+function rankingCanvas(){
+ const rows=[...document.querySelectorAll('#ranking tr')].filter(tr=>tr.cells.length>=8);if(!rows.length)throw new Error('leer');
+ const W=1200,P=40,RH=66,HEAD=150,FOOT=74,sans='"Segoe UI",Arial,sans-serif',c=document.createElement('canvas'),x=c.getContext('2d');
+ const H=P+HEAD+rows.length*RH+FOOT+P;c.width=W;c.height=H;
+ x.fillStyle='#081118';x.fillRect(0,0,W,H);
+ const bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,22):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
+ const L=P+24,R=W-P-24,live=!!document.querySelector('#tableTitle .live-badge');
+ x.textBaseline='alphabetic';x.textAlign='left';
+ x.font=`900 40px Georgia,serif`;x.fillStyle='#ebc768';x.fillText('KBL LEGENDEN',L,P+58);
+ const t1=x.measureText('KBL LEGENDEN ').width;x.font=`700 30px ${sans}`;x.fillStyle='#e9f0f4';x.fillText('· Liga-Tabelle',L+t1,P+58);
+ x.textAlign='right';x.font=`700 26px ${sans}`;
+ if(live){x.fillStyle='#ed8b85';x.fillText('● LIVE',R,P+56);}
+ else{x.fillStyle='#9db0bd';x.fillText($('#rankingMeta')?.textContent||'',R,P+56);}
+ // Spalten: [Text aus Zelle, rechte bzw. linke Kante, Ausrichtung]
+ const cols=[[0,L+6,'left'],[1,L+110,'center'],[2,L+170,'left'],[3,L+620,'right'],[4,L+720,'right'],[5,L+800,'right'],[6,L+955,'right'],[7,R-8,'right']];
+ const heads=[...document.querySelectorAll('#table thead th')].map(th=>th.textContent.trim().replace('Ø PRO ST','Ø'));
+ let y=P+HEAD-30;x.font=`700 20px ${sans}`;x.fillStyle='#9db0bd';
+ for(const [i,px,al] of cols){x.textAlign=al;x.fillText(heads[i]||'',px,y);}
+ y+=14;x.fillStyle='#2e3f4a';x.fillRect(L,y,R-L,2);
+ const ell=(t,max)=>{if(x.measureText(t).width<=max)return t;while(t.length>1&&x.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+ rows.forEach((tr,n)=>{
+  const top=y+4+n*RH,mid=top+RH/2,base=mid+10,first=tr.classList.contains('rank-row-1'),podium=first||tr.classList.contains('rank-row-top'),last=tr.classList.contains('rank-row-last');
+  if(n)x.fillStyle='#2e3f4a',x.fillRect(L,top,R-L,1);
+  if(first){x.fillStyle='rgba(235,199,104,.07)';x.fillRect(L,top+1,R-L,RH-1);}
+  if(podium||last){x.fillStyle=last?'#ed8b85':'#ebc768';x.fillRect(L,top+4,5,RH-8);}
+  const cell=i=>tr.cells[i].textContent.trim();
+  x.textAlign='left';x.font=`${first?800:500} 28px ${sans}`;x.fillStyle=first?'#ebc768':'#e9f0f4';x.fillText(cell(0),L+22,base);
+  const mv=tr.cells[1].querySelector('span'),mt=cell(1);x.textAlign='center';x.font=`700 24px ${sans}`;
+  x.fillStyle=mv?.classList.contains('rank-up')?'#7fd3a6':mv?.classList.contains('rank-down')?'#ed8b85':'#728592';x.fillText(mt,L+110,base-1);
+  // Profilbild (Kreis), sonst Anfangsbuchstabe
+  const av=tr.cells[2].querySelector('.mgr-av'),name=av?.dataset.mgr||cell(2),cx=L+170+22,r=22,face=rsFaces?.get(rsFaceSrc(rsImgOf(name)));
+  x.save();x.beginPath();x.arc(cx,mid,r,0,Math.PI*2);x.fillStyle='#14212b';x.fill();x.clip();
+  if(face){const s=Math.min(face.naturalWidth,face.naturalHeight);try{x.drawImage(face,(face.naturalWidth-s)/2,0,s,s,cx-r,mid-r,2*r,2*r);}catch{}}
+  else{x.fillStyle='#9db0bd';x.font=`700 22px ${sans}`;x.textAlign='center';x.fillText((name[0]||'?').toUpperCase(),cx,mid+8);}
+  x.restore();x.beginPath();x.arc(cx,mid,r,0,Math.PI*2);x.strokeStyle='#465864';x.lineWidth=2;x.stroke();
+  x.textAlign='left';x.font=`700 28px ${sans}`;x.fillStyle=first?'#ebc768':'#e9f0f4';x.fillText(ell(name,L+535-(L+226)),L+226,base);
+  x.textAlign='right';x.font=`500 26px ${sans}`;x.fillStyle=first?'#ebc768':'#9db0bd';
+  for(const i of [3,4,5,6])x.fillText(cell(i),cols[i][1],base);
+  x.font=`800 28px ${sans}`;x.fillStyle=first?'#ebc768':'#e9f0f4';x.fillText(cell(7),R-8,base);
+ });
+ const d=new Date(),p2=v=>String(v).padStart(2,'0');
+ x.textAlign='left';x.font=`24px ${sans}`;x.fillStyle='#728592';
+ x.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,L,H-P-24);
+ return c;
+}
+function rankingShot(btn){
+ const flash=t=>{const o='📷 Als Bild';btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1800);};
+ let c;try{c=rankingCanvas();}catch{flash('✕ Keine Tabelle');return;}
+ const meta=($('#rankingMeta')?.textContent||'').match(/\d+/),name=`kbl-tabelle${meta?'-st'+meta[0]:''}-${new Date().toISOString().slice(0,10)}.png`;
+ // Synchron in eine Datei umwandeln (wie pvTileCopy), dann herunterladen.
+ const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+ const blob=new Blob([u],{type:'image/png'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇ Gespeichert');
+}
+$('#rankingShot')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rankingShot(e.currentTarget);});
 function storageKey(){return 'kbl-penalties-'+String(currentLeague?.id||'none')}
 function loadPenalties(){try{penalties=JSON.parse(localStorage.getItem(storageKey())||'[]');if(!Array.isArray(penalties))penalties=[]}catch{penalties=[]}renderPenalties();const old=$('#penaltyOld');if(old)old.hidden=!penalties.length}
 function renderPenalties(){$('#penaltyList').innerHTML=penalties.length?penalties.map((p,i)=>`<div class="penalty"><span><strong>${escapeHtml(p.manager)}</strong> · ${escapeHtml(p.rule)} <small class="muted">${p.done?'Erledigt':'Offen'}</small></span><div><button class="ghost" data-toggle="${i}">${p.done?'↶':'✓'}</button> <button class="ghost" data-delete="${i}">×</button></div></div>`).join(''):'<p class="muted">Noch keine Strafen erfasst.</p>'}
