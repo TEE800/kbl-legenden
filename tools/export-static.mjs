@@ -89,7 +89,7 @@ try {
   if (live) await save(`/api/rule-live/${live}`);
 
   fs.writeFileSync(path.join(DATA, key('/api/vorschau')), JSON.stringify({ preview: false, admin: false, loggedIn: true }));
-  for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen', '/api/berichte']) await save(u);
+  for (const u of ['/api/leagues', `/api/ranking/${LEAGUE}`, '/api/points-overview', '/api/points-season', '/api/bumsungen', '/api/berichte', '/api/huho-probe']) await save(u);
   const ranking = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8'));
   for (const m of ranking.us || []) await save(`/api/manager-squad-v4/${LEAGUE}/${m.i}`);
 
