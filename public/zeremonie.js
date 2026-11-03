@@ -232,7 +232,7 @@
  function chargeLine(c){const t=String(c.text||'');
   const extra=(c.recv||[]).filter(r=>{const n=r.replace(/^→ an /,'');return !t.includes(n);});
   return [t,...extra].join('  ·  ');}
- function sorted(m){return [...m.defendants].sort((a,b)=>b.charges.length-a.charges.length||(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));}
+ function sorted(m){return [...m.defendants].sort((a,b)=>(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));}
  async function overviewCanvas(m){
   const W=1080,P=56,cw=W-2*P,c=document.createElement('canvas'),ctx=c.getContext('2d');
   const sans='"Segoe UI",Arial,sans-serif',serif='Georgia,"Times New Roman",serif';
@@ -241,7 +241,7 @@
   ctx.font=`500 27px ${sans}`;
   const cards=list.map(x=>{const lines=x.charges.map(ch=>{ctx.font=`500 27px ${sans}`;return {ch,l:wrap(ctx,chargeLine(ch),TW)};});
    return {x,lines,h:Math.max(124,88+lines.reduce((n,b)=>n+b.l.length*36+10,0)+12)};});
-  ctx.font=`600 26px ${sans}`;const cleanTxt=m.clean.map(x=>x.name).join('  ·  ');const cleanL=m.clean.length?wrap(ctx,cleanTxt,cw-40):[];
+  ctx.font=`600 26px ${sans}`;const cleanS=[...m.clean].sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9));const cleanTxt=cleanS.map(x=>x.name).join('  ·  ');const cleanL=m.clean.length?wrap(ctx,cleanTxt,cw-40):[];
   const kingTxt=m.kings.length?m.kings.map(k=>k.name).join(', ')+` (${m.kings[0].count}×)`:'';
   const H=300+cards.reduce((n,b)=>n+b.h+16,0)+(cleanL.length?90+cleanL.length*36:0)+120;
   c.width=W;c.height=H;
