@@ -925,7 +925,22 @@
   $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
   $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
   $('#mvpRuleWertung').value=d.rule?.wertung||'';
+  ruleCheck();
  }
+ // Admin-Reiter (Kevin-Wunsch 4.11.): zeigt beim Schreiben, wie die BumsKI die Regel versteht (Wertung, Vereine, Bedingungen, nicht ausgewertete Teile).
+ function ruleCheckHtml(){
+  const text=$('#mvpRuleText')?.value.trim(),w=$('#mvpRuleWertung')?.value||'';
+  if(!text)return '';
+  const d={rule:{id:'eigene',text,wertung:w||undefined},wertungen:ruleData?.wertungen,managers:[]},kind=kindOf(d);
+  if(!kind)return `<small class="mvp-wertung mvp-unclear">⚠️ Die BumsKI erkennt aus diesem Text nicht, wie gewertet wird. Dann zeigt sie keine Führenden und keinen Gewinner-Vorschlag. Bitte bei „So wird gewertet“ auswählen oder die Regel anders formulieren.</small>`;
+  if(kind==='keine')return `<small class="mvp-wertung">🔍 Keine automatische Wertung: Führende und Gewinner bestimmt ihr selbst.</small>`;
+  const u=ruleUnclear(d);
+  return `<small class="mvp-wertung">🔍 So versteht die BumsKI die Regel: <b>${esc(kindTitle(d,kind))}</b>${w?' (von Hand gewählt)':''}</small><br>`+
+   (u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil wertet die BumsKI nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende dann bitte selbst prüfen.</small>`:`<small class="mvp-wertung">✓ Die BumsKI versteht die ganze Regel.</small>`);
+ }
+ const ruleCheck=()=>{const b=$('#mvpRuleCheck');if(b)b.innerHTML=ruleCheckHtml();};
+ document.addEventListener('input',e=>{if(e.target.id==='mvpRuleText')ruleCheck();});
+ document.addEventListener('change',e=>{if(e.target.id==='mvpRuleWertung')ruleCheck();});
  async function loadRuleAdmin(){
   const state=$('#mvpAdminState');if(!state)return;
   try{
