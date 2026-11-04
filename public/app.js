@@ -38,14 +38,39 @@ function mgrFace(name,cls='',id=null){
 // Logo plus Name; Logo und Namensanfang bleiben in einer Zeile, lange Namen dürfen nach „_“ umbrechen.
 function mgrName(name,cls='',id=null){
  const t=escapeHtml(name??''),i=t.indexOf('_'),head=i<0?t:t.slice(0,i+1),rest=i<0?'':'<wbr>'+t.slice(i+1).replaceAll('_','_<wbr>');
- return `<span class="mgr-nm">${mgrFace(name,cls,id)}${head}</span>${rest}`;
+ return `<span class="mgr-nm">${mgrFace(name,cls,id)}${head}</span>${rest}${mgrSym(name)}`;
 }
+// Symbole hinter Managernamen (Kevin-Wunsch 4.11.), immer nach dem letzten abgeschlossenen Spieltag (Gleichstand = alle):
+// 🏆 Spieltagssieger, 🥄 Spieltagsletzter, 👑 Bumskönig (meiste Bumsungen), 😇 ungebumst (BumsTabelle des neuesten Spieltags),
+// 🥇 Tabellenführer, 🏮 Tabellenletzter. Platzhalter <span class="mgr-sym"> füllt fillMgrSyms (auch in später gezeichneten Bereichen).
+const MGR_SYM=new Map();
+const MGR_SYM_INFO={'🏆':'Spieltagssieger','🥄':'Spieltagsletzter','👑':'Bumskönig','😇':'ungebumst','🥇':'Tabellenführer','🏮':'Tabellenletzter'};
+function mgrSym(name){return `&#8288;<span class="mgr-sym" data-sym="${escapeHtml(name??'')}"></span>`;}
+function mgrSymHtml(name){const l=MGR_SYM.get(mgrKey(name));return l?.length?l.map(x=>`<span title="${escapeHtml(x.t)}">${x.i}</span>`).join(''):'';}
+function fillMgrSyms(root=document){for(const el of root.querySelectorAll('.mgr-sym[data-sym]')){const h=mgrSymHtml(el.dataset.sym);if(el.innerHTML!==h)el.innerHTML=h;}}
+function mgrSymCompute(){
+ const add=(n,i,t)=>{const k=mgrKey(n);const l=MGR_SYM.get(k)||[];if(!l.some(x=>x.i===i))l.push({i,t});MGR_SYM.set(k,l);};
+ MGR_SYM.clear();
+ const fin=(historyData||[]).filter(h=>h.status==='finished').sort((a,b)=>a.day-b.day).pop();
+ if(fin){const L=fin.list.filter(m=>isEligibleManager(m.name));
+  const dp=L.filter(m=>m.dayPoints!=null),hi=Math.max(...dp.map(m=>m.dayPoints)),lo=Math.min(...dp.map(m=>m.dayPoints));
+  if(dp.length){dp.filter(m=>m.dayPoints===hi).forEach(m=>add(m.name,'🏆',`Spieltagssieger ST ${fin.day}`));if(lo!==hi)dp.filter(m=>m.dayPoints===lo).forEach(m=>add(m.name,'🥄',`Spieltagsletzter ST ${fin.day}`));}
+  const sc=L.filter(m=>m.score!=null),sh=Math.max(...sc.map(m=>m.score)),sl=Math.min(...sc.map(m=>m.score));
+  if(sc.length){sc.filter(m=>m.score===sh).forEach(m=>add(m.name,'🥇',`Tabellenführer nach ST ${fin.day}`));if(sl!==sh)sc.filter(m=>m.score===sl).forEach(m=>add(m.name,'🏮',`Tabellenletzter nach ST ${fin.day}`));}}
+ const bd=Object.keys(bumsDays||{}).map(Number).filter(d=>!fin||d<=fin.day).sort((a,b)=>b-a)[0];
+ if(bd){const ms=Object.values(bumsDays[bd].managers||{}).filter(v=>isEligibleManager(v.name)),mx=Math.max(0,...ms.map(v=>v.count||0));
+  if(mx>0)ms.filter(v=>v.count===mx).forEach(v=>add(v.name,'👑',`Bumskönig ST ${bd} (${mx}×)`));
+  ms.filter(v=>!v.count).forEach(v=>add(v.name,'😇',`ungebumst an ST ${bd}`));}
+ const order=Object.keys(MGR_SYM_INFO);for(const l of MGR_SYM.values())l.sort((a,b)=>order.indexOf(a.i)-order.indexOf(b.i));
+ fillMgrSyms();
+}
+try{new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1&&(n.matches?.('.mgr-sym')||n.querySelector?.('.mgr-sym:empty'))){if(MGR_SYM.size)fillMgrSyms(n.parentNode||n);}}).observe(document.documentElement,{childList:true,subtree:true});}catch{}
 function fillMgrFaces(root=document){
  for(const el of root.querySelectorAll('.mgr-av[data-mgr]:empty')){const inner=mgrFaceInner(el.dataset.mgr,el.dataset.mgrId);if(inner==null)continue;el.innerHTML=inner;if(!inner.startsWith('<img'))el.classList.add('mgr-av-txt');}
 }
 // Manager mit seinem Profil verlinken (Kevin-Wunsch): Klick öffnet „Managerprofile“ mit diesem Manager. html = Inhalt (Standard: Logo plus Name).
-function mgrLink(name,html=mgrName(name)){return `<a class="mgr-link" href="#profiles" data-goto-profile="${escapeHtml(name??'')}">${html}</a>`;}
-window.kblMgrFace=mgrFace;window.kblMgrName=mgrName;window.kblMgrLink=mgrLink;window.kblFillMgrFaces=fillMgrFaces;
+function mgrLink(name,html=mgrName(name)){return `<a class="mgr-link" href="#profiles" data-goto-profile="${escapeHtml(name??'')}">${html}${String(html).includes('mgr-sym')?'':mgrSym(name)}</a>`;}
+window.kblMgrFace=mgrFace;window.kblMgrName=mgrName;window.kblMgrSym=mgrSym;window.kblMgrLink=mgrLink;window.kblFillMgrFaces=fillMgrFaces;
 // Abgelaufene Sitzung (z. B. nach einem Server-Neustart): Anmeldemaske wieder zeigen statt Fehlern in jedem Reiter.
 async function api(url,options){const r=await fetch(url,options);const d=await r.json().catch(()=>({}));if(r.status===401&&!String(url).startsWith('/api/login')){try{setConnected(false);}catch{}throw Error('Bitte neu anmelden (Sitzung abgelaufen).');}if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d}
 function setConnected(on){$('#status').textContent=on?'● Kickbase verbunden':'Nicht verbunden';$('#status').classList.toggle('ok',on);$('#loginCard').classList.toggle('hidden',on);$('#leagueCard').classList.add('hidden');if(!on)$('#dashboard').classList.add('hidden')}
@@ -638,7 +663,7 @@ async function loadHistory(){
   const awards=winners.length?winners.slice(0,5).map(([name,n])=>`<span>🏆 ${escapeHtml(name)}: <b>${n}</b> Spieltagssieg${n===1?'':'e'}</span>`).join(''):'Noch keine offiziellen Spieltagssiege.';
   const liveEntry=nextHistory.find(x=>x.status==='live');
   const liveHtml=liveEntry?`<div class="center-live" id="historyLive">${historyLiveInner(liveEntry.day)}</div>`:'';
-  historyData=nextHistory;
+  historyData=nextHistory;try{mgrSymCompute();}catch{}
   $('#historySummary').innerHTML='<div class="history-awards">'+awards+'</div>'+liveHtml;
   statusEl.textContent='';
   renderHistory();
@@ -1843,6 +1868,7 @@ async function renderBumsTabelle(){
  const el=$('#bumsTable');if(!el||!currentLeague)return;
  let days;try{days=bumsDays=(await api('/api/bumsungen')).days||{};}catch(e){el.innerHTML=`<p class="error">BumsTabelle nicht abrufbar: ${escapeHtml(e.message)}</p>`;return;}
  if(window.KBL_STATIC)try{await bumsStaticDerive(days);}catch{}
+ try{mgrSymCompute();}catch{}
  try{kblAccDayLabels(days);}catch{}try{accDaysRender();}catch{}
  try{showProfile();}catch{}try{renderPreview();}catch{}
  const finished=historyData.filter(h=>h.status==='finished').map(h=>h.day);
