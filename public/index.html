@@ -112,7 +112,7 @@
  const allowed=new Set(views.map(x=>x.dataset.view));
  const titles={overview:'Übersicht',profiles:'Managerprofile',accounting:'BumsParade',penalties:'BumsTabelle',archiv:'BumsArchiv',rules:'Regeln',lineups:'Aufstellungen',ligen:'Ligenübersicht',challenges:'Challenges',points:'Punkteübersicht',arena:'Arena',transfers:'Transfers',mvp:'MVP-Tipp',meister:'Meisterecke',admin:'Admin'};
  // „Mehr“ leuchtet nur bei Reitern, die unter „Mehr“ stehen (aus #mobileMore gelesen, nichts fest im Code).
- const moreViews=new Set([...document.querySelectorAll('#mobileMore [data-kbl-nav]')].map(a=>a.dataset.kblNav));
+ const moreViews={has:v=>!!document.querySelector('#mobileMore [data-kbl-nav="'+v+'"]')}; // live, weil die Reiter sortiert werden können (reiter.js)
  const moreBtn=document.querySelector('#mobileMoreBtn'),morePanel=document.querySelector('#mobileMore');
  function setMore(open){if(!morePanel)return;morePanel.hidden=!open;moreBtn.setAttribute('aria-expanded',String(open));}
  moreBtn?.addEventListener('click',e=>{e.stopPropagation();setMore(morePanel.hidden);});
@@ -169,4 +169,4 @@
   showView('overview',false);
  }
 })();
-</script><script src="/challenges-view.js"></script><script src="/mvp-tipp.js"></script><script src="/arena.js"></script><script src="/zeremonie.js"></script><script src="/dauerregeln.js"></script><script src="/transfers.js"></script><script src="/ligen.js"></script><script src="/meisterecke.js"></script><script src="/bericht.js"></script><script src="/vorschau.js"></script><script src="/push.js"></script><script src="/nutzung.js"></script><script src="/wischen.js"></script></body></html>
+</script><script src="/challenges-view.js"></script><script src="/mvp-tipp.js"></script><script src="/arena.js"></script><script src="/zeremonie.js"></script><script src="/dauerregeln.js"></script><script src="/transfers.js"></script><script src="/ligen.js"></script><script src="/meisterecke.js"></script><script src="/bericht.js"></script><script src="/vorschau.js"></script><script src="/push.js"></script><script src="/nutzung.js"></script><script src="/reiter.js"></script><script src="/wischen.js"></script></body></html>
