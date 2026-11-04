@@ -3483,12 +3483,14 @@ async function mwEnsure(token, force) {
   if (!mwRunning) mwRunning = mwRefresh(token).finally(() => { mwRunning = null; });
   return mwRunning;
 }
-// Marktwert eines Spielers an einem Tag (YYYY-MM-DD, Berlin): Wert mit diesem dt, sonst der letzte davor (höchstens 3 Tage).
+// Marktwert eines Spielers an einem Tag (YYYY-MM-DD, Berlin), gültig tagsüber bis zur Anpassung um 22 Uhr. Kickbase datiert
+// einen Wert auf den Tag der Anpassung (am 4.11. tagsüber war der neueste dt der 3.11., gleich mv im Kader), darum dt = Tag - 1;
+// fehlt er, der letzte davor (höchstens 3 Tage).
 function mwOn(pid, ymd) {
   const p = mwLoad().players[String(pid)];
   if (!p || p.s == null) return null;
-  const want = dtOfYmd(ymd);
-  for (let d = want; d >= want - 3; d--) { const v = p.mv[d - p.s]; if (v != null) return { mv: v, date: ymdOfDt(d), exact: d === want }; }
+  const want = dtOfYmd(ymd) - 1;
+  for (let d = want; d >= want - 3; d--) { const v = p.mv[d - p.s]; if (v != null) return { mv: v, date: ymdOfDt(d + 1), exact: d === want }; }
   return null;
 }
 const mwSquadCache = new Map();
@@ -3519,13 +3521,13 @@ app.get('/api/marktwerte', async (req, res) => {
       } catch (e) { m.error = e.message; }
       managers.push(m);
     }
-    const L = s.latestDt;
+    const L = s.latestDt, photos = await playerPhotos().catch(() => null);
     const list = Object.entries(s.players).map(([id, p]) => {
       const at = d => { const v = p.mv[d - p.s]; return v == null ? null : v; }, mv = at(L);
       if (mv == null) return null;
       const ch = n => { const v = at(L - n); return v == null ? null : mv - v; };
       const last365 = p.mv.slice(Math.max(0, L - 365 - p.s)).filter(v => v != null);
-      return { id, n: p.n, t: p.gone ? null : p.t, tid: p.gone ? null : p.tid, pos: p.pos, img: p.img, mv, d1: ch(1), d7: ch(7), d30: ch(30),
+      return { id, n: p.n, t: p.gone ? null : p.t, tid: p.gone ? null : p.tid, pos: p.pos, img: photos?.get(id) || p.img, mv, d1: ch(1), d7: ch(7), d30: ch(30),
         hmv: Math.max(...last365), lmv: Math.min(...last365), owner: owner.get(id) || null };
     }).filter(Boolean);
     res.set('Cache-Control', 'no-store').json({ updatedAt: s.fetchedAt || null, date: L ? ymdOfDt(L) : null, players: list, managers,
