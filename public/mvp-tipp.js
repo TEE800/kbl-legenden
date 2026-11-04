@@ -11,7 +11,10 @@
  const API=STATIC?String(window.KBL_TIPP_API||'').replace(/\/+$/,''):'';
  const LIVE=!STATIC||!!API;
  const tippUrl=path=>API?API+path.replace(/^\/api\/mvp-tipps/,'/tipps').replace('/tipps/codes/','/codes/'):path;
- const adminCode=()=>$('#mvpAdminCode')?.value||'';
+ // Online meldet sich der Admin mit demselben Code an wie für die BumsParade-Haken (kbl-admin-haken), das Feld ist dann ausgeblendet.
+ const storedCode=()=>{try{return localStorage.getItem('kbl-admin-haken')||'';}catch{return '';}};
+ const adminCode=()=>$('#mvpAdminCode')?.value||storedCode();
+ let ruleData=null;// Spieltag im Admin-Reiter „Tippregel festlegen“ (immer der nächste offene, unabhängig von der Auswahl im MVP-Tipp)
  let overview=null,data=null,players=null,playerByLabel=new Map(),loading=false;
 
  async function get(url,opts){
@@ -852,16 +855,6 @@
   if(zrGroups&&d.reveal)zrMount(root,d,zrGroups);zrGroups=null;
   if(race?.open&&!players)loadPlayers().then(()=>render()).catch(()=>{});
   if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
-  const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
-  if(!admin.hidden){
-   const withCode=d.managers.filter(m=>m.hasCode);
-   $('#mvpCodes').innerHTML=withCode.length?`<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code für Spieltag ${d.day} vergessen hat.</p>`+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
-   $('#mvpRuleText').value=d.rule?.text||'';
-   $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
-   $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
-   $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
-   $('#mvpRuleWertung').value=d.rule?.wertung||'';
-  }
   if(d.open&&LIVE)loadPlayers().catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
  // Spieltag gespielt, aber Kickbase hat ihn noch nicht abgeschlossen (Ranking il, meist bis zum Abend nach dem letzten Spiel):
@@ -913,6 +906,44 @@
   finally{loading=false;}
  }
 
+
+ // Admin-Reiter (Kevin-Wunsch 4.11.): „Tippregel festlegen“ für den nächsten offenen Spieltag, lädt beim Aufklappen.
+ function renderRuleAdmin(){
+  const d=ruleData,state=$('#mvpAdminState'),form=$('#mvpAdminForm');if(!state||!form)return;
+  $('#mvpAdminTitle').textContent=d?`Tippregel festlegen · Spieltag ${d.day}`:'Tippregel festlegen (MVP-Tipp)';
+  const ok=d&&(d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked;
+  form.hidden=!ok;
+  state.textContent=!d?'Kein offener Spieltag zum Tippen gefunden.':ok?`Gilt für Spieltag ${d.day}${d.deadline?`, änderbar bis zum Anstoß (${when(d.deadline)})`:''}.`
+   :d.status!=='upcoming'||d.locked?`Spieltag ${d.day} ist schon angepfiffen, die Tippregel lässt sich nicht mehr ändern.`
+   :'Zum Festlegen der Tippregel bitte als Admin anmelden.';
+  if(!ok)return;
+  $('#mvpAdminCodeBox').style.display=API&&!storedCode()?'block':'none';// inline display, das hidden-Attribut wirkt dort nicht
+  const withCode=d.managers.filter(m=>m.hasCode);
+  $('#mvpCodes').innerHTML=withCode.length?`<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code für Spieltag ${d.day} vergessen hat.</p>`+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
+  $('#mvpRuleText').value=d.rule?.text||'';
+  $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+  $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
+  $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
+  $('#mvpRuleWertung').value=d.rule?.wertung||'';
+ }
+ async function loadRuleAdmin(){
+  const state=$('#mvpAdminState');if(!state)return;
+  try{
+   overview=await get('/api/mvp-tipps');
+   const day=overview.next;
+   if(!day){ruleData=null;renderRuleAdmin();return;}
+   const d=await get(API?tippUrl(`/api/mvp-tipps/${day}`):`/api/mvp-tipps/${day}`);
+   if(day>1&&overview.days?.find(x=>x.day===day-1)?.status==='finished'){
+    const p=await get(`/api/mvp-tipps/${day-1}`).catch(()=>null);
+    if(p?.result&&!['missing','empty'].includes(p.result.status))d.prevBest={day:day-1,managers:p.result.best?.managers||[]};
+   }
+   ruleData=d;renderRuleAdmin();
+  }catch(e){ruleData=null;$('#mvpAdminForm').hidden=true;state.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
+ }
+ document.addEventListener('toggle',e=>{if(e.target.id==='mvpAdminBox'&&e.target.open)loadRuleAdmin();},true);
+ // Nach dem Speichern im Admin-Reiter auch den MVP-Tipp neu laden, falls dort derselbe Spieltag gewählt ist.
+ const afterRuleChange=async day=>{await loadRuleAdmin();if(data?.day===day)await loadDay(day);};
+
  document.addEventListener('submit',async e=>{
   if(e.target.id!=='mvpForm')return;e.preventDefault();
   const msg=$('#mvpMsg'),pick=pickPlayer($('#mvpPlayer')),p=pick.p,pts=Number($('#mvpPoints').value);
@@ -952,7 +983,8 @@
  document.addEventListener('click',async e=>{
   if(e.target.id==='mvpRuleSave'){
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
-   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,wertung:$('#mvpRuleWertung').value,adminCode:adminCode()})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
+   if(!ruleData)return;const day=ruleData.day;
+   try{await get(tippUrl(`/api/mvp-tipps/${day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,wertung:$('#mvpRuleWertung').value,adminCode:adminCode()})});await afterRuleChange(day);$('#mvpRuleMsg').textContent=`Tippregel für Spieltag ${day} gespeichert.`;}
    catch(err){m.textContent='Fehler: '+err.message;}
   }
   if(e.target.id==='mvpWertungSave'){
@@ -968,8 +1000,8 @@
    catch(err){m.textContent=err.message;}
   }
   const rc=e.target.closest?.('[data-mvp-reset]');
-  if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} für Spieltag ${data.day} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
-   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}?day=${data.day}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
+  if(rc&&ruleData){const name=rc.dataset.name,day=ruleData.day;if(!confirm(`Tipp-Code von ${name} für Spieltag ${day} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
+   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}?day=${day}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await afterRuleChange(day);}catch(err){alert('Fehler: '+err.message);}
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');
