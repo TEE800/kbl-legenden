@@ -41,10 +41,10 @@ function mgrName(name,cls='',id=null){
  return `<span class="mgr-nm">${mgrFace(name,cls,id)}${head}</span>${rest}${mgrSym(name)}`;
 }
 // Symbole hinter Managernamen (Kevin-Wunsch 4.11.), immer nach dem letzten abgeschlossenen Spieltag (Gleichstand = alle):
-// 🏆 Spieltagssieger, 🥄 Spieltagsletzter, 👑 Bumskönig (meiste Bumsungen), 😇 ungebumst (BumsTabelle des neuesten Spieltags),
+// 🏆 Spieltagssieger, 🥄 Spieltagsletzter, ⛺ Bumskönig (meiste Bumsungen), 😇 ungebumst (BumsTabelle des neuesten Spieltags),
 // 🥇 Tabellenführer, 🏮 Tabellenletzter. Platzhalter <span class="mgr-sym"> füllt fillMgrSyms (auch in später gezeichneten Bereichen).
 const MGR_SYM=new Map();
-const MGR_SYM_INFO={'🏆':'Spieltagssieger','🥄':'Spieltagsletzter','👑':'Bumskönig','😇':'ungebumst','🥇':'Tabellenführer','🏮':'Tabellenletzter'};
+const MGR_SYM_INFO={'🏆':'Spieltagssieger','🥄':'Spieltagsletzter','⛺':'Bumskönig','😇':'ungebumst','🥇':'Tabellenführer','🏮':'Tabellenletzter'};
 function mgrSym(name){return `&#8288;<span class="mgr-sym" data-sym="${escapeHtml(name??'')}"></span>`;}
 function mgrSymHtml(name){const l=MGR_SYM.get(mgrKey(name));return l?.length?l.map(x=>`<span title="${escapeHtml(x.t)}">${x.i}</span>`).join(''):'';}
 function fillMgrSyms(root=document){for(const el of root.querySelectorAll('.mgr-sym[data-sym]')){const h=mgrSymHtml(el.dataset.sym);if(el.innerHTML!==h)el.innerHTML=h;}}
@@ -59,7 +59,7 @@ function mgrSymCompute(){
   if(sc.length){sc.filter(m=>m.score===sh).forEach(m=>add(m.name,'🥇',`Tabellenführer nach ST ${fin.day}`));if(sl!==sh)sc.filter(m=>m.score===sl).forEach(m=>add(m.name,'🏮',`Tabellenletzter nach ST ${fin.day}`));}}
  const bd=Object.keys(bumsDays||{}).map(Number).filter(d=>!fin||d<=fin.day).sort((a,b)=>b-a)[0];
  if(bd){const ms=Object.values(bumsDays[bd].managers||{}).filter(v=>isEligibleManager(v.name)),mx=Math.max(0,...ms.map(v=>v.count||0));
-  if(mx>0)ms.filter(v=>v.count===mx).forEach(v=>add(v.name,'👑',`Bumskönig ST ${bd} (${mx}×)`));
+  if(mx>0)ms.filter(v=>v.count===mx).forEach(v=>add(v.name,'⛺',`Bumskönig ST ${bd} (${mx}×)`));
   ms.filter(v=>!v.count).forEach(v=>add(v.name,'😇',`ungebumst an ST ${bd}`));}
  const order=Object.keys(MGR_SYM_INFO);for(const l of MGR_SYM.values())l.sort((a,b)=>order.indexOf(a.i)-order.indexOf(b.i));
  fillMgrSyms();
