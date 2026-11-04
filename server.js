@@ -3517,6 +3517,23 @@ async function mwKaderVerlauf(token, managers, L) {
   if (!period) return;
   const start = Math.max(dtOfYmd(berlinYmd(period.from)), L - 365);
   const mvAt = (pi, d) => { const p = store[pi]; return p && p.s != null ? p.mv[d - p.s] ?? null : null; };
+  // Spieler, die in keinem Vereinsprofil mehr stehen (gewechselt, z. B. Ceka, Pedersen), aber in einem Kader der Halbserie waren:
+  // Verlauf einzeln nachholen, einmal je Marktwert-Anpassung.
+  const seen = new Map();
+  for (const [id, list] of lists) for (const t of list) if (Date.parse(t.dt) >= period.from) seen.set(String(t.pi), { n: t.pn, tid: t.tid });
+  for (const m of managers) for (const p of mwSquadCache.get(m.id)?.value?.it || []) seen.set(String(p.pi), { n: p.pn, tid: p.tid });
+  let added = 0;
+  for (const [pi, info] of seen) {
+    const p = store[pi];
+    if (p && (p.s + p.mv.length - 1 >= L || p.tried === L)) continue;
+    try {
+      const r = await kbFetch(`/v4/competitions/1/players/${pi}/marketvalue/365`, { token }), map = mwSeries(p);
+      for (const x of (r?.it || [])) { const dt = Number(x.dt), mv = Number(x.mv); if (Number.isInteger(dt) && dt > 15000 && dt < 40000 && Number.isFinite(mv)) map.set(dt, mv); }
+      store[pi] = { ...(p || { n: info.n || pi, t: null, tid: info.tid != null ? String(info.tid) : null, pos: null, img: null, gone: true }), ...mwPack(map), tried: L };
+      added++;
+    } catch { if (p) p.tried = L; }
+  }
+  if (added) { try { fs.writeFileSync(MW_FILE, JSON.stringify(mwLoad())); } catch {} }
   for (const m of managers) {
     if (m.error || !lists.has(m.id)) continue;
     const sq = mwSquadCache.get(m.id)?.value?.it || [], set = new Set(sq.map(p => String(p.pi)));
