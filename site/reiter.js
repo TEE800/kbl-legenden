@@ -6,7 +6,7 @@
  const KEY='kbl-reiter',BAR=4;
  const side=document.querySelector('.sidebar nav'),bar=document.querySelector('.mobilenav'),more=document.querySelector('#mobileMore'),moreBtn=document.querySelector('#mobileMoreBtn');
  if(!side||!bar||!more||!moreBtn)return;
- const NAMES={overview:'Übersicht',profiles:'Managerprofile',accounting:'BumsParade',penalties:'BumsTabelle',archiv:'BumsArchiv',rules:'Regeln',lineups:'Aufstellungen',ligen:'Ligenübersicht',challenges:'Challenges',points:'Punkteübersicht',arena:'Arena',transfers:'Transfers',mvp:'MVP-Tipp',meister:'Meisterecke'};
+ const NAMES={overview:'Übersicht',profiles:'Managerprofile',accounting:'BumsParade',penalties:'BumsTabelle',archiv:'BumsArchiv',rules:'Regeln',lineups:'Aufstellungen',ligen:'Ligenübersicht',challenges:'Challenges',points:'Punkteübersicht',arena:'Arena',transfers:'Transfers',marktwerte:'Marktwerte',mvp:'MVP-Tipp',meister:'Meisterecke'};
  // Kurze Namen für die schmale Leiste unten am Handy.
  const SHORT={profiles:'Profile',points:'Punkte',ligen:'Ligen',lineups:'Aufstellung',meister:'Meister',penalties:'BumsTabelle'};
  const isPhone=()=>matchMedia('(max-width:900px)').matches;
