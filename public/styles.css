@@ -1265,3 +1265,39 @@ body.zr-on .mobilenav{display:none}
 .rs-phone .rs-item:nth-child(4){margin-bottom:22px;position:relative}
 .rs-phone .rs-item:nth-child(4)::after{content:'▲ unten in der Leiste · darunter unter „Mehr“ ▼';position:absolute;left:0;right:0;top:calc(100% + 4px);text-align:center;font-size:11px;color:var(--muted);pointer-events:none}
 .rs-foot{display:flex;justify-content:space-between;gap:8px;margin-top:12px}
+
+/* ---- Marktwerte (Kevin-Wunsch 4.11.): Gewinner/Verlierer, Verlauf je Spieler, Kaderwerte ---- */
+.mw-tiles{grid-template-columns:repeat(4,minmax(0,1fr));margin:0 0 14px}
+.mw-who{display:flex;align-items:center;gap:8px;min-width:0;margin-top:4px;background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mw-who>div{display:grid;min-width:0}.mw-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mw-who>.tr-face{width:36px;height:36px}.mw-who small{color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+div.mw-who{display:grid;gap:2px;cursor:default}
+.mw-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mw-list,.mw-kader{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.mw-row{width:100%;display:grid;grid-template-columns:24px 32px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 9px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.mw-row:hover{border-color:var(--line-strong)}.mw-row>.tr-face{width:32px;height:32px}
+.mw-name{display:grid;min-width:0}.mw-name b,.mw-name>.mgr-nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mw-name small{color:var(--dim);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mw-val{display:grid;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.mw-val small{color:var(--dim);font-size:11px}
+.mw-mn{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden}.mw-mn .mgr-nm{overflow:hidden;text-overflow:ellipsis}
+.mw-mgr{vertical-align:-3px}.mw-owner{display:flex;gap:4px;align-items:center}.mw-mgr .mgr-av{width:14px;height:14px}
+.mw-search{max-width:420px;margin-bottom:12px}.mw-search input{width:100%}
+.mw-suggest small,.mvp-suggest button small{color:var(--dim);font-weight:400;font-size:12px}
+.mw-chart-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.mw-chart-head>.tr-face{width:44px;height:44px}
+.mw-chart-head>div{display:grid;min-width:0}.mw-chart-head small{color:var(--dim);font-size:12px}
+.mw-chart-now{margin-left:auto;text-align:right}.mw-chart-now b{font-size:20px;font-variant-numeric:tabular-nums}
+.mw-chart{position:relative;background:var(--surface-0);border:1px solid var(--line);border-radius:8px;padding:6px;touch-action:pan-y}
+.mw-chart svg{display:block;max-width:100%;height:auto}
+.mw-line{fill:none;stroke:var(--ok);stroke-width:2;vector-effect:non-scaling-stroke}.mw-line.neg{stroke:var(--bad)}
+.mw-area{fill:var(--gold);opacity:.08}.mw-dot{fill:var(--gold)}
+.mw-lbl{fill:var(--text-2);font-size:12px;font-weight:600}.mw-axis{fill:var(--dim);font-size:11px}
+.mw-cursor{stroke:var(--line-strong);stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.mw-tip{position:absolute;top:6px;width:120px;text-align:center;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:6px;padding:3px 6px;font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none}
+.mw-kader li{display:grid;grid-template-columns:24px minmax(0,1fr) 120px auto;gap:8px;align-items:center;padding:7px 9px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px}
+.mw-spark{width:120px;height:30px}
+.center-mv{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+@media(max-width:900px){.mw-tiles{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){
+ .mw-cols{grid-template-columns:1fr;gap:4px}
+ .mw-kader li{grid-template-columns:20px minmax(0,1fr) 56px auto;gap:6px;padding:7px}.mw-spark{width:56px}
+}
