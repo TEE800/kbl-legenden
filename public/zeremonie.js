@@ -40,19 +40,26 @@
   const mgrs=new Map(),get=(mid,name)=>{const k=String(mid||idOf(name)||name);if(!mgrs.has(k)){const p=pts.get(k)?.pts??null;mgrs.set(k,{id:mid||idOf(name),name,pts:p,place:placeOf(p),charges:[],gifts:[]});}return mgrs.get(k);};
   for(const t of d.todos||[]){if(checks[t.key]?.removed||!isEligibleManager(t.manager))continue;
    const done=t.check?.state==='done'||!!checks[t.key]?.done;
-   get(t.managerId,t.manager).charges.push({key:t.key,rule:t.rule,manager:t.manager,pts:t.rule==='BD'?((d.bd||[]).find(x=>same(x,t.managerId,t.key.split(':')[2]))?.points??null):null,text:t.text,proof:proof(t),recv:recv(t),done,auto:t.check?.state==='done',needPick:todoNeedsPick(t)&&!checks[t.key]?.target,options:t.rule==='DD'?(t.options||[]):[],player:todoPlayer(t)});
+   const short=(()=>{const g=checks[t.key]?.target,k=todoPick(t),pl=todoPlayer(t),tos=(t.to||[]).map(r=>r.manager).join(', ');
+    if(t.rule==='MM')return `→ ${g||'?'} (1 weniger)`;
+    if(t.rule==='HuHo'){const h=/hatte (.+?) \(.*?(-?[\d.]+) Punkte werden genullt/.exec(t.text||'');if(h)return `${h[1]}: ${h[2]} Pkt. genullt`;}
+    if(t.rule==='DD')return `${k==='dd'&&g?g:(t.to||[])[0]?.playerName||'Top 3'} → ${tos||'?'}`;
+    const bd=t.rule==='BD'?((d.bd||[]).find(x=>same(x,t.managerId,t.key.split(':')[2]))?.points??null):null;
+    const to=k==='to'&&g?g:tos||(/an den Markt/.test(t.text||'')?'Markt':'');
+    return `${pl||t.text||''}${bd!=null?` (${fmt(bd)})`:''}${to?` → ${to}`:''}`;})();
+   get(t.managerId,t.manager).charges.push({key:t.key,rule:t.rule,manager:t.manager,pts:t.rule==='BD'?((d.bd||[]).find(x=>same(x,t.managerId,t.key.split(':')[2]))?.points??null):null,text:t.text,proof:proof(t),recv:recv(t),done,auto:t.check?.state==='done',needPick:todoNeedsPick(t)&&!checks[t.key]?.target,options:t.rule==='DD'?(t.options||[]):[],player:todoPlayer(t),short});
    // Empfänger (UM, DD, RK, BN, AH, MM) sind auch gebumst und bekommen einen eigenen Anklagepunkt, genau wie in der BumsTabelle (bumsCounts); TL nur erste Ebene.
    if(t.rule==='TL')continue;
    const g=checks[t.key]?.target,k=todoPick(t);
-   const inCharge=(name,id,text)=>{if(isEligibleManager(name))get(id,name).charges.push({key:`IN:${t.key}:${name}`,rule:t.rule,manager:name,in:true,src:t.key,text,proof:proof(t),recv:[],done,auto:t.check?.state==='done',needPick:false,options:[],player:null});};
-   if(t.rule==='MM'){if(g)inCharge(g,idOf(g),`Muss am nächsten Spieltag einen Spieler weniger aufstellen (von ${t.manager})`);continue;}
+   const inCharge=(name,id,text,short)=>{if(isEligibleManager(name))get(id,name).charges.push({key:`IN:${t.key}:${name}`,rule:t.rule,manager:name,in:true,src:t.key,text,short,proof:proof(t),recv:[],done,auto:t.check?.state==='done',needPick:false,options:[],player:null});};
+   if(t.rule==='MM'){if(g)inCharge(g,idOf(g),`Muss am nächsten Spieltag einen Spieler weniger aufstellen (von ${t.manager})`,`← ${t.manager} (1 weniger)`);continue;}
    let to=(t.to||[]).map(r=>({name:r.manager,id:r.managerId,player:k==='dd'&&g?g:r.playerName}));
    if(k==='to'&&g)to=g==='Markt'?[]:[{name:g,id:idOf(g),player:todoPlayer(t)}];
-   for(const r of to)inCharge(r.name,r.id,`Bekommt ${r.player||'einen Spieler'} von ${t.manager}`);}
+   for(const r of to)inCharge(r.name,r.id,`Bekommt ${r.player||'einen Spieler'} von ${t.manager}`,`${r.player||'Spieler'} ← ${t.manager}`);}
   for(const u of ae?.unclear||[]){if(!isEligibleManager(u.manager))continue;const k=unclearKey(u),g=checks[k]?.target;
    if(g==='Entfällt')continue;
-   get(u.managerId,u.manager).charges.push({key:k,rule:u.rule,manager:u.manager,text:`${u.playerName||u.name||'Spieler'}: ${g?(g==='Markt'?'an den Markt':'an '+g):'wird vom Gericht geprüft'}`,proof:u.reason||'',recv:[],done:!!g,auto:false,needPick:!g,options:[],player:u.playerName});
-   if(g&&g!=='Markt'&&isEligibleManager(g))get(null,g).charges.push({key:`IN:${k}:${g}`,rule:u.rule,manager:g,in:true,src:k,text:`Bekommt ${u.playerName||'einen Spieler'} von ${u.manager}`,proof:u.reason||'',recv:[],done:true,auto:false,needPick:false,options:[],player:null});}
+   get(u.managerId,u.manager).charges.push({key:k,rule:u.rule,manager:u.manager,text:`${u.playerName||u.name||'Spieler'}: ${g?(g==='Markt'?'an den Markt':'an '+g):'wird vom Gericht geprüft'}`,short:`${u.playerName||u.name||'Spieler'} → ${g||'?'}`,proof:u.reason||'',recv:[],done:!!g,auto:false,needPick:!g,options:[],player:u.playerName});
+   if(g&&g!=='Markt'&&isEligibleManager(g))get(null,g).charges.push({key:`IN:${k}:${g}`,rule:u.rule,manager:g,in:true,src:k,text:`Bekommt ${u.playerName||'einen Spieler'} von ${u.manager}`,short:`${u.playerName||'Spieler'} ← ${u.manager}`,proof:u.reason||'',recv:[],done:true,auto:false,needPick:false,options:[],player:null});}
   // Reihenfolge wie bei der Abrechnung: vom Spieltagssieger abwärts, DD zuletzt.
   const ord=r=>r==='DD'?2:r==='TL'?1:0;
   const list=[...mgrs.values()].map(m=>({...m,charges:m.charges.sort((a,b)=>ord(a.rule)-ord(b.rule))})).sort((a,b)=>(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));
@@ -234,57 +241,57 @@
   return [t,...extra].join('  ·  ');}
  function sorted(m){return [...m.defendants].sort((a,b)=>(a.place??99)-(b.place??99)||a.name.localeCompare(b.name,'de'));}
  async function overviewCanvas(m){
-  const W=1080,P=56,cw=W-2*P,c=document.createElement('canvas'),ctx=c.getContext('2d');
+  // Querformat (Kevin 4.11.: das lange Bild war in Discord schlecht lesbar): Kacheln je Manager in 4 Spalten, je Bumsung eine Zeile in Kurzform.
+  const W=1920,P=40,G=20,COLS=4,CW=(W-2*P-(COLS-1)*G)/COLS,LH=40,TOP=100,c=document.createElement('canvas'),ctx=c.getContext('2d');
   const sans='"Segoe UI",Arial,sans-serif',serif='Georgia,"Times New Roman",serif';
-  const list=sorted(m),CX=P+124,TX=P+206,TW=W-P-28-TX;
-  // Erst messen.
-  ctx.font=`500 27px ${sans}`;
-  const cards=list.map(x=>{const lines=x.charges.map(ch=>{ctx.font=`500 27px ${sans}`;return {ch,l:wrap(ctx,chargeLine(ch),TW)};});
-   return {x,lines,h:Math.max(124,88+lines.reduce((n,b)=>n+b.l.length*36+10,0)+12)};});
-  ctx.font=`600 26px ${sans}`;const cleanS=[...m.clean].sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9));const cleanTxt=cleanS.map(x=>x.name).join('  ·  ');const cleanL=m.clean.length?wrap(ctx,cleanTxt,cw-40):[];
-  const kingTxt=m.kings.length?m.kings.map(k=>k.name).join(', ')+` (${m.kings[0].count}×)`:'';
-  const H=300+cards.reduce((n,b)=>n+b.h+16,0)+(cleanL.length?90+cleanL.length*36:0)+120;
+  const list=sorted(m),rows=[];for(let i=0;i<list.length;i+=COLS)rows.push(list.slice(i,i+COLS));
+  const rh=rows.map(r=>Math.max(...r.map(x=>TOP+x.charges.length*LH+14)));
+  const HEAD=170,cleanS=[...m.clean].sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9));
+  const H=HEAD+rh.reduce((n,h)=>n+h+G,0)+(cleanS.length?70:0)+70;
   c.width=W;c.height=H;
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#14212b');g.addColorStop(1,'#081118');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='#b48633';ctx.lineWidth=5;ctx.strokeRect(20,20,W-40,H-40);
-  ctx.textAlign='center';ctx.fillStyle='#ebc768';ctx.font=`700 26px ${sans}`;ctx.fillText('KBL LEGENDEN',W/2,84);
-  ctx.font=`700 70px ${serif}`;ctx.fillStyle='#f4d777';ctx.fillText(`BumsParade · Spieltag ${m.day}`,W/2,166,cw);
-  ctx.font=`600 30px ${sans}`;ctx.fillStyle='#e9f0f4';
-  ctx.fillText(`${m.total} Bumsung${m.total===1?'':'en'}  ·  ${list.length} Manager gebumst${m.clean.length?`  ·  ${m.clean.length} davongekommen`:''}`,W/2,218,cw);
-  if(kingTxt){ctx.font=`600 26px ${sans}`;ctx.fillStyle='#f1a5aa';ctx.fillText(`👑 Bumskönig: ${kingTxt}`,W/2,260,cw);}
-  let y=292;const imgs=await Promise.all(list.map(x=>loadImg(faceUrl(x))));
-  cards.forEach((b,i)=>{const x=b.x,top=y;
-   ctx.fillStyle='rgba(255,255,255,.045)';ctx.beginPath();ctx.roundRect?ctx.roundRect(P,top,cw,b.h,16):ctx.rect(P,top,cw,b.h);ctx.fill();
-   // Profilbild
-   const R=40,cx=P+24+R,cy=top+20+R,img=imgs[i];
-   ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#22313c';ctx.fill();ctx.clip();
-   if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{ctx.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-R,cy-R,2*R,2*R);}catch{}}
-   else{ctx.fillStyle='#ebc768';ctx.font=`700 38px ${sans}`;ctx.textAlign='center';ctx.fillText((x.name[0]||'?').toUpperCase(),cx,cy+14);}
-   ctx.restore();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='#ebc768';ctx.lineWidth=2;ctx.stroke();
-   // Anzahl unter dem Bild
-   ctx.textAlign='center';ctx.fillStyle='#f1a5aa';ctx.font=`900 34px ${sans}`;ctx.fillText(`${x.charges.length}×`,cx,cy+R+40);
-   // Name und Platz
-   ctx.textAlign='left';ctx.fillStyle='#e9f0f4';ctx.font=`800 34px ${sans}`;ctx.fillText(x.name,CX,top+52,W-P-28-CX-230);
-   ctx.textAlign='right';ctx.fillStyle='#9db0bd';ctx.font=`500 22px ${sans}`;
-   ctx.fillText([x.place?`Platz ${x.place}`:'',x.pts!=null?`${fmt(x.pts)} Pkt.`:''].filter(Boolean).join(' · '),W-P-28,top+50);
-   // Anklagepunkte
-   let yy=top+88;ctx.textAlign='left';
-   for(const {ch,l} of b.lines){const col=COLOR[ch.rule]||'#ebc768';
-    ctx.font=`900 20px ${sans}`;const tag=ch.rule,tw=ctx.measureText(tag).width+18;
-    const cw2=Math.max(62,tw);ctx.fillStyle=col;ctx.beginPath();ctx.roundRect?ctx.roundRect(CX,yy-21,cw2,28,6):ctx.rect(CX,yy-21,cw2,28);ctx.fill();
-    ctx.fillStyle='#081118';ctx.textAlign='center';ctx.fillText(tag,CX+cw2/2,yy);ctx.textAlign='left';
-    ctx.fillStyle=ch.in?'#cfd9e0':'#e9f0f4';ctx.font=`${ch.in?'italic ':''}500 27px ${sans}`;
-    l.forEach((s,k)=>ctx.fillText(s,TX,yy+k*36));
-    yy+=l.length*36+10;}
-   y+=b.h+16;});
-  if(!list.length){ctx.textAlign='center';ctx.fillStyle='#9db0bd';ctx.font=`600 32px ${sans}`;ctx.fillText('Keine Bumsungen. Die Parade fällt aus. 😴',W/2,y+40);y+=80;}
-  if(cleanL.length){y+=30;ctx.textAlign='left';ctx.fillStyle='#7fd3a6';ctx.font=`800 26px ${sans}`;ctx.fillText(`😇 DAVONGEKOMMEN (${m.clean.length})`,P+20,y+24);
-   ctx.fillStyle='#cfd9e0';ctx.font=`600 26px ${sans}`;cleanL.forEach((s,k)=>ctx.fillText(s,P+20,y+66+k*36));y+=60+cleanL.length*36;}
+  ctx.strokeStyle='#b48633';ctx.lineWidth=5;ctx.strokeRect(14,14,W-28,H-28);
+  const ell=(t,max)=>{t=String(t);if(ctx.measureText(t).width<=max)return t;while(t.length>1&&ctx.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+  // Kopf
+  ctx.textAlign='left';ctx.fillStyle='#ebc768';ctx.font=`700 24px ${sans}`;ctx.fillText('KBL LEGENDEN',P+8,P+40);
+  ctx.font=`700 64px ${serif}`;ctx.fillStyle='#f4d777';ctx.fillText(`BumsParade · Spieltag ${m.day}`,P+8,P+112);
+  ctx.textAlign='right';ctx.font=`800 40px ${sans}`;ctx.fillStyle='#f1a5aa';ctx.fillText(`${m.total} Bumsung${m.total===1?'':'en'}`,W-P-8,P+62);
+  ctx.font=`600 26px ${sans}`;ctx.fillStyle='#e9f0f4';
+  const kingTxt=m.kings.length?`👑 Bumskönig: ${m.kings.map(k=>k.name).join(', ')} (${m.kings[0].count}×)`:'';
+  ctx.fillText([`${list.length} Manager gebumst`,kingTxt].filter(Boolean).join('   ·   '),W-P-8,P+108);
+  const imgs=await Promise.all(list.map(x=>loadImg(faceUrl(x))));
+  let y=HEAD,idx=0;
+  rows.forEach((r,ri)=>{r.forEach((x,ci)=>{const L=P+ci*(CW+G),img=imgs[idx++];
+    ctx.fillStyle='rgba(255,255,255,.05)';ctx.beginPath();ctx.roundRect?ctx.roundRect(L,y,CW,rh[ri],16):ctx.rect(L,y,CW,rh[ri]);ctx.fill();
+    if(x.place===1){ctx.strokeStyle='rgba(235,199,104,.6)';ctx.lineWidth=2;ctx.stroke();}
+    const R=32,cx=L+18+R,cy=y+18+R;
+    ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#22313c';ctx.fill();ctx.clip();
+    if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{ctx.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-R,cy-R,2*R,2*R);}catch{}}
+    else{ctx.fillStyle='#ebc768';ctx.font=`700 30px ${sans}`;ctx.textAlign='center';ctx.fillText((x.name[0]||'?').toUpperCase(),cx,cy+11);}
+    ctx.restore();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='#ebc768';ctx.lineWidth=2;ctx.stroke();
+    ctx.textAlign='right';ctx.fillStyle='#f1a5aa';ctx.font=`900 44px ${sans}`;ctx.fillText(`${x.charges.length}×`,L+CW-18,y+66);
+    const cntW=ctx.measureText(`${x.charges.length}×`).width;
+    ctx.textAlign='left';ctx.fillStyle=x.place===1?'#ebc768':'#e9f0f4';ctx.font=`800 30px ${sans}`;ctx.fillText(ell(x.name,CW-2*R-60-cntW),L+2*R+34,y+48);
+    ctx.fillStyle='#9db0bd';ctx.font=`500 21px ${sans}`;ctx.fillText([x.place?`Platz ${x.place}`:'',x.pts!=null?`${fmt(x.pts)} Pkt.`:''].filter(Boolean).join(' · '),L+2*R+34,y+78);
+    let yy=y+TOP+24;
+    for(const ch of x.charges){const col=COLOR[ch.rule]||'#ebc768';
+     ctx.font=`900 19px ${sans}`;const tw=Math.max(58,ctx.measureText(ch.rule).width+16);
+     ctx.fillStyle=col;ctx.beginPath();ctx.roundRect?ctx.roundRect(L+18,yy-21,tw,28,6):ctx.rect(L+18,yy-21,tw,28);ctx.fill();
+     ctx.fillStyle='#081118';ctx.textAlign='center';ctx.fillText(ch.rule,L+18+tw/2,yy);ctx.textAlign='left';
+     // Zu lang: erst etwas kleiner schreiben (bis 20 px), erst dann kürzen.
+     const txt=ch.short||chargeLine(ch),mw=CW-18-tw-30;let fs=25;
+     do{ctx.font=`${ch.in?'italic ':''}500 ${fs}px ${sans}`;}while(ctx.measureText(txt).width>mw&&--fs>20);
+     ctx.fillStyle=ch.in?'#b9c7d1':'#e9f0f4';ctx.fillText(ell(txt,mw),L+18+tw+12,yy+1);
+     yy+=LH;}
+   });y+=rh[ri]+G;});
+  if(cleanS.length){ctx.textAlign='left';ctx.font=`800 26px ${sans}`;ctx.fillStyle='#7fd3a6';const lbl=`😇 Davongekommen (${cleanS.length}): `;ctx.fillText(lbl,P+8,y+34);
+   const lw=ctx.measureText(lbl).width;ctx.font=`600 26px ${sans}`;ctx.fillStyle='#cfd9e0';ctx.fillText(ell(cleanS.map(x=>x.name).join('  ·  '),W-2*P-lw-20),P+8+lw,y+34);}
   const d=new Date(),p2=v=>String(v).padStart(2,'0');
-  ctx.textAlign='center';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
-  ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,W/2,H-48);
+  ctx.textAlign='right';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
+  ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡    → abgeben  ·  ← bekommen`,W-P-8,H-36);
   return c;
  }
+
  function overviewText(m){const L=sorted(m);
   return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n😇 Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
  async function openOverview(){
