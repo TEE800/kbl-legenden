@@ -1295,6 +1295,8 @@ div.mw-who{display:grid;gap:2px;cursor:default}
 .mw-tip{position:absolute;top:6px;width:120px;text-align:center;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:6px;padding:3px 6px;font-size:12px;font-variant-numeric:tabular-nums;pointer-events:none}
 .mw-kader li{display:grid;grid-template-columns:24px minmax(0,1fr) 120px auto;gap:8px;align-items:center;padding:7px 9px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px}
 .mw-spark{width:120px;height:30px}
+.mw-kader li[data-mw-mgr]{cursor:pointer}.mw-kader li[data-mw-mgr]:hover{border-color:var(--line-strong)}.mw-kader li.sel{border-color:var(--gold)}
+#mwKChart:not(:empty){margin-bottom:14px}.mw-mgr-big{font-weight:700;font-size:16px}.mw-mgr-big .mgr-av{width:36px;height:36px}
 .center-mv{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 @media(max-width:900px){.mw-tiles{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){

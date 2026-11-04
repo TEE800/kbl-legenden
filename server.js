@@ -3501,6 +3501,38 @@ async function mwSquad(token, id) {
   mwSquadCache.set(id, { at: Date.now(), value });
   return value;
 }
+// Kaderwert je Tag seit Beginn der laufenden Halbserie (Kevin-Wunsch 4.11.): Kader rückwärts aus dem heutigen Kader und dem
+// Transfer-Verlauf (nach der Anpassung um 22 Uhr gekauft = noch nicht im Kader, verkauft = noch drin), Wert = Summe der Marktwerte
+// dieses Tages. Fehlt der Wert eines Spielers an einem Tag, bleibt der Tag leer (nie raten). m.hist = {s: dt, v: Werte in 10.000 €}.
+let mwTrCache = null;
+async function mwKaderVerlauf(token, managers, L) {
+  if (!L) return;
+  if (!mwTrCache || Date.now() - mwTrCache.at > 60 * 60e3) {
+    const lists = new Map();
+    for (const m of managers) { try { lists.set(m.id, await fetchTransferList(token, m.id)); } catch {} }
+    mwTrCache = { at: Date.now(), lists };
+  }
+  const lists = mwTrCache.lists, store = mwLoad().players;
+  const period = transferPeriods([...lists.values()].flat().map(t => Date.parse(t.dt)))[0];
+  if (!period) return;
+  const start = Math.max(dtOfYmd(berlinYmd(period.from)), L - 365);
+  const mvAt = (pi, d) => { const p = store[pi]; return p && p.s != null ? p.mv[d - p.s] ?? null : null; };
+  for (const m of managers) {
+    if (m.error || !lists.has(m.id)) continue;
+    const sq = mwSquadCache.get(m.id)?.value?.it || [], set = new Set(sq.map(p => String(p.pi)));
+    const tr = lists.get(m.id).filter(t => t.tty === 1 || t.tty === 2).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+    const vals = []; let k = 0, gaps = 0;
+    for (let d = L; d >= start; d--) {
+      const cutoff = berlinNextDayAt((d - 1) * 864e5 + 12 * 3600e3, 22);
+      while (k < tr.length && Date.parse(tr[k].dt) > cutoff) { const pi = String(tr[k].pi); if (tr[k].tty === 1) set.delete(pi); else set.add(pi); k++; }
+      let sum = 0, ok = set.size > 0;
+      for (const pi of set) { const v = mvAt(pi, d); if (v == null) { ok = false; break; } sum += v; }
+      if (!ok) gaps++;
+      vals.push(ok ? Math.round(sum / 1e4) : null);
+    }
+    m.hist = { s: start, v: vals.reverse(), gaps };
+  }
+}
 // Übersicht: je Spieler aktueller Wert, Änderung über 1, 7 und 30 Tage, Höchst-/Tiefstwert, Besitzer in der Liga;
 // je Manager der heutige Kaderwert (Summe der Marktwerte im Kader). T1000 ist ausgeschlossen.
 app.get('/api/marktwerte', async (req, res) => {
@@ -3522,6 +3554,7 @@ app.get('/api/marktwerte', async (req, res) => {
       managers.push(m);
     }
     const L = s.latestDt, photos = await playerPhotos().catch(() => null);
+    try { await mwKaderVerlauf(token, managers, L); } catch (e) { for (const m of managers) m.histError = e.message; }
     const list = Object.entries(s.players).map(([id, p]) => {
       const at = d => { const v = p.mv[d - p.s]; return v == null ? null : v; }, mv = at(L);
       if (mv == null) return null;
