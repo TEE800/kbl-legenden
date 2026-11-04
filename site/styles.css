@@ -589,6 +589,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .bx-row .mgr-av{margin-right:5px}
 @media(max-width:700px){.bx-row{max-width:104px}}
 .mgr-nm{white-space:nowrap}
+.mgr-sym{white-space:nowrap;margin-left:4px;font-size:.9em;font-style:normal;letter-spacing:1px}.mgr-sym:empty{display:none}
 .rank-cards span.mgr-nm{font-size:inherit;color:inherit}
 .rank-cards span.mgr-av{font-size:inherit}
 .rank-cards span.mgr-av-txt{font-size:.75em;color:var(--muted)}
