@@ -3540,7 +3540,8 @@ async function mwKaderVerlauf(token, managers, L) {
     const tr = lists.get(m.id).filter(t => t.tty === 1 || t.tty === 2).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
     const vals = []; let k = 0, gaps = 0;
     for (let d = L; d >= start; d--) {
-      const cutoff = berlinNextDayAt((d - 1) * 864e5 + 12 * 3600e3, 22);
+      // Letzter Tag = heutiger Kader (gleicher Wert wie „Kaderwert heute“), davor der Kader zur Anpassung um 22 Uhr.
+      const cutoff = d === L ? Infinity : berlinNextDayAt((d - 1) * 864e5 + 12 * 3600e3, 22);
       while (k < tr.length && Date.parse(tr[k].dt) > cutoff) { const pi = String(tr[k].pi); if (tr[k].tty === 1) set.delete(pi); else set.add(pi); k++; }
       let sum = 0, ok = set.size > 0;
       for (const pi of set) { const v = mvAt(pi, d); if (v == null) { ok = false; break; } sum += v; }
