@@ -455,5 +455,16 @@
         "noGoal"
       ]
     }
+  },
+  "9": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Tippe den MVP aus der unteren Tabellenhälfte!",
+      "by": {
+        "id": "1165589",
+        "name": "Stammler9"
+      }
+    }
   }
 }
