@@ -93,6 +93,10 @@ try {
   const ranking = JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/ranking/${LEAGUE}`)), 'utf8'));
   for (const m of ranking.us || []) await save(`/api/manager-squad-v4/${LEAGUE}/${m.i}`);
 
+  // Marktwerte aller Spieler (Reiter "Marktwerte"): der Server holt die Verlaeufe nur einmal nach jeder Kickbase-Anpassung (22 Uhr),
+  // sonst nur Besitzer und Kaderwerte (16 Kader). Im Live-Lauf hoechstens stuendlich.
+  const mwOld = () => { try { return !(Date.now() - fs.statSync(path.join(DATA, key('/api/marktwerte'))).mtimeMs <= 3600e3); } catch { return true; } };
+  if (MODE === 'full' || mwOld()) { if (await save('/api/marktwerte')) await save('/api/marktwerte/verlauf'); }
   // Spieltage: im Live-Modus nur der laufende und was fehlt oder noch nicht fertig abgerechnet ist;
   // im Voll-Modus (taeglich) alle, weil Kickbase Punkte nachtraeglich korrigiert.
   const unfinished = u => { try { const j = JSON.parse(fs.readFileSync(path.join(DATA, key(u)), 'utf8')); return j.ready === false || !!j.pendingCorrections || bumsOffen(j); } catch { return true; } };
@@ -168,10 +172,6 @@ try {
   // Transfers je Manager (Reiter "Transfers"): je Manager Verlauf und Kader. Im Live-Lauf hoechstens stuendlich neu.
   const transfersOld = () => { try { return !(Date.now() - Date.parse(JSON.parse(fs.readFileSync(path.join(DATA, key('/api/transfers')), 'utf8')).updatedAt) <= 3600e3); } catch { return true; } };
   if (MODE === 'full' || transfersOld()) await save('/api/transfers');
-  // Marktwerte aller Spieler (Reiter "Marktwerte"): der Server holt die Verlaeufe nur einmal nach jeder Kickbase-Anpassung (22 Uhr),
-  // sonst nur Besitzer und Kaderwerte (16 Kader). Im Live-Lauf hoechstens stuendlich.
-  const mwOld = () => { try { return !(Date.now() - fs.statSync(path.join(DATA, key('/api/marktwerte'))).mtimeMs <= 3600e3); } catch { return true; } };
-  if (MODE === 'full' || mwOld()) { if (await save('/api/marktwerte')) await save('/api/marktwerte/verlauf'); }
   // Ligenuebersicht (fuenf Kickbase-Wettbewerbe, Spielplan, Ergebnisse, Tabelle). Live-Lauf: wenn aelter als 15 Min. oder irgendwo ein Spiel laeuft.
   // Der Tippdienst liest daraus die Anstosszeiten fuer die Erinnerung 1 Std. vor Spieltagsbeginn.
   const ligenOld = () => { try { const l = JSON.parse(fs.readFileSync(path.join(DATA, key('/api/ligen')), 'utf8')); return !(Date.now() - Date.parse(l.updatedAt) <= 15 * 60e3) || l.leagues.some(x => x.days.some(d => d.matches.some(m => m.state === 'live'))); } catch { return true; } };
