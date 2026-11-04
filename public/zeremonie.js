@@ -292,17 +292,17 @@
      ctx.fillStyle=ch.in?'#b9c7d1':'#e9f0f4';ctx.fillText(ell(txt,mw),L+18+tw+12,yy+1);
      yy+=LH;}
    });y+=rh[ri]+G;});
-  if(cleanS.length){ctx.textAlign='left';ctx.font=`800 26px ${sans}`;ctx.fillStyle='#7fd3a6';const lbl=`😇 Ungebumst (${cleanS.length}): `;ctx.fillText(lbl,P+8,y+34);
+  if(cleanS.length){ctx.textAlign='left';ctx.font=`800 26px ${sans}`;ctx.fillStyle='#7fd3a6';const lbl=`🧜‍♀️ Ungebumst (${cleanS.length}): `;ctx.fillText(lbl,P+8,y+34);
    const lw=ctx.measureText(lbl).width;ctx.font=`600 26px ${sans}`;ctx.fillStyle='#cfd9e0';ctx.fillText(ell(cleanS.map(x=>{const ic=icons(x);return ic?`${x.name} ${ic}`:x.name;}).join('  ·  '),W-2*P-lw-20),P+8+lw,y+34);}
   const d=new Date(),p2=v=>String(v).padStart(2,'0');
   ctx.textAlign='right';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
   ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,W-P-8,H-74);
-  ctx.textAlign='left';ctx.fillText(`🏆 Spieltagssieger  ·  🥄 Spieltagsletzter  ·  ⛺ Bumskönig  ·  🥇 Tabellenführer  ·  🏮 Tabellenletzter  ·  😇 ungebumst  ·  → abgeben  ·  ← bekommen`,P+8,H-36);
+  ctx.textAlign='left';ctx.fillText(`🏆 Spieltagssieger  ·  🥄 Spieltagsletzter  ·  ⛺ Bumskönig  ·  🥇 Tabellenführer  ·  🏮 Tabellenletzter  ·  🧜‍♀️ ungebumst  ·  → abgeben  ·  ← bekommen`,P+8,H-36);
   return c;
  }
 
  function overviewText(m){const L=sorted(m);
-  return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n😇 Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
+  return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n🧜‍♀️ Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
  async function openOverview(){
   const m=model();if(!m)return;
   const box=document.createElement('div');box.className='zer-akte';box.setAttribute('role','dialog');box.setAttribute('aria-label',`Alle Bumsungen Spieltag ${m.day}`);
