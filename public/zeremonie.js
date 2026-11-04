@@ -153,7 +153,7 @@
     ${l.length?line('🏮 Rote Laterne',l.map(x=>`${mgrName(x.manager,'',x.managerId)} ${fmt(x.dayPoints)}`).join(', ')):''}
     ${mvp.length?line('⭐ MVP des Spieltags',mvp.map(p=>`${safe(p.name)} (${safe(p.team)}) ${fmt(p.points)}`).join(', ')):''}
     ${line('🎯 MVP-Tipp',tipWin==null?'wird geladen …':tipWin.length?tipWin.map(n=>mgrName(n)).join(', '):'kein Treffer')}
-    ${m.kings.length?line('👑 Bumskönig des Spieltags',m.kings.map(k=>`${mgrName(k.name)} ${k.count}×`).join(', ')):''}
+    ${m.kings.length?line('⛺ Bumskönig des Spieltags',m.kings.map(k=>`${mgrName(k.name)} ${k.count}×`).join(', ')):''}
     ${line('✅ Vollstreckt',`${done} von ${all.length}`)}
     <p class="zer-hint" style="margin-top:30px">Die Sitzung ist geschlossen. Bis nächsten Montag! 🤡</p></div></div>`;
    if(Z.dir>0)fanfare();
@@ -257,14 +257,14 @@
   ctx.font=`700 64px ${serif}`;ctx.fillStyle='#f4d777';ctx.fillText(`BumsParade · Spieltag ${m.day}`,P+8,P+112);
   ctx.textAlign='right';ctx.font=`800 40px ${sans}`;ctx.fillStyle='#f1a5aa';ctx.fillText(`${m.total} Bumsung${m.total===1?'':'en'}`,W-P-8,P+62);
   ctx.font=`600 26px ${sans}`;ctx.fillStyle='#e9f0f4';
-  const kingTxt=m.kings.length?`👑 Bumskönig: ${m.kings.map(k=>k.name).join(', ')} (${m.kings[0].count}×)`:'';
+  const kingTxt=m.kings.length?`⛺ Bumskönig: ${m.kings.map(k=>k.name).join(', ')} (${m.kings[0].count}×)`:'';
   ctx.fillText([`${list.length} Manager gebumst`,kingTxt].filter(Boolean).join('   ·   '),W-P-8,P+108);
   // Symbole hinter dem Namen (Kevin 4.11.): Spieltagssieger, Spieltagsletzter, Bumskönig, Tabellenführer und -letzter nach diesem Spieltag; Gleichstand = alle.
   const dayPts=[...list,...cleanS].map(x=>x.pts).filter(v=>v!=null),hiD=Math.max(...dayPts),loD=Math.min(...dayPts);
   const kingSet=new Set(m.kings.map(k=>k.name));
   let tab=null;try{const h=(historyData||[]).find(h=>h.day===m.day&&h.status==='finished');if(h)tab=new Map(h.list.filter(e=>e.score!=null).map(e=>[e.name,e.score]));}catch{}
   const tv=tab?[...tab.values()]:[],hiT=tv.length?Math.max(...tv):null,loT=tv.length?Math.min(...tv):null;
-  const icons=x=>{const o=[];if(x.pts!=null&&x.pts===hiD)o.push('🏆');if(x.pts!=null&&x.pts===loD&&loD!==hiD)o.push('🥄');if(kingSet.has(x.name))o.push('👑');
+  const icons=x=>{const o=[];if(x.pts!=null&&x.pts===hiD)o.push('🏆');if(x.pts!=null&&x.pts===loD&&loD!==hiD)o.push('🥄');if(kingSet.has(x.name))o.push('⛺');
    const t=tab?.get(x.name);if(t!=null&&t===hiT)o.push('🥇');if(t!=null&&t===loT&&loT!==hiT)o.push('🏮');return o.join(' ');};
   const imgs=await Promise.all(list.map(x=>loadImg(faceUrl(x))));
   let y=HEAD,idx=0;
@@ -297,7 +297,7 @@
   const d=new Date(),p2=v=>String(v).padStart(2,'0');
   ctx.textAlign='right';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
   ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,W-P-8,H-74);
-  ctx.textAlign='left';ctx.fillText(`🏆 Spieltagssieger  ·  🥄 Spieltagsletzter  ·  👑 Bumskönig  ·  🥇 Tabellenführer  ·  🏮 Tabellenletzter  ·  😇 ungebumst  ·  → abgeben  ·  ← bekommen`,P+8,H-36);
+  ctx.textAlign='left';ctx.fillText(`🏆 Spieltagssieger  ·  🥄 Spieltagsletzter  ·  ⛺ Bumskönig  ·  🥇 Tabellenführer  ·  🏮 Tabellenletzter  ·  😇 ungebumst  ·  → abgeben  ·  ← bekommen`,P+8,H-36);
   return c;
  }
 
