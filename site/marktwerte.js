@@ -20,7 +20,7 @@
  const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
  const POS={1:'TW',2:'ABW',3:'MF',4:'ST'};
  let data=null,loading=false,verlauf=null,verlaufP=null,tv=null,tvP=null;
- let period='d1',scope='all',sel=null,range=92;
+ let period='d1',scope='all',sel=null,selM=null,range=92;
  async function get(url){
   const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d;
@@ -47,30 +47,47 @@
    <div><h4 class="tr-h">📉 Verlierer · ${esc(PER[period][1])}</h4>${down.length?`<ol class="mw-list">${down.map(row).join('')}</ol>`:'<p class="muted tiny">Keiner gefallen.</p>'}</div></div>`;
  }
  // Spieler-Verlauf: Suche plus Diagramm (Linie mit Fläche, Höchst-/Tiefstwert, Antippen zeigt den Wert des Tages).
+ // Punkte eines Verlaufs: Spieler (Schlüssel = Spieler-ID, aus /api/marktwerte/verlauf, Zeitraum 3 Monate/1 Jahr)
+ // oder Manager (Schlüssel m:<ID>, Kaderwert je Tag der Halbserie aus /api/marktwerte).
+ function ptsFor(key){
+  if(String(key).startsWith('m:')){const m=data.managers.find(x=>'m:'+x.id===key),h=m?.hist;if(!h)return [];
+   return h.v.map((v,i)=>v==null?null:{t:(h.s+i)*864e5,v:v*1e4}).filter(Boolean);}
+  const raw=verlauf?.players?.[key];if(!raw)return [];
+  const start=Date.parse(verlauf.start+'T00:00:00Z');
+  const pts=raw.slice(1).map((v,i)=>v==null?null:{t:start+(raw[0]+i)*864e5,v:v*verlauf.unit}).filter(Boolean);
+  const cut=pts.length?pts[pts.length-1].t-range*864e5:0;return pts.filter(x=>x.t>=cut);
+ }
+ const dd=t=>new Date(t).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
+ // Diagramm wie beim Spieler: Kopf (Bild, Name, Wert, Änderung), Linie mit Fläche, Hoch/Tief, Antippen zeigt den Tageswert.
+ function graph(key,pts,head,name,box,extra=''){
+  if(pts.length<2)return `${head}<p class="muted tiny">Noch zu wenige Werte für ein Diagramm.</p>`;
+  const W=Math.max(280,Math.round(($(box)?.clientWidth||600)-14)),H=W<500?180:220,L=8,R=8,T=16,B=24,vs=pts.map(x=>x.v),hi=Math.max(...vs),lo=Math.min(...vs),pad=(hi-lo)*.08||hi*.05||1;
+  const y0=lo-pad,y1=hi+pad,t0=pts[0].t,t1=pts[pts.length-1].t;
+  const X=t=>L+(t-t0)/(t1-t0||1)*(W-L-R),Y=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B);
+  const line=pts.map((x,i)=>`${i?'L':'M'}${X(x.t).toFixed(1)},${Y(x.v).toFixed(1)}`).join('');
+  const first=pts[0].v,last=pts[pts.length-1].v,ch=last-first,iHi=vs.indexOf(hi),iLo=vs.indexOf(lo);
+  const mark=(i,txt,up)=>{const x=X(pts[i].t),y=Y(pts[i].v),anchor=x<70?'start':x>W-70?'end':'middle';return `<circle cx="${x}" cy="${y}" r="3.5" class="mw-dot"/><text x="${x}" y="${up?y-7:y+15}" text-anchor="${anchor}" class="mw-lbl">${esc(txt)}</text>`;};
+  return `<div class="mw-chart-head">${head}<div class="mw-chart-now"><b>${money(last)}</b><small class="${cls(ch)}">${money(ch,true)} seit ${esc(dd(t0))}${esc(pct(ch,last))}</small></div></div>${extra}
+   <div class="mw-chart" data-mw-chart="${esc(key)}" data-w="${W}"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(`${name}: ${money(first)} am ${dd(t0)}, ${money(last)} am ${dd(t1)}`)}">
+    <path d="${line}L${X(t1).toFixed(1)},${H-B}L${X(t0).toFixed(1)},${H-B}Z" class="mw-area"/><path d="${line}" class="mw-line ${ch<0?'neg':''}"/>
+    ${mark(iHi,'Hoch '+money(hi),true)}${iLo!==iHi?mark(iLo,'Tief '+money(lo),false):''}
+    <text x="${L}" y="${H-6}" class="mw-axis">${esc(dd(t0))}</text><text x="${W-R}" y="${H-6}" text-anchor="end" class="mw-axis">${esc(dd(t1))}</text>
+    <line class="mw-cursor" x1="0" x2="0" y1="${T}" y2="${H-B}" visibility="hidden"/></svg><div class="mw-tip" hidden></div></div>`;
+ }
  function chartHtml(){
   if(!sel)return '<p class="muted tiny">Spieler suchen oder oben in einer Liste antippen.</p>';
   const p=data.players.find(x=>x.id===sel);if(!p)return '';
   if(!verlauf)return '<p class="muted tiny">Verlauf wird geladen …</p>';
   if(verlauf.error)return `<p class="error tiny">Das fehlt: Verlauf (${esc(verlauf.error)}).</p>`;
-  const raw=verlauf.players[sel];if(!raw)return '<p class="error tiny">Das fehlt: Für diesen Spieler hat Kickbase keinen Verlauf geliefert.</p>';
-  const start=Date.parse(verlauf.start+'T00:00:00Z'),off=raw[0],vals=raw.slice(1);
-  let pts=vals.map((v,i)=>v==null?null:{t:start+(off+i)*864e5,v:v*verlauf.unit}).filter(Boolean);
-  const cut=pts.length?pts[pts.length-1].t-range*864e5:0;pts=pts.filter(x=>x.t>=cut);
-  if(pts.length<2)return '<p class="muted tiny">Noch zu wenige Werte für ein Diagramm.</p>';
-  const W=Math.max(280,Math.round(($('#mwChart')?.clientWidth||600)-14)),H=W<500?180:220,L=8,R=8,T=16,B=24,vs=pts.map(x=>x.v),hi=Math.max(...vs),lo=Math.min(...vs),pad=(hi-lo)*.08||hi*.05||1;
-  const y0=lo-pad,y1=hi+pad,t0=pts[0].t,t1=pts[pts.length-1].t;
-  const X=t=>L+(t-t0)/(t1-t0||1)*(W-L-R),Y=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B);
-  const line=pts.map((x,i)=>`${i?'L':'M'}${X(x.t).toFixed(1)},${Y(x.v).toFixed(1)}`).join('');
-  const first=pts[0].v,last=pts[pts.length-1].v,ch=last-first,iHi=vs.indexOf(hi),iLo=vs.indexOf(lo);
-  const d=t=>new Date(t).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
-  const mark=(i,txt,up)=>{const x=X(pts[i].t),y=Y(pts[i].v),anchor=x<70?'start':x>W-70?'end':'middle';return `<circle cx="${x}" cy="${y}" r="3.5" class="mw-dot"/><text x="${x}" y="${up?y-7:y+15}" text-anchor="${anchor}" class="mw-lbl">${esc(txt)}</text>`;};
-  return `<div class="mw-chart-head">${face(p.img,p.n)}<div><strong>${esc(p.n)}</strong><small>${sub(p)}</small></div><div class="mw-chart-now"><b>${money(last)}</b><small class="${cls(ch)}">${money(ch,true)} seit ${esc(d(t0))}${esc(pct(ch,last))}</small></div></div>
-   ${chips('range',[['92','3 Monate'],['365','1 Jahr']],String(range))}
-   <div class="mw-chart" data-mw-chart="${esc(sel)}" data-w="${W}"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(`Marktwert ${p.n}: ${money(first)} am ${d(t0)}, ${money(last)} am ${d(t1)}`)}">
-    <path d="${line}L${X(t1).toFixed(1)},${H-B}L${X(t0).toFixed(1)},${H-B}Z" class="mw-area"/><path d="${line}" class="mw-line ${ch<0?'neg':''}"/>
-    ${mark(iHi,'Hoch '+money(hi),true)}${iLo!==iHi?mark(iLo,'Tief '+money(lo),false):''}
-    <text x="${L}" y="${H-6}" class="mw-axis">${esc(d(t0))}</text><text x="${W-R}" y="${H-6}" text-anchor="end" class="mw-axis">${esc(d(t1))}</text>
-    <line class="mw-cursor" x1="0" x2="0" y1="${T}" y2="${H-B}" visibility="hidden"/></svg><div class="mw-tip" hidden></div></div>`;
+  if(!verlauf.players[sel])return '<p class="error tiny">Das fehlt: Für diesen Spieler hat Kickbase keinen Verlauf geliefert.</p>';
+  return graph(sel,ptsFor(sel),`${face(p.img,p.n)}<div><strong>${esc(p.n)}</strong><small>${sub(p)}</small></div>`,'Marktwert '+p.n,'#mwChart',chips('range',[['92','3 Monate'],['365','1 Jahr']],String(range)));
+ }
+ // Kaderwert-Verlauf eines Managers (Antippen in „Kaderwerte“).
+ function mgrChartHtml(){
+  const m=selM&&data.managers.find(x=>x.id===selM);if(!m)return '';
+  const head=`<span class="mw-mgr-big">${mgr(m)}</span>`;
+  if(!m.hist)return `<div class="mw-chart-head">${head}</div><p class="error tiny">Das fehlt: Kaderwert-Verlauf${m.histError?` (${esc(m.histError)})`:''}.</p>`;
+  return graph('m:'+m.id,ptsFor('m:'+m.id),head,'Kaderwert '+m.name,'#mwKChart')+`<p class="muted tiny">Kaderwert je Tag seit Beginn der Halbserie: Kader laut Transfer-Verlauf, Summe der Marktwerte des Tages, ohne Kontostand.${m.hist.gaps?` An ${m.hist.gaps} Tagen fehlt der Wert eines Spielers, dort bleibt die Linie leer.`:''}</p>`;
  }
  function verlaufBox(){
   return `<div class="mvp-pick mw-search"><input type="search" id="mwSearch" placeholder="Spieler suchen …" autocomplete="off" aria-label="Spieler suchen"><div class="mvp-suggest" id="mwSuggest" hidden></div></div><div id="mwChart">${chartHtml()}</div>`;
@@ -86,7 +103,7 @@
   const ms=data.managers.filter(m=>!m.error).sort((a,b)=>b.value-a.value),days=tv?.days||[];
   const series=m=>days.map(d=>d.tv[m.id]??null);
   const head=days.length?`<p class="muted tiny">Verlauf: Teamwert laut Kickbase je Spieltag (ST ${days[0].day} bis ${days[days.length-1].day}).</p>`:tv?.error?`<p class="error tiny">Das fehlt: Teamwerte je Spieltag (${esc(tv.error)}).</p>`:tv?'':'<p class="muted tiny">Teamwerte je Spieltag werden geladen …</p>';
-  return `${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(m.d1)}">${money(m.d1,true)} heute</small></span></li>`;}).join('')}</ol>
+  return `<div id="mwKChart">${mgrChartHtml()}</div>${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li class="${m.id===selM?'sel':''}" data-mw-mgr="${esc(m.id)}" role="button" tabindex="0" title="Kaderwert-Verlauf ansehen"><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(m.d1)}">${money(m.d1,true)} heute</small></span></li>`;}).join('')}</ol>
    ${data.managers.some(m=>m.error)?`<p class="error tiny">Das fehlt: Kader von ${esc(data.managers.filter(m=>m.error).map(m=>m.name).join(', '))}.</p>`:''}
    <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. „heute“ = Änderung bei der letzten Anpassung.</p>`;
  }
@@ -132,6 +149,8 @@
    if(t.dataset.mwRange){range=Number(t.dataset.mwRange);redraw();return;}
    if(t.dataset.mwPlayer){pick(t.dataset.mwPlayer);return;}
   }
+  const mr=e.target.closest?.('[data-mw-mgr]');
+  if(mr&&data){selM=selM===mr.dataset.mwMgr?null:mr.dataset.mwMgr;const k=$('#mwKader');if(k)k.innerHTML=kader();if(selM)$('#mwKChart')?.scrollIntoView({behavior:'smooth',block:'start'});return;}
   if(!e.target.closest?.('.mw-search')){const s=$('#mwSuggest');if(s)s.hidden=true;}
   if(e.target.closest?.('[data-kbl-nav="marktwerte"]'))load();
  });
@@ -139,6 +158,7 @@
   const s=e.target.dataset?.mwSec;if(!s||!e.target.open)return;
   if(s==='verlauf')loadVerlauf();if(s==='kader')loadTv();
  },true);
+ document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset?.mwMgr){e.preventDefault();e.target.click();}});
  document.addEventListener('input',e=>{
   if(e.target.id!=='mwSearch'||!data)return;
   const q=norm(e.target.value.trim()),box=$('#mwSuggest');
@@ -149,13 +169,10 @@
  });
  // Antippen bzw. Überfahren des Diagramms: Wert an diesem Tag.
  const tipAt=e=>{
-  const c=e.target.closest?.('.mw-chart');if(!c||!verlauf?.players)return;
-  const svg=c.querySelector('svg'),tip=c.querySelector('.mw-tip'),cur=c.querySelector('.mw-cursor'),raw=verlauf.players[c.dataset.mwChart];if(!raw)return;
-  const start=Date.parse(verlauf.start+'T00:00:00Z');
-  let pts=raw.slice(1).map((v,i)=>v==null?null:{t:start+(raw[0]+i)*864e5,v:v*verlauf.unit}).filter(Boolean);
-  const cut=pts[pts.length-1].t-range*864e5;pts=pts.filter(x=>x.t>=cut);
+  const c=e.target.closest?.('.mw-chart');if(!c)return;
+  const svg=c.querySelector('svg'),tip=c.querySelector('.mw-tip'),cur=c.querySelector('.mw-cursor'),pts=ptsFor(c.dataset.mwChart);if(pts.length<2)return;
   const W=Number(c.dataset.w)||600,r=svg.getBoundingClientRect(),k=r.width/W,f=Math.min(1,Math.max(0,(e.clientX-r.left-8*k)/((W-16)*k)));
-  const p=pts[Math.round(f*(pts.length-1))];if(!p)return;
+  const t=pts[0].t+f*(pts[pts.length-1].t-pts[0].t),p=pts.reduce((b,x)=>Math.abs(x.t-t)<Math.abs(b.t-t)?x:b,pts[0]);
   const x=8+(p.t-pts[0].t)/(pts[pts.length-1].t-pts[0].t||1)*(W-16);
   cur.setAttribute('x1',x);cur.setAttribute('x2',x);cur.setAttribute('visibility','visible');
   tip.hidden=false;tip.textContent=`${new Date(p.t).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'UTC'})}: ${money(p.v)}`;
