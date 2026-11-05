@@ -20,7 +20,7 @@
  const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
  const POS={1:'TW',2:'ABW',3:'MF',4:'ST'};
  let data=null,loading=false,verlauf=null,verlaufP=null,tv=null,tvP=null;
- let period='d1',scope='all',sel=null,selM=null,range=92;
+ let period='d1',scope='all',sel=null,selM=null,range=92,kPeriod='d1',kSort='value';
  async function get(url){
   const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d;
@@ -100,12 +100,17 @@
   return `<svg class="mw-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${dpath}" class="mw-line ${ok[ok.length-1]<ok[0]?'neg':''}"/></svg>`;
  }
  function kader(){
-  const ms=data.managers.filter(m=>!m.error).sort((a,b)=>b.value-a.value),days=tv?.days||[];
+  // Änderung je Zeitraum = Summe der Änderungen der Spieler, die heute im Kader stehen (reine Marktwert-Bewegung, ohne Transfers).
+  const chg={},miss={};
+  for(const p of data.players)if(p.owner){if(p[kPeriod]==null)miss[p.owner]=(miss[p.owner]||0)+1;else chg[p.owner]=(chg[p.owner]||0)+p[kPeriod];}
+  const cv=m=>chg[m.id]??(miss[m.id]?null:0);
+  const ms=data.managers.filter(m=>!m.error).sort((a,b)=>kSort==='chg'?(cv(b)??-Infinity)-(cv(a)??-Infinity):b.value-a.value),days=tv?.days||[];
+  const lbl=kPeriod==='d1'?'heute':PER[kPeriod][0];
   const series=m=>days.map(d=>d.tv[m.id]??null);
   const head=days.length?`<p class="muted tiny">Verlauf: Teamwert laut Kickbase je Spieltag (ST ${days[0].day} bis ${days[days.length-1].day}).</p>`:tv?.error?`<p class="error tiny">Das fehlt: Teamwerte je Spieltag (${esc(tv.error)}).</p>`:tv?'':'<p class="muted tiny">Teamwerte je Spieltag werden geladen …</p>';
-  return `<div id="mwKChart">${mgrChartHtml()}</div>${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li class="${m.id===selM?'sel':''}" data-mw-mgr="${esc(m.id)}" role="button" tabindex="0" title="Kaderwert-Verlauf ansehen"><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(m.d1)}">${money(m.d1,true)} heute</small></span></li>`;}).join('')}</ol>
+  return `<div id="mwKChart">${mgrChartHtml()}</div>${chips('kperiod',Object.entries(PER).map(([k,v])=>[k,v[0]]),kPeriod)}${chips('ksort',[['value','Nach Kaderwert'],['chg','Nach Änderung']],kSort)}${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li class="${m.id===selM?'sel':''}" data-mw-mgr="${esc(m.id)}" role="button" tabindex="0" title="Kaderwert-Verlauf ansehen"><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(cv(m))}">${money(cv(m),true)} ${lbl}${miss[m.id]&&cv(m)!=null?'*':''}</small></span></li>`;}).join('')}</ol>
    ${data.managers.some(m=>m.error)?`<p class="error tiny">Das fehlt: Kader von ${esc(data.managers.filter(m=>m.error).map(m=>m.name).join(', '))}.</p>`:''}
-   <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. „heute“ = Änderung bei der letzten Anpassung.</p>`;
+   <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. „heute“ = Änderung bei der letzten Anpassung, 7/30 Tage = Summe der Änderungen der Spieler, die heute im Kader stehen (ohne Transfers).${Object.keys(miss).length?' * = ohne Spieler, deren Wert für den ganzen Zeitraum fehlt.':''}</p>`;
  }
  function render(){
   const root=$('#mwContent');if(!root||!data)return;
@@ -142,8 +147,9 @@
   finally{loading=false;}
  }
  document.addEventListener('click',e=>{
-  const t=e.target.closest?.('[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
+  const t=e.target.closest?.('[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
   if(t&&!e.target.closest('a')){
+   if(t.dataset.mwKperiod||t.dataset.mwKsort){if(t.dataset.mwKperiod)kPeriod=t.dataset.mwKperiod;else kSort=t.dataset.mwKsort;const k=$('#mwKader');if(k)k.innerHTML=kader();return;}
    if(t.dataset.mwPeriod){period=t.dataset.mwPeriod;$('#mwMovers').innerHTML=movers();return;}
    if(t.dataset.mwScope){scope=t.dataset.mwScope;$('#mwMovers').innerHTML=movers();return;}
    if(t.dataset.mwRange){range=Number(t.dataset.mwRange);redraw();return;}
