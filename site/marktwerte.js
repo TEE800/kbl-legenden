@@ -100,17 +100,16 @@
   return `<svg class="mw-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path d="${dpath}" class="mw-line ${ok[ok.length-1]<ok[0]?'neg':''}"/></svg>`;
  }
  function kader(){
-  // Änderung je Zeitraum = Summe der Änderungen der Spieler, die heute im Kader stehen (reine Marktwert-Bewegung, ohne Transfers).
-  const chg={},miss={};
-  for(const p of data.players)if(p.owner){if(p[kPeriod]==null)miss[p.owner]=(miss[p.owner]||0)+1;else chg[p.owner]=(chg[p.owner]||0)+p[kPeriod];}
-  const cv=m=>chg[m.id]??(miss[m.id]?null:0);
+  // Änderung je Zeitraum aus dem Kaderwert-Verlauf (Kader, wie er an dem Tag war, also mit Transfers; Kevin 5.11.).
+  const N={d1:1,d7:7,d30:30}[kPeriod];
+  const cv=m=>{const v=m.hist?.v;if(!v||v.length<=N)return null;const a=v[v.length-1],b=v[v.length-1-N];return a==null||b==null?null:(a-b)*1e4;};
   const ms=data.managers.filter(m=>!m.error).sort((a,b)=>kSort==='chg'?(cv(b)??-Infinity)-(cv(a)??-Infinity):b.value-a.value),days=tv?.days||[];
   const lbl=kPeriod==='d1'?'heute':PER[kPeriod][0];
   const series=m=>days.map(d=>d.tv[m.id]??null);
   const head=days.length?`<p class="muted tiny">Verlauf: Teamwert laut Kickbase je Spieltag (ST ${days[0].day} bis ${days[days.length-1].day}).</p>`:tv?.error?`<p class="error tiny">Das fehlt: Teamwerte je Spieltag (${esc(tv.error)}).</p>`:tv?'':'<p class="muted tiny">Teamwerte je Spieltag werden geladen …</p>';
-  return `<div id="mwKChart">${mgrChartHtml()}</div>${chips('kperiod',Object.entries(PER).map(([k,v])=>[k,v[0]]),kPeriod)}${chips('ksort',[['value','Nach Kaderwert'],['chg','Nach Änderung']],kSort)}${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li class="${m.id===selM?'sel':''}" data-mw-mgr="${esc(m.id)}" role="button" tabindex="0" title="Kaderwert-Verlauf ansehen"><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(cv(m))}">${money(cv(m),true)} ${lbl}${miss[m.id]&&cv(m)!=null?'*':''}</small></span></li>`;}).join('')}</ol>
+  return `<div id="mwKChart">${mgrChartHtml()}</div>${chips('kperiod',Object.entries(PER).map(([k,v])=>[k,v[0]]),kPeriod)}${chips('ksort',[['value','Nach Kaderwert'],['chg','Nach Änderung']],kSort)}${head}<ol class="mw-kader">${ms.map((m,i)=>{const s=series(m),ok=s.filter(v=>v!=null);return `<li class="${m.id===selM?'sel':''}" data-mw-mgr="${esc(m.id)}" role="button" tabindex="0" title="Kaderwert-Verlauf ansehen"><span class="tr-place">${i+1}.</span><span class="mw-name">${mgr(m)}<small>${m.count} Spieler${ok.length>1?` · ST ${days[s.findIndex(v=>v!=null)].day}: ${money(ok[0])}`:''}</small></span>${spark(s)}<span class="mw-val"><b>${money(m.value)}</b><small class="${cls(cv(m))}">${money(cv(m),true)} ${lbl}</small></span></li>`;}).join('')}</ol>
    ${data.managers.some(m=>m.error)?`<p class="error tiny">Das fehlt: Kader von ${esc(data.managers.filter(m=>m.error).map(m=>m.name).join(', '))}.</p>`:''}
-   <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. „heute“ = Änderung bei der letzten Anpassung, 7/30 Tage = Summe der Änderungen der Spieler, die heute im Kader stehen (ohne Transfers).${Object.keys(miss).length?' * = ohne Spieler, deren Wert für den ganzen Zeitraum fehlt.':''}</p>`;
+   <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. Änderung (1/7/30 Tage) = Kaderwert heute minus Kaderwert vor 1/7/30 Tagen, jeweils mit dem Kader, der an dem Tag im Kader stand (Käufe und Verkäufe zählen mit). Fehlt ein Tag, steht –.</p>`;
  }
  function render(){
   const root=$('#mwContent');if(!root||!data)return;
