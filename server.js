@@ -1564,7 +1564,38 @@ function ruleTeams(text,teams){
  const t=n(text);
  return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
 }
-const tippPool=async(token,rule)=>rule?.text?ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team)):[];
+// Vereine nach Tabellenplatz aus dem Regeltext (Kevin 5.11., ST 9: "Tippe den MVP aus der unteren Tabellenhälfte!").
+// Zählt die Tabelle vor dem Anpfiff (tableBefore), nicht die während des Spieltags. Gleiche Erkennung in public/mvp-tipp.js.
+function ruleTableTeams(text,order){
+ const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
+ if(!Array.isArray(order)||order.length<10)return [];
+ const h=Math.floor(order.length/2),out=[];
+ if(/unter\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(order.length-h));
+ if(/ober\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(0,h));
+ return out;
+}
+// Bundesliga-Tabelle vor dem ersten Anstoß eines Spieltags (Vereinsnamen nach Platz), gespeichert in kbl-tabellen.json.
+// Bis zum Anstoß wird sie bei jedem Abruf erneuert, danach bleibt sie eingefroren. Fehlt sie, zählt nichts (nie raten).
+const TABLE_FILE=path.join(process.cwd(),'kbl-tabellen.json');
+function readTables(){try{return JSON.parse(fs.readFileSync(TABLE_FILE,'utf8'));}catch{return {};}}
+async function tableBefore(token,day){
+ const all=readTables();let md=null;try{md=await tippMatchdays();}catch{}
+ if(!md||!token||tippState(md,day).locked||tippState(md,day).next!==day)return all[day]?.teams||null;
+ try{const t=await kbFetch('/v4/competitions/1/table',{token});
+  const rows=(t?.it||[]).filter(x=>x?.tn&&Number.isFinite(x.cpl)).sort((a,b)=>a.cpl-b.cpl);
+  if(rows.length<10||rows.some(x=>x.il))return all[day]?.teams||null;
+  const teams=rows.map(x=>x.tn);
+  if(JSON.stringify(all[day]?.teams)!==JSON.stringify(teams)){all[day]={at:new Date().toISOString(),teams};
+   try{const tmp=TABLE_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all,null,1));fs.renameSync(tmp,TABLE_FILE);}catch{}}
+  return teams;
+ }catch{return all[day]?.teams||null;}
+}
+const tippPool=async(token,rule,day)=>{
+ if(!rule?.text)return [];
+ const named=ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team));
+ const byTable=/haelfte|hälfte/i.test(rule.text)&&day?ruleTableTeams(rule.text,await tableBefore(token,day)):[];
+ return [...new Set([...named,...byTable])];
+};
 // MVP innerhalb der genannten Vereine (pool), sonst der ganzen Bundesliga.
 function poolMvp(m,pool){
  if(!pool.length)return m.players;
@@ -1832,7 +1863,7 @@ function recordVerlauf(day,tracking,result,finished){
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
- const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule),conds=tippConds(rule),chk=condChecker(token,day,conds);
+ const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule,day),conds=tippConds(rule),chk=condChecker(token,day,conds);
  const cb=chk?await condTop(m.all,pool,chk,1):null,mvp={...m,players:cb?cb.list:poolMvp(m,pool),reliable:m.reliable&&!cb?.unsure};
  // Ohne eingestellte Wertung: nur den MVP zeigen, Gewinner bestimmt die Liga selbst.
  if(!kind||kind==='keine')return {status:'manual',message:kind?'Den Gewinner bestimmt ihr nach eurer Tippregel selbst.':'Für diese Tippregel ist keine Wertung eingestellt. Den Gewinner bestimmt ihr selbst.',rows:[],winners:[],
@@ -2011,7 +2042,10 @@ app.get('/api/mvp-tipps',async(req,res)=>{
   // Managerliste: braucht auch der Online-Tippdienst (tools/tipp-dienst), er liest sie aus der exportierten Datei.
   const token=await tippToken(req),managers=token?await tippManagers(token).catch(()=>null):null;
   const teams=token?await loadAllPlayers(token).then(a=>[...new Set([...a.players.values()].map(p=>p.team))].sort()).catch(()=>null):null;
-  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{})});
+  // Tabelle vor dem Anpfiff je Spieltag, damit Browser und Tippdienst "obere/untere Tabellenhälfte" auch vor dem Anstoß kennen.
+  if(token&&next)await tableBefore(token,next).catch(()=>null);
+  const tables=Object.fromEntries(Object.entries(readTables()).map(([k,v])=>[k,v.teams]));
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{}),tables});
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{
@@ -2026,7 +2060,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
   let tracking=null;
-  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule),tippConds(rule));}catch{}
+  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule,day),tippConds(rule));}catch{}
   if(tracking)recordVerlauf(day,tracking,result,st.status==='finished');
   // Punkte-Aufschluesselung des gerade Besten (Krone): MVP laut Tippregel, ohne MVP-Wertung der Erste der Top 10.
   if(tracking){const mv=(st.status==='finished'?result?.mvp:tracking.mvp)?.players||[],t1=tracking.top10?.players||[];
