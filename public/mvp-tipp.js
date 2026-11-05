@@ -72,12 +72,13 @@
  const RULE_TRIGGERS=[['torwart|torhueter|keeper','Torwart'],['abwehr\\w*|verteidiger','Abwehr'],['mittelfeld\\w*','Mittelfeld'],['stuermer|angreifer|sturm','Sturm'],
   ['gelb\\w*|rot\\w*|karten?','Karten'],['eingewechselt\\w*|einwechsl\\w*|joker|bank','Einwechslung/Bank'],['startelf|aufgestellt\\w*','Startelf'],['heim\\w*|auswaert\\w*','Heim/Auswärts'],
   ['marktwert\\w*|mio|millionen?','Marktwert'],['minus\\w*|negativ\\w*','Minuspunkte'],['tor|tore|treffer|torschuetz\\w*|vorlage\\w*|assists?','Tore/Vorlagen'],['elfmeter\\w*','Elfmeter'],
-  ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
+  ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['tabelle\\w*|tabellenhaelfte|haelfte|platz\\w*|tabellenplatz\\w*','Tabellenplatz'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
  function ruleUnclear(d){
   const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const kind=kindOf(d),c=condsOf(d);let t=' '+n(d.rule?.text)+' ';
   if(c.includes('noGoal'))t=t.replace(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung *(\([^)]*\))?/g,' ');
   if(c.includes('field'))t=t.replace(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/g,' ');
+  if(poolOf(d).length)t=t.replace(/(unter|ober)\w* *(tabellen)?haelfte/g,' ');
   for(const team of poolOf(d)){const k=n(team);for(const w of [k,...k.split(/['\s]/).filter(w=>w.length>=5)])t=t.split(w).join(' ');}
   if(kind==='drunter')t=t.replace(/(nicht|ohne|kein) *(drueber|darueber|ueber)/g,' ');
   if(kind==='name')t=t.replace(/punkt\w* *(zaehl\w*|ist|sind) *(nicht|egal)|ohne punkt\w*/g,' ');
@@ -167,6 +168,15 @@
   const t=n(text);
   return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
  }
+ // Vereine nach Tabellenplatz ("obere/untere Tabellenhälfte", gleiche Funktion wie in server.js). order = Tabelle vor dem Anpfiff.
+ function ruleTableTeams(text,order){
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
+  if(!Array.isArray(order)||order.length<10)return [];
+  const h=Math.floor(order.length/2),out=[];
+  if(/unter\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(order.length-h));
+  if(/ober\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(0,h));
+  return out;
+ }
  // Bedingungen an den Spieler (gleiche Erkennung wie ruleConds in server.js): field = kein Torwart, noGoal = keine direkte Torbeteiligung.
  function ruleConds(text){
   const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
@@ -179,7 +189,7 @@
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
  let ruleOut=new Set();
  const offRule=(pool,team,id)=>(pool.length&&!pool.includes(team))||ruleOut.has(String(id));
- const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?ruleTeams(d.rule.text,overview.teams):[]);
+ const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?[...new Set([...ruleTeams(d.rule.text,overview.teams),...ruleTableTeams(d.rule.text,overview.tables?.[d.day])])]:[]);
  const kindAuto=d=>!!d.rule&&!d.rule.wertung&&d.rule.id==='eigene';
  // Nennt die Regel Vereine, heißt die Wertung nach dem Besten dieser Vereine statt nach dem MVP der ganzen Liga.
  const POOL_TITLE={volltreffer:p=>`Wer den Punktbesten von ${p} tippt, dann nächste Punktzahl`,name:p=>`Wer den Punktbesten von ${p} tippt`,
@@ -931,7 +941,7 @@
  function ruleCheckHtml(){
   const text=$('#mvpRuleText')?.value.trim(),w=$('#mvpRuleWertung')?.value||'';
   if(!text)return '';
-  const d={rule:{id:'eigene',text,wertung:w||undefined},wertungen:ruleData?.wertungen,managers:[]},kind=kindOf(d);
+  const d={day:overview?.next,rule:{id:'eigene',text,wertung:w||undefined},wertungen:ruleData?.wertungen,managers:[]},kind=kindOf(d);
   if(!kind)return `<small class="mvp-wertung mvp-unclear">⚠️ Die BumsKI erkennt aus diesem Text nicht, wie gewertet wird. Dann zeigt sie keine Führenden und keinen Gewinner-Vorschlag. Bitte bei „So wird gewertet“ auswählen oder die Regel anders formulieren.</small>`;
   if(kind==='keine')return `<small class="mvp-wertung">🔍 Keine automatische Wertung: Führende und Gewinner bestimmt ihr selbst.</small>`;
   const u=ruleUnclear(d);
