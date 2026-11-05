@@ -20,7 +20,7 @@
  const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
  const POS={1:'TW',2:'ABW',3:'MF',4:'ST'};
  let data=null,loading=false,verlauf=null,verlaufP=null,tv=null,tvP=null;
- let period='d1',scope='all',sel=null,selM=null,range=92,kPeriod='d1',kSort='value';
+ let period='d1',scope='all',sel=null,selM=null,range=92,kPeriod='d1',kSort='value',tPeriod='d1';
  async function get(url){
   const r=await fetch(url,{cache:'no-store'});const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||`HTTP ${r.status}`);return d;
@@ -29,13 +29,17 @@
  const sub=p=>{const o=ownerOf(p);return `${esc(p.t||'ohne Verein')}${POS[p.pos]?' · '+POS[p.pos]:''}</small>${o?`<small class="mw-owner">bei ${mgr(o,'mw-mgr')}</small>`:''}<small hidden>`;};
  const PER={d1:['1 Tag','letzte Anpassung'],d7:['7 Tage','letzte 7 Tage'],d30:['30 Tage','letzte 30 Tage']};
 
- // Kacheln: größter Gewinner/Verlierer der letzten Anpassung (Spieler und Kader), Gleichstand = alle.
+ // Kaderwert-Änderung über n Tage aus dem Kaderwert-Verlauf (Kader, wie er an dem Tag war, mit Transfers; Kevin 5.11.).
+ const kaderChg=(m,n)=>{const v=m.hist?.v;if(!v||v.length<=n)return null;const a=v[v.length-1],b=v[v.length-1-n];return a==null||b==null?null:(a-b)*1e4;};
+ const DAYS={d1:1,d7:7,d30:30};
+ // Kacheln: größter Gewinner/Verlierer im gewählten Zeitraum (Spieler und Kader), Gleichstand = alle. Umschaltbar 1/7/30 Tage (Kevin 5.11.).
  function tiles(){
-  const ps=data.players.filter(p=>p.d1!=null),ms=data.managers.filter(m=>!m.error&&m.d1!=null);
+  const P=tPeriod,pv=p=>p[P],mv=m=>kaderChg(m,DAYS[P]);
+  const ps=data.players.filter(p=>pv(p)!=null),ms=data.managers.filter(m=>!m.error&&mv(m)!=null);
   const best=(list,val,dir)=>{if(!list.length)return [];const v=dir>0?Math.max(...list.map(val)):Math.min(...list.map(val));return dir>0?(v>0?list.filter(x=>val(x)===v):[]):(v<0?list.filter(x=>val(x)===v):[]);};
-  const pTile=(label,hits)=>`<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${cls(hits[0].d1)}">${money(hits[0].d1,true)}</b>${hits.map(p=>`<button type="button" class="mw-who" data-mw-player="${esc(p.id)}">${face(p.img,p.n)}<div><strong>${esc(p.n)}</strong><small>${sub(p)}</small><small>jetzt ${money(p.mv)}${esc(pct(p.d1,p.mv))}</small></div></button>`).join('')}`:'<b class="muted">–</b>'}</div>`;
-  const mTile=(label,hits)=>`<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${cls(hits[0].d1)}">${money(hits[0].d1,true)}</b>${hits.map(m=>`<div class="mw-who">${mgr(m)}<small>Kader jetzt ${money(m.value)}</small></div>`).join('')}`:'<b class="muted">–</b><small>keiner</small>'}</div>`;
-  return `<div class="tr-tiles mw-tiles">${pTile('Spieler-Gewinner',best(ps,p=>p.d1,1))}${pTile('Spieler-Verlierer',best(ps,p=>p.d1,-1))}${mTile('Kader-Gewinner',best(ms,m=>m.d1,1))}${mTile('Kader-Verlierer',best(ms,m=>m.d1,-1))}</div>`;
+  const pTile=(label,hits)=>`<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${cls(pv(hits[0]))}">${money(pv(hits[0]),true)}</b>${hits.map(p=>`<button type="button" class="mw-who" data-mw-player="${esc(p.id)}">${face(p.img,p.n)}<div><strong>${esc(p.n)}</strong><small>${sub(p)}</small><small>jetzt ${money(p.mv)}${esc(pct(pv(p),p.mv))}</small></div></button>`).join('')}`:'<b class="muted">–</b>'}</div>`;
+  const mTile=(label,hits)=>`<div class="tr-tile tr-record"><span>${label}</span>${hits.length?`<b class="${cls(mv(hits[0]))}">${money(mv(hits[0]),true)}</b>${hits.map(m=>`<div class="mw-who">${mgr(m)}<small>Kader jetzt ${money(m.value)}</small></div>`).join('')}`:'<b class="muted">–</b><small>keiner</small>'}</div>`;
+  return `${chips('tperiod',Object.entries(PER).map(([k,v])=>[k,v[0]]),P)}<div class="tr-tiles mw-tiles">${pTile('Spieler-Gewinner',best(ps,pv,1))}${pTile('Spieler-Verlierer',best(ps,pv,-1))}${mTile('Kader-Gewinner',best(ms,mv,1))}${mTile('Kader-Verlierer',best(ms,mv,-1))}</div>`;
  }
  const chips=(name,opts,cur)=>`<div class="tr-sorts" role="group">${opts.map(([k,t])=>`<button type="button" class="tr-sort${k===cur?' active':''}" data-mw-${name}="${esc(k)}" aria-pressed="${k===cur}">${esc(t)}</button>`).join('')}</div>`;
  const row=(p,i)=>`<li><button type="button" class="mw-row" data-mw-player="${esc(p.id)}"><span class="tr-place">${i+1}.</span>${face(p.img,p.n)}<span class="mw-name"><b>${esc(p.n)}</b><small>${sub(p)}</small></span><span class="mw-val"><b class="${cls(p[period])}">${money(p[period],true)}</b><small>${money(p.mv)}</small></span></button></li>`;
@@ -101,8 +105,7 @@
  }
  function kader(){
   // Änderung je Zeitraum aus dem Kaderwert-Verlauf (Kader, wie er an dem Tag war, also mit Transfers; Kevin 5.11.).
-  const N={d1:1,d7:7,d30:30}[kPeriod];
-  const cv=m=>{const v=m.hist?.v;if(!v||v.length<=N)return null;const a=v[v.length-1],b=v[v.length-1-N];return a==null||b==null?null:(a-b)*1e4;};
+  const cv=m=>kaderChg(m,DAYS[kPeriod]);
   const ms=data.managers.filter(m=>!m.error).sort((a,b)=>kSort==='chg'?(cv(b)??-Infinity)-(cv(a)??-Infinity):b.value-a.value),days=tv?.days||[];
   const lbl=kPeriod==='d1'?'heute':PER[kPeriod][0];
   const series=m=>days.map(d=>d.tv[m.id]??null);
@@ -116,7 +119,7 @@
   root.className='';
   $('#mwMeta').textContent=data.date?`Stand ${ddmm(data.date)}`:'–';
   if(!data.players.length){root.innerHTML='<p class="error">Das fehlt: Die BumsKI hat noch keine Marktwerte von Kickbase bekommen.</p>';return;}
-  root.innerHTML=`${tiles()}
+  root.innerHTML=`<div id="mwTiles">${tiles()}</div>
    <details class="acc-group tr-pech" data-mw-sec="movers"><summary><span class="tr-mname">📈 Gewinner & Verlierer</span><span class="tr-pill">${data.players.length} Spieler</span></summary><div class="acc-sub" id="mwMovers">${movers()}</div></details>
    <details class="acc-group tr-pech" id="mwVerlauf" data-mw-sec="verlauf"><summary><span class="tr-mname">🔍 Spieler-Verlauf</span></summary><div class="acc-sub">${verlaufBox()}</div></details>
    <details class="acc-group tr-pech" data-mw-sec="kader"><summary><span class="tr-mname">💰 Kaderwerte</span><span class="tr-pill">${data.managers.length} Manager</span></summary><div class="acc-sub" id="mwKader">${kader()}</div></details>
@@ -146,8 +149,9 @@
   finally{loading=false;}
  }
  document.addEventListener('click',e=>{
-  const t=e.target.closest?.('[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
+  const t=e.target.closest?.('[data-mw-tperiod],[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
   if(t&&!e.target.closest('a')){
+   if(t.dataset.mwTperiod){tPeriod=t.dataset.mwTperiod;const x=$('#mwTiles');if(x)x.innerHTML=tiles();return;}
    if(t.dataset.mwKperiod||t.dataset.mwKsort){if(t.dataset.mwKperiod)kPeriod=t.dataset.mwKperiod;else kSort=t.dataset.mwKsort;const k=$('#mwKader');if(k)k.innerHTML=kader();return;}
    if(t.dataset.mwPeriod){period=t.dataset.mwPeriod;$('#mwMovers').innerHTML=movers();return;}
    if(t.dataset.mwScope){scope=t.dataset.mwScope;$('#mwMovers').innerHTML=movers();return;}
