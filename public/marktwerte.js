@@ -114,6 +114,63 @@
    ${data.managers.some(m=>m.error)?`<p class="error tiny">Das fehlt: Kader von ${esc(data.managers.filter(m=>m.error).map(m=>m.name).join(', '))}.</p>`:''}
    <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. Änderung (1/7/30 Tage) = Kaderwert heute minus Kaderwert vor 1/7/30 Tagen, jeweils mit dem Kader, der an dem Tag im Kader stand (Käufe und Verkäufe zählen mit). Fehlt ein Tag, steht –.</p>`;
  }
+
+ // „📊 Kaderwerte im Vergleich“ (Kevin-Wunsch 5.11.): Liniendiagramm aller Manager wie die Punkteentwicklung der Übersicht.
+ // Werte aus dem Kaderwert-Verlauf (hist, Kader wie er an dem Tag war). Graue Linien = übrige Manager, antippen/anhaken hebt hervor.
+ const VCOL=['#f1c75c','#59b8e8','#ed8b85','#7fd3a6','#bb9af7','#e8a665','#75d5d1','#ed94c6','#a6c76a','#d0b8ff','#ffb4a0','#86b2ff','#c1db77','#d1a77b','#e0d9a0','#9ebdc8'];
+ let vMode='value',vRange=0;const vSel=new Set();let vInit=false;
+ function vglData(){
+  const ms=data.managers.filter(m=>!m.error&&m.hist?.v?.length);if(!ms.length)return null;
+  const end=Math.max(...ms.map(m=>m.hist.s+m.hist.v.length-1)),start0=Math.min(...ms.map(m=>m.hist.s));
+  const start=vRange?Math.max(start0,end-vRange+1):start0,n=end-start+1;
+  const lines=ms.map(m=>({m,values:Array.from({length:n},(_,i)=>{const v=m.hist.v[start+i-m.hist.s];return v==null?null:v*1e4;})}));
+  if(vMode!=='value')for(let i=0;i<n;i++){
+   const day=lines.filter(l=>l.values[i]!=null).map(l=>l.values[i]);
+   const top=Math.max(...day),sorted=[...day].sort((a,b)=>b-a);
+   lines.forEach(l=>{const v=l.values[i];(l.out=l.out||[])[i]=v==null?null:vMode==='gap'?v-top:sorted.indexOf(v)+1;});
+  }
+  lines.forEach(l=>{if(vMode!=='value')l.values=l.out;});
+  return {lines,start,n};
+ }
+ function vglHtml(){
+  const d=vglData();if(!d)return '<p class="error tiny">Das fehlt: Kaderwert-Verlauf der Manager.</p>';
+  const {lines,start,n}=d,last=l=>[...l.values].reverse().find(v=>v!=null);
+  lines.sort((a,b)=>vMode==='rank'?(last(a)??99)-(last(b)??99):(last(b)??-Infinity)-(last(a)??-Infinity));
+  if(!vInit){vInit=true;lines.slice(0,3).forEach(l=>vSel.add(l.m.id));const own=lines.find(l=>l.m.name==='T800');if(own)vSel.add(own.m.id);}
+  const colorOf=new Map([...vSel].map((id,i)=>[id,VCOL[i%VCOL.length]]));
+  const ddmm2=dt=>new Date(dt*864e5).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'UTC'});
+  const isRank=vMode==='rank',all=lines.flatMap(l=>l.values).filter(v=>v!=null);
+  const narrow=($('#mwVgl')?.clientWidth||1000)<640;
+  const W=narrow?480:1000,H=400,left=narrow?64:78,right=narrow?100:150,top=24,bottom=48,pw=W-left-right,ph=H-top-bottom,fs=narrow?16:12;
+  let lo=Math.min(...all),hi=Math.max(...all);if(vMode==='gap')hi=0;
+  const rough=Math.max(1,(hi-lo)/5),mag=10**Math.floor(Math.log10(rough)),tick=[1,2,2.5,5,10].map(f=>f*mag).find(v=>v>=rough);
+  lo=Math.floor(lo/tick)*tick;hi=Math.ceil(hi/tick)*tick;if(hi===lo)hi=lo+tick;
+  const rc=isRank?Math.max(...all):0;if(isRank){lo=.5;hi=rc+.5;}
+  const x=i=>left+(n===1?pw/2:i*pw/(n-1)),y=v=>isRank?top+(v-lo)/(hi-lo)*ph:top+(hi-v)/(hi-lo)*ph;
+  const mio=v=>money(v).replace(' Mio.','');
+  const unit=v=>isRank?`Platz ${v}`:vMode==='gap'?(v===0?'höchster Kaderwert':`${money(-v)} hinter Platz 1`):money(v);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kaderwerte im Vergleich" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#12212b" rx="10"/>`;
+  if(isRank){const ev=rc>12?2:1;for(let r=1;r<=rc;r++){if((r-1)%ev&&r!==rc)continue;svg+=`<line x1="${left}" y1="${y(r)}" x2="${W-right}" y2="${y(r)}" stroke="#2c3c47"/><text x="${left-10}" y="${y(r)+4}" fill="${r===1?'#f1c75c':'#9fb3c0'}" text-anchor="end" font-size="${fs}">${r}.</text>`;}}
+  else for(let v=lo;v<=hi+tick/1000;v+=tick)svg+=`<line x1="${left}" y1="${y(v)}" x2="${W-right}" y2="${y(v)}" stroke="${vMode==='gap'&&Math.abs(v)<1e-9?'#6b5a2e':'#2c3c47'}"/><text x="${left-10}" y="${y(v)+4}" fill="#9fb3c0" text-anchor="end" font-size="${fs}">${Math.abs(v)<1e-9?'0':(v<0?'−':'')+esc(mio(Math.abs(v)))}</text>`;
+  const step=Math.max(1,Math.ceil(n/(narrow?5:10)));for(let i=0;i<n;i++)if(i%step===0||i===n-1)svg+=`<text x="${x(i)}" y="${H-18}" fill="#9fb3c0" text-anchor="middle" font-size="${fs}">${ddmm2(start+i)}</text>`;
+  const segs=l=>{const out=[];let seg=[];l.values.forEach((v,i)=>{if(v==null){if(seg.length)out.push(seg);seg=[];}else seg.push(`${x(i).toFixed(1)},${y(v).toFixed(1)}`);});if(seg.length)out.push(seg);return out;};
+  for(const l of [...lines.filter(l=>!colorOf.has(l.m.id)),...lines.filter(l=>colorOf.has(l.m.id))]){
+   const c=colorOf.get(l.m.id),lv=last(l);
+   svg+=`<g data-mw-vline="${esc(l.m.id)}" style="cursor:pointer"><title>${esc(l.m.name)}${lv!=null?` · ${ddmm2(start+n-1)}: ${esc(unit(lv))}`:''}</title>`;
+   for(const p of segs(l)){if(p.length<2)continue;svg+=`<polyline points="${p.join(' ')}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/><polyline points="${p.join(' ')}" fill="none" stroke="${c||'#5d6f7b'}" stroke-opacity="${c?1:.45}" stroke-width="${c?3:1.5}" stroke-linecap="round" stroke-linejoin="round"/>`;}
+   svg+='</g>';
+  }
+  const labels=lines.filter(l=>colorOf.has(l.m.id)).map(l=>{const i=l.values.map((v,k)=>v!=null?k:-1).filter(k=>k>=0).at(-1);return i==null?null:{name:l.m.name,color:colorOf.get(l.m.id),ty:y(l.values[i]),lx:x(i)};}).filter(Boolean).sort((a,b)=>a.ty-b.ty);
+  const gap=fs+3;labels.forEach((l,k)=>{l.y=Math.max(l.ty,k?labels[k-1].y+gap:top);});const of=labels.length?labels.at(-1).y-(H-bottom):0;if(of>0)labels.forEach(l=>l.y-=of);
+  for(const l of labels){const mx=narrow?10:16,sh=l.name.length>mx?l.name.slice(0,mx-1)+'…':l.name;svg+=`<line x1="${l.lx+6}" y1="${l.ty}" x2="${W-right+8}" y2="${l.y}" stroke="${l.color}" stroke-opacity=".5"/><text x="${W-right+12}" y="${l.y+4}" fill="${l.color}" font-size="${fs}" font-weight="700">${esc(sh)}</text>`;}
+  svg+='</svg>';
+  const how={value:'Kaderwert je Tag in Mio. €',gap:'Abstand zum höchsten Kaderwert des Tages in Mio. € (0 = Platz 1)',rank:'Platz nach Kaderwert je Tag (Platz 1 oben)'}[vMode];
+  return `${chips('vmode',[['value','Kaderwert'],['gap','Abstand zu Platz 1'],['rank','Platz']],vMode)}${chips('vrange',[['30','30 Tage'],['0','Ganze Halbserie']],String(vRange))}
+   <div class="kbl-chart-buttons"><button type="button" class="ghost" data-mw-vpick="top">Top 5</button><button type="button" class="ghost" data-mw-vpick="all">Alle</button><button type="button" class="ghost" data-mw-vpick="none">Keine</button></div>
+   <div class="kbl-chart-managers">${lines.map(l=>{const c=colorOf.get(l.m.id);return `<label style="border-color:${c||'#394c57'}"><input type="checkbox" data-mw-vchk="${esc(l.m.id)}" ${c?'checked':''}><span style="color:${c||'#5d6f7b'}">●</span>${esc(l.m.name)}</label>`;}).join('')}</div>
+   <div class="kbl-chart-area">${svg}</div><p class="muted tiny" style="margin-top:12px">${how}, mit dem Kader, der an dem Tag im Kader stand (Käufe und Verkäufe zählen mit), ohne Kontostand. Graue Linien sind die übrigen Manager: antippen oder oben anhaken, um sie hervorzuheben. Fehlt ein Wert, hat die Linie dort eine Lücke.</p>`;
+ }
+ const vglRedraw=()=>{const b=$('#mwVgl');if(b)b.innerHTML=vglHtml();};
  function render(){
   const root=$('#mwContent');if(!root||!data)return;
   root.className='';
@@ -123,6 +180,7 @@
    <details class="acc-group tr-pech" data-mw-sec="movers"><summary><span class="tr-mname">📈 Gewinner & Verlierer</span><span class="tr-pill">${data.players.length} Spieler</span></summary><div class="acc-sub" id="mwMovers">${movers()}</div></details>
    <details class="acc-group tr-pech" id="mwVerlauf" data-mw-sec="verlauf"><summary><span class="tr-mname">🔍 Spieler-Verlauf</span></summary><div class="acc-sub">${verlaufBox()}</div></details>
    <details class="acc-group tr-pech" data-mw-sec="kader"><summary><span class="tr-mname">💰 Kaderwerte</span><span class="tr-pill">${data.managers.length} Manager</span></summary><div class="acc-sub" id="mwKader">${kader()}</div></details>
+   <details class="acc-group tr-pech" data-mw-sec="vgl"><summary><span class="tr-mname">📊 Kaderwerte im Vergleich</span><span class="tr-pill">Diagramm</span></summary><div class="acc-sub" id="mwVgl"></div></details>
    ${data.run&&(data.run.failed||data.run.empty)?`<p class="muted tiny">Beim letzten Abruf fehlten ${data.run.failed+data.run.empty} von ${data.run.players} Spielern.</p>`:''}`;
  }
  const redraw=()=>{const c=$('#mwChart');if(c)c.innerHTML=chartHtml();};
@@ -149,8 +207,12 @@
   finally{loading=false;}
  }
  document.addEventListener('click',e=>{
-  const t=e.target.closest?.('[data-mw-tperiod],[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
+  const t=e.target.closest?.('[data-mw-vmode],[data-mw-vrange],[data-mw-vpick],[data-mw-vline],[data-mw-tperiod],[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
   if(t&&!e.target.closest('a')){
+   if(t.dataset.mwVmode){vMode=t.dataset.mwVmode;vglRedraw();return;}
+   if(t.dataset.mwVrange!=null){vRange=Number(t.dataset.mwVrange);vglRedraw();return;}
+   if(t.dataset.mwVpick){const ls=vglData()?.lines||[],lv=l=>[...l.values].reverse().find(v=>v!=null);vSel.clear();if(t.dataset.mwVpick==='all')ls.forEach(l=>vSel.add(l.m.id));if(t.dataset.mwVpick==='top')ls.sort((a,b)=>vMode==='rank'?(lv(a)??99)-(lv(b)??99):(lv(b)??-Infinity)-(lv(a)??-Infinity)).slice(0,5).forEach(l=>vSel.add(l.m.id));vglRedraw();return;}
+   if(t.dataset.mwVline){const id=t.dataset.mwVline;if(vSel.has(id))vSel.delete(id);else vSel.add(id);vglRedraw();return;}
    if(t.dataset.mwTperiod){tPeriod=t.dataset.mwTperiod;const x=$('#mwTiles');if(x)x.innerHTML=tiles();return;}
    if(t.dataset.mwKperiod||t.dataset.mwKsort){if(t.dataset.mwKperiod)kPeriod=t.dataset.mwKperiod;else kSort=t.dataset.mwKsort;const k=$('#mwKader');if(k)k.innerHTML=kader();return;}
    if(t.dataset.mwPeriod){period=t.dataset.mwPeriod;$('#mwMovers').innerHTML=movers();return;}
@@ -163,9 +225,11 @@
   if(!e.target.closest?.('.mw-search')){const s=$('#mwSuggest');if(s)s.hidden=true;}
   if(e.target.closest?.('[data-kbl-nav="marktwerte"]'))load();
  });
+ document.addEventListener('change',e=>{const id=e.target.dataset?.mwVchk;if(id==null)return;if(e.target.checked)vSel.add(id);else vSel.delete(id);vglRedraw();});
+ window.addEventListener('resize',()=>{clearTimeout(window.__mwVgl);window.__mwVgl=setTimeout(()=>{if($('[data-mw-sec=vgl]')?.open)vglRedraw();},200);});
  document.addEventListener('toggle',e=>{
   const s=e.target.dataset?.mwSec;if(!s||!e.target.open)return;
-  if(s==='verlauf')loadVerlauf();if(s==='kader')loadTv();
+  if(s==='verlauf')loadVerlauf();if(s==='kader')loadTv();if(s==='vgl')vglRedraw();
  },true);
  document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset?.mwMgr){e.preventDefault();e.target.click();}});
  document.addEventListener('input',e=>{
