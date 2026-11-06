@@ -325,6 +325,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .pv-tile p{margin:0;font-size:16px;line-height:1.35;overflow-wrap:anywhere}
 .pv-tile p b{color:var(--gold)}
 .pv-tile span{color:var(--muted);font-size:13px}
+.pv-more{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}.pv-more li{border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:3px}.pv-more small{padding-right:0;font-size:10px}.pv-fq{font-size:14px;line-height:1.35;overflow-wrap:anywhere}.pv-fq b{color:var(--gold)}.pv-fs{color:var(--muted);font-size:12.5px}
 @media(max-width:560px){.pv-units{gap:6px}.pv-unit{min-width:0;flex:1}.pv-unit b{font-size:26px}.pv-tiles{grid-template-columns:1fr}}
 
 /* ---- MVP-Tipp ---- */
