@@ -1,0 +1,1 @@
+{"day":9,"rules":[{"code":"FV","name":"Frühverkauf","ab":1,"active":true}],"started":true,"start":{"at":"2026-11-09T18:00:00.000Z","by":"regel","begun":false},"accReady":false,"violations":[],"failures":[],"final":false,"updatedAt":"2026-11-06T19:35:21.361Z"}
