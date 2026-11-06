@@ -343,6 +343,7 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .mvp-me td{background:rgba(235,199,104,.07)}.mvp-win{color:var(--gold)}.mvp-mvp{margin:14px 0 6px}
 @media(max-width:600px){.mvp-form label:first-child{flex:1 1 100%}.mvp-form #mvpPlayer{width:100%}.mvp-table th,.mvp-table td{padding:8px 5px;font-size:13px}}
 #mvp [hidden]{display:none!important}
+.mvp-tips-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:22px 0 8px}.mvp-tips-head h4{margin:0}.mvp-tips-head button{padding:6px 12px;font-size:13px}
 .mvp-stats{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.mvp-stats span{background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--text-2)}.mvp-stats b{color:var(--gold)}
 .mvp-race{display:grid;gap:10px}
 .mvp-lane{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface-2);display:grid;gap:8px}
