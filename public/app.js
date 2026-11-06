@@ -2085,54 +2085,177 @@ function pvLiveHtml(day){
  return `<div class="pv-live"><h4 class="pv-head">Live-Zwischenstand Spieltag ${day}</h4><div class="pvl-table">${ms.map(row).join('')}</div>
   <p class="muted tiny">Summe der Live-Punkte der Startelf, minus 100 je leerem Platz. Stand ${escapeHtml(time)} Uhr. Kickbase zeigt im Ranking erst nach dem Spieltag Punkte; nach Spielende können sich Punkte noch ändern. ✓ Spiel vorbei · ● läuft · – noch keine Punkte. Auf einen Manager tippen zeigt seine Spieler.</p></div>`;
 }
+// Fragen-Kacheln der Spieltagsvorschau (Kevin-Wunsch 6.11.: mehr Abwechslung, echte Deep-Dive-Statistiken).
+// Großer Fragen-Pool; je Spieltag mischt die BumsKI neu (fest je Spieltag, alle sehen dieselben Fragen), höchstens eine Frage
+// je Familie und drei je Bereich; was am Vorspieltag dran war, kommt zuletzt. Nur abgeschlossene Spieltage, BumsTabelle und
+// (online) die gespeicherten Aufstellungen mit Spielerpunkten. Fehlt etwas, fällt die Frage weg (nie raten).
+const PV_SHOW=8,PV_CAT_MAX=3;
+let pvExtra=null,pvExtraBusy=false;
+// Startelfen (Ranking lp), Spielerpunkte aller Bundesliga-Spieler (Abrechnung, ah.mvp.all, wie im Spieltagsbericht) und
+// Bankpunkte je Spieltag. Nur online (fertige Dateien): am PC rechnet der Server die Abrechnung je Spieltag neu, das wäre zu viel.
+async function pvLoadExtra(days){
+ if(pvExtraBusy||!window.KBL_STATIC||!days.length||!currentLeague)return;
+ const key=days.join(',');if(pvExtra?.key===key)return;
+ pvExtraBusy=true;const get=u=>api(u).catch(()=>null);
+ try{pvExtra={key,days:await Promise.all(days.map(async d=>{
+  const [r,a,bp]=await Promise.all([get(`/api/ranking/${encodeURIComponent(currentLeague.id)}?dayNumber=${d}`),get(`/api/rule-accounting/${d}`),get(`/api/bench-points/${d}`)]);
+  const all=a?.ah?.mvp?.reliable===false?null:a?.ah?.mvp?.all;
+  return {d,us:r?.us||[],pts:Array.isArray(all)&&all.length?new Map(all.map(x=>[String(x.id),x])):null,bench:bp};}))};}
+ finally{pvExtraBusy=false;}
+ renderPreview();
+}
+const pvHash=s=>{let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
+function pvPick(all,day){
+ const take=(d,skip,out=[])=>{const order=all.slice().sort((a,b)=>pvHash(a.id+':'+d)-pvHash(b.id+':'+d)),fam=new Set(out.map(q=>q.fam)),cat={};out.forEach(q=>cat[q.cat]=(cat[q.cat]||0)+1);
+  for(const q of order){if(out.length>=PV_SHOW)break;if(skip.has(q.fam)||out.includes(q)||fam.has(q.fam)||(cat[q.cat]||0)>=PV_CAT_MAX)continue;fam.add(q.fam);cat[q.cat]=(cat[q.cat]||0)+1;out.push(q);}
+  return out;};
+ // Kette ab Spieltag 1: je Spieltag zuerst nur Familien, die am Spieltag davor nicht dran waren; reicht das nicht, wird aufgefüllt.
+ let prev=new Set(),pick=[];
+ for(let d=1;d<=day;d++){pick=take(d,new Set(),take(d,prev));prev=new Set(pick.map(q=>q.fam));}
+ return pick;
+}
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
- if(!days.length)return [];
- const b=n=>mgrLink(n,`<b>${escapeHtml(n)}</b>`),l=n=>mgrLink(n,escapeHtml(n)),f=v=>fmt(Math.round(v));
+ if(!days.length)return {list:[],pool:0};
+ const b=n=>mgrLink(n,`<b>${escapeHtml(n)}</b>`),l=n=>mgrLink(n,escapeHtml(n)),f=v=>fmt(Math.round(v)||0),e=escapeHtml;
+ const and=a=>a.length<2?a[0]:a.slice(0,-1).join(', ')+' und '+a.at(-1);
+ const avg=a=>a.reduce((s,x)=>s+x,0)/a.length,pct=(a,c)=>Math.round(a/c*100);
+ const out=[],q=(id,fam,cat,tag,text,sub)=>out.push({id,fam,cat,tag,text,sub});
+ const elig=h=>h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));
  const series=new Map();
- for(const h of days)for(const m of h.list)if(m.dayPoints!==null&&isEligibleManager(m.name)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push(m.dayPoints);}
- const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
- const out=[],q=(tag,text,sub)=>out.push({tag,text,sub});
- const last=days.at(-1),prev=days.at(-2);
- // Tabelle nach dem letzten Spieltag
+ for(const h of days)for(const m of elig(h)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push({day:h.day,p:m.dayPoints});}
+ const P=n=>(series.get(n)||[]).map(x=>x.p);
+ const dayAvg=new Map(days.map(h=>{const s=elig(h);return [h.day,s.length?avg(s.map(m=>m.dayPoints)):null];}));
+ // Platz am Spieltag (Tagespunkte) und in der Tabelle (Gesamtpunkte), Gleichstand = gleicher Platz.
+ const placeBy=(list,key)=>{const m=new Map();for(const x of list)m.set(x.name,1+list.filter(y=>y[key]>x[key]).length);return m;};
+ const dayPlace=new Map(days.map(h=>[h.day,placeBy(elig(h),'dayPoints')]));
+ const tabPlace=new Map(days.map(h=>[h.day,placeBy(h.list.filter(m=>m.score!==null&&isEligibleManager(m.name)),'score')]));
+ const last=days.at(-1),N=elig(last).length;
  const table=last.list.filter(m=>isEligibleManager(m.name)&&m.score!==null).slice().sort((x,y)=>y.score-x.score);
- if(table.length>1){const [a,c]=table,gap=a.score-c.score;
-  q('👑 THRON',`Wackelt der Thron von ${b(a.name)}?`,gap===0?`Punktgleich mit ${l(c.name)}. Wer zuckt zuerst?`:gap<250?`Nur ${f(gap)} Punkte vor ${l(c.name)}. Ein schwacher Spieltag reicht.`:`${f(gap)} Punkte vor ${l(c.name)}. Kommt da überhaupt noch wer ran?`);}
- // Formkurve: letzte 3 Spieltage gegen den eigenen Schnitt
- const form=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const l=p.slice(-3);return {n,last:avg(l),all:avg(p),d:avg(l)-avg(p)};});
- const hot=form.slice().sort((x,y)=>y.d-x.d)[0],cold=form.slice().sort((x,y)=>x.d-y.d)[0];
- if(hot&&hot.d>0)q('🔥 FORMKURVE',`Hält die Formkurve von ${b(hot.n)}?`,`Ø letzte 3 Spieltage: ${f(hot.last)} · Saisonschnitt ${f(hot.all)} (+${f(hot.d)})`);
- // BumsTabelle (laufende Halbserie)
- const bnames=[...new Set(Object.values(bumsDays||{}).flatMap(d=>Object.values(d.managers||{}).map(v=>v.name)))].filter(isEligibleManager);
- const bums=bnames.map(n=>({n,c:bumsOf(n)})).filter(x=>x.c!=null).sort((x,y)=>y.c-x.c);
- if(bums.length&&bums[0].c>0){const top=bums.filter(x=>x.c===bums[0].c);
-  q('🍆 BUMSTABELLE',top.length===1?`Wird ${b(top[0].n)} wieder am häufigsten gebumst?`:`Wer von ${top.map(x=>b(x.n)).join(' und ')} wird diesmal öfter gebumst?`,`${bums[0].c} Bumsungen in der Halbserie, Platz 1 der BumsTabelle`);}
- if(cold&&cold.d<0)q('📉 ABSTURZ',`Ist ${b(cold.n)} im freien Fall oder war das nur ein Ausrutscher?`,`Ø letzte 3 Spieltage: ${f(cold.last)} · Saisonschnitt ${f(cold.all)} (${f(cold.d)})`);
- // Engstes Duell in der Tabelle (ohne Platz 1 gegen 2, das steht schon beim Thron)
+ const winsOf=new Map();for(const h of days){const p=dayPlace.get(h.day);for(const [n,pl] of p)if(pl===1)winsOf.set(n,(winsOf.get(n)||0)+1);}
+ // ---------- Tabelle ----------
+ if(table.length>1){const [a,c]=table,gap=a.score-c.score,la=avg(P(a.name).slice(-3)),lc=avg(P(c.name).slice(-3));
+  q('thron','thron','tab','👑 THRON',`Wackelt der Thron von ${b(a.name)}?`,
+   gap===0?`Punktgleich mit ${l(c.name)}. Wer zuckt zuerst?`
+   :lc>la&&P(c.name).length>=3?`${f(gap)} Punkt${gap===1?'':'e'} vor ${l(c.name)}. Im Tempo der letzten 3 Spieltage (Ø ${f(lc)} gegen Ø ${f(la)}) wäre ${l(c.name)} ${(k=>k===1?'schon nach dem nächsten Spieltag':`in ${k} Spieltagen`)(Math.ceil(gap/(lc-la)))} vorbei.`
+   :gap<250?`Nur ${f(gap)} Punkte vor ${l(c.name)}. Ein schwacher Spieltag reicht.`:`${f(gap)} Punkte vor ${l(c.name)}, und in den letzten 3 Spieltagen war ${l(a.name)} auch noch schneller (Ø ${f(la)} gegen ${f(lc)}).`);
+  let lead=0,streak=0;for(const h of days){const one=tabPlace.get(h.day).get(a.name)===1;if(one){lead++;streak++;}else streak=0;}
+  if(lead>=3)q('abo','thron','tab','📅 ABO',`Wie lange hält das Abo von ${b(a.name)} an der Spitze?`,`${lead} von ${days.length} Spieltagen Tabellenführer${streak===lead?', alle am Stück':streak>1?`, gerade ${streak} in Folge`:', nach kurzer Pause wieder vorn'}.`);
+  // Wer kann mit einem einzigen Spieltag ganz nach oben? Eigener Bestwert minus schwächster Tag des Führenden größer als der Rückstand.
+  const wl=Math.min(...P(a.name));let far=null;
+  for(let i=2;i<table.length;i++){const t=table[i],gp=a.score-t.score,best=Math.max(...P(t.name));if(P(t.name).length&&best-wl>gp)far={t,gp,best,pl:tabPlace.get(last.day).get(t.name)};}
+  if(far)q('jagd','jagd','tab','🚀 JAGD',`Schießt sich ${b(far.t.name)} mit einem Sahnetag von Platz ${far.pl} nach oben?`,`${f(far.gp)} Punkte hinter ${l(a.name)}. Sein Bestwert: ${f(far.best)}, der schwächste Tag von ${l(a.name)}: ${f(wl)}. Rein rechnerisch reicht ein Spieltag.`);
+ }
  let duel=null;for(let i=2;i<table.length;i++){const g=table[i-1].score-table[i].score;if(!duel||g<duel.g)duel={a:table[i-1],c:table[i],g,pl:i};}
- if(duel)q('⚔️ DUELL',`Zieht ${b(duel.c.name)} an ${b(duel.a.name)} vorbei?`,duel.g===0?`Platz ${duel.pl} und ${duel.pl+1}, punktgleich`:`Platz ${duel.pl} gegen ${duel.pl+1}, nur ${f(duel.g)} Punkte Abstand`);
- // Letzter Spieltag: Sieger und Letzter (Dämonische Drehtür)
- const sc=last.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)).slice().sort((x,y)=>y.dayPoints-x.dayPoints);
+ if(duel)q('duell','duell','tab','⚔️ DUELL',`Zieht ${b(duel.c.name)} an ${b(duel.a.name)} vorbei?`,duel.g===0?`Platz ${duel.pl} und ${duel.pl+1}, punktgleich`:`Platz ${duel.pl} gegen ${duel.pl+1}, nur ${f(duel.g)} Punkte Abstand`);
+ if(table.length>=8){let s=null;for(let i=1;i+5<=table.length-1;i++){const sp=table[i].score-table[i+4].score;if(!s||sp<s.sp)s={i,sp};}
+  if(s)q('sumpf','sumpf','tab','🐊 SUMPF',`Wer kommt raus aus dem Sumpf von Platz ${s.i+1} bis ${s.i+5}?`,`Nur ${f(s.sp)} Punkte zwischen ${and(table.slice(s.i,s.i+5).map(m=>l(m.name)))}. Ein guter Spieltag, und es geht drei Plätze hoch.`);}
+ const lan=table.at(-1),above=table.at(-2);
+ if(lan&&above&&lan!==table[0])q('laterne','laterne','tab','🏮 ROTE LATERNE',`Gibt ${b(lan.name)} die rote Laterne endlich ab?`,`${f(above.score-lan.score)} Punkte hinter ${l(above.name)}`);
+ if(days.length>=4){const fs=[...series.keys()].map(n=>{const pl=days.map(h=>tabPlace.get(h.day).get(n)).filter(Boolean);return {n,lo:Math.min(...pl),hi:Math.max(...pl),cur:tabPlace.get(last.day).get(n)};}).filter(x=>x.cur).sort((x,y)=>(y.hi-y.lo)-(x.hi-x.lo));
+  const x=fs[0];if(x&&x.hi-x.lo>=5)q('fahrstuhl','fahrstuhl','tab','🛗 FAHRSTUHL',`Wohin fährt der Fahrstuhl von ${b(x.n)} diesmal?`,`Diese Saison schon zwischen Platz ${x.lo} und ${x.hi}, gerade Platz ${x.cur}. Niemand fährt mehr Etagen.`);}
+ // ---------- Form ----------
+ const form=[...series.keys()].filter(n=>P(n).length>=4).map(n=>{const p=P(n),r=p.slice(-3);return {n,last:avg(r),all:avg(p),d:avg(r)-avg(p)};});
+ const hot=form.slice().sort((x,y)=>y.d-x.d)[0],cold=form.slice().sort((x,y)=>x.d-y.d)[0];
+ if(hot&&hot.d>0)q('hot','hot','form','🔥 FORMKURVE',`Hält die Formkurve von ${b(hot.n)}?`,`Ø letzte 3 Spieltage: ${f(hot.last)} · Saisonschnitt ${f(hot.all)} (+${f(hot.d)})`);
+ if(cold&&cold.d<0)q('cold','cold','form','📉 ABSTURZ',`Ist ${b(cold.n)} im freien Fall oder war das nur ein Ausrutscher?`,`Ø letzte 3 Spieltage: ${f(cold.last)} · Saisonschnitt ${f(cold.all)} (${f(cold.d)})`);
+ if(days.length>=5){const k=4,ft=[...series.keys()].map(n=>({n,s:(series.get(n)||[]).filter(x=>x.day>last.day-k).reduce((s,x)=>s+x.p,0),c:(series.get(n)||[]).filter(x=>x.day>last.day-k).length})).filter(x=>x.c===k).sort((x,y)=>y.s-x.s);
+  const t=ft[0],pl=t&&tabPlace.get(last.day).get(t.n);if(t&&(ft[1]?.s??-Infinity)<t.s&&pl>=3)q('formtab','formtab','form','🕵️ HEIMLICHER MEISTER',`Ist ${b(t.n)} der heimliche Meister?`,`In der Formtabelle der letzten ${k} Spieltage Platz 1 mit ${f(t.s)} Punkten. In der echten Tabelle nur Platz ${pl}.`);}
+ // Serie über/unter dem Ligaschnitt (vom letzten Spieltag rückwärts)
+ const ser=[...series.keys()].map(n=>{const s=series.get(n);let k=0,up=null;for(let i=s.length-1;i>=0;i--){const a=dayAvg.get(s[i].day);if(a==null)break;const u=s[i].p>a;if(up===null)up=u;if(u!==up||s[i].day!==last.day-(s.length-1-i))break;k++;}return {n,k,up};}).filter(x=>x.k>=3).sort((x,y)=>y.k-x.k);
+ if(ser.length){const top=ser.filter(x=>x.k===ser[0].k&&x.up===ser[0].up).slice(0,3),x=ser[0];
+  q('serie','serie','form',x.up?'📈 SERIE':'🧊 EISZEIT',x.up?`Reißt die Serie von ${and(top.map(y=>b(y.n)))}?`:`Kommt ${and(top.map(y=>b(y.n)))} endlich wieder über den Ligaschnitt?`,
+   `${x.k} Spieltage in Folge ${x.up?'über':'unter'} dem Ligaschnitt. Zuletzt ${top.map(y=>`${l(y.n)} ${f(P(y.n).at(-1))}`).join(', ')} bei Ø ${f(dayAvg.get(last.day))}.`);}
+ const sd=[...series.keys()].filter(n=>P(n).length>=4).map(n=>{const p=P(n),a=avg(p);return {n,a,sd:Math.sqrt(avg(p.map(x=>(x-a)**2))),lo:Math.min(...p),hi:Math.max(...p)};});
+ const wild=sd.slice().sort((x,y)=>y.sd-x.sd)[0],calm=sd.slice().sort((x,y)=>x.sd-y.sd)[0];
+ if(wild)q('wild','sd','form','🎲 WUNDERTÜTE',`Top oder Flop: Welcher ${b(wild.n)} kommt diesmal?`,`Bisher zwischen ${f(wild.lo)} und ${f(wild.hi)} Punkten alles dabei, im Schnitt ±${f(wild.sd)} vom eigenen Ø.`);
+ if(calm)q('calm','sd','form','🤖 MASCHINE',`Ist ${b(calm.n)} die Maschine der Liga?`,`Schwankt im Schnitt nur ±${f(calm.sd)} Punkte um sein Ø von ${f(calm.a)}. Schwächster Tag: ${f(calm.lo)}, bester: ${f(calm.hi)}.`);
+ // ---------- Spieltag: Sieger, Letzter, Rekorde ----------
+ const sc=elig(last).slice().sort((x,y)=>y.dayPoints-x.dayPoints);
  if(sc.length>1){
   const best=sc[0].dayPoints,winners=sc.filter(m=>m.dayPoints===best),worst=sc.at(-1).dayPoints,losers=sc.filter(m=>m.dayPoints===worst);
-  const pw=prev?prev.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name)):null,prevBest=pw?.length?Math.max(...pw.map(m=>m.dayPoints)):null;
-  if(winners.length===1){const w=winners[0],twice=prevBest!=null&&pw.find(m=>m.name===w.name)?.dayPoints===prevBest;
-   q('🏆 SIEGER',twice?`Hattrick für ${b(w.name)}? Zwei Spieltagssiege hat es schon.`:`Schafft ${b(w.name)} zwei Spieltagssiege am Stück?`,`Spieltag ${last.day}: ${f(best)} Punkte. Nach der Drehtür fehlt jetzt einer der drei besten Spieler.`);}
-  if(losers.length===1)q('🥄 LETZTER',`Holt sich ${b(losers[0].name)} wieder den Holzlöffel ab?`,`Spieltag ${last.day}: ${f(worst)} Punkte. Immerhin gab es per Drehtür ein Geschenk vom Sieger.`);
+  // Was passiert Siegern und Letzten am Spieltag danach (Drehtür)? Aus allen bisherigen Spieltagen.
+  const after=role=>{const r=[];for(let i=0;i+1<days.length;i++){const p=dayPlace.get(days[i].day),nx=dayPlace.get(days[i+1].day),s=elig(days[i]);
+   const target=role==='w'?1:Math.max(...p.values());for(const [n,pl] of p)if(pl===target&&nx.has(n)){const own=avg(P(n));r.push({n,next:series.get(n).find(x=>x.day===days[i+1].day)?.p,own,pl:nx.get(n),of:nx.size});}}return r.filter(x=>x.next!=null);};
+  if(winners.length===1){const w=winners[0],pw=days.length>1?dayPlace.get(days.at(-2).day).get(w.name)===1:false;
+   q('sieger','sieger','tag','🏆 SIEGER',pw?`Hattrick für ${b(w.name)}? Zwei Spieltagssiege hat es schon.`:`Schafft ${b(w.name)} zwei Spieltagssiege am Stück?`,`Spieltag ${last.day}: ${f(best)} Punkte. Nach der Drehtür fehlt jetzt einer der drei besten Spieler.`);
+   const a=after('w');if(a.length>=3){const nx=avg(a.map(x=>x.next)),own=avg(a.map(x=>x.own));
+    q('fluch','sieger','tag','🌀 SIEGER-FLUCH',nx<own?`Erwischt der Sieger-Fluch auch ${b(w.name)}?`:`Lacht ${b(w.name)} über die Drehtür?`,
+     nx<own?`Spieltagssieger holten am Spieltag danach im Schnitt ${f(nx)} Punkte, ${f(own-nx)} unter ihrem eigenen Schnitt (${a.length} Fälle). ${(k=>k?`Nur ${k}× gab es den Sieg gleich nochmal.`:'Den Sieg gleich nochmal gab es kein einziges Mal.')(a.filter(x=>x.pl===1).length)}`
+     :`Spieltagssieger holten danach sogar Ø ${f(nx)} Punkte, mehr als ihr eigener Schnitt (${f(own)}), trotz Drehtür (${a.length} Fälle).`);}}
+  if(losers.length===1){const lo=losers[0];
+   q('letzter','letzter','tag','🥄 LETZTER',`Holt sich ${b(lo.name)} wieder den Holzlöffel ab?`,`Spieltag ${last.day}: ${f(worst)} Punkte. Immerhin gab es per Drehtür ein Geschenk vom Sieger.`);
+   const a=after('l');if(a.length>=3){const ap=avg(a.map(x=>x.pl)),of=Math.round(avg(a.map(x=>x.of)));
+    q('geschenk','letzter','tag','🎁 DREHTÜR-GESCHENK',`Startet ${b(lo.name)} mit dem Geschenk vom Sieger die Aufholjagd?`,`Wer Letzter war, landete am Spieltag danach im Schnitt auf Platz ${fmt(Math.round(ap*10)/10)} von ${of} (${a.length} Fälle). ${(k=>k?`${k}× gab es den Holzlöffel gleich nochmal.`:'Zweimal hintereinander Letzter war noch keiner.')(a.filter(x=>x.pl===x.of).length)}`);}}
  }
- const lan=table.at(-1),above=table.at(-2);
- if(lan&&above&&lan!==table[0])q('🏮 ROTE LATERNE',`Gibt ${b(lan.name)} die rote Laterne endlich ab?`,`${f(above.score-lan.score)} Punkte hinter ${l(above.name)}`);
- // Bester Schnitt ohne Spieltagssieg
- const wins=new Map();for(const h of days){const s=h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));if(!s.length)continue;const mx=Math.max(...s.map(m=>m.dayPoints));s.filter(m=>m.dayPoints===mx).forEach(m=>wins.set(m.name,1));}
- const winless=[...series].filter(([n,p])=>!wins.has(n)&&p.length>=3).map(([n,p])=>({n,a:avg(p),g:p.length})).sort((x,y)=>y.a-x.a)[0];
- if(winless)q('⏳ SIEGLOS',`Wann gewinnt ${b(winless.n)} endlich mal einen Spieltag?`,`Ø ${f(winless.a)} Punkte, aber kein Spieltagssieg in ${winless.g} Spieltagen`);
- // Noch ungebumst
+ const all=days.flatMap(h=>elig(h).map(m=>({n:m.name,p:m.dayPoints,day:h.day})));
+ if(all.length){const mx=Math.max(...all.map(x=>x.p)),rec=all.filter(x=>x.p===mx),runner=all.filter(x=>!rec.some(r=>r.n===x.n)).sort((x,y)=>y.p-x.p)[0];
+  q('rekord','rekord','tag','📛 REKORD',`Fällt diese Saison noch der Rekord von ${and([...new Set(rec.map(x=>x.n))].map(b))}?`,`${f(mx)} Punkte an Spieltag ${and(rec.map(x=>x.day))}. Der Ligaschnitt pro Spieltag liegt bei ${f(avg(all.map(x=>x.p)))}${runner?`, am nächsten dran ist ${l(runner.n)} mit ${f(runner.p)}`:''}.`);
+  const t=[...series.keys()].map(n=>({n,c:P(n).filter(p=>p>=1000).length})).sort((x,y)=>y.c-x.c),tot=all.filter(x=>x.p>=1000).length;
+  if(t[0]?.c>=2&&t[0].c>(t[1]?.c||0))q('tausend','1000','tag','💯 TAUSENDER',`Knackt ${b(t[0].n)} wieder die 1000?`,`${t[0].c}× über 1000 Punkte, die ganze Liga zusammen ${tot}×.`);
+  const never=[...series.keys()].filter(n=>P(n).length>=4&&!P(n).some(p=>p>=1000)).map(n=>{const s=series.get(n),bx=s.reduce((a,x)=>x.p>a.p?x:a);return {n,...bx};}).sort((x,y)=>y.p-x.p)[0];
+  if(never)q('nie1000','1000','tag','🪫 NOCH NIE 1000',`Schafft ${b(never.n)} endlich seinen ersten Tausender?`,`${P(never.n).length} Spieltage, noch nie über 1000. Bestwert bisher: ${f(never.p)} an Spieltag ${never.day}.`);}
+ const winless=[...series.keys()].filter(n=>!winsOf.has(n)&&P(n).length>=3).map(n=>({n,a:avg(P(n)),g:P(n).length})).sort((x,y)=>y.a-x.a)[0];
+ if(winless)q('sieglos','sieglos','tag','⏳ SIEGLOS',`Wann gewinnt ${b(winless.n)} endlich mal einen Spieltag?`,`Ø ${f(winless.a)} Punkte, aber kein Spieltagssieg in ${winless.g} Spieltagen`);
+ const seconds=[...series.keys()].map(n=>({n,c:days.filter(h=>dayPlace.get(h.day).get(n)===2).length,w:winsOf.get(n)||0})).filter(x=>x.c>=2&&x.c>x.w).sort((x,y)=>y.c-x.c||x.w-y.w);
+ if(seconds.length&&seconds[0].c>(seconds[1]?.c||0))q('zweiter','zweiter','tag','🥈 EWIGER ZWEITER',`Bleibt ${b(seconds[0].n)} der ewige Zweite?`,`${seconds[0].c}× Zweiter am Spieltag, aber ${seconds[0].w?seconds[0].w+'× ':'noch nie '}Spieltagssieger.`);
+ // ---------- BumsTabelle (laufende Halbserie) ----------
+ const hd=(bumsHalfDays()||[]).slice().sort((a,c)=>a-c);
+ const bnames=[...new Set(hd.flatMap(d=>Object.values(bumsDays[d].managers||{}).map(v=>v.name)))].filter(isEligibleManager);
+ const bums=bnames.map(n=>({n,c:bumsOf(n)})).filter(x=>x.c!=null).sort((x,y)=>y.c-x.c);
+ if(bums.length&&bums[0].c>0){const top=bums.filter(x=>x.c===bums[0].c);
+  q('bumstop','bumstop','bums','🍆 BUMSTABELLE',top.length===1?`Wird ${b(top[0].n)} wieder am häufigsten gebumst?`:`Wer von ${and(top.map(x=>b(x.n)))} wird diesmal öfter gebumst?`,`${bums[0].c} Bumsungen in der Halbserie, Platz 1 der BumsTabelle. Liga-Schnitt: ${fmt(Math.round(avg(bums.map(x=>x.c))*10)/10)}.`);}
  const clean=bums.filter(x=>x.c===0);
- if(clean.length&&bums.length)q('🧜‍♀️ UNGEBUMST',clean.length<=2?`Bleibt ${clean.map(x=>b(x.n)).join(' und ')} weiter ungebumst?`:`${clean.length} Manager sind noch ungebumst. Wen erwischt es zuerst?`,clean.length<=2?'Bisher keine einzige Bumsung in der Halbserie':clean.map(x=>l(x.n)).join(', '));
- // Größte Schwankung
- const wild=[...series].filter(([,p])=>p.length>=4).map(([n,p])=>{const a=avg(p);return {n,sd:Math.sqrt(avg(p.map(x=>(x-a)**2))),lo:Math.min(...p),hi:Math.max(...p)};}).sort((x,y)=>y.sd-x.sd)[0];
- if(wild)q('🎲 WUNDERTÜTE',`Top oder Flop: Welcher ${b(wild.n)} kommt diesmal?`,`Bisher zwischen ${f(wild.lo)} und ${f(wild.hi)} Punkten alles dabei`);
- return out;
+ if(clean.length&&bums.length)q('ungebumst','ungebumst','bums','🧜‍♀️ UNGEBUMST',clean.length<=2?`Bleibt ${and(clean.map(x=>b(x.n)))} weiter ungebumst?`:`${clean.length} Manager sind noch ungebumst. Wen erwischt es zuerst?`,clean.length<=2?`Bisher keine einzige Bumsung in ${hd.length} Spieltagen der Halbserie.`:and(clean.map(x=>l(x.n))));
+ const pairs=new Map(),ruleCnt=new Map(),dayCnt=new Map();
+ for(const d of hd)for(const v of Object.values(bumsDays[d].managers||{})){if(!isEligibleManager(v.name))continue;
+  dayCnt.set(v.name,{...(dayCnt.get(v.name)||{}),[d]:v.count});
+  for(const [r,c] of Object.entries(v.rules||{})){const k=r+'|'+v.name;ruleCnt.set(k,(ruleCnt.get(k)||0)+c);}
+  for(const x of (v.moves||[])){const g=bumsGiver(x);if(!g||g===v.name||!isEligibleManager(g))continue;const k=g+'|'+v.name,p=pairs.get(k)||{g,v:v.name,n:0,r:{}};p.n++;p.r[x.r]=(p.r[x.r]||0)+1;pairs.set(k,p);}}
+ const pr=[...pairs.values()].sort((x,y)=>y.n-x.n);
+ if(pr[0]?.n>=2&&pr[0].n>(pr[1]?.n||0)){const p=pr[0];q('erzfeind','erzfeind','bums','😈 ERZFEIND',`Bumst ${b(p.g)} schon wieder ${b(p.v)}?`,`${p.n}× in der Halbserie, öfter als jedes andere Paar (${Object.entries(p.r).map(([k,c])=>c>1?`${k} ×${c}`:k).join(', ')}).`);}
+ const rc=[...ruleCnt.entries()].map(([k,c])=>{const [r,n]=k.split('|');return {r,n,c};}).filter(x=>x.r!=='EZ');
+ const rcTop=rc.filter(x=>x.c>=2&&rc.every(y=>y.r!==x.r||y===x||y.c<x.c)).sort((x,y)=>y.c-x.c);
+ if(rcTop.length){const x=rcTop[0],nm=BUMS_NAMES[x.r]||x.r,TXT={BD:`Ist ${b(x.n)} wieder besoffen?`,DD:`Dreht sich die Drehtür wieder für ${b(x.n)}?`,MM:`Trifft Magic Miyoshi wieder ${b(x.n)}?`,AH:`Muss ${b(x.n)} wieder seinen MVP abgeben?`,RK:`Fliegt bei ${b(x.n)} wieder einer vom Platz?`,BN:`Verschießt bei ${b(x.n)} wieder einer?`,HuHo:`Frisst der hungrige Hoeneß wieder die Punkte von ${b(x.n)}?`};
+  q('regel','regel','bums','🍻 STAMMGAST',TXT[x.r]||`Schlägt ${e(nm)} wieder bei ${b(x.n)} zu?`,`${x.c}× ${e(nm)} (${e(x.r)}) in der Halbserie, kein anderer Manager so oft.`);}
+ const bs=[...dayCnt.entries()].map(([n,m])=>{let k=0,s=0;for(let i=hd.length-1;i>=0;i--){const c=m[hd[i]];if(!(c>0))break;k++;s+=c;}return {n,k,s};}).filter(x=>x.k>=3).sort((x,y)=>y.k-x.k||y.s-x.s);
+ if(bs.length)q('bumsserie','bumsserie','bums','🔁 DAUERGAST',`Wird ${b(bs[0].n)} zum ${bs[0].k+1}. Mal in Folge gebumst?`,`Seit ${bs[0].k} Spieltagen jedes Mal dabei, zusammen ${bs[0].s} Bumsungen.`);
+ // ---------- Spieler (online: gespeicherte Aufstellungen mit Spielerpunkten) ----------
+ pvLoadExtra(days.map(h=>h.day));
+ if(pvExtra?.key===days.map(h=>h.day).join(',')){
+  // Je Manager und Spieltag nur, wenn die Spielerpunkte (minus 100 je leerem Platz) genau seine Tagespunkte ergeben (nie raten).
+  const combo=new Map(),neg=new Map(),tot=new Map(),empt=new Map(),seen=new Map(),usedAll=new Set();
+  for(const x of pvExtra.days){if(!x.pts)continue;const h=days.find(y=>y.day===x.d);if(!h)continue;
+   for(const u of x.us){const n=String(u.n||'');if(!isEligibleManager(n))continue;const dp=h.list.find(m=>m.name===n)?.dayPoints;if(dp==null)continue;
+    const lp=(u.lp||[]).filter(Boolean).map(String);lp.forEach(id=>usedAll.add(id));const empty=11-lp.length,pl=lp.map(id=>({id,name:x.pts.get(id)?.name||'Spieler '+id,p:x.pts.get(id)?.points??0}));
+    if(pl.reduce((s,y)=>s+y.p,0)-100*empty!==dp)continue;
+    seen.set(n,(seen.get(n)||0)+1);empt.set(n,(empt.get(n)||0)+empty);
+    for(const y of pl){const k=n+'|'+y.id,c=combo.get(k)||{n,id:y.id,name:y.name,c:0,s:0};c.c++;c.s+=y.p;combo.set(k,c);tot.set(n,(tot.get(n)||0)+y.p);if(y.p<0)neg.set(n,(neg.get(n)||0)+y.p);}}}
+  const mds=Math.max(0,...seen.values());
+  if(mds>=3){
+   const cs=[...combo.values()],full=n=>seen.get(n)>=mds-1;
+   const dep=[...tot.entries()].filter(([n,t])=>t>0&&full(n)).map(([n,t])=>{const top=cs.filter(c=>c.n===n).sort((x,y)=>y.s-x.s)[0];return top?{n,t,top,share:top.s/t}:null;}).filter(Boolean).sort((x,y)=>y.share-x.share)[0];
+   if(dep)q('abhaengig','abhaengig','spieler','🩼 ABHÄNGIG',`Was ist ${b(dep.n)} ohne ${e(dep.top.name)}?`,`${e(dep.top.name)} holte ${f(dep.top.s)} Punkte für ihn (${dep.top.c}× aufgestellt), das sind ${pct(dep.top.s,dep.t)} % aller Punkte seiner Startelf. Keiner hängt so an einem Spieler.`);
+   const dud=cs.filter(c=>c.c>=4).map(c=>({...c,a:c.s/c.c})).sort((x,y)=>x.a-y.a)[0];
+   if(dud&&dud.a<60)q('blind','treue','spieler','🙈 BLINDGÄNGER',`Warum stellt ${b(dud.n)} immer noch ${e(dud.name)} auf?`,`${dud.c}× in seiner Startelf, im Schnitt nur ${f(dud.a)} Punkte.`);
+   const star=cs.filter(c=>c.c>=3).sort((x,y)=>y.s-x.s)[0];
+   if(star)q('lebensvers','treue','spieler','💎 LEBENSVERSICHERUNG',`Wie viel legt ${e(star.name)} diesmal für ${b(star.n)} auf?`,`${star.c}× in seiner Startelf, zusammen ${f(star.s)} Punkte (Ø ${f(star.s/star.c)}). Kein Manager hat mit einem Spieler mehr geholt.`);
+   const ng=[...seen.keys()].filter(full).map(n=>[n,neg.get(n)||0]).sort((x,y)=>x[1]-y[1]);
+   if(ng.length&&ng[0][1]<0&&ng[0][1]<(ng[1]?.[1]??0))q('minus','minus','spieler','➖ MINUS-MAGNET',`Sammelt ${b(ng[0][0])} wieder Minuspunkte?`,`${f(ng[0][1])} Punkte von Spielern mit Minus in seiner Startelf (${seen.get(ng[0][0])} Spieltage), Liga-Schnitt ${f(avg(ng.map(x=>x[1])))}. Magic Miyoshi lauert.`);
+   const em=[...empt.entries()].sort((x,y)=>y[1]-x[1]);
+   if(em[0]?.[1]>=2&&em[0][1]>(em[1]?.[1]||0))q('leer','leer','spieler','🕳️ LÜCKE',`Steht bei ${b(em[0][0])} wieder ein Platz leer?`,`${em[0][1]} leere Plätze in ${seen.get(em[0][0])} Spieltagen (Auflagen wie Magic Miyoshi zählen mit), macht −${f(em[0][1]*100)} Punkte.`);
+   const bestP=new Map();for(const x of pvExtra.days){if(!x.pts)continue;for(const y of x.pts.values()){const o=bestP.get(String(y.id))||{name:y.name,s:0};o.s+=y.points||0;bestP.set(String(y.id),o);}}
+   // Bester Bundesliga-Spieler der Saison, den keiner aufgestellt hat.
+   const sn=[...bestP.entries()].sort((x,y)=>y[1].s-x[1].s).find(([id])=>!usedAll.has(id));
+   if(sn){const rank=[...bestP.values()].filter(y=>y.s>sn[1].s).length+1;
+    q('verschmaeht','verschmaeht','spieler','🙄 VERSCHMÄHT',`Wann stellt endlich jemand ${e(sn[1].name)} auf?`,`${f(sn[1].s)} Punkte in ${pvExtra.days.filter(x=>x.pts).length} Spieltagen, Platz ${rank} der ganzen Bundesliga. In einer Startelf der Liga stand er kein einziges Mal.`);}
+  }
+  const bench=new Map();let bDays=0;
+  for(const x of pvExtra.days){const ms=x.bench?.managers||[];if(!ms.length||ms.some(m=>m.open))continue;bDays++;for(const m of ms)if(isEligibleManager(m.name))bench.set(m.name,(bench.get(m.name)||0)+(m.points||0));}
+  const bn=[...bench.entries()].sort((x,y)=>y[1]-x[1]);
+  if(bDays>=2&&bn[0]?.[1]>=50&&bn[0][1]>(bn[1]?.[1]||0))q('bank','bank','spieler','🪑 BANKDRÜCKER',`Lässt ${b(bn[0][0])} wieder die Punkte auf der Bank liegen?`,`${f(bn[0][1])} Punkte auf der Bank in ${bDays} Spieltagen, Liga-Schnitt ${f(avg(bn.map(x=>x[1])))}.`);
+ }
+ return {list:pvPick(out,last.day+1),pool:out.length};
 }
 // Fragen-Kachel als Bild (Kevin-Wunsch 1.11.): zum Einfuegen in Discord. Gezeichnet auf einer Leinwand aus dem Text der Kachel
 // (Namen gold), ohne Profilbilder, damit die Leinwand nie gesperrt ist. PC: Zwischenablage; Handy: Teilen-Menue; sonst Download.
@@ -2175,8 +2298,8 @@ async function pvTileCopy(btn){
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pv-copy]');if(b){e.preventDefault();e.stopPropagation();pvTileCopy(b);}},true);
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
- const qs=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
- el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ const {list:qs,pool}=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><p class="muted tiny">Die BumsKI mischt jeden Spieltag neu: ${qs.length} von ${pool} möglichen Fragen.</p><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
  openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
