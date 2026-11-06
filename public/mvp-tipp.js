@@ -11,7 +11,10 @@
  const API=STATIC?String(window.KBL_TIPP_API||'').replace(/\/+$/,''):'';
  const LIVE=!STATIC||!!API;
  const tippUrl=path=>API?API+path.replace(/^\/api\/mvp-tipps/,'/tipps').replace('/tipps/codes/','/codes/'):path;
- const adminCode=()=>$('#mvpAdminCode')?.value||'';
+ // Online meldet sich der Admin mit demselben Code an wie für die BumsParade-Haken (kbl-admin-haken), das Feld ist dann ausgeblendet.
+ const storedCode=()=>{try{return localStorage.getItem('kbl-admin-haken')||'';}catch{return '';}};
+ const adminCode=()=>$('#mvpAdminCode')?.value||storedCode();
+ let ruleData=null;// Spieltag im Admin-Reiter „Tippregel festlegen“ (immer der nächste offene, unabhängig von der Auswahl im MVP-Tipp)
  let overview=null,data=null,players=null,playerByLabel=new Map(),loading=false;
 
  async function get(url,opts){
@@ -69,12 +72,13 @@
  const RULE_TRIGGERS=[['torwart|torhueter|keeper','Torwart'],['abwehr\\w*|verteidiger','Abwehr'],['mittelfeld\\w*','Mittelfeld'],['stuermer|angreifer|sturm','Sturm'],
   ['gelb\\w*|rot\\w*|karten?','Karten'],['eingewechselt\\w*|einwechsl\\w*|joker|bank','Einwechslung/Bank'],['startelf|aufgestellt\\w*','Startelf'],['heim\\w*|auswaert\\w*','Heim/Auswärts'],
   ['marktwert\\w*|mio|millionen?','Marktwert'],['minus\\w*|negativ\\w*','Minuspunkte'],['tor|tore|treffer|torschuetz\\w*|vorlage\\w*|assists?','Tore/Vorlagen'],['elfmeter\\w*','Elfmeter'],
-  ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
+  ['ohne|ausser|nicht|kein\\w*','„ohne“/„nicht“'],['mindestens|hoechstens|weniger|mehr als|unter','Grenzen'],['alter|jahre?|jung\\w*|aelter\\w*','Alter'],['zugang|zugaenge|transfer\\w*|neuzugang\\w*','Transfers'],['kapitaen\\w*','Kapitän'],['tabelle\\w*|tabellenhaelfte|haelfte|platz\\w*|tabellenplatz\\w*','Tabellenplatz'],['spielminute\\w*|minuten?|halbzeit','Spielzeit']];
  function ruleUnclear(d){
   const n=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
   const kind=kindOf(d),c=condsOf(d);let t=' '+n(d.rule?.text)+' ';
   if(c.includes('noGoal'))t=t.replace(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung *(\([^)]*\))?/g,' ');
   if(c.includes('field'))t=t.replace(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/g,' ');
+  if(poolOf(d).length)t=t.replace(/(unter|ober)\w* *(tabellen)?haelfte/g,' ');
   for(const team of poolOf(d)){const k=n(team);for(const w of [k,...k.split(/['\s]/).filter(w=>w.length>=5)])t=t.split(w).join(' ');}
   if(kind==='drunter')t=t.replace(/(nicht|ohne|kein) *(drueber|darueber|ueber)/g,' ');
   if(kind==='name')t=t.replace(/punkt\w* *(zaehl\w*|ist|sind) *(nicht|egal)|ohne punkt\w*/g,' ');
@@ -164,6 +168,15 @@
   const t=n(text);
   return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
  }
+ // Vereine nach Tabellenplatz ("obere/untere Tabellenhälfte", gleiche Funktion wie in server.js). order = Tabelle vor dem Anpfiff.
+ function ruleTableTeams(text,order){
+  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
+  if(!Array.isArray(order)||order.length<10)return [];
+  const h=Math.floor(order.length/2),out=[];
+  if(/unter\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(order.length-h));
+  if(/ober\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(0,h));
+  return out;
+ }
  // Bedingungen an den Spieler (gleiche Erkennung wie ruleConds in server.js): field = kein Torwart, noGoal = keine direkte Torbeteiligung.
  function ruleConds(text){
   const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
@@ -176,7 +189,7 @@
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
  let ruleOut=new Set();
  const offRule=(pool,team,id)=>(pool.length&&!pool.includes(team))||ruleOut.has(String(id));
- const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?ruleTeams(d.rule.text,overview.teams):[]);
+ const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?[...new Set([...ruleTeams(d.rule.text,overview.teams),...ruleTableTeams(d.rule.text,overview.tables?.[d.day])])]:[]);
  const kindAuto=d=>!!d.rule&&!d.rule.wertung&&d.rule.id==='eigene';
  // Nennt die Regel Vereine, heißt die Wertung nach dem Besten dieser Vereine statt nach dem MVP der ganzen Liga.
  const POOL_TITLE={volltreffer:p=>`Wer den Punktbesten von ${p} tippt, dann nächste Punktzahl`,name:p=>`Wer den Punktbesten von ${p} tippt`,
@@ -759,13 +772,79 @@
     <p class="muted tiny">${pool.length?`Nur Spieler von ${esc(pool.join(', '))}${condsOf(d).length?`, ${esc(condText(condsOf(d)))}`:''}. `:condsOf(d).length?`Alle Bundesliga-Spieler, ${esc(condText(condsOf(d)))}. `:'Alle Bundesliga-Spieler. '}Darunter steht, wer den Spieler getippt hat.${fin?'':` Stand ${esc(clock(t.at))} Uhr, getippte Spieler aktueller.`}${t.reliable===false?' Nicht alle Spieler waren abrufbar.':''}</p>`;
   return `<details class="acc-group" style="margin-top:14px"><summary>Top 10 laut Tippregel</summary><div class="acc-sub">${body}</div></details>`;
  }
+ // Übersicht aller Tipps als Bild (Kevin-Wunsch 06.11., wie „📷 Als Bild“ an der Liga-Tabelle): je Manager getippter Spieler,
+ // Tipp, Punkte und Stand, sortiert nach der Wertung. Bilder: Manager online aus site/faces/, am PC über /api/mgr-img
+ // (Kickbase-CDN erlaubt kein CORS), Köpfe vom eigenen Server; vorgeladen beim Zeichnen der Ansicht, damit der Klick nicht warten muss.
+ let shot=null;const shotImgs=new Map();
+ const shotFace=m=>{const h=(window.kblMgrFace||(()=>''))(m.name,'',m.id),x=/src="([^"]+)"/.exec(h),u=x?x[1].replace(/&amp;/g,'&'):'',k=/kickbase\.b-cdn\.net\/(user\/([\w.-]+))$/.exec(u);
+  return !k?u:STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
+ const shotLoad=src=>{if(!src||shotImgs.has(src))return;shotImgs.set(src,null);const i=new Image();i.crossOrigin='anonymous';i.onload=()=>shotImgs.set(src,i);i.src=src;};
+ function shotCanvas(){
+  const {d,rows,lead,auto,ready,needMvp,pool}=shot,W=1080,P=36,L=P+26,R=W-P-26,RH=78,sans='"Segoe UI",Arial,sans-serif';
+  const c=document.createElement('canvas'),x=c.getContext('2d'),fin=d.status==='finished',leadIds=new Set(lead.map(r=>r.m.id));
+  const wrap=(t,max)=>{const out=[];let line='';for(const w of String(t||'').split(/\s+/)){const n=line?line+' '+w:w;if(line&&x.measureText(n).width>max){out.push(line);line=w;}else line=n;}if(line)out.push(line);return out;};
+  const ell=(t,max)=>{t=String(t||'');if(x.measureText(t).width<=max)return t;while(t.length>1&&x.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+  x.font=`500 24px ${sans}`;const rule=d.rule?.text?wrap(d.rule.text,R-L).slice(0,4):[];
+  const favTxt=shot.fav?.n>1?`Beliebtester Tipp: ${shot.fav.gs.map(g=>g.t.player).join(', ')} (${shot.fav.gs.length>1?'je ':''}${shot.fav.n}×)`:'';
+  const leadTxt=auto&&ready&&lead.length?`${fin?'Vorne nach der Wertung':'Führend'}: ${lead.map(r=>r.m.name).join(', ')}`:'';
+  const none=d.managers.filter(m=>!m.tipped).map(m=>m.name);x.font=`500 21px ${sans}`;const noneL=none.length?wrap('Ohne Tipp: '+none.join(', '),R-L):[];
+  x.font=`600 22px ${sans}`;const favL=favTxt?wrap(favTxt,R-L).slice(0,2):[];
+  const HEAD=110+rule.length*32+(leadTxt?44:0)+favL.length*30+(favL.length?8:0)+56,H=P+HEAD+rows.length*RH+noneL.length*28+(noneL.length?16:0)+70+P;
+  c.width=W;c.height=H;x.fillStyle='#081118';x.fillRect(0,0,W,H);
+  const bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,22):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
+  x.textBaseline='alphabetic';x.textAlign='left';x.font='900 38px Georgia,serif';x.fillStyle='#ebc768';x.fillText('KBL LEGENDEN',L,P+56);
+  const t1=x.measureText('KBL LEGENDEN ').width;x.font=`700 28px ${sans}`;x.fillStyle='#e9f0f4';x.fillText(`· MVP-Tipp Spieltag ${d.day}`,L+t1,P+56);
+  x.textAlign='right';x.font=`700 24px ${sans}`;
+  if(d.status==='live'||d.closing){x.fillStyle='#ed8b85';x.fillText('● LIVE',R,P+54);}else if(fin){x.fillStyle='#9db0bd';x.fillText('Endstand',R,P+54);}
+  let y=P+100;x.textAlign='left';x.font=`500 24px ${sans}`;x.fillStyle='#c9d6de';for(const l of rule){x.fillText(l,L,y);y+=32;}
+  if(leadTxt){y+=10;x.font=`800 25px ${sans}`;x.fillStyle='#ebc768';x.fillText(ell('👑 '+leadTxt,R-L),L,y);y+=34;}
+  if(favL.length){y+=8;x.font=`600 22px ${sans}`;x.fillStyle='#c9d6de';for(const l of favL){x.fillText(l,L,y);y+=30;}}
+  y+=22;x.font=`700 19px ${sans}`;x.fillStyle='#9db0bd';
+  const cTip=R-150,cPts=R-8;x.fillText('PL.',L+6,y);x.fillText('MANAGER',L+70,y);x.fillText('SPIELER',L+400,y);x.textAlign='right';x.fillText('TIPP',cTip,y);x.fillText('PUNKTE',cPts,y);
+  y+=14;x.fillStyle='#2e3f4a';x.fillRect(L,y,R-L,2);
+  const circle=(img,cx,cy,r,ch)=>{x.save();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fillStyle='#14212b';x.fill();x.clip();
+   if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{x.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-r,cy-r,2*r,2*r);}catch{}}
+   else{x.fillStyle='#9db0bd';x.font=`700 20px ${sans}`;x.textAlign='center';x.fillText((ch||'?')[0].toUpperCase(),cx,cy+7);}
+   x.restore();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.strokeStyle='#465864';x.lineWidth=2;x.stroke();};
+  rows.forEach((r,n)=>{
+   const top=y+4+n*RH,mid=top+RH/2,gold=leadIds.has(r.m.id);
+   if(n){x.fillStyle='#2e3f4a';x.fillRect(L,top,R-L,1);}
+   if(gold){x.fillStyle='rgba(235,199,104,.08)';x.fillRect(L,top+1,R-L,RH-1);x.fillStyle='#ebc768';x.fillRect(L,top+4,5,RH-8);}
+   x.textAlign='left';x.font=`${gold?800:500} 26px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';x.fillText(r.rank?r.rank+'.':'–',L+16,mid+9);
+   circle(shotImgs.get(shotFace(r.m)),L+92,mid,22,r.m.name);
+   x.textAlign='left';x.font=`700 25px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';x.fillText(ell(r.m.name+(r.t.late?'*':''),L+385-(L+124)),L+124,mid+9);
+   // Spielerkopf (ausgeschnitten, ohne Kreis), sonst nichts
+   const hd=shotImgs.get(headSrc(r.t.playerId));if(hd){const s=56/Math.max(hd.naturalWidth,hd.naturalHeight);try{x.drawImage(hd,L+400+(56-hd.naturalWidth*s)/2,mid-28+(56-hd.naturalHeight*s),hd.naturalWidth*s,hd.naturalHeight*s);}catch{}}
+   const px=L+466,st=r.why||off(r,needMvp,'','',pool.length||condsOf(d).length)||STATE[r.state]||'';
+   x.font=`700 24px ${sans}`;x.fillStyle='#e9f0f4';const pn=ell(r.t.player,cTip-80-px);x.fillText(pn,px,mid-3);
+   const pw=x.measureText(pn+'  ').width;x.font=`500 18px ${sans}`;x.fillStyle='#9db0bd';x.fillText(ell(r.t.team,Math.max(0,cTip-60-px-pw)),px+pw,mid-3);
+   x.font=`500 17px ${sans}`;x.fillStyle=r.ok===false&&r.why?'#ed8b85':'#9db0bd';x.fillText(ell(st,cTip-40-px),px,mid+23);
+   x.textAlign='right';x.font=`500 25px ${sans}`;x.fillStyle='#9db0bd';x.fillText(fmt(r.t.points),cTip,mid+9);
+   x.font=`800 27px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';x.fillText(r.pts===null?'–':fmt(r.pts),cPts,mid+9);
+  });
+  y+=4+rows.length*RH+14;x.textAlign='left';x.font=`500 21px ${sans}`;x.fillStyle='#9db0bd';for(const l of noneL){y+=28;x.fillText(l,L,y);}
+  const t=new Date(fin?Date.now():d.tracking?.updatedAt||Date.now()),p2=v=>String(v).padStart(2,'0');
+  x.font=`22px ${sans}`;x.fillStyle='#728592';
+  x.fillText(`${fin?'Stand':'Punkte Stand'} ${p2(t.getDate())}.${p2(t.getMonth()+1)}.${t.getFullYear()}, ${p2(t.getHours())}:${p2(t.getMinutes())} Uhr${rows.some(r=>r.t.late)?' · * nachgetragen':''} · BumsKI 🤡`,L,H-P-22);
+  return c;
+ }
+ function shotSave(btn){
+  const flash=t=>{const o=btn.textContent;btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1800);};
+  let c;try{if(!shot)throw 0;c=shotCanvas();}catch{flash('✕ Keine Tipps');return;}
+  // Synchron in eine Datei umwandeln (wie rankingShot), dann herunterladen.
+  const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  const url=URL.createObjectURL(new Blob([u],{type:'image/png'})),a=document.createElement('a');
+  a.href=url;a.download=`kbl-mvp-tipps-st${shot.d.day}-${new Date().toISOString().slice(0,10)}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇ Gespeichert');
+ }
+ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-mvp-shot]');if(b){e.preventDefault();shotSave(b);}});
  function allTips(d){
   if(!d.reveal)return '';
   const {rows,lead,kind,auto,ready,needMvp,mvp,mvpPts,pool}=standings(d);if(!rows.length)return '';
   const fin=d.status==='finished',live=d.status==='live',max=Math.max(1,...rows.map(r=>Math.max(r.pts??0,r.t.points)));
   const pct=v=>Math.max(0,Math.min(100,(v/max)*100)).toFixed(1);
   const done=fin&&!!d.result;// Ergebnis steht schon oben im Ergebnis-Kasten
-  let h=`<h4 style="margin:22px 0 8px">Übersicht aller Tipps <small class="muted">${done?'':d.tracking?`Punkte Stand ${esc(clock(d.tracking.updatedAt))} Uhr`:'Punkte folgen'}</small></h4>`;
+  shot={d,rows,lead,auto,ready,needMvp,pool};rows.forEach(r=>{shotLoad(shotFace(r.m));shotLoad(headSrc(r.t.playerId));});
+  let h=`<div class="mvp-tips-head"><h4>Übersicht aller Tipps <small class="muted">${done?'':d.tracking?`Punkte Stand ${esc(clock(d.tracking.updatedAt))} Uhr`:'Punkte folgen'}</small></h4><button type="button" class="ghost" data-mvp-shot title="Alle Tipps als Bild herunterladen (z. B. für Discord)">📷 Als Bild</button></div>`;
   const mvpLine=needMvp&&mvp?.players?.length?`<div class="muted">${pool.length?'Bester der genannten Vereine':condsOf(d).length?'Bester laut Tippregel':'MVP'} ${fin?'am Spieltag':'gerade'}: ${mvp.players.map(p=>`<b>${esc(p.name)}</b> (${esc(p.team)})`).join(', ')} mit <b>${fmt(mvpPts)}</b> Punkten${fin?'':` · Stand ${esc(clock(mvp.at))} Uhr${mvp.reliable===false?', nicht alle Spieler abrufbar':''}`}${detBtn(d)}</div>`:'';
   // Hat keiner den Besten getippt (Kevin-Wunsch): statt "niemand vorne" den besten getippten Spieler mit seinen Tippern zeigen.
   const tipBest=(()=>{const c=rows.filter(r=>r.pts!==null&&!offRule(pool,r.t.team,r.t.playerId));if(!c.length)return '';
@@ -784,7 +863,9 @@
   groups.sort((a,b)=>(a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||b.rs.length-a.rs.length||a.t.player.localeCompare(b.t.player,'de'));
   let place=0;groups.forEach((g,i)=>{const p=groups[i-1];g.place=g.pts===null?null:p&&p.pts===g.pts?p.place:(place=i+1);});
   const played=groups.filter(g=>g.pts!==null).length;
-  h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span>${fin?'':`<span><b>${played}</b> davon schon mit Punkten</span>`}${groups[0]?.rs.length>1?`<span>Beliebtester Tipp: <b>${esc(groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].t.player)}</b> (${groups.slice().sort((a,b)=>b.rs.length-a.rs.length)[0].rs.length}×)</span>`:''}</div>`;
+  // Beliebtester Tipp: bei Gleichstand alle (Kevin-Wunsch 06.11.).
+  const favN=Math.max(0,...groups.map(g=>g.rs.length)),fav={n:favN,gs:groups.filter(g=>g.rs.length===favN)};shot.fav=fav;
+  h+=`<div class="mvp-stats"><span><b>${rows.length}</b> Tipps</span><span><b>${groups.length}</b> Spieler getippt</span>${fin?'':`<span><b>${played}</b> davon schon mit Punkten</span>`}${fav.n>1?`<span>Beliebtester Tipp: ${fav.gs.map(g=>`<b>${esc(g.t.player)}</b>`).join(', ')} (${fav.gs.length>1?'je ':''}${fav.n}×)</span>`:''}</div>`;
   // Zeitraffer des Spieltags (Kevin-Wunsch), eingeklappt. Ist der Spieltag abgeschlossen, zeigt er alles, das Rennen entfällt dann (Kevin: doppelt).
   const zrHtml=zeitraffer(d,groups);
   if(!(fin&&!d.closing&&zrHtml))h+=toonRace(live||!!d.closing,groups,leadIds,bestIds,d.me,needMvp&&mvp?.players?.length&&mvpPts!==null?{players:mvp.players,points:mvpPts}:null,pool,auto&&ready);
@@ -852,16 +933,6 @@
   if(zrGroups&&d.reveal)zrMount(root,d,zrGroups);zrGroups=null;
   if(race?.open&&!players)loadPlayers().then(()=>render()).catch(()=>{});
   if($('#mvpLate')?.open)loadPlayers().catch(()=>{});
-  const admin=$('#mvpAdminBox');admin.hidden=!((d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked);$('#mvpAdminCodeBox').hidden=!API;
-  if(!admin.hidden){
-   const withCode=d.managers.filter(m=>m.hasCode);
-   $('#mvpCodes').innerHTML=withCode.length?`<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code für Spieltag ${d.day} vergessen hat.</p>`+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
-   $('#mvpRuleText').value=d.rule?.text||'';
-   $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
-   $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
-   $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
-   $('#mvpRuleWertung').value=d.rule?.wertung||'';
-  }
   if(d.open&&LIVE)loadPlayers().catch(e=>{const m=$('#mvpMsg');if(m)m.textContent='Spielerliste nicht abrufbar: '+e.message;});
  }
  // Spieltag gespielt, aber Kickbase hat ihn noch nicht abgeschlossen (Ranking il, meist bis zum Abend nach dem letzten Spiel):
@@ -913,6 +984,59 @@
   finally{loading=false;}
  }
 
+
+ // Admin-Reiter (Kevin-Wunsch 4.11.): „Tippregel festlegen“ für den nächsten offenen Spieltag, lädt beim Aufklappen.
+ function renderRuleAdmin(){
+  const d=ruleData,state=$('#mvpAdminState'),form=$('#mvpAdminForm');if(!state||!form)return;
+  $('#mvpAdminTitle').textContent=d?`Tippregel festlegen · Spieltag ${d.day}`:'Tippregel festlegen (MVP-Tipp)';
+  const ok=d&&(d.admin&&!STATIC||API&&d.online)&&d.status==='upcoming'&&!d.locked;
+  form.hidden=!ok;
+  state.textContent=!d?'Kein offener Spieltag zum Tippen gefunden.':ok?`Gilt für Spieltag ${d.day}${d.deadline?`, änderbar bis zum Anstoß (${when(d.deadline)})`:''}.`
+   :d.status!=='upcoming'||d.locked?`Spieltag ${d.day} ist schon angepfiffen, die Tippregel lässt sich nicht mehr ändern.`
+   :'Zum Festlegen der Tippregel bitte als Admin anmelden.';
+  if(!ok)return;
+  $('#mvpAdminCodeBox').style.display=API&&!storedCode()?'block':'none';// inline display, das hidden-Attribut wirkt dort nicht
+  const withCode=d.managers.filter(m=>m.hasCode);
+  $('#mvpCodes').innerHTML=withCode.length?`<h4>Tipp-Codes zurücksetzen</h4><p class="muted tiny">Falls jemand seinen Code für Spieltag ${d.day} vergessen hat.</p>`+withCode.map(m=>`<button type="button" class="ghost" data-mvp-reset="${esc(m.id)}" data-name="${esc(m.name)}" style="margin:4px 6px 4px 0">${esc(m.name)}</button>`).join(''):'';
+  $('#mvpRuleText').value=d.rule?.text||'';
+  $('#mvpRuleBy').innerHTML='<option value="">Bitte wählen …</option>'+d.managers.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+  $('#mvpRuleBy').value=d.rule?.by?.id||(bestIds(d).length===1?bestIds(d)[0]:'');
+  $('#mvpRuleWertung').innerHTML='<option value="">Automatisch aus dem Regeltext</option>'+(d.wertungen||overview?.wertungen||[]).map(w=>`<option value="${esc(w.id)}">${esc(w.title)}</option>`).join('');
+  $('#mvpRuleWertung').value=d.rule?.wertung||'';
+  ruleCheck();
+ }
+ // Admin-Reiter (Kevin-Wunsch 4.11.): zeigt beim Schreiben, wie die BumsKI die Regel versteht (Wertung, Vereine, Bedingungen, nicht ausgewertete Teile).
+ function ruleCheckHtml(){
+  const text=$('#mvpRuleText')?.value.trim(),w=$('#mvpRuleWertung')?.value||'';
+  if(!text)return '';
+  const d={day:overview?.next,rule:{id:'eigene',text,wertung:w||undefined},wertungen:ruleData?.wertungen,managers:[]},kind=kindOf(d);
+  if(!kind)return `<small class="mvp-wertung mvp-unclear">⚠️ Die BumsKI erkennt aus diesem Text nicht, wie gewertet wird. Dann zeigt sie keine Führenden und keinen Gewinner-Vorschlag. Bitte bei „So wird gewertet“ auswählen oder die Regel anders formulieren.</small>`;
+  if(kind==='keine')return `<small class="mvp-wertung">🔍 Keine automatische Wertung: Führende und Gewinner bestimmt ihr selbst.</small>`;
+  const u=ruleUnclear(d);
+  return `<small class="mvp-wertung">🔍 So versteht die BumsKI die Regel: <b>${esc(kindTitle(d,kind))}</b>${w?' (von Hand gewählt)':''}</small><br>`+
+   (u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil wertet die BumsKI nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende dann bitte selbst prüfen.</small>`:`<small class="mvp-wertung">✓ Die BumsKI versteht die ganze Regel.</small>`);
+ }
+ const ruleCheck=()=>{const b=$('#mvpRuleCheck');if(b)b.innerHTML=ruleCheckHtml();};
+ document.addEventListener('input',e=>{if(e.target.id==='mvpRuleText')ruleCheck();});
+ document.addEventListener('change',e=>{if(e.target.id==='mvpRuleWertung')ruleCheck();});
+ async function loadRuleAdmin(){
+  const state=$('#mvpAdminState');if(!state)return;
+  try{
+   overview=await get('/api/mvp-tipps');
+   const day=overview.next;
+   if(!day){ruleData=null;renderRuleAdmin();return;}
+   const d=await get(API?tippUrl(`/api/mvp-tipps/${day}`):`/api/mvp-tipps/${day}`);
+   if(day>1&&overview.days?.find(x=>x.day===day-1)?.status==='finished'){
+    const p=await get(`/api/mvp-tipps/${day-1}`).catch(()=>null);
+    if(p?.result&&!['missing','empty'].includes(p.result.status))d.prevBest={day:day-1,managers:p.result.best?.managers||[]};
+   }
+   ruleData=d;renderRuleAdmin();
+  }catch(e){ruleData=null;$('#mvpAdminForm').hidden=true;state.textContent='MVP-Tipps nicht abrufbar: '+e.message;}
+ }
+ document.addEventListener('toggle',e=>{if(e.target.id==='mvpAdminBox'&&e.target.open)loadRuleAdmin();},true);
+ // Nach dem Speichern im Admin-Reiter auch den MVP-Tipp neu laden, falls dort derselbe Spieltag gewählt ist.
+ const afterRuleChange=async day=>{await loadRuleAdmin();if(data?.day===day)await loadDay(day);};
+
  document.addEventListener('submit',async e=>{
   if(e.target.id!=='mvpForm')return;e.preventDefault();
   const msg=$('#mvpMsg'),pick=pickPlayer($('#mvpPlayer')),p=pick.p,pts=Number($('#mvpPoints').value);
@@ -952,7 +1076,8 @@
  document.addEventListener('click',async e=>{
   if(e.target.id==='mvpRuleSave'){
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
-   try{await get(tippUrl(`/api/mvp-tipps/${data.day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,wertung:$('#mvpRuleWertung').value,adminCode:adminCode()})});m.textContent='Tippregel gespeichert.';await loadDay(data.day);}
+   if(!ruleData)return;const day=ruleData.day;
+   try{await get(tippUrl(`/api/mvp-tipps/${day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,wertung:$('#mvpRuleWertung').value,adminCode:adminCode()})});await afterRuleChange(day);$('#mvpRuleMsg').textContent=`Tippregel für Spieltag ${day} gespeichert.`;}
    catch(err){m.textContent='Fehler: '+err.message;}
   }
   if(e.target.id==='mvpWertungSave'){
@@ -968,8 +1093,8 @@
    catch(err){m.textContent=err.message;}
   }
   const rc=e.target.closest?.('[data-mvp-reset]');
-  if(rc){const name=rc.dataset.name;if(!confirm(`Tipp-Code von ${name} für Spieltag ${data.day} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
-   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}?day=${data.day}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await loadDay(data.day);}catch(err){alert('Fehler: '+err.message);}
+  if(rc&&ruleData){const name=rc.dataset.name,day=ruleData.day;if(!confirm(`Tipp-Code von ${name} für Spieltag ${day} zurücksetzen? Beim nächsten Tipp legt ${name} einen neuen fest.`))return;
+   try{await get(tippUrl(`/api/mvp-tipps/codes/${rc.dataset.mvpReset}?day=${day}`),{method:'DELETE',headers:{'X-Admin-Code':adminCode()}});await afterRuleChange(day);}catch(err){alert('Fehler: '+err.message);}
   }
   if(e.target.id==='mvpToNpc'){
    const m=$('#mvpNpcMsg');

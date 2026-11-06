@@ -455,5 +455,209 @@
         "noGoal"
       ]
     }
+  },
+  "9": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Tippe den MVP aus der unteren Tabellenhälfte!",
+      "by": {
+        "id": "1165589",
+        "name": "Stammler9"
+      }
+    },
+    "tips": {
+      "699062": {
+        "name": "T800",
+        "playerId": "2373",
+        "player": "Kabak",
+        "team": "Hoffenheim",
+        "points": 175,
+        "updatedAt": "2026-11-04T14:35:18.366Z"
+      },
+      "841764": {
+        "name": "Hasan",
+        "playerId": "3158",
+        "player": "Asllani",
+        "team": "Hoffenheim",
+        "points": 232,
+        "updatedAt": "2026-11-06T08:34:05.882Z"
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "playerId": "3158",
+        "player": "Asllani",
+        "team": "Hoffenheim",
+        "points": 221,
+        "updatedAt": "2026-11-06T14:03:57.291Z"
+      },
+      "1386995": {
+        "name": "Adam",
+        "playerId": "11959",
+        "player": "Daghim",
+        "team": "Hoffenheim",
+        "points": 172,
+        "updatedAt": "2026-11-06T12:34:06.865Z"
+      },
+      "1403991": {
+        "name": "Cello",
+        "playerId": "7158",
+        "player": "Undav",
+        "team": "Stuttgart",
+        "points": 235,
+        "updatedAt": "2026-11-06T12:28:26.045Z"
+      },
+      "1631136": {
+        "name": "Fabio",
+        "playerId": "32",
+        "player": "Karius",
+        "team": "Schalke",
+        "points": 211,
+        "updatedAt": "2026-11-06T12:07:03.720Z"
+      },
+      "1631954": {
+        "name": "YW7",
+        "playerId": "577",
+        "player": "Batz",
+        "team": "M'gladbach",
+        "points": 222,
+        "updatedAt": "2026-11-06T10:35:12.858Z"
+      },
+      "1646647": {
+        "name": "Baumann",
+        "playerId": "7158",
+        "player": "Undav",
+        "team": "Stuttgart",
+        "points": 267,
+        "updatedAt": "2026-11-06T17:33:17.164Z"
+      },
+      "1906625": {
+        "name": "xDanii",
+        "playerId": "2074",
+        "player": "Hack",
+        "team": "M'gladbach",
+        "points": 167,
+        "updatedAt": "2026-11-06T19:21:55.802Z"
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "playerId": "11748",
+        "player": "Mohya",
+        "team": "M'gladbach",
+        "points": 222,
+        "updatedAt": "2026-11-06T13:48:02.191Z"
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "playerId": "11959",
+        "player": "Daghim",
+        "team": "Hoffenheim",
+        "points": 178,
+        "updatedAt": "2026-11-05T21:05:31.443Z"
+      },
+      "2710049": {
+        "name": "diminator",
+        "playerId": "11631",
+        "player": "Burger",
+        "team": "Hoffenheim",
+        "points": 166,
+        "updatedAt": "2026-11-04T14:50:25.771Z"
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "playerId": "2941",
+        "player": "Scally",
+        "team": "M'gladbach",
+        "points": 176,
+        "updatedAt": "2026-11-06T16:09:22.861Z"
+      }
+    },
+    "liveMvp": {
+      "at": "2026-11-06T19:35:25.215Z",
+      "points": 17,
+      "players": [
+        {
+          "id": "2074",
+          "name": "Hack",
+          "team": "M'gladbach"
+        }
+      ],
+      "top10": [
+        {
+          "id": "2074",
+          "name": "Hack",
+          "team": "M'gladbach",
+          "points": 17
+        },
+        {
+          "id": "11752",
+          "name": "Omari",
+          "team": "Hamburg",
+          "points": 13
+        },
+        {
+          "id": "6199",
+          "name": "Machino",
+          "team": "M'gladbach",
+          "points": 11
+        },
+        {
+          "id": "8367",
+          "name": "Sambi Lokonga",
+          "team": "Hamburg",
+          "points": 11
+        },
+        {
+          "id": "2560",
+          "name": "Sander",
+          "team": "M'gladbach",
+          "points": 10
+        },
+        {
+          "id": "9605",
+          "name": "Grønbæk",
+          "team": "Hamburg",
+          "points": 10
+        },
+        {
+          "id": "15202",
+          "name": "Uno",
+          "team": "M'gladbach",
+          "points": 9
+        },
+        {
+          "id": "3277",
+          "name": "Muheim",
+          "team": "Hamburg",
+          "points": 9
+        },
+        {
+          "id": "2941",
+          "name": "Scally",
+          "team": "M'gladbach",
+          "points": 8
+        },
+        {
+          "id": "2725",
+          "name": "Bornauw",
+          "team": "Hamburg",
+          "points": 8
+        }
+      ],
+      "checked": 473,
+      "failed": 0,
+      "reliable": true,
+      "pool": [
+        "Augsburg",
+        "Stuttgart",
+        "Hoffenheim",
+        "Köln",
+        "Paderborn",
+        "Hamburg",
+        "Union Berlin",
+        "Schalke",
+        "M'gladbach"
+      ]
+    }
   }
 }

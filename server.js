@@ -9,7 +9,7 @@ import { germanEventTitle } from './event-types-de.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const KICKBASE_API = 'https://api.kickbase.com';
+const KICKBASE_API = process.env.KBL_KICKBASE_API || 'https://api.kickbase.com';   // anderer Wert nur zum Testen
 const sessions = new Map();
 
 app.use(express.json({ limit: '32kb' }));
@@ -1564,7 +1564,38 @@ function ruleTeams(text,teams){
  const t=n(text);
  return [...new Set(teams)].filter(x=>{const k=n(x);return [k,...k.split(/['\s]/).filter(w=>w.length>=5)].some(w=>w.length>=4&&new RegExp(`(^|[^a-z0-9])${w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}([^a-z0-9]|$)`).test(t));});
 }
-const tippPool=async(token,rule)=>rule?.text?ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team)):[];
+// Vereine nach Tabellenplatz aus dem Regeltext (Kevin 5.11., ST 9: "Tippe den MVP aus der unteren Tabellenhälfte!").
+// Zählt die Tabelle vor dem Anpfiff (tableBefore), nicht die während des Spieltags. Gleiche Erkennung in public/mvp-tipp.js.
+function ruleTableTeams(text,order){
+ const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
+ if(!Array.isArray(order)||order.length<10)return [];
+ const h=Math.floor(order.length/2),out=[];
+ if(/unter\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(order.length-h));
+ if(/ober\w* *(tabellen)?haelfte/.test(t))out.push(...order.slice(0,h));
+ return out;
+}
+// Bundesliga-Tabelle vor dem ersten Anstoß eines Spieltags (Vereinsnamen nach Platz), gespeichert in kbl-tabellen.json.
+// Bis zum Anstoß wird sie bei jedem Abruf erneuert, danach bleibt sie eingefroren. Fehlt sie, zählt nichts (nie raten).
+const TABLE_FILE=path.join(process.cwd(),'kbl-tabellen.json');
+function readTables(){try{return JSON.parse(fs.readFileSync(TABLE_FILE,'utf8'));}catch{return {};}}
+async function tableBefore(token,day){
+ const all=readTables();let md=null;try{md=await tippMatchdays();}catch{}
+ if(!md||!token||tippState(md,day).locked||tippState(md,day).next!==day)return all[day]?.teams||null;
+ try{const t=await kbFetch('/v4/competitions/1/table',{token});
+  const rows=(t?.it||[]).filter(x=>x?.tn&&Number.isFinite(x.cpl)).sort((a,b)=>a.cpl-b.cpl);
+  if(rows.length<10||rows.some(x=>x.il))return all[day]?.teams||null;
+  const teams=rows.map(x=>x.tn);
+  if(JSON.stringify(all[day]?.teams)!==JSON.stringify(teams)){all[day]={at:new Date().toISOString(),teams};
+   try{const tmp=TABLE_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all,null,1));fs.renameSync(tmp,TABLE_FILE);}catch{}}
+  return teams;
+ }catch{return all[day]?.teams||null;}
+}
+const tippPool=async(token,rule,day)=>{
+ if(!rule?.text)return [];
+ const named=ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team));
+ const byTable=/haelfte|hälfte/i.test(rule.text)&&day?ruleTableTeams(rule.text,await tableBefore(token,day)):[];
+ return [...new Set([...named,...byTable])];
+};
 // MVP innerhalb der genannten Vereine (pool), sonst der ganzen Bundesliga.
 function poolMvp(m,pool){
  if(!pool.length)return m.players;
@@ -1832,7 +1863,7 @@ function recordVerlauf(day,tracking,result,finished){
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
- const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule),conds=tippConds(rule),chk=condChecker(token,day,conds);
+ const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule,day),conds=tippConds(rule),chk=condChecker(token,day,conds);
  const cb=chk?await condTop(m.all,pool,chk,1):null,mvp={...m,players:cb?cb.list:poolMvp(m,pool),reliable:m.reliable&&!cb?.unsure};
  // Ohne eingestellte Wertung: nur den MVP zeigen, Gewinner bestimmt die Liga selbst.
  if(!kind||kind==='keine')return {status:'manual',message:kind?'Den Gewinner bestimmt ihr nach eurer Tippregel selbst.':'Für diese Tippregel ist keine Wertung eingestellt. Den Gewinner bestimmt ihr selbst.',rows:[],winners:[],
@@ -2011,7 +2042,10 @@ app.get('/api/mvp-tipps',async(req,res)=>{
   // Managerliste: braucht auch der Online-Tippdienst (tools/tipp-dienst), er liest sie aus der exportierten Datei.
   const token=await tippToken(req),managers=token?await tippManagers(token).catch(()=>null):null;
   const teams=token?await loadAllPlayers(token).then(a=>[...new Set([...a.players.values()].map(p=>p.team))].sort()).catch(()=>null):null;
-  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{})});
+  // Tabelle vor dem Anpfiff je Spieltag, damit Browser und Tippdienst "obere/untere Tabellenhälfte" auch vor dem Anstoß kennen.
+  if(token&&next)await tableBefore(token,next).catch(()=>null);
+  const tables=Object.fromEntries(Object.entries(readTables()).map(([k,v])=>[k,v.teams]));
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{}),tables});
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{
@@ -2026,7 +2060,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
   let tracking=null;
-  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule),tippConds(rule));}catch{}
+  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule,day),tippConds(rule));}catch{}
   if(tracking)recordVerlauf(day,tracking,result,st.status==='finished');
   // Punkte-Aufschluesselung des gerade Besten (Krone): MVP laut Tippregel, ohne MVP-Wertung der Erste der Top 10.
   if(tracking){const mv=(st.status==='finished'?result?.mvp:tracking.mvp)?.players||[],t1=tracking.top10?.players||[];
@@ -2939,6 +2973,9 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       let win=null;try{win=await dayWindow(day);}catch{win=null;}
       if(win){
         saleDeadline=berlinNextDay22(win.end);
+        // Marktwert des Abrechnungstages (Regel RK und BN: Abgabe zum Marktwert dieses Tages, Kevin-Wunsch 4.11.): Tag der Verkaufsfrist.
+        const abrTag=berlinYmd(saleDeadline);
+        for(const t of todos)if(['RK','BN'].includes(t.rule)){const v=mwOn(String(t.key).split(':')[2],abrTag);if(v)t.marketValue={...v,day:abrTag};}
         const sCache=new Map();
         const salesList=async gid=>{if(!sCache.has(gid)){try{sCache.set(gid,await transfersSince(token,gid,histSince));}catch{sCache.set(gid,null);}}return sCache.get(gid);};
         for(const t of todos){
@@ -3428,6 +3465,193 @@ app.get('/api/transfers', async (req, res) => {
     transferCache = { at: Date.now(), value, raw };
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
+});
+
+// Marktwerte (Kevin-Wunsch 4.11.): Marktwert und Verlauf aller Bundesliga-Spieler. Kickbase passt die Marktwerte jeden Abend
+// nach 22 Uhr an. Quelle je Spieler: /v4/competitions/1/players/{pi}/marketvalue/{92|365} (it[]: dt = Tage seit 1.1.1970, mv),
+// Spielerliste aus den Vereinsprofilen (loadAllPlayers). Gespeichert in kbl-marktwerte.json (gehört GitHub, vom PC nie hochladen);
+// neu geholt wird nur einmal nach jeder Anpassung (ab 22:30 Uhr), ein Abruf in der ersten Stunde danach wird einmal wiederholt.
+const MW_FILE = path.join(process.cwd(), 'kbl-marktwerte.json');
+let mwStore = null, mwRunning = null;
+function mwLoad() {
+  if (!mwStore) { try { mwStore = JSON.parse(fs.readFileSync(MW_FILE, 'utf8')); } catch { mwStore = { players: {} }; } }
+  if (!mwStore.players) mwStore.players = {};
+  return mwStore;
+}
+const berlinYmd = ms => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+const dtOfYmd = ymd => { const [y, m, d] = ymd.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+const ymdOfDt = dt => new Date(dt * 864e5).toISOString().slice(0, 10);
+// Letzte Marktwert-Anpassung: 22:30 Uhr deutscher Zeit, heute oder gestern.
+function mwLastUpdate(now = Date.now()) {
+  const today = berlinNextDayAt(now - 864e5, 22) + 30 * 60e3;
+  return today <= now ? today : berlinNextDayAt(now - 2 * 864e5, 22) + 30 * 60e3;
+}
+function mwStale(now = Date.now()) {
+  const s = mwLoad(), at = Date.parse(s.fetchedAt || 0) || 0, last = mwLastUpdate(now);
+  if (!Object.keys(s.players).length || at < last) return true;
+  return at < last + 60 * 60e3 && now - at > 60 * 60e3;
+}
+// Verlauf eines Spielers als Map dt -> mv (gespeichert als Startdatum s und Werte ab dort, Lücken null).
+const mwSeries = p => { const m = new Map(); (p?.mv || []).forEach((v, i) => { if (v != null) m.set(p.s + i, v); }); return m; };
+function mwPack(map) {
+  const dts = [...map.keys()].sort((a, b) => a - b);
+  if (!dts.length) return { s: null, mv: [] };
+  const s = dts[0], mv = new Array(dts[dts.length - 1] - s + 1).fill(null);
+  for (const d of dts) mv[d - s] = map.get(d);
+  return { s, mv };
+}
+async function mwRefresh(token) {
+  const s = mwLoad(), { players } = await loadAllPlayers(token);
+  const ids = [...players.keys()];
+  let ok = 0, failed = 0, empty = 0, raw = null;
+  const one = async id => {
+    const old = s.players[id], frame = old?.mv?.length ? 92 : 365;
+    try {
+      const r = await kbFetch(`/v4/competitions/1/players/${id}/marketvalue/${frame}`, { token });
+      if (!raw) raw = { id, frame, keys: Object.keys(r || {}), sample: (r?.it || []).slice(-3) };
+      const map = mwSeries(old);
+      for (const x of (r?.it || [])) { const dt = Number(x.dt), mv = Number(x.mv); if (Number.isInteger(dt) && dt > 15000 && dt < 40000 && Number.isFinite(mv)) map.set(dt, mv); }
+      if (!map.size) { empty++; return; }
+      const p = players.get(id);
+      s.players[id] = { n: p.name, t: p.team, tid: p.teamId, pos: p.pos, img: p.img, ...mwPack(map), hmv: Number(r?.hmv) || null, lmv: Number(r?.lmv) || null };
+      ok++;
+    } catch { failed++; }
+  };
+  for (let i = 0; i < ids.length; i += 4) await Promise.all(ids.slice(i, i + 4).map(one));
+  // Spieler, die nicht mehr in einem Vereinsprofil stehen (gewechselt), bleiben mit ihrem alten Verlauf, aber ohne Verein.
+  for (const id of Object.keys(s.players)) if (!players.has(id)) s.players[id].gone = true;
+  s.fetchedAt = new Date().toISOString();
+  s.latestDt = Math.max(0, ...Object.values(s.players).map(p => p.s + p.mv.length - 1));
+  s.lastRun = { at: s.fetchedAt, players: ids.length, ok, failed, empty, raw };
+  if (ok) fs.writeFileSync(MW_FILE, JSON.stringify(s));
+  console.log(`Marktwerte: ${ok} Spieler, ${failed} Fehler, ${empty} ohne Werte`);
+  return s;
+}
+async function mwEnsure(token, force) {
+  if (!force && !mwStale()) return mwLoad();
+  if (!mwRunning) mwRunning = mwRefresh(token).finally(() => { mwRunning = null; });
+  return mwRunning;
+}
+// Marktwert eines Spielers an einem Tag (YYYY-MM-DD, Berlin), gültig tagsüber bis zur Anpassung um 22 Uhr. Kickbase datiert
+// einen Wert auf den Tag der Anpassung (am 4.11. tagsüber war der neueste dt der 3.11., gleich mv im Kader), darum dt = Tag - 1;
+// fehlt er, der letzte davor (höchstens 3 Tage).
+function mwOn(pid, ymd) {
+  const p = mwLoad().players[String(pid)];
+  if (!p || p.s == null) return null;
+  const want = dtOfYmd(ymd) - 1;
+  for (let d = want; d >= want - 3; d--) { const v = p.mv[d - p.s]; if (v != null) return { mv: v, date: ymdOfDt(d + 1), exact: d === want }; }
+  return null;
+}
+const mwSquadCache = new Map();
+async function mwSquad(token, id) {
+  const c = mwSquadCache.get(id);
+  if (c && Date.now() - c.at < 10 * 60e3) return c.value;
+  const value = await kbFetch(`/v4/leagues/6422780/managers/${id}/squad`, { token });
+  mwSquadCache.set(id, { at: Date.now(), value });
+  return value;
+}
+// Kaderwert je Tag seit Beginn der laufenden Halbserie (Kevin-Wunsch 4.11.): Kader rückwärts aus dem heutigen Kader und dem
+// Transfer-Verlauf (nach der Anpassung um 22 Uhr gekauft = noch nicht im Kader, verkauft = noch drin), Wert = Summe der Marktwerte
+// dieses Tages. Fehlt der Wert eines Spielers an einem Tag, bleibt der Tag leer (nie raten). m.hist = {s: dt, v: Werte in 10.000 €}.
+let mwTrCache = null;
+async function mwKaderVerlauf(token, managers, L) {
+  if (!L) return;
+  if (!mwTrCache || Date.now() - mwTrCache.at > 60 * 60e3) {
+    const lists = new Map();
+    for (const m of managers) { try { lists.set(m.id, await fetchTransferList(token, m.id)); } catch {} }
+    mwTrCache = { at: Date.now(), lists };
+  }
+  const lists = mwTrCache.lists, store = mwLoad().players;
+  const period = transferPeriods([...lists.values()].flat().map(t => Date.parse(t.dt)))[0];
+  if (!period) return;
+  const start = Math.max(dtOfYmd(berlinYmd(period.from)), L - 365);
+  const mvAt = (pi, d) => { const p = store[pi]; return p && p.s != null ? p.mv[d - p.s] ?? null : null; };
+  // Spieler, die in keinem Vereinsprofil mehr stehen (gewechselt, z. B. Ceka, Pedersen), aber in einem Kader der Halbserie waren:
+  // Verlauf einzeln nachholen, einmal je Marktwert-Anpassung.
+  const seen = new Map();
+  for (const [id, list] of lists) for (const t of list) if (Date.parse(t.dt) >= period.from) seen.set(String(t.pi), { n: t.pn, tid: t.tid });
+  for (const m of managers) for (const p of mwSquadCache.get(m.id)?.value?.it || []) seen.set(String(p.pi), { n: p.pn, tid: p.tid });
+  let added = 0;
+  for (const [pi, info] of seen) {
+    const p = store[pi];
+    if (p && (p.s + p.mv.length - 1 >= L || p.tried === L)) continue;
+    try {
+      const r = await kbFetch(`/v4/competitions/1/players/${pi}/marketvalue/365`, { token }), map = mwSeries(p);
+      for (const x of (r?.it || [])) { const dt = Number(x.dt), mv = Number(x.mv); if (Number.isInteger(dt) && dt > 15000 && dt < 40000 && Number.isFinite(mv)) map.set(dt, mv); }
+      store[pi] = { ...(p || { n: info.n || pi, t: null, tid: info.tid != null ? String(info.tid) : null, pos: null, img: null, gone: true }), ...mwPack(map), tried: L };
+      added++;
+    } catch { if (p) p.tried = L; }
+  }
+  if (added) { try { fs.writeFileSync(MW_FILE, JSON.stringify(mwLoad())); } catch {} }
+  for (const m of managers) {
+    if (m.error || !lists.has(m.id)) continue;
+    const sq = mwSquadCache.get(m.id)?.value?.it || [], set = new Set(sq.map(p => String(p.pi)));
+    const tr = lists.get(m.id).filter(t => t.tty === 1 || t.tty === 2).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+    const vals = []; let k = 0, gaps = 0;
+    for (let d = L; d >= start; d--) {
+      // Letzter Tag = heutiger Kader (gleicher Wert wie „Kaderwert heute“), davor der Kader zur Anpassung um 22 Uhr.
+      const cutoff = d === L ? Infinity : berlinNextDayAt((d - 1) * 864e5 + 12 * 3600e3, 22);
+      while (k < tr.length && Date.parse(tr[k].dt) > cutoff) { const pi = String(tr[k].pi); if (tr[k].tty === 1) set.delete(pi); else set.add(pi); k++; }
+      let sum = 0, ok = set.size > 0;
+      for (const pi of set) { const v = mvAt(pi, d); if (v == null) { ok = false; break; } sum += v; }
+      if (!ok) gaps++;
+      vals.push(ok ? Math.round(sum / 1e4) : null);
+    }
+    m.hist = { s: start, v: vals.reverse(), gaps };
+  }
+}
+// Übersicht: je Spieler aktueller Wert, Änderung über 1, 7 und 30 Tage, Höchst-/Tiefstwert, Besitzer in der Liga;
+// je Manager der heutige Kaderwert (Summe der Marktwerte im Kader). T1000 ist ausgeschlossen.
+app.get('/api/marktwerte', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  try {
+    const s = await mwEnsure(token, req.query.neu === '1' && (!PREVIEW || isAdmin(req)));
+    const ranking = await kbFetch('/v4/leagues/6422780/ranking', { token });
+    const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+    const owner = new Map(), managers = [];
+    for (const u of users) {
+      const m = { id: String(u.i), name: u.n, img: u.uim || null };
+      try {
+        const sq = await mwSquad(token, u.i), it = sq?.it || [];
+        for (const p of it) owner.set(String(p.pi), m.id);
+        m.count = it.length; m.value = it.reduce((a, p) => a + (Number(p.mv) || 0), 0);
+        m.d1 = it.reduce((a, p) => a + (Number(p.tfhmvt) || 0), 0);
+      } catch (e) { m.error = e.message; }
+      managers.push(m);
+    }
+    const L = s.latestDt, photos = await playerPhotos().catch(() => null);
+    try { await mwKaderVerlauf(token, managers, L); } catch (e) { for (const m of managers) m.histError = e.message; }
+    const list = Object.entries(s.players).map(([id, p]) => {
+      const at = d => { const v = p.mv[d - p.s]; return v == null ? null : v; }, mv = at(L);
+      if (mv == null) return null;
+      const ch = n => { const v = at(L - n); return v == null ? null : mv - v; };
+      const last365 = p.mv.slice(Math.max(0, L - 365 - p.s)).filter(v => v != null);
+      return { id, n: p.n, t: p.gone ? null : p.t, tid: p.gone ? null : p.tid, pos: p.pos, img: photos?.get(id) || p.img, mv, d1: ch(1), d7: ch(7), d30: ch(30),
+        hmv: Math.max(...last365), lmv: Math.min(...last365), owner: owner.get(id) || null };
+    }).filter(Boolean);
+    res.set('Cache-Control', 'no-store').json({ updatedAt: s.fetchedAt || null, date: L ? ymdOfDt(L) : null, players: list, managers,
+      run: s.lastRun ? { at: s.lastRun.at, players: s.lastRun.players, ok: s.lastRun.ok, failed: s.lastRun.failed, empty: s.lastRun.empty } : null });
+  } catch (err) { res.status(err.status || 502).json({ error: 'Marktwerte nicht abrufbar.', detail: err.message }); }
+});
+// Verlauf aller Spieler kompakt (für das Diagramm): Werte in 10.000 € ab Startdatum, höchstens ein Jahr.
+app.get('/api/marktwerte/verlauf', (req, res) => {
+  const s = mwLoad(), L = s.latestDt;
+  if (!L) return res.status(404).json({ error: 'Noch keine Marktwerte gespeichert.' });
+  const start = L - 365, out = {};
+  for (const [id, p] of Object.entries(s.players)) {
+    const from = Math.max(start, p.s), vals = p.mv.slice(from - p.s).map(v => v == null ? null : Math.round(v / 1e4));
+    if (vals.some(v => v != null)) out[id] = [from - start, ...vals];
+  }
+  res.set('Cache-Control', 'no-store').json({ start: ymdOfDt(start), end: ymdOfDt(L), unit: 10000, players: out });
+});
+// Testabfrage (Admin): Rohform der Kickbase-Antwort für einen Spieler.
+app.get('/api/marktwerte/probe', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const id = /^\d{1,8}$/.test(String(req.query.id || '')) ? req.query.id : '2201';
+  try { res.json({ lastRun: mwLoad().lastRun || null, answer: await kbFetch(`/v4/competitions/1/players/${id}/marketvalue/92`, { token }) }); }
+  catch (e) { res.status(e.status || 502).json({ error: e.message, data: e.data }); }
 });
 
 // Pechradar (Kevin-Wunsch 28.10., Reiter "Transfers"): Spieler, die ein Manager verkauft hat und die gleich am nächsten

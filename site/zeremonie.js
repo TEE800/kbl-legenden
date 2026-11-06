@@ -153,7 +153,7 @@
     ${l.length?line('🏮 Rote Laterne',l.map(x=>`${mgrName(x.manager,'',x.managerId)} ${fmt(x.dayPoints)}`).join(', ')):''}
     ${mvp.length?line('⭐ MVP des Spieltags',mvp.map(p=>`${safe(p.name)} (${safe(p.team)}) ${fmt(p.points)}`).join(', ')):''}
     ${line('🎯 MVP-Tipp',tipWin==null?'wird geladen …':tipWin.length?tipWin.map(n=>mgrName(n)).join(', '):'kein Treffer')}
-    ${m.kings.length?line('👑 Bumskönig des Spieltags',m.kings.map(k=>`${mgrName(k.name)} ${k.count}×`).join(', ')):''}
+    ${m.kings.length?line('⛺ Bumskönig des Spieltags',m.kings.map(k=>`${mgrName(k.name)} ${k.count}×`).join(', ')):''}
     ${line('✅ Vollstreckt',`${done} von ${all.length}`)}
     <p class="zer-hint" style="margin-top:30px">Die Sitzung ist geschlossen. Bis nächsten Montag! 🤡</p></div></div>`;
    if(Z.dir>0)fanfare();
@@ -247,7 +247,7 @@
   const list=sorted(m),rows=[];for(let i=0;i<list.length;i+=COLS)rows.push(list.slice(i,i+COLS));
   const rh=rows.map(r=>Math.max(...r.map(x=>TOP+x.charges.length*LH+14)));
   const HEAD=170,cleanS=[...m.clean].sort((a,b)=>(b.pts??-1e9)-(a.pts??-1e9));
-  const H=HEAD+rh.reduce((n,h)=>n+h+G,0)+(cleanS.length?70:0)+70;
+  const H=HEAD+rh.reduce((n,h)=>n+h+G,0)+(cleanS.length?70:0)+110;
   c.width=W;c.height=H;
   const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#14212b');g.addColorStop(1,'#081118');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='#b48633';ctx.lineWidth=5;ctx.strokeRect(14,14,W-28,H-28);
@@ -257,13 +257,19 @@
   ctx.font=`700 64px ${serif}`;ctx.fillStyle='#f4d777';ctx.fillText(`BumsParade · Spieltag ${m.day}`,P+8,P+112);
   ctx.textAlign='right';ctx.font=`800 40px ${sans}`;ctx.fillStyle='#f1a5aa';ctx.fillText(`${m.total} Bumsung${m.total===1?'':'en'}`,W-P-8,P+62);
   ctx.font=`600 26px ${sans}`;ctx.fillStyle='#e9f0f4';
-  const kingTxt=m.kings.length?`👑 Bumskönig: ${m.kings.map(k=>k.name).join(', ')} (${m.kings[0].count}×)`:'';
+  const kingTxt=m.kings.length?`⛺ Bumskönig: ${m.kings.map(k=>k.name).join(', ')} (${m.kings[0].count}×)`:'';
   ctx.fillText([`${list.length} Manager gebumst`,kingTxt].filter(Boolean).join('   ·   '),W-P-8,P+108);
+  // Symbole hinter dem Namen (Kevin 4.11.): Spieltagssieger, Spieltagsletzter, Bumskönig, Tabellenführer und -letzter nach diesem Spieltag; Gleichstand = alle.
+  const dayPts=[...list,...cleanS].map(x=>x.pts).filter(v=>v!=null),hiD=Math.max(...dayPts),loD=Math.min(...dayPts);
+  const kingSet=new Set(m.kings.map(k=>k.name));
+  let tab=null;try{const h=(historyData||[]).find(h=>h.day===m.day&&h.status==='finished');if(h)tab=new Map(h.list.filter(e=>e.score!=null).map(e=>[e.name,e.score]));}catch{}
+  const tv=tab?[...tab.values()]:[],hiT=tv.length?Math.max(...tv):null,loT=tv.length?Math.min(...tv):null;
+  const icons=x=>{const o=[];if(x.pts!=null&&x.pts===hiD)o.push('🏆');if(x.pts!=null&&x.pts===loD&&loD!==hiD)o.push('🥄');if(kingSet.has(x.name))o.push('⛺');
+   const t=tab?.get(x.name);if(t!=null&&t===hiT)o.push('🥇');if(t!=null&&t===loT&&loT!==hiT)o.push('🏮');return o.join(' ');};
   const imgs=await Promise.all(list.map(x=>loadImg(faceUrl(x))));
   let y=HEAD,idx=0;
   rows.forEach((r,ri)=>{r.forEach((x,ci)=>{const L=P+ci*(CW+G),img=imgs[idx++];
     ctx.fillStyle='rgba(255,255,255,.05)';ctx.beginPath();ctx.roundRect?ctx.roundRect(L,y,CW,rh[ri],16):ctx.rect(L,y,CW,rh[ri]);ctx.fill();
-    if(x.place===1){ctx.strokeStyle='rgba(235,199,104,.6)';ctx.lineWidth=2;ctx.stroke();}
     const R=32,cx=L+18+R,cy=y+18+R;
     ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle='#22313c';ctx.fill();ctx.clip();
     if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{ctx.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-R,cy-R,2*R,2*R);}catch{}}
@@ -271,7 +277,9 @@
     ctx.restore();ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.strokeStyle='#ebc768';ctx.lineWidth=2;ctx.stroke();
     ctx.textAlign='right';ctx.fillStyle='#f1a5aa';ctx.font=`900 44px ${sans}`;ctx.fillText(`${x.charges.length}×`,L+CW-18,y+66);
     const cntW=ctx.measureText(`${x.charges.length}×`).width;
-    ctx.textAlign='left';ctx.fillStyle=x.place===1?'#ebc768':'#e9f0f4';ctx.font=`800 30px ${sans}`;ctx.fillText(ell(x.name,CW-2*R-60-cntW),L+2*R+34,y+48);
+    const ic=icons(x);ctx.font=`26px ${sans}`;const icW=ic?ctx.measureText(ic).width+10:0;
+    ctx.textAlign='left';ctx.fillStyle='#e9f0f4';ctx.font=`800 30px ${sans}`;const nm=ell(x.name,CW-2*R-60-cntW-icW);ctx.fillText(nm,L+2*R+34,y+48);
+    if(ic){const nw=ctx.measureText(nm).width;ctx.font=`26px ${sans}`;ctx.fillText(ic,L+2*R+34+nw+10,y+46);}
     ctx.fillStyle='#9db0bd';ctx.font=`500 21px ${sans}`;ctx.fillText([x.place?`Platz ${x.place}`:'',x.pts!=null?`${fmt(x.pts)} Pkt.`:''].filter(Boolean).join(' · '),L+2*R+34,y+78);
     let yy=y+TOP+24;
     for(const ch of x.charges){const col=COLOR[ch.rule]||'#ebc768';
@@ -284,16 +292,17 @@
      ctx.fillStyle=ch.in?'#b9c7d1':'#e9f0f4';ctx.fillText(ell(txt,mw),L+18+tw+12,yy+1);
      yy+=LH;}
    });y+=rh[ri]+G;});
-  if(cleanS.length){ctx.textAlign='left';ctx.font=`800 26px ${sans}`;ctx.fillStyle='#7fd3a6';const lbl=`😇 Davongekommen (${cleanS.length}): `;ctx.fillText(lbl,P+8,y+34);
-   const lw=ctx.measureText(lbl).width;ctx.font=`600 26px ${sans}`;ctx.fillStyle='#cfd9e0';ctx.fillText(ell(cleanS.map(x=>x.name).join('  ·  '),W-2*P-lw-20),P+8+lw,y+34);}
+  if(cleanS.length){ctx.textAlign='left';ctx.font=`800 26px ${sans}`;ctx.fillStyle='#7fd3a6';const lbl=`🧜‍♀️ Ungebumst (${cleanS.length}): `;ctx.fillText(lbl,P+8,y+34);
+   const lw=ctx.measureText(lbl).width;ctx.font=`600 26px ${sans}`;ctx.fillStyle='#cfd9e0';ctx.fillText(ell(cleanS.map(x=>{const ic=icons(x);return ic?`${x.name} ${ic}`:x.name;}).join('  ·  '),W-2*P-lw-20),P+8+lw,y+34);}
   const d=new Date(),p2=v=>String(v).padStart(2,'0');
   ctx.textAlign='right';ctx.fillStyle='#728592';ctx.font=`22px ${sans}`;
-  ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡    → abgeben  ·  ← bekommen`,W-P-8,H-36);
+  ctx.fillText(`Stand ${p2(d.getDate())}.${p2(d.getMonth()+1)}.${d.getFullYear()}, ${p2(d.getHours())}:${p2(d.getMinutes())} Uhr · BumsKI 🤡`,W-P-8,H-74);
+  ctx.textAlign='left';ctx.fillText(`🏆 Spieltagssieger  ·  🥄 Spieltagsletzter  ·  ⛺ Bumskönig  ·  🥇 Tabellenführer  ·  🏮 Tabellenletzter  ·  🧜‍♀️ ungebumst  ·  → abgeben  ·  ← bekommen`,P+8,H-36);
   return c;
  }
 
  function overviewText(m){const L=sorted(m);
-  return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n😇 Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
+  return `**🎺 BUMSPARADE · Spieltag ${m.day}** (${m.total} Bumsungen)\n${L.map(x=>`**${x.name}** ${x.charges.length}×: ${x.charges.map(c=>`${c.rule} ${chargeLine(c)}`).join('; ')}`).join('\n')}${m.clean.length?`\n🧜‍♀️ Davongekommen: ${m.clean.map(x=>x.name).join(', ')}`:''}`;}
  async function openOverview(){
   const m=model();if(!m)return;
   const box=document.createElement('div');box.className='zer-akte';box.setAttribute('role','dialog');box.setAttribute('aria-label',`Alle Bumsungen Spieltag ${m.day}`);
