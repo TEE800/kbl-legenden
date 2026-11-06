@@ -2405,7 +2405,10 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   // AH: aktuell bester Spieler aller Bundesliga-Spieler.
   let mvp=null;try{mvp=await liveMvpFor(token,day);}catch(e){notes.push('Aktueller MVP nicht ermittelbar: '+e.message);}
   const mvpIds=new Set((mvp?.players||[]).map(p=>String(p.id)));
-  const ah=roster.flatMap(m=>m.players.filter(p=>mvpIds.has(p.playerId)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  // AH tritt hinter RK, BN und UM zurueck (Kevin 06.11.): dann kein MVP-Verkauf.
+  const evIds=new Set(ev.actions.map(a=>String(a.playerId)));
+  const ahAll=roster.flatMap(m=>m.players.filter(p=>mvpIds.has(p.playerId)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
+  const ah=ahAll.filter(p=>!evIds.has(String(p.playerId)));
   // BD erst nach Spielende (Kevin-Vorgabe): waehrend des Spiels aendern sich die Punkte staendig.
   const bd=roster.flatMap(m=>m.players.filter(p=>p.state==='done'&&isSchnapszahl(p.points)).map(p=>({managerId:m.managerId,manager:m.name,...p})));
   // Rangfolge wie in der BumsParade: BD tritt hinter allen anderen Regeln zurueck, DD zuletzt.
@@ -2414,8 +2417,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   for(const a of ah)add(a.playerId,'AH');
   // state je Spieler (open/live/done): Push-Nachrichten "gebumst" gehen erst nach Spielende raus (tools/tipp-dienst/worker.js).
   const items=[],item=(rule,m,text,extra={})=>items.push({rule,managerId:String(m.managerId),manager:m.manager||m.name,text,...(m.playerName?{playerId:String(m.playerId),playerName:m.playerName,...(pts[String(m.playerId)]?.state?{state:pts[String(m.playerId)].state}:{})}:{}),...extra});
-  for(const [id,r] of other)if(r.size>1){const a=ev.actions.find(x=>String(x.playerId)===id)||ah.find(x=>String(x.playerId)===id);item('EZ',a,`${a.playerName} ist von ${[...r].join(' und ')} betroffen: Einzelfallentscheidung`);}
+  for(const [id,r] of other)if(r.size>1){const a=ev.actions.find(x=>String(x.playerId)===id)||ah.find(x=>String(x.playerId)===id);item('EZ',a,`${a.playerName} ist von ${[...r].join(' und ')} betroffen: ${a.manager} dürfte selbst wählen, wer ihn bekommt`);}
   const multi=id=>(other.get(String(id))?.size||0)>1;
+  for(const p of ahAll)if(evIds.has(String(p.playerId)))notes.push(`${p.playerName} ist gerade MVP, AH entfällt aber, weil auch ${[...new Set(ev.actions.filter(a=>String(a.playerId)===String(p.playerId)).map(a=>a.rule))].join(' und ')} gilt.`);
   for(const p of ah)if(!multi(p.playerId))item('AH',p,`${p.playerName} ist mit ${fmtNum(p.points)} Punkten gerade MVP des Spieltags: müsste zum Verkauf angeboten werden`);
   for(const a of ev.actions)if(!multi(a.playerId))item(a.rule,a,a.rule==='UM'?`${a.playerName}: ${a.reason}. ${a.recipientKind==='manager'?`Ginge an ${a.recipient}`:'Ginge an den Markt'}`:`${a.playerName}: ${a.reason}. Müsste an einen Mitmanager abgegeben werden`,{reason:a.reason,...(a.rule==='UM'&&a.recipientKind==='manager'?{to:[String(a.recipient)]}:{})});
   for(const p of bd)if(!other.has(String(p.playerId)))item('BD',p,`${p.playerName} steht bei ${fmtNum(p.points)} Punkten (Schnapszahl): müsste an den Markt verkauft werden (Spiel beendet)`,{state:p.state,points:p.points});
@@ -2698,14 +2702,18 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       try { mvpInfo = await loadMatchdayMvp(token, day); }
       catch (e) { mvpInfo = { error: 'MVP konnte nicht ermittelt werden: ' + e.message, players: [], top: [], reliable: false }; }
     }
-    const ahFinal = (() => {
+    const ahRaw = (() => {
       if (!mvpInfo || mvpInfo.error || !mvpInfo.players.length) return { ...ah, mvp: mvpInfo };
       const affected = mvpInfo.players.flatMap(mp => calculateAh(roster, mp.id).affected);
       return { status: mvpInfo.reliable ? 'provisional' : 'unsure', affected, mvp: mvpInfo };
     })();
+    // AH tritt hinter RK, BN und UM zurueck (Kevin 06.11.): kein MVP-Verkauf, es gilt die andere Regel.
+    const autoRulesOf=id=>[...new Set((autoEvents?.actions||[]).filter(a=>String(a.playerId)===String(id)).map(a=>a.rule))];
+    const ahDropped=(ahRaw.affected||[]).filter(p=>autoRulesOf(p.playerId).length).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||p.playerName||null,because:autoRulesOf(p.playerId)}));
+    const ahFinal={...ahRaw,affected:(ahRaw.affected||[]).filter(p=>!autoRulesOf(p.playerId).length)};
     // KBL 4.13: Rangfolge bei Mehrfachtreffern (Liga-Vorgabe): DD zuletzt (nur Spieler ohne andere Regel),
-    // BD tritt hinter allen anderen Regeln zurueck. RK, BN, UM und AH sind gleichrangig: trifft es einen Spieler
-    // mehrfach, entscheidet die Liga im Einzelfall (wird angezeigt, nichts wird automatisch gewaehlt).
+    // BD tritt hinter allen anderen Regeln zurueck, AH hinter RK, BN und UM. RK, BN und UM sind gleichrangig: trifft es einen Spieler
+    // mehrfach, gibt ihn sein Manager an einen Mitmanager seiner Wahl ab (EZ).
     const otherRules=new Map();
     const addRule=(id,r)=>{id=String(id);if(!otherRules.has(id))otherRules.set(id,new Set());otherRules.get(id).add(r);};
     for(const a of (autoEvents?.actions||[]))addRule(a.playerId,a.rule);
@@ -2722,7 +2730,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
     const addEx=(id,label)=>{id=String(id);if(!exMap.has(id))exMap.set(id,[]);if(!exMap.get(id).includes(label))exMap.get(id).push(label);};
     for(const p of bd)addEx(p.playerId,'BD');
     for(const a of (autoEvents?.actions||[]))addEx(a.playerId,a.rule);
-    for(const a of (ahFinal.affected||[]))addEx(a.playerId,'AH');
+    for(const a of [...(ahFinal.affected||[]),...ahDropped])addEx(a.playerId,'AH');
     const uncertain=new Map((autoEvents?.unclear||[]).map(u=>[String(u.playerId),u.rule]));
     // Spieler, deren Ereignisse nicht lesbar waren: koennten von BN, RK oder UM betroffen sein, also nicht stillschweigend als Kandidat werten.
     for(const f of (autoEvents?.failures||[]))if(!uncertain.has(String(f.playerId)))uncertain.set(String(f.playerId),`Ereignisdaten nicht lesbar (${f.error})`);
@@ -2779,7 +2787,14 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
       todos.at(-1).to=last.map(m=>({managerId:String(m.managerId),manager:m.manager||m.name,playerName:got?pname(got):null}));
     }
     for(const m of (mm?.affected||[]))todo(`MM:${m.managerId}`,'MM',m.managerId,m.manager,'bestimmt, wer am nächsten Spieltag einen Spieler weniger aufstellt',{state:'manual',note:'nur von Hand abhakbar'});
-    for(const c of conflicts)todo(`EZ:${c.managerId}:${c.playerId}`,'EZ',c.managerId,c.manager,`${pname(c)} ist von ${c.rules.join(' und ')} betroffen: Einzelfallentscheidung, danach von Hand abhaken`,{state:'manual',note:'mehrere gleichrangige Regeln'});
+    // EZ (Kevin 06.11.): Trifft es einen Spieler mit mehreren von RK, BN und UM, entscheidet sein Manager selbst, wer ihn bekommt.
+    for(const c of conflicts){
+      const here=inSquad(c.managerId,c.playerId),owner=ownerMap.get(String(c.playerId));
+      const check=here===null||!allSquadsKnown?{state:'unknown',note:'nicht alle Kader lesbar'}:here?{state:'open',note:'noch im Kader'}:
+        !owner?{state:'unknown',note:'bei keinem Manager, an den Markt verkauft?'}:{state:'done',note:`jetzt bei ${owner.manager}`};
+      todo(`EZ:${c.managerId}:${c.playerId}`,'EZ',c.managerId,c.manager,`gibt ${pname(c)} an einen Mitmanager ab (${c.rules.join(' und ')}, Empfänger frei wählbar)`,check);
+      if(here===false&&owner?.managerId&&String(owner.managerId)!==String(c.managerId))todos.at(-1).to=[{managerId:String(owner.managerId),manager:owner.manager,playerName:pname(c)}];
+    }
     for(const p of (ahFinal.affected||[])){
       if(conflictIds.has(String(p.playerId)))continue;
       const here=inSquad(p.managerId,p.playerId);
@@ -2827,7 +2842,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
           return c.find(t=>Date.parse(t.dt)<=win.next)||c.find(t=>Date.parse(t.dt)<=win.end+14*864e5)||null;};
         const byName=n=>managers.find(m=>String(m.n)===String(n));
         for(const t of todos){
-          if(!['AH','RK','BN'].includes(t.rule))continue;
+          if(!['AH','RK','BN','EZ'].includes(t.rule))continue;
           const pid=String(t.key).split(':')[2];if(!pid)continue;
           const sale=await firstSale(t.managerId,pid);
           // Nie raten: Steht kein Verkauf im Verlauf, ist der heutige Besitzer nur ein Hinweis (Kevin-Meldung Suzuki ST 1).
@@ -2851,7 +2866,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
     const addIncoming=(recipientId,playerId,rule)=>{if(recipientId)incoming.push({recipientId:String(recipientId),playerId:String(playerId),rule});};
     // Wer in der BumsParade einen Spieler bekommt: aus den Aufgaben (Empfaenger aus dem Transfer-Verlauf oder dem heutigen Kader).
     for(const t of todos){
-      if(!['UM','RK','BN','AH','DD'].includes(t.rule)||!t.to)continue;
+      if(!['UM','RK','BN','AH','DD','EZ'].includes(t.rule)||!t.to)continue;
       const pid=t.rule==='DD'?(t.options||[]).find(o=>o.moved)?.playerId:String(t.key).split(':')[2];if(!pid)continue;
       for(const r of t.to)if(r.managerId&&String(r.managerId)!==String(t.managerId))addIncoming(r.managerId,pid,t.rule);
     }
@@ -2927,7 +2942,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         const sCache=new Map();
         const salesList=async gid=>{if(!sCache.has(gid)){try{sCache.set(gid,await transfersSince(token,gid,histSince));}catch{sCache.set(gid,null);}}return sCache.get(gid);};
         for(const t of todos){
-          if(!['BD','AH','RK','BN','UM','TL','DD'].includes(t.rule))continue;
+          if(!['BD','AH','RK','BN','UM','TL','DD','EZ'].includes(t.rule))continue;
           const pid=t.rule==='DD'?(t.options||[]).find(o=>o.moved)?.playerId:String(t.key).split(':')[2];
           if(!pid){if(t.check?.state==='open'&&Date.now()>saleDeadline)t.overdue=true;continue;}
           const list=await salesList(String(t.managerId));if(!list)continue;
@@ -2999,7 +3014,7 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
     }
     return res.set('Cache-Control','no-store').json({day,ready:true,status:testMode?'test':probe?'probe':'provisional',testMode,probe,complete,...(huho?{huho}:{}),pendingCorrections:centerConflicts.length?{count:centerConflicts.length,examples:centerConflicts.slice(0,5).map(c=>({playerName:playerNames.get(c.playerId)||c.playerId,performance:c.performance,center:c.center}))}:null,todos,saleDeadline:saleDeadline?new Date(saleDeadline).toISOString():null,expected:managers.length,missing,invalid,incompletePoints,missingPoints,missingDetails,pointDiagnostics,failures,plausibility,managers:roster.length,
       actions:bdActive.map(p=>({rule:'BD',managerId:p.managerId,manager:p.manager,playerId:p.playerId,playerName:p.playerName,points:p.points,action:'Spieler an den Markt verkaufen',status:'zu_pruefen',marketStatus:p.marketStatus})),
-      mm:mm&&{...mm,values:mm.values.map(v=>({...v,negatives:v.negatives.map(n=>({...n,playerName:playerNames.get(String(n.playerId))||null}))}))},ah:{...ahFinal,affected:(ahFinal.affected||[]).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||null}))},autoEvents,bd:bdActive,bdDropped,conflicts,dd:{winners:complete?dd:[],lastPlace:complete?last.map(m=>({managerId:m.managerId,manager:m.manager||m.name,dayPoints:m.dayPoints})):[],tie:complete&&tie},
+      mm:mm&&{...mm,values:mm.values.map(v=>({...v,negatives:v.negatives.map(n=>({...n,playerName:playerNames.get(String(n.playerId))||null}))}))},ah:{...ahFinal,affected:(ahFinal.affected||[]).map(p=>({...p,playerName:playerNames.get(String(p.playerId))||null}))},autoEvents,bd:bdActive,bdDropped,ahDropped,conflicts,dd:{winners:complete?dd:[],lastPlace:complete?last.map(m=>({managerId:m.managerId,manager:m.manager||m.name,dayPoints:m.dayPoints})):[],tie:complete&&tie},
       warnings:[...histNotes,...(probe?[`PROBELAUF: Die heutigen Aufstellungen wurden als Startelf von Spieltag ${day} angenommen. Nur ein Funktionstest, keine echte Abrechnung, nichts gespeichert.`,...(probeUnreadable.length?[`Startelf nicht lesbar bei: ${probeUnreadable.join(', ')}.`]:[])]:[]),...(rankingWarning?[rankingWarning]:[]),...(inferredZero.size?[`${inferredZero.size} aufgestellte Spieler hatten keinen Spieltagseintrag und wurden mit 0 Punkten gewertet (nicht eingesetzt): ${[...inferredZero].map(id=>playerNames.get(String(id))||id).join(', ')}.`]:[]),...(fromCenter.size?[`${fromCenter.size} aufgestellte Spieler hatten keinen Eintrag in den Leistungsdaten; die Punkte stammen aus den Spieltagsdaten: ${[...fromCenter].map(([id,pt])=>(playerNames.get(String(id))||id)+' ('+pt+')').join(', ')}.`]:[]),...(centerConflicts.length?[`Abweichende Punkte in zwei Quellen (verwendet: Leistungsdaten): ${centerConflicts.map(c=>(playerNames.get(c.playerId)||c.playerId)+' '+c.performance+' statt '+c.center).join(', ')}.`]:[]),...(!complete?['Unvollständige Daten: BD zeigt alle nachgewiesenen Schnapszahlen; weitere BD-Fälle können fehlen. DD und MM sind nicht verbindlich berechenbar.']:[]),...incompletePoints.map(m=>m.name+': Spielerpunkte fehlen ('+m.playerIds.length+' Spieler-IDs: '+m.playerIds.map(id=>{if(failedIds.has(String(id)))return id+' [API-Fehler]';const rec=findDayRecord(performancePayloads.get(id),day);if(!rec)return id+' [kein Spieltagseintrag]';const keep={};for(const k of ['day','p','mp','st','cur','mdst','md','k'])if(rec[k]!==undefined)keep[k]=rec[k];return id+' [Eintrag ohne verwertbare Punkte: '+JSON.stringify(keep)+']';}).join(', ')+').'),...missing.map(m=>m.name+': Aufstellung fehlt.'),...invalid.map(m=>m.name+': '+m.reason),...scored.filter(m=>!Number.isFinite(m.dayPoints)).map(m=>m.name+': Spieltagspunkte laut Ranking nicht ermittelbar.'),...(ahFinal.mvp&&!ahFinal.mvp.error&&ahFinal.mvp.reliable?[]:['AH: Der Spieltags-MVP konnte nicht sicher ermittelt werden'+(ahFinal.mvp?.error?' ('+ahFinal.mvp.error+')':ahFinal.mvp?` (${ahFinal.mvp.failedPlayers} Spieler nicht abrufbar, ${(ahFinal.mvp.failedTeams||[]).length} Vereine nicht lesbar)`:'')+'. AH und die Ausschlüsse bei der Drehtür sind unsicher.']),
         'Marktwerte (BN, RK) werden noch nicht berücksichtigt.','Nur Anzeige: keine automatischen Transfers oder Gebote.']});
   } catch(err) {res.status(err.status||502).json({error:'Abrechnung fehlgeschlagen.',detail:err.message});}

@@ -1478,7 +1478,7 @@ function centerTodoHtml(){
    if(x){out.push(`Grund: ${safe(x.reason)}.`);if(x.rule==='UM'&&x.recipient)out.push(`Empfänger: <strong>${safe(x.recipient)}</strong>.`);out.push(safe(x.action)+'.');}}
   if(t.rule==='EZ'){const c=(d.conflicts||[]).find(x=>String(x.playerId)===String(pid));
    if(c)out.push(...(c.details||[]).map(x=>`${safe(x.rule)}: ${safe(x.reason)}`));
-   out.push('Mehrere gleichrangige Regeln treffen denselben Spieler. Welche gilt, entscheidet ihr im Einzelfall.');}
+   out.push('Mehrere von RK, BN und UM treffen denselben Spieler. Sein Manager entscheidet selbst, an wen er ihn abgibt.');}
   if(t.rule==='TL')out.push('Teamlimit 1: Wer in der BumsParade einen Spieler bekommt, verkauft seinen bisherigen Spieler desselben Vereins (Markt oder Manager).');
   return out.length?`<details class="center-more"><summary>${safe(RULE[t.rule]||t.rule)} · Details</summary>${out.map(x=>`<p>${x}</p>`).join('')}</details>`:'';};
  // Magic Miyoshi: Auswahl, wen der Manager bestimmt hat.
@@ -1531,6 +1531,7 @@ function centerTodoHtml(){
   const st=g?`<span class="center-state ok">✓ ${g==='Entfällt'?'Regel entfällt':g==='Markt'?'an den Markt':'an '+safe(g)}</span>`:`<span class="center-state warn">? bitte prüfen</span>`;
   rows.push({mid:u.managerId,manager:u.manager,todo:false,unclear:!g,html:`<li class="center-info${g?' center-done':''}"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${pl(u)}: bitte von Hand prüfen</span><span class="center-status">${st} <span class="muted tiny">${safe(u.reason)}</span></span>${sel}</span></li>`});
   if(g&&g!=='Entfällt'&&g!=='Markt')rows.push({mid:midOf(g),manager:g,todo:false,receive:true,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">${safe(u.rule)}</span><span class="center-text"><span>${recvVerb(u.rule)} ${pl(u)} von ${safe(u.manager)}</span><span class="center-status"><span class="center-state ok">✓ von Hand nachgetragen</span></span></span></li>`});}
+ for(const x of (d.ahDropped||[]))rows.push({mid:x.managerId,manager:x.manager,todo:false,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">AH</span><span class="center-text"><span>${pl(x)} (${fmt(x.points)} Pkt.): MVP-Verkauf entfällt</span><span class="center-status muted tiny">weil auch ${x.because.map(safe).join(' und ')} gilt, AH tritt zurück</span></span></li>`});
  for(const x of (d.bdDropped||[]))rows.push({mid:x.managerId,manager:x.manager,todo:false,html:`<li class="center-info center-done"><span class="center-check"></span><span class="center-rule">BD</span><span class="center-text"><span>${pl(x)} (${fmt(x.points)} Pkt.): Schnapszahl entfällt</span><span class="center-status muted tiny">weil auch ${x.because.map(safe).join(' und ')} gilt, BD tritt zurück</span></span></li>`});
  // Reihenfolge wie bei der Abrechnung: chronologisch vom Spieltagssieger abwärts.
  const dayList=historyData.find(h=>Number(h.day)===Number(a.day))?.list||[];
@@ -1556,7 +1557,7 @@ function centerTodoHtml(){
  if(d.ah?.mvp?.error)notes.push('Der MVP des Spieltags konnte nicht ermittelt werden.');
  const nTodo=rows.filter(r=>r.todo).length,nDone=rows.filter(r=>r.todo&&r.finished).length,nCheck=rows.filter(r=>r.unclear).length;
  const mvp=d.ah?.mvp?.players||[];
- const mvpLine=mvp.length&&!(d.ah?.affected||[]).length?`<p class="muted tiny">MVP des Spieltags: ${mvp.map(m=>`${safe(m.name)} (${fmt(m.points)} Pkt.)`).join(' · ')}, stand bei keinem in der Startelf.</p>`:'';
+ const mvpLine=mvp.length&&!(d.ah?.affected||[]).length&&!(d.ahDropped||[]).length?`<p class="muted tiny">MVP des Spieltags: ${mvp.map(m=>`${safe(m.name)} (${fmt(m.points)} Pkt.)`).join(' · ')}, stand bei keinem in der Startelf.</p>`:'';
  return notes.map(n=>`<p class="error tiny">${safe(n)}</p>`).join('')+(rows.length?`<p class="center-progress"><b>${nDone} von ${nTodo}</b> erledigt${nCheck?` · <b>${nCheck}</b> bitte prüfen`:''} <button type="button" class="ghost" id="centerRecheck">↻ Neu prüfen</button>${hakenBar()}</p><p class="muted tiny" style="margin:-4px 0 10px">Reihenfolge wie bei der Abrechnung: vom Spieltagssieger abwärts. Details zum Aufklappen.</p><ul class="center-groups">${groupHtml}</ul><p class="muted tiny">Die BumsKI prüft anhand der heutigen Kader, ob ein Spieler weg ist oder beim richtigen Manager steht. Was sie nicht sicher erkennt, kannst du von Hand abhaken. Die Haken gelten auf allen Geräten.</p>`:'<p>Keine Strafen fällig. 🎉</p>')+mvpLine;
 }
 // Online: Admin-Anmeldung zum Abhaken (Admin-Code des Tippdienstes, wie beim MVP-Tipp).
@@ -1709,7 +1710,7 @@ document.addEventListener('click',async e=>{
 document.addEventListener('click',e=>{if(e.target.closest('#centerRecheck')&&centerAccounting.day){if(centerAccounting.probe)$('#accountingProbe')?.click();else centerLoadAccounting(centerAccounting.day,true);}});
 
 // Von Hand nachzutragen: bei DD welcher Spieler, bei RK, BN, AH und TL an wen (Manager oder Markt), bei MM wen er bestimmt hat.
-const PICK_TO_RULES=['RK','BN','AH','TL','UM'];
+const PICK_TO_RULES=['RK','BN','AH','TL','UM','EZ'];
 const unclearKey=u=>`${u.rule}:${u.managerId}:${u.playerId}`;
 function todoPlayer(t){const x=t.text||'',m=/bietet den MVP (.+) zum Verkauf an/.exec(x)||/gibt (.+) an einen Mitmanager ab/.exec(x)||/verkauft (.+?) \(/.exec(x)||/^verkauft (.+?) an den Markt/.exec(x)||/^gibt (.+?) an /.exec(x);return m?m[1]:(t.to||[])[0]?.playerName||null;}
 function todoPick(t){if(t.rule==='MM')return 'mm';if(t.rule==='DD')return t.options?.length?'dd':null;if(PICK_TO_RULES.includes(t.rule))return 'to';return null;}
