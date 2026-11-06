@@ -2089,7 +2089,7 @@ function pvLiveHtml(day){
 // Großer Fragen-Pool; je Spieltag mischt die BumsKI neu (fest je Spieltag, alle sehen dieselben Fragen), höchstens eine Frage
 // je Familie und drei je Bereich; was am Vorspieltag dran war, kommt zuletzt. Nur abgeschlossene Spieltage, BumsTabelle und
 // (online) die gespeicherten Aufstellungen mit Spielerpunkten. Fehlt etwas, fällt die Frage weg (nie raten).
-const PV_SHOW=8,PV_CAT_MAX=3;
+
 let pvExtra=null,pvExtraBusy=false;
 // Startelfen (Ranking lp), Spielerpunkte aller Bundesliga-Spieler (Abrechnung, ah.mvp.all, wie im Spieltagsbericht) und
 // Bankpunkte je Spieltag. Nur online (fertige Dateien): am PC rechnet der Server die Abrechnung je Spieltag neu, das wäre zu viel.
@@ -2097,22 +2097,34 @@ async function pvLoadExtra(days){
  if(pvExtraBusy||!window.KBL_STATIC||!days.length||!currentLeague)return;
  const key=days.join(',');if(pvExtra?.key===key)return;
  pvExtraBusy=true;const get=u=>api(u).catch(()=>null);
- try{pvExtra={key,days:await Promise.all(days.map(async d=>{
+ // Heutige Kader (Kevin 6.11.: Fragen dürfen nicht so tun, als hätte ein Manager einen längst verkauften Spieler noch).
+ try{const ids=new Set();
+  pvExtra={key,days:await Promise.all(days.map(async d=>{
   const [r,a,bp]=await Promise.all([get(`/api/ranking/${encodeURIComponent(currentLeague.id)}?dayNumber=${d}`),get(`/api/rule-accounting/${d}`),get(`/api/bench-points/${d}`)]);
   const all=a?.ah?.mvp?.reliable===false?null:a?.ah?.mvp?.all;
-  return {d,us:r?.us||[],pts:Array.isArray(all)&&all.length?new Map(all.map(x=>[String(x.id),x])):null,bench:bp};}))};}
+  (r?.us||[]).forEach(u=>ids.add(String(u.i)));
+  return {d,us:r?.us||[],pts:Array.isArray(all)&&all.length?new Map(all.map(x=>[String(x.id),x])):null,bench:bp};}))};
+  const sq=new Map(),nm=new Map();await Promise.all([...ids].map(async id=>{const x=await get(`/api/manager-squad-v4/${encodeURIComponent(currentLeague.id)}/${id}`),it=x?.data?.it;if(Array.isArray(it)&&it.length){sq.set(id,new Set(it.map(p=>String(p.pi))));it.forEach(p=>p.pn&&nm.set(String(p.pi),p.pn));}}));
+  pvExtra.squads=sq;pvExtra.names=nm;}
  finally{pvExtraBusy=false;}
  renderPreview();
 }
 const pvHash=s=>{let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;};
-function pvPick(all,day){
- const take=(d,skip,out=[])=>{const order=all.slice().sort((a,b)=>pvHash(a.id+':'+d)-pvHash(b.id+':'+d)),fam=new Set(out.map(q=>q.fam)),cat={};out.forEach(q=>cat[q.cat]=(cat[q.cat]||0)+1);
-  for(const q of order){if(out.length>=PV_SHOW)break;if(skip.has(q.fam)||out.includes(q)||fam.has(q.fam)||(cat[q.cat]||0)>=PV_CAT_MAX)continue;fam.add(q.fam);cat[q.cat]=(cat[q.cat]||0)+1;out.push(q);}
-  return out;};
- // Kette ab Spieltag 1: je Spieltag zuerst nur Familien, die am Spieltag davor nicht dran waren; reicht das nicht, wird aufgefüllt.
- let prev=new Set(),pick=[];
- for(let d=1;d<=day;d++){pick=take(d,new Set(),take(d,prev));prev=new Set(pick.map(q=>q.fam));}
- return pick;
+// Je Manager genau eine Kachel (Kevin 6.11.: mehr Streuung, jeder Manager eine Statistik). Wer zuerst wählt, mischt der Spieltag;
+// Liga-Spitzenwerte zählen mehr, eine Familie mehrmals und Manager, die schon in anderen Kacheln stehen, zählen weniger,
+// und was ein Manager am Vorspieltag hatte, kommt nicht gleich wieder. Angezeigt in der Reihenfolge der Tabelle.
+function pvAssign(all,day,order){
+ const run=(d,prev)=>{const fam={},seen=new Set(),pick=new Map();
+  const ms=[...new Set(all.map(q=>q.who[0]))].sort((a,b)=>pvHash(a+':'+d)-pvHash(b+':'+d));
+  for(const m of ms){let best=null,bs=-Infinity;
+   for(const q of all){if(q.who[0]!==m)continue;
+    const sc=q.score+(pvHash(q.id+':'+m+':'+d)%1000)/700-1.2*(fam[q.fam]||0)-(prev?.get(m)===q.fam?10:0)-1.5*q.who.slice(1).filter(o=>seen.has(o)||pick.has(o)).length-3*q.who.slice(1).filter(o=>pick.get(o)?.who.includes(m)).length;
+    if(sc>bs){bs=sc;best=q;}}
+   if(best){pick.set(m,best);fam[best.fam]=(fam[best.fam]||0)+1;best.who.forEach(o=>seen.add(o));}}
+  return pick;};
+ let prev=null,pick=new Map();for(let d=1;d<=day;d++){pick=run(d,prev);prev=new Map([...pick].map(([m,q])=>[m,q.fam]));}
+ const pos=m=>{const i=order.findIndex(n=>escapeHtml(n)===m);return i<0?999:i;};
+ return [...pick.entries()].sort((a,b)=>pos(a[0])-pos(b[0])).map(([,q])=>q);
 }
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
@@ -2120,7 +2132,9 @@ function pvQuestions(){
  const b=n=>mgrLink(n,`<b>${escapeHtml(n)}</b>`),l=n=>mgrLink(n,escapeHtml(n)),f=v=>fmt(Math.round(v)||0),e=escapeHtml;
  const and=a=>a.length<2?a[0]:a.slice(0,-1).join(', ')+' und '+a.at(-1);
  const avg=a=>a.reduce((s,x)=>s+x,0)/a.length,pct=(a,c)=>Math.round(a/c*100);
- const out=[],q=(id,fam,cat,tag,text,sub)=>out.push({id,fam,cat,tag,text,sub});
+ // who = verlinkte Manager (erster in der Frage = um wen es geht), aus den Links gelesen. score: 3 = Liga-Spitzenwert, 1 = eigene Statistik.
+ const linked=h=>[...String(h).matchAll(/data-goto-profile="([^"]*)"/g)].map(m=>m[1]);
+ const out=[],q=(id,fam,cat,tag,text,sub,score=3)=>{const t=linked(text),who=[...new Set([...t,...linked(sub)])];if(t.length)out.push({id,fam,cat,tag,text,sub,score,who});};
  const elig=h=>h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));
  const series=new Map();
  for(const h of days)for(const m of elig(h)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push({day:h.day,p:m.dayPoints});}
@@ -2227,19 +2241,23 @@ function pvQuestions(){
   const combo=new Map(),neg=new Map(),tot=new Map(),empt=new Map(),seen=new Map(),usedAll=new Set();
   for(const x of pvExtra.days){if(!x.pts)continue;const h=days.find(y=>y.day===x.d);if(!h)continue;
    for(const u of x.us){const n=String(u.n||'');if(!isEligibleManager(n))continue;const dp=h.list.find(m=>m.name===n)?.dayPoints;if(dp==null)continue;
-    const lp=(u.lp||[]).filter(Boolean).map(String);lp.forEach(id=>usedAll.add(id));const empty=11-lp.length,pl=lp.map(id=>({id,name:x.pts.get(id)?.name||'Spieler '+id,p:x.pts.get(id)?.points??0}));
+    const lp=(u.lp||[]).filter(Boolean).map(String);lp.forEach(id=>usedAll.add(id));const empty=11-lp.length,pl=lp.map(id=>({id,name:x.pts.get(id)?.name||pvExtra.names?.get(id)||null,p:x.pts.get(id)?.points??0}));
     if(pl.reduce((s,y)=>s+y.p,0)-100*empty!==dp)continue;
     seen.set(n,(seen.get(n)||0)+1);empt.set(n,(empt.get(n)||0)+empty);
-    for(const y of pl){const k=n+'|'+y.id,c=combo.get(k)||{n,id:y.id,name:y.name,c:0,s:0};c.c++;c.s+=y.p;combo.set(k,c);tot.set(n,(tot.get(n)||0)+y.p);if(y.p<0)neg.set(n,(neg.get(n)||0)+y.p);}}}
+    for(const y of pl){const k=n+'|'+y.id,c=combo.get(k)||{n,mid:String(u.i),id:y.id,name:y.name,c:0,s:0};c.c++;c.s+=y.p;combo.set(k,c);tot.set(n,(tot.get(n)||0)+y.p);if(y.p<0)neg.set(n,(neg.get(n)||0)+y.p);}}}
   const mds=Math.max(0,...seen.values());
   if(mds>=3){
    const cs=[...combo.values()],full=n=>seen.get(n)>=mds-1;
+   // null = Kader unbekannt (dann keine Frage, die den heutigen Kader voraussetzt).
+   const has=c=>{const q=pvExtra.squads?.get(c.mid);return q?q.has(c.id):null;};
    const dep=[...tot.entries()].filter(([n,t])=>t>0&&full(n)).map(([n,t])=>{const top=cs.filter(c=>c.n===n).sort((x,y)=>y.s-x.s)[0];return top?{n,t,top,share:top.s/t}:null;}).filter(Boolean).sort((x,y)=>y.share-x.share)[0];
-   if(dep)q('abhaengig','abhaengig','spieler','🩼 ABHÄNGIG',`Was ist ${b(dep.n)} ohne ${e(dep.top.name)}?`,`${e(dep.top.name)} holte ${f(dep.top.s)} Punkte für ihn (${dep.top.c}× aufgestellt), das sind ${pct(dep.top.s,dep.t)} % aller Punkte seiner Startelf. Keiner hängt so an einem Spieler.`);
-   const dud=cs.filter(c=>c.c>=4).map(c=>({...c,a:c.s/c.c})).sort((x,y)=>x.a-y.a)[0];
+   if(dep&&dep.top.name&&has(dep.top)!==null)q('abhaengig','abhaengig','spieler','🩼 ABHÄNGIG',`Was ist ${b(dep.n)} ohne ${e(dep.top.name)}?`,`${e(dep.top.name)} holte ${f(dep.top.s)} Punkte für ihn (${dep.top.c}× aufgestellt), das sind ${pct(dep.top.s,dep.t)} % aller Punkte seiner Startelf.${has(dep.top)===false?' Und jetzt ist er weg.':' Keiner hängt so an einem Spieler.'}`);
+   const dud=cs.filter(c=>c.c>=4&&c.name&&has(c)===true).map(c=>({...c,a:c.s/c.c})).sort((x,y)=>x.a-y.a)[0];
    if(dud&&dud.a<60)q('blind','treue','spieler','🙈 BLINDGÄNGER',`Warum stellt ${b(dud.n)} immer noch ${e(dud.name)} auf?`,`${dud.c}× in seiner Startelf, im Schnitt nur ${f(dud.a)} Punkte.`);
-   const star=cs.filter(c=>c.c>=3).sort((x,y)=>y.s-x.s)[0];
-   if(star)q('lebensvers','treue','spieler','💎 LEBENSVERSICHERUNG',`Wie viel legt ${e(star.name)} diesmal für ${b(star.n)} auf?`,`${star.c}× in seiner Startelf, zusammen ${f(star.s)} Punkte (Ø ${f(star.s/star.c)}). Kein Manager hat mit einem Spieler mehr geholt.`);
+   // Nur, wenn der Manager ihn heute noch hat: der beste Spieler eines Managers über alle, nicht nur über die Behaltenen.
+   const star=cs.filter(c=>c.c>=3&&c.name).sort((x,y)=>y.s-x.s)[0];
+   if(star&&has(star)===false)q('lebensvers','treue','spieler','💔 VERLOREN',`Wer ersetzt bei ${b(star.n)} jetzt ${e(star.name)}?`,`${star.c}× in seiner Startelf, zusammen ${f(star.s)} Punkte (Ø ${f(star.s/star.c)}), so viel hat kein Manager mit einem Spieler geholt. Inzwischen steht er nicht mehr in seinem Kader.`);
+   else if(star&&has(star))q('lebensvers','treue','spieler','💎 LEBENSVERSICHERUNG',`Wie viel legt ${e(star.name)} diesmal für ${b(star.n)} auf?`,`${star.c}× in seiner Startelf, zusammen ${f(star.s)} Punkte (Ø ${f(star.s/star.c)}). Kein Manager hat mit einem Spieler mehr geholt.`);
    const ng=[...seen.keys()].filter(full).map(n=>[n,neg.get(n)||0]).sort((x,y)=>x[1]-y[1]);
    if(ng.length&&ng[0][1]<0&&ng[0][1]<(ng[1]?.[1]??0))q('minus','minus','spieler','➖ MINUS-MAGNET',`Sammelt ${b(ng[0][0])} wieder Minuspunkte?`,`${f(ng[0][1])} Punkte von Spielern mit Minus in seiner Startelf (${seen.get(ng[0][0])} Spieltage), Liga-Schnitt ${f(avg(ng.map(x=>x[1])))}. Magic Miyoshi lauert.`);
    const em=[...empt.entries()].sort((x,y)=>y[1]-x[1]);
@@ -2249,13 +2267,47 @@ function pvQuestions(){
    const sn=[...bestP.entries()].sort((x,y)=>y[1].s-x[1].s).find(([id])=>!usedAll.has(id));
    if(sn){const rank=[...bestP.values()].filter(y=>y.s>sn[1].s).length+1;
     q('verschmaeht','verschmaeht','spieler','🙄 VERSCHMÄHT',`Wann stellt endlich jemand ${e(sn[1].name)} auf?`,`${f(sn[1].s)} Punkte in ${pvExtra.days.filter(x=>x.pts).length} Spieltagen, Platz ${rank} der ganzen Bundesliga. In einer Startelf der Liga stand er kein einziges Mal.`);}
+   // Je Manager sein bester Spieler (Kevin 6.11.: für jeden Manager eine Frage; nur mit bekanntem heutigem Kader).
+   for(const n of seen.keys()){if(!full(n))continue;const top=cs.filter(c=>c.n===n&&c.name).sort((x,y)=>y.s-x.s)[0],t=tot.get(n);if(!top||!(t>0))continue;const own=has(top);if(own===null)continue;
+    q('pstar','pstar','spieler',own?'⭐ SEIN BESTER':'💔 VERLOREN',own?`Liefert ${e(top.name)} wieder für ${b(n)}?`:`Wer ersetzt bei ${b(n)} jetzt ${e(top.name)}?`,
+     `${top.c}× in der Startelf, ${f(top.s)} Punkte (Ø ${f(top.s/top.c)}), das sind ${pct(top.s,t)} % aller Punkte seiner Startelf.${own?'':' Inzwischen ist er nicht mehr im Kader.'}`,1.5);}
   }
   const bench=new Map();let bDays=0;
   for(const x of pvExtra.days){const ms=x.bench?.managers||[];if(!ms.length||ms.some(m=>m.open))continue;bDays++;for(const m of ms)if(isEligibleManager(m.name))bench.set(m.name,(bench.get(m.name)||0)+(m.points||0));}
   const bn=[...bench.entries()].sort((x,y)=>y[1]-x[1]);
   if(bDays>=2&&bn[0]?.[1]>=50&&bn[0][1]>(bn[1]?.[1]||0))q('bank','bank','spieler','🪑 BANKDRÜCKER',`Lässt ${b(bn[0][0])} wieder die Punkte auf der Bank liegen?`,`${f(bn[0][1])} Punkte auf der Bank in ${bDays} Spieltagen, Liga-Schnitt ${f(avg(bn.map(x=>x[1])))}.`);
  }
- return {list:pvPick(out,last.day+1),pool:out.length};
+ // ---------- Je Manager eine eigene Statistik (Kevin 6.11.: jeder Manager soll eine Frage bekommen) ----------
+ const avgRank=new Map([...series.keys()].map(n=>[n,1+[...series.keys()].filter(o=>avg(P(o))>avg(P(n))).length]));
+ const formRank=new Map(form.map(x=>[x.n,1+form.filter(y=>y.d>x.d).length]));
+ const bumsRank=new Map(bums.map(x=>[x.n,1+bums.filter(y=>y.c>x.c).length]));
+ for(const n of series.keys()){
+  const s=series.get(n),p=P(n),pl=tabPlace.get(last.day).get(n),i=table.findIndex(m=>m.name===n);
+  // Nachbar in der Tabelle
+  if(i>0){const up=table[i-1],gp=up.score-table[i].score,mine=avg(p.slice(-3)),his=avg(P(up.name).slice(-3));
+   q('nachbar','nachbar','tab','🎯 NÄCHSTES ZIEL',`Schnappt sich ${b(n)} Platz ${i} von ${l(up.name)}?`,`${gp===0?'Punktgleich':`${f(gp)} Punkt${gp===1?'':'e'} Rückstand`}. Form der letzten 3 Spieltage: Ø ${f(mine)} gegen Ø ${f(his)}${mine>his?', es läuft für ihn':', da muss mehr kommen'}.`,1);}
+  else if(i===0&&table[1]){const gp=table[0].score-table[1].score;
+   q('nachbar','nachbar','tab','🎯 GEJAGT',`Wer stoppt ${b(n)} an der Spitze?`,`${f(gp)} Punkt${gp===1?'':'e'} Vorsprung, Ø ${f(avg(p.slice(-3)))} in den letzten 3 Spieltagen.`,1);}
+  // Form
+  const fm=form.find(x=>x.n===n);
+  if(fm)q('pform','pform','form',fm.d>=0?'📈 AUFWIND':'📉 GEGENWIND',fm.d>=0?`Bleibt ${b(n)} im Aufwind?`:`Findet ${b(n)} zurück zur alten Form?`,`Ø letzte 3 Spieltage ${f(fm.last)}, Saisonschnitt ${f(fm.all)} (${fm.d>=0?'+':''}${f(fm.d)}). Platz ${formRank.get(n)} von ${form.length} im Formvergleich.`,Math.abs(fm.d)>150?2:1);
+  // Bestwert und Schnitt
+  if(p.length){const bx=s.reduce((a,x)=>x.p>a.p?x:a),lo=Math.min(...p);
+   q('pbest','pbest','tag','📊 BESTWERT',`Knackt ${b(n)} seinen Bestwert von ${f(bx.p)}?`,`Geschafft an Spieltag ${bx.day}. Im Schnitt ${f(avg(p))} (Platz ${avgRank.get(n)} der Liga), schwächster Tag ${f(lo)}.`,1);}
+  // Spieltagssiege und -plätze
+  const pls=days.map(h=>({day:h.day,pl:dayPlace.get(h.day).get(n)})).filter(x=>x.pl),w=pls.filter(x=>x.pl===1);
+  if(pls.length){const ap=fmt(Math.round(avg(pls.map(x=>x.pl))*10)/10),bp=pls.reduce((a,x)=>x.pl<a.pl?x:a);
+   q('psieg','psieg','tag',w.length?'🏆 SIEGE':'⏳ WARTEN',w.length?`Holt ${b(n)} Spieltagssieg Nummer ${w.length+1}?`:`Wann gewinnt ${b(n)} seinen ersten Spieltag?`,
+    w.length?`${w.length}× Spieltagssieger, zuletzt an Spieltag ${w.at(-1).day}. Im Schnitt Platz ${ap} am Spieltag.`:`Bestes Ergebnis bisher: Platz ${bp.pl} an Spieltag ${bp.day}. Im Schnitt Platz ${ap} am Spieltag.`,1);}
+  // Tabellenplatz-Verlauf
+  const tp=days.map(h=>tabPlace.get(h.day).get(n)).filter(Boolean);
+  if(tp.length>=3)q('pplatz','pplatz','tab','🧭 KURS',`Wohin geht die Reise für ${b(n)}?`,`Tabellenplatz der letzten Spieltage: ${tp.slice(-5).join(' → ')}. Diese Saison schon zwischen Platz ${Math.min(...tp)} und ${Math.max(...tp)}.`,1);
+  // Bumsungen
+  const bc=bums.find(x=>x.n===n);
+  if(bc&&bc.c>0){const foe=bumsFoe(n);
+   q('pbums','pbums','bums','🍆 BUMS-AKTE',`Wer bumst ${b(n)} diesmal?`,`${bc.c} Bumsung${bc.c===1?'':'en'} in der Halbserie, Platz ${bumsRank.get(n)} der BumsTabelle${foe?.n>=2?`. Am häufigsten von ${and(foe.who.map(l))} (${foe.n}×)`:''}.`,1);}
+ }
+ return {list:pvAssign(out,last.day+1,table.map(m=>m.name)),pool:out.length};
 }
 // Fragen-Kachel als Bild (Kevin-Wunsch 1.11.): zum Einfuegen in Discord. Gezeichnet auf einer Leinwand aus dem Text der Kachel
 // (Namen gold), ohne Profilbilder, damit die Leinwand nie gesperrt ist. PC: Zwischenablage; Handy: Teilen-Menue; sonst Download.
@@ -2268,7 +2320,7 @@ function pvTileCanvas(tile){
    const cur=lines.at(-1).reduce((s,q)=>s+q.w,0);if(cur+ww>max&&lines.at(-1).length){while(lines.at(-1).length&&lines.at(-1).at(-1).t===' ')lines.at(-1).pop();lines.push([]);}
    lines.at(-1).push({t:word,b:r.b,w:ww});w=0;}
   return lines.filter(l=>l.length);};
- const tag=tile.querySelector('small')?.textContent||'',q=wrap(runs(tile.querySelector('p')),54,700,W-2*P-40),sub=wrap(runs(tile.querySelector('span')),34,400,W-2*P-40);
+ const tag=tile.querySelector(':scope>small')?.textContent||'',q=wrap(runs(tile.querySelector(':scope>p')),54,700,W-2*P-40),sub=wrap(runs(tile.querySelector(':scope>span')),34,400,W-2*P-40);
  const day=(historyData.filter(h=>h.status==='finished').map(h=>h.day).reduce((a,b)=>Math.max(a,b),0)||0)+1;
  const H=P+60+q.length*68+24+sub.length*46+80+P;c.width=W;c.height=H;
  x.fillStyle='#081118';x.fillRect(0,0,W,H);
@@ -2299,7 +2351,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-pv-copy]')
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
  const {list:qs,pool}=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
- el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><p class="muted tiny">Die BumsKI mischt jeden Spieltag neu: ${qs.length} von ${pool} möglichen Fragen.</p><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><p class="muted tiny">Für jeden Manager eine Frage, in der Reihenfolge der Tabelle. Die BumsKI mischt jeden Spieltag neu (${pool} mögliche Fragen).</p><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
  openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
