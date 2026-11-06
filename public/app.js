@@ -2115,7 +2115,7 @@ const pvHash=s=>{let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charC
 // und was ein Manager am Vorspieltag hatte, kommt nicht gleich wieder. Angezeigt in der Reihenfolge der Tabelle.
 function pvAssign(all,day,order){
  const run=(d,prev)=>{const fam={},seen=new Set(),pick=new Map();
-  const ms=[...new Set(all.map(q=>q.who[0]))].sort((a,b)=>pvHash(a+':'+d)-pvHash(b+':'+d));
+  const ms=[...new Set(all.filter(q=>q.who.length).map(q=>q.who[0]))].sort((a,b)=>pvHash(a+':'+d)-pvHash(b+':'+d));
   for(const m of ms){let best=null,bs=-Infinity;
    for(const q of all){if(q.who[0]!==m)continue;
     const sc=q.score+(pvHash(q.id+':'+m+':'+d)%1000)/700-1.2*(fam[q.fam]||0)-(prev?.get(m)===q.fam?10:0)-1.5*q.who.slice(1).filter(o=>seen.has(o)||pick.has(o)).length-3*q.who.slice(1).filter(o=>pick.get(o)?.who.includes(m)).length;
@@ -2124,7 +2124,13 @@ function pvAssign(all,day,order){
   return pick;};
  let prev=null,pick=new Map();for(let d=1;d<=day;d++){pick=run(d,prev);prev=new Map([...pick].map(([m,q])=>[m,q.fam]));}
  const pos=m=>{const i=order.findIndex(n=>escapeHtml(n)===m);return i<0?999:i;};
- return [...pick.entries()].sort((a,b)=>pos(a[0])-pos(b[0])).map(([,q])=>q);
+ // Weitere Fakten zum selben Manager (Kevin 6.11.: mehrere, wenn es interessant ist): höchstens 2, nur starke Werte
+ // (Liga-Spitze oder deutliche Form), nur über ihn allein, andere Familie als die Hauptfrage.
+ // Fragen ohne Manager (Kevin 6.11.: bleiben trotzdem) stehen am Ende.
+ const liga=all.filter(q=>!q.who.length).sort((a,b)=>pvHash(a.id+':'+day)-pvHash(b.id+':'+day)).slice(0,3);
+ return [...pick.entries()].sort((a,b)=>pos(a[0])-pos(b[0])).map(([m,q])=>{const fam=new Set([q.fam]),more=[];
+  for(const x of all.filter(x=>x.who[0]===m&&x!==q&&x.who.length===1&&x.score>=1.5).sort((a,b)=>b.score-a.score||pvHash(a.id+day)-pvHash(b.id+day))){if(more.length>=2)break;if(fam.has(x.fam))continue;fam.add(x.fam);more.push(x);}
+  return {...q,more};}).concat(liga);
 }
 function pvQuestions(){
  const days=historyData.filter(h=>h.status==='finished').slice().sort((a,b)=>a.day-b.day);
@@ -2132,9 +2138,9 @@ function pvQuestions(){
  const b=n=>mgrLink(n,`<b>${escapeHtml(n)}</b>`),l=n=>mgrLink(n,escapeHtml(n)),f=v=>fmt(Math.round(v)||0),e=escapeHtml;
  const and=a=>a.length<2?a[0]:a.slice(0,-1).join(', ')+' und '+a.at(-1);
  const avg=a=>a.reduce((s,x)=>s+x,0)/a.length,pct=(a,c)=>Math.round(a/c*100);
- // who = verlinkte Manager (erster in der Frage = um wen es geht), aus den Links gelesen. score: 3 = Liga-Spitzenwert, 1 = eigene Statistik.
+ // who = verlinkte Manager (erster in der Frage = um wen es geht), aus den Links gelesen; leer = Liga-Frage ohne Manager (z. B. Verschmäht). score: 3 = Liga-Spitzenwert, 1 = eigene Statistik.
  const linked=h=>[...String(h).matchAll(/data-goto-profile="([^"]*)"/g)].map(m=>m[1]);
- const out=[],q=(id,fam,cat,tag,text,sub,score=3)=>{const t=linked(text),who=[...new Set([...t,...linked(sub)])];if(t.length)out.push({id,fam,cat,tag,text,sub,score,who});};
+ const out=[],q=(id,fam,cat,tag,text,sub,score=3)=>{const t=linked(text),who=[...new Set([...t,...linked(sub)])];out.push({id,fam,cat,tag,text,sub,score,who:t.length?who:[]});};
  const elig=h=>h.list.filter(m=>m.dayPoints!==null&&isEligibleManager(m.name));
  const series=new Map();
  for(const h of days)for(const m of elig(h)){if(!series.has(m.name))series.set(m.name,[]);series.get(m.name).push({day:h.day,p:m.dayPoints});}
@@ -2321,8 +2327,9 @@ function pvTileCanvas(tile){
    lines.at(-1).push({t:word,b:r.b,w:ww});w=0;}
   return lines.filter(l=>l.length);};
  const tag=tile.querySelector(':scope>small')?.textContent||'',q=wrap(runs(tile.querySelector(':scope>p')),54,700,W-2*P-40),sub=wrap(runs(tile.querySelector(':scope>span')),34,400,W-2*P-40);
+ const more=[...tile.querySelectorAll(':scope>.pv-more>li')].map(li=>({tag:li.querySelector(':scope>small')?.textContent||'',q:wrap(runs(li.querySelector('.pv-fq')),40,600,W-2*P-40),s:wrap(runs(li.querySelector('.pv-fs')),30,400,W-2*P-40)}));
  const day=(historyData.filter(h=>h.status==='finished').map(h=>h.day).reduce((a,b)=>Math.max(a,b),0)||0)+1;
- const H=P+60+q.length*68+24+sub.length*46+80+P;c.width=W;c.height=H;
+ const H=P+60+q.length*68+24+sub.length*46+more.reduce((h,m)=>h+40+36+m.q.length*52+10+m.s.length*40,0)+80+P;c.width=W;c.height=H;
  x.fillStyle='#081118';x.fillRect(0,0,W,H);
  const r=22,bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,r):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
  x.save();x.clip();x.fillStyle='#b48633';x.fillRect(bx,by,10,bh);x.restore();
@@ -2332,6 +2339,8 @@ function pvTileCanvas(tile){
  y+=16;
  const draw=(lines,size,weight,col,colB,lh)=>{for(const l of lines){y+=lh;let px=L;for(const w of l){x.font=`${w.b?800:weight} ${size}px ${sans}`;x.fillStyle=w.b?colB:col;x.fillText(w.t,px,y);px+=w.w;}}};
  draw(q,54,700,'#e9f0f4','#ebc768',68);y+=24;draw(sub,34,400,'#9db0bd','#cfd9e0',46);
+ for(const m of more){y+=40;x.strokeStyle='#2e3f4a';x.lineWidth=2;x.beginPath();x.moveTo(L,y-20);x.lineTo(W-P-20,y-20);x.stroke();
+  y+=16;x.font=`600 24px ${sans}`;x.fillStyle='#9db0bd';x.fillText(m.tag,L,y);y+=4;draw(m.q,40,600,'#e9f0f4','#ebc768',52);y+=10;draw(m.s,30,400,'#9db0bd','#cfd9e0',40);}
  x.font=`26px ${sans}`;x.fillStyle='#728592';x.fillText(`Die großen Fragen vor Spieltag ${day} · BumsKI 🤡`,L,H-P-6);
  return {c,day};
 }
@@ -2351,7 +2360,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-pv-copy]')
 function renderPreview(){
  const el=$('#previewContent');if(!el)return;
  const {list:qs,pool}=pvQuestions(),openRows=[...el.querySelectorAll('.pvl-row[open]')].map(d=>d.dataset.pvl);
- el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><p class="muted tiny">Für jeden Manager eine Frage, in der Reihenfolge der Tabelle. Die BumsKI mischt jeden Spieltag neu (${pool} mögliche Fragen).</p><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span></div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
+ el.innerHTML=pvCountdownHtml()+(qs.length?`<h4 class="pv-head">Die großen Fragen vor dem Spieltag</h4><p class="muted tiny">Für jeden Manager eine Kachel, in der Reihenfolge der Tabelle. Die BumsKI mischt jeden Spieltag neu (${pool} mögliche Fragen).</p><div class="pv-tiles">${qs.map(x=>`<div class="pv-tile"><button type="button" class="pv-copy" data-pv-copy title="Als Bild kopieren (für Discord)" aria-label="Kachel als Bild kopieren">📋</button><small>${x.tag}</small><p>${x.text}</p><span>${x.sub}</span>${x.more?.length?`<ul class="pv-more">${x.more.map(y=>`<li><small>${y.tag}</small><div class="pv-fq">${y.text}</div><div class="pv-fs">${y.sub}</div></li>`).join('')}</ul>`:''}</div>`).join('')}</div>`:'<p class="muted">Fragen gibt es, sobald der erste Spieltag abgeschlossen ist.</p>');
  openRows.forEach(id=>{const d=el.querySelector(`.pvl-row[data-pvl="${CSS.escape(id)}"]`);if(d)d.open=true;});
  pvTick();
 }
