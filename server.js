@@ -3522,7 +3522,10 @@ app.get('/api/transfers', async (req, res) => {
         .filter(m => current || m.error || m.buys || m.sells).sort((a, b) => (b.realized ?? -Infinity) - (a.realized ?? -Infinity));
       return { key: pd.key, current, from: new Date(pd.from).toISOString(), to: pd.to == null ? null : new Date(pd.to).toISOString(), managers };
     }).filter(se => se.current || se.managers.length);
-    const value = { updatedAt: new Date().toISOString(), seasons };
+    // Anstoßzeiten je Spieltag (OpenLigaDB) für „Gewinne und Verluste des Spieltags“ (Kevin-Wunsch 10.11.): ein Verkauf zählt
+    // zu Spieltag N, wenn er zwischen dem ersten Anstoß von N und dem ersten Anstoß von N+1 liegt (BumsParade-Verkäufe inklusive).
+    const kickoffs = await loadMatchdays().then(md => md.days.filter(d => d.firstKickoffUTC).map(d => ({ day: d.day, at: d.firstKickoffUTC }))).catch(() => null);
+    const value = { updatedAt: new Date().toISOString(), seasons, kickoffs };
     transferCache = { at: Date.now(), value, raw };
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Transfers konnten nicht geladen werden.', detail: err.message }); }
