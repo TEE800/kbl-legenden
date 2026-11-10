@@ -1142,7 +1142,7 @@ app.get('/api/bench-points/:day', async (req, res) => {
       return res.set('Cache-Control', 'no-store').json(value);
     }
     const all = await loadAllPlayers(token).catch(() => null), pts = {};
-    const benchOf = u => { const s = snaps[`${day}:${u.i}`], xi = new Set((s.playerIds || []).map(String)); return s.squadIds.map(String).filter(id => !xi.has(id)); };
+    const benchOf = u => { const s = snaps[`${day}:${u.i}`]; if (!s) return []; const xi = new Set((s.playerIds || []).map(String)); return s.squadIds.map(String).filter(id => !xi.has(id)); };
     const ids = [...new Set(users.flatMap(benchOf))];
     for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
       try { pts[id] = await dayPlayerPoints(token, id, day, st === 'finished'); } catch { pts[id] = { points: null, state: 'error' }; }
