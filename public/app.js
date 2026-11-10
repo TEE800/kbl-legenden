@@ -1217,7 +1217,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  if(window.KBL_STATIC){btn.closest('details')?.remove();const h=day.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
  // Eigener Reiter „Punkteübersicht“; vorbelegt mit dem letzten beendeten Spieltag.
  day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
- let etiData=null,etiSort='count',etiFilter='';
+ let etiData=null,etiSort='high',etiFilter='';
  // Auf-/Zugeklappt bleibt beim Neuzeichnen (Suchen, Sortieren, anderer Spieltag) erhalten.
  const ptsOpen={stats:false,all:false};
  let dayTouched=false;day.addEventListener('change',()=>{dayTouched=true;});
@@ -1266,11 +1266,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   };
   const rows=STAT_CATS.map(row).join('');
   if(!rows){return etiData.some(t=>t.topPlayers)?'':'<p class="muted tiny">Für die Spieltags-Statistik diesen Spieltag bitte einmal neu sammeln.</p>';}
-  const lab=new Map(etiData.filter(t=>t.eti>=4000&&t.topPlayers).map(t=>[norm(t.kickbaseTitle),t.label]));
-  const extra=extraCats([...lab.keys()],t=>lab.get(t)).map(c=>[c[0],c[1],row(c)]).filter(c=>c[2]);
-  const head='<div class="eti-head"><span>KATEGORIE</span><span>SPITZENREITER</span><span>ANZAHL</span></div>';
-  const more=extra.length?`<details class="acc-group" style="margin-top:12px"><summary>Alle weiteren Ereignisse <span class="pts-sub">${extra.length} Kategorien</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de">${head}${extra.map(c=>c[2]).join('')}</div></div></details>`:'';
-  return `<details class="acc-group" data-pts-open="stats"${ptsOpen.stats?' open':''}><summary>Spieltags-Statistik <span class="pts-sub">${STAT_CATS.length+extra.length} Kategorien, antippen für Top 5</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de">${head}${rows}</div>${more}</div></details>`;
+  return `<details class="acc-group" data-pts-open="stats"${ptsOpen.stats?' open':''}><summary>Spieltags-Statistik <span class="pts-sub">${STAT_CATS.length} Kategorien, antippen für Top 5</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de"><div class="eti-head"><span>KATEGORIE</span><span>SPITZENREITER</span><span>ANZAHL</span></div>${rows}</div></div></details>`;
  }
  function renderEti(){
   if(!etiData){root.innerHTML='';return;}
@@ -1286,7 +1282,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    const ex=t.examples.map(e=>`${safe(e.name)} (${safe(e.team)}${e.minute!=null?', '+safe(e.minute)+'.':''})`).join(' · ');
    return `<details><summary><span class="eti-name${known?'':' unk'}">${known?safe(t.label):'Noch unbekannt'}</span><span class="eti-count">${safe(t.occurrences)}×</span><span class="eti-pts ${mp>0?'pos':mp<0?'neg':''}">${safe(sign(mp))}</span></summary><div class="eti-body"><div><b>Nummer</b> ${safe(t.eti)}${t.kickbaseTitle?` · <b>Kickbase</b> ${safe(t.kickbaseTitle)}`:''}${t.ke&&t.ke.length?' · ke '+safe(t.ke.join(',')):''}</div><div><b>Punkte</b> ${pts||'–'}</div>${t.topPlayers?.length?`<div><b>Am häufigsten</b> ${t.topPlayers.slice(0,5).map(x=>`${safe(x.name)} (${safe(x.team)}) ${x.count}×`).join(' · ')}</div>`:(ex?`<div><b>Beispiele</b> ${ex}</div>`:'')}</div></details>`;
   }).join('');
-  const tools=`<div class="eti-tools"><label>Sortieren <select id="etiSort"><option value="count">Am häufigsten</option><option value="high">Meiste Punkte</option><option value="low">Meiste Minuspunkte</option><option value="eti">Nach Nummer</option></select></label><label>Suchen <input id="etiFilter" type="search" placeholder="z. B. Elfmeter oder Spieler"></label><span class="muted tiny">${list.length} von ${etiData.length}</span></div>`;
+  const tools=`<div class="eti-tools"><label>Sortieren <select id="etiSort"><option value="high">Meiste Punkte</option><option value="count">Am häufigsten</option><option value="low">Meiste Minuspunkte</option><option value="eti">Nach Nummer</option></select></label><label>Suchen <input id="etiFilter" type="search" placeholder="z. B. Elfmeter oder Spieler"></label><span class="muted tiny">${list.length} von ${etiData.length}</span></div>`;
   root.innerHTML=statsHtml()+`<details class="acc-group" data-pts-open="all"${ptsOpen.all?' open':''}><summary>Alle Einzelereignisse <span class="pts-sub">${etiData.length} Arten, sortier- und durchsuchbar</span></summary><div class="acc-sub">${tools}${rows?`<div class="eti-list"><div class="eti-head"><span>EREIGNIS (antippen für Details)</span><span>ANZAHL</span><span>PUNKTE</span></div>${rows}</div>`:'<p class="muted">Nichts gefunden.</p>'}</div></details>`;
   root.querySelectorAll('[data-pts-open]').forEach(d=>d.addEventListener('toggle',()=>{ptsOpen[d.dataset.ptsOpen]=d.open;}));
   const sel=root.querySelector('#etiSort'),inp=root.querySelector('#etiFilter');
