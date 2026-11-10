@@ -1247,9 +1247,13 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   ['Meiste Paraden (Torwart)',['Shot saved (GK)']]];
  // Ältere Stände zählten Gegenbuchungen (z. B. Gelb −10, später +10) mit. Bei festem Betrag ergibt sich die Anzahl aus den Punkten.
  const fixCount=(t,x)=>{if(t.signCount)return x.count;const m=new Set((t.points||[]).map(p=>Math.abs(p.points)));if(m.size!==1||m.has(0)||m.has(null))return x.count;const v=(t.points||[]).filter(p=>p.points).sort((a,b)=>b.count-a.count)[0].points;return Math.max(0,Math.round(x.points/v));};
+ const STAT_TITLES=new Set(STAT_CATS.flatMap(c=>c[1]));
+ const normTitle=x=>String(x||'').replace(/\s+/g,' ').trim();
+ // Alle übrigen Kickbase-Ereignisse als eigene Kategorie (Kevin-Wunsch 10.11.), deutscher Name, alphabetisch.
+ const extraCats=(titles,labelOf)=>[...new Set(titles.map(normTitle))].filter(t=>t&&!STAT_TITLES.has(t)).map(t=>[labelOf(t)||t,[t]]).sort((a,b)=>a[0].localeCompare(b[0],'de'));
  function statsHtml(){
-  const norm=x=>String(x||'').replace(/\s+/g,' ').trim();
-  const rows=STAT_CATS.map(([name,titles])=>{
+  const norm=normTitle;
+  const row=([name,titles])=>{
    const per=new Map();
    for(const t of etiData)if(titles.includes(norm(t.kickbaseTitle)))for(const x of (t.topPlayers||[])){const r=per.get(x.playerId)||{...x,count:0,points:0};r.count+=fixCount(t,x);r.points+=x.points;per.set(x.playerId,r);}
    const top=[...per.values()].sort((a,b)=>b.count-a.count||b.points-a.points);
@@ -1259,9 +1263,14 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    const lead=best.slice(0,2).map(x=>`${safe(x.name)} <span class="muted">(${safe(x.team)})</span>`).join(', ')+(best.length>2?` <span class="muted">+ ${best.length-2} weitere</span>`:'');
    const more=top.slice(0,5).map((x,n)=>`${n+1}. ${safe(x.name)} (${safe(x.team)}) ${x.count}× · ${safe(sign(x.points))} Pkt.`).join('<br>');
    return `<details><summary><span class="eti-name">${safe(name)}</span><span class="eti-count" style="text-align:left;white-space:normal">${lead}</span><span class="eti-pts">${top[0].count}×</span></summary><div class="eti-body"><div>${more}</div></div></details>`;
-  }).join('');
+  };
+  const rows=STAT_CATS.map(row).join('');
   if(!rows){return etiData.some(t=>t.topPlayers)?'':'<p class="muted tiny">Für die Spieltags-Statistik diesen Spieltag bitte einmal neu sammeln.</p>';}
-  return `<details class="acc-group" data-pts-open="stats"${ptsOpen.stats?' open':''}><summary>Spieltags-Statistik <span class="pts-sub">${STAT_CATS.length} Kategorien, antippen für Top 5</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de"><div class="eti-head"><span>KATEGORIE</span><span>SPITZENREITER</span><span>ANZAHL</span></div>${rows}</div></div></details>`;
+  const lab=new Map(etiData.filter(t=>t.eti>=4000&&t.topPlayers).map(t=>[norm(t.kickbaseTitle),t.label]));
+  const extra=extraCats([...lab.keys()],t=>lab.get(t)).map(c=>[c[0],c[1],row(c)]).filter(c=>c[2]);
+  const head='<div class="eti-head"><span>KATEGORIE</span><span>SPITZENREITER</span><span>ANZAHL</span></div>';
+  const more=extra.length?`<details class="acc-group" style="margin-top:12px"><summary>Alle weiteren Ereignisse <span class="pts-sub">${extra.length} Kategorien</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de">${head}${extra.map(c=>c[2]).join('')}</div></div></details>`:'';
+  return `<details class="acc-group" data-pts-open="stats"${ptsOpen.stats?' open':''}><summary>Spieltags-Statistik <span class="pts-sub">${STAT_CATS.length+extra.length} Kategorien, antippen für Top 5</span></summary><div class="acc-sub"><div class="eti-list eti-stats" lang="de">${head}${rows}</div>${more}</div></details>`;
  }
  function renderEti(){
   if(!etiData){root.innerHTML='';return;}
@@ -1288,10 +1297,15 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  // Saison-Bestenliste: gleiche Kategorien wie die Spieltags-Statistik, über alle gespeicherten Spieltage summiert.
  // Rangliste als Balken, Verlauf als Linien wie in der Punkteentwicklung.
  const sCat=document.querySelector('#seasonCat'),sMode=document.querySelector('#seasonMode'),sRoot=document.querySelector('#seasonChart');
- let seasonData=null;
- if(sCat)sCat.innerHTML=STAT_CATS.map(([name],i)=>`<option value="${i}">${safe(name)}</option>`).join('');
+ let seasonData=null,seasonCats=STAT_CATS;
+ const seasonOpts=()=>{if(!sCat)return;const keep=sCat.value?seasonCats[Number(sCat.value)]?.[0]:null;
+  const extra=seasonData?extraCats(Object.keys(seasonData.titles||{}),t=>seasonData.labels?.[t]):[];seasonCats=[...STAT_CATS,...extra];
+  const opt=(c,i)=>`<option value="${i}">${safe(c[0])}</option>`;
+  sCat.innerHTML=STAT_CATS.map(opt).join('')+(extra.length?`<optgroup label="Alle weiteren Ereignisse">${extra.map((c,i)=>opt(c,STAT_CATS.length+i)).join('')}</optgroup>`:'');
+  const k=keep?seasonCats.findIndex(c=>c[0]===keep):-1;sCat.value=String(k<0?0:k);};
+ seasonOpts();
  function seasonRows(){
-  const [,titles]=STAT_CATS[Number(sCat.value)||0],per=new Map();
+  const [,titles]=seasonCats[Number(sCat.value)||0],per=new Map();
   for(const t of titles)for(const [id,c,p,d] of (seasonData.titles[t]||[])){
    const r=per.get(id)||{id,name:seasonData.players[id]?.[0]||'Unbekannt',team:seasonData.players[id]?.[1]||'',count:0,points:0,days:new Array(seasonData.days.length).fill(0)};
    r.count+=c;r.points+=p;d.forEach((v,k)=>r.days[k]+=v);per.set(id,r);
@@ -1303,7 +1317,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   if(!seasonData){return;}
   const days=seasonData.days;
   if(!days.length){sRoot.innerHTML='<p class="muted">Noch keine Spieltage gespeichert. Oben einen Spieltag wählen und „Einzelereignisse sammeln“.</p>';return;}
-  const rows=seasonRows(),mode=sMode.value,catName=STAT_CATS[Number(sCat.value)||0][0];
+  const rows=seasonRows(),mode=sMode.value,catName=seasonCats[Number(sCat.value)||0][0];
   const partial=days.filter(d=>!d.full).map(d=>d.day);
   const have=new Set(days.map(d=>d.day)),lastDay=Math.max(...days.map(d=>d.day));
   const missing=Array.from({length:lastDay},(_,i)=>i+1).filter(n=>!have.has(n));
@@ -1361,7 +1375,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  }
  async function loadSeason(){
   if(!sRoot)return;
-  try{seasonData=await api('/api/points-season');renderSeason();}
+  try{seasonData=await api('/api/points-season');seasonOpts();renderSeason();}
   catch(e){sRoot.innerHTML=`<p class="muted">Saison-Bestenliste nicht verfügbar: ${safe(e.message)}</p>`;}
  }
  sCat?.addEventListener('change',renderSeason);sMode?.addEventListener('change',renderSeason);

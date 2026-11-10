@@ -1310,7 +1310,8 @@ app.get('/api/points-season', (req, res) => {
   for (const [title, map] of Object.entries(titles)) out[title] = [...map.entries()].map(([id, r]) => [id, r.c, r.p, r.d]);
   res.set('Cache-Control', 'no-store').json({
     days: days.map(d => ({ day: d.day, savedAt: d.savedAt, full: (d.types || []).some(t => t.allPlayers) })),
-    players, titles: out
+    players, titles: out,
+    labels: Object.fromEntries(Object.keys(out).map(t => [t, germanEventTitle(t)]).filter(x => x[1]))
   });
 });
 app.get('/api/playercenter-scan/:day', async (req, res) => {
