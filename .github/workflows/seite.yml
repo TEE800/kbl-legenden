@@ -1,7 +1,11 @@
 name: Seite aktualisieren
 on:
   schedule:
-    - cron: '*/5 * * * *'    # alle 5 Minuten, aber nur waehrend Bundesliga-Spielen (siehe tools/spieltag-aktiv.mjs)
+    # Kevin-Vorgabe 7.11. (nach der GitHub-Sperre am 6.11.): keine Livepunkte mehr waehrend der Spiele,
+    # nur noch kurze Laeufe nach Spielende (Winterzeit, UTC): Fr 22:40, Sa 17:40 und 20:40, So 17:40, 19:40 und 21:40 Uhr.
+    - cron: '40 21 * * 5'
+    - cron: '40 16,19 * * 6'
+    - cron: '40 16,18,20 * * 0'
     - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
     inputs:
@@ -10,7 +14,7 @@ on:
         required: false
         default: ''
       live:
-        description: 'Nur Live-Lauf (stoesst der Lauf waehrend der Spiele alle 5 Min. selbst an)'
+        description: 'Nur kurzer Lauf (laufender bzw. gerade beendeter Spieltag statt alles)'
         required: false
         default: 'false'
   push:                      # nach Programm-Aenderungen gleich neu bauen, voll (sonst bleiben beendete Spieltage bis 6:07 auf altem Stand)
@@ -37,7 +41,7 @@ jobs:
         name: Laeuft gerade ein Spieltag?
         run: |
           echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event.schedule }}" = "*/5 * * * *" ] || [ "${{ github.event.inputs.live }}" = "true" ]; then node tools/spieltag-aktiv.mjs; else echo "aktiv=true" >> "$GITHUB_OUTPUT"; fi
+          echo "aktiv=true" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         if: steps.gate.outputs.aktiv == 'true'
         with:
@@ -59,7 +63,7 @@ jobs:
         name: Live oder voll?
         if: steps.gate.outputs.aktiv == 'true'
         run: |
-          m=${{ (github.event.schedule == '*/5 * * * *' || github.event.inputs.live == 'true') && 'live' || 'full' }}
+          m=${{ ((github.event_name == 'schedule' && github.event.schedule != '7 4 * * *') || github.event.inputs.live == 'true') && 'live' || 'full' }}
           code=$(git ls-files -s public server.js challenges.js event-types-de.js tools | sha1sum | cut -c1-40)
           alt=$(node -e "try{console.log(require('./kbl-voll-code.json').code)}catch{console.log('')}")
           if [ "$m" = "live" ] && [ "$alt" != "$code" ]; then m=full; echo "Programm seit dem letzten Voll-Lauf geaendert: dieser Lauf ist voll"; fi
@@ -101,14 +105,3 @@ jobs:
           # Bei gleichzeitigen Aenderungen gewinnen die eben erzeugten Daten.
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done
           exit 1
-      # GitHub startet den 5-Minuten-Zeitplan nur etwa alle 45 bis 60 Minuten (ST 8: Livepunkte online fast eine Stunde alt).
-      # Waehrend der Spiele (und solange Online-Daten offen sind) stoesst sich der Lauf darum selbst wieder an, 5 Min. nach seinem Start.
-      # Laufen zwei Ketten gleichzeitig, bleibt durch concurrency nur ein wartender Lauf uebrig, sie fallen wieder zu einer zusammen.
-      - name: Naechsten Live-Lauf in 5 Minuten anstossen
-        if: ${{ !cancelled() && steps.gate.outputs.weiter == 'true' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          rest=$(( 300 - $(date +%s) + ${{ steps.gate.outputs.start }} - 20 ))
-          [ "$rest" -gt 0 ] && sleep "$rest"
-          gh workflow run seite.yml --repo "${{ github.repository }}" --ref main -f live=true
