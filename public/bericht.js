@@ -47,7 +47,7 @@
   if(b.editedAt){const f=fremdeZahlen(b.text,b.day);if(f)rows.push(f.length?`<li class="bad">⚠️ In deiner Änderung stehen Zahlen, die nicht in den App-Daten vorkommen: ${f.map(x=>`<b>${esc(x)}</b>`).join(', ')}</li>`:'<li>✓ Auch nach deiner Änderung stammen alle Zahlen aus den App-Daten.</li>');}
   return `<div class="ber-pruef"><b>🔍 Prüfung</b><ul>${rows.join('')}</ul></div>`;
  }
- let pub=[],drafts=[],sel=null,editing=false,msg='',pruef={},zahlen={};
+ let pub=[],drafts=[],sel=null,editing=false,loadErr='',msg='',pruef={},zahlen={};
  async function loadPublic(){
   let list=[];
   try{const r=await fetch('/api/berichte',{cache:'no-store'});if(r.ok){const d=await r.json();list=d.berichte||[];pruef=d.pruefungen||{};zahlen=d.zahlen||{};}}catch{}
@@ -57,7 +57,7 @@
  }
  async function load(){
   pub=await loadPublic();
-  drafts=[];if(isAdmin())try{drafts=(await req('/bericht/admin',{})).berichte||[];}catch(e){msg=e.message;}
+  drafts=[];loadErr='';if(isAdmin())try{drafts=(await req('/bericht/admin',{})).berichte||[];}catch(e){loadErr=msg=e.message;}
   const newestDraft=drafts.find(b=>b.status!=='frei'&&!pub.some(p=>p.day>=b.day));
   if(!editing)sel=newestDraft||pub[0]||null;
   render();
@@ -80,6 +80,7 @@
   }
   const pr=admin&&draft?pruefHtml(sel):'';
   box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
+  if(loadErr)box.insertAdjacentHTML('afterbegin',`<p class="error" role="status">⚠️ Entwürfe nicht abrufbar: ${esc(loadErr)}</p>`);
   fitHeads();
   if(!draft)reactMount(sel.day);
  }
@@ -156,6 +157,7 @@
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!editing)load();});
  // Nach der Admin-Anmeldung in der BumsParade (gleicher Code) Entwürfe zeigen.
  window.addEventListener('storage',e=>{if(e.key===CODE&&!editing)load();});
+ window.addEventListener('kbl-admin',()=>{if(!editing)load();});
  window.kblBerichtReload=()=>{if(!editing)load();};
  // Anmeldung/Abmeldung als Admin (BumsParade „🔑 Bearbeiten (Admin)“) gleich hier übernehmen.
  const H=window.kblHaken;if(H?.login&&!H.__ber){const li=H.login.bind(H),lo=H.logout.bind(H);H.login=async c=>{await li(c);window.kblBerichtReload();};H.logout=()=>{lo();window.kblBerichtReload();};H.__ber=true;}
