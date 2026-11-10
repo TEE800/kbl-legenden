@@ -1277,3 +1277,8 @@ div.mw-who{display:grid;gap:2px;cursor:default}
 .rg-order{margin:14px 0 0;font-size:13px;color:var(--text-2);line-height:2}
 .rg-order .bums-rule{cursor:default}
 @media(max-width:600px){.rg-grid{grid-template-columns:1fr;gap:6px}.rg-card{padding:9px 10px}.rg-basics span{font-size:11px}}
+/* MVP-Rennen/Zeitraffer: Tipper als kleine Profilbilder am Namensschild des Spielers (Kevin 10.11.: nur Spieler laufen) */
+.toon-fans{display:inline-flex;vertical-align:middle;margin-left:2px}
+.toon-fan{display:inline-block;margin-left:-3px}.toon-fan:first-child{margin-left:0}
+.toon-fan .mgr-av{width:15px;height:15px;font-size:8px;border:1px solid #0008;vertical-align:middle}
+.toon-fan.lead .mgr-av{box-shadow:0 0 0 1.5px var(--gold)}.toon-fan.me .mgr-av{box-shadow:0 0 0 1.5px #7fd3a6}

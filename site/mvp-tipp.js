@@ -291,41 +291,33 @@
   if(!groups.length)return '';
   const vals=[...groups.map(g=>g.pts??0),...(best?[best.points]:[])],lo=Math.min(0,...vals),hi=Math.max(1,...vals),span=hi-lo;
   const pos=v=>(4+72*((v??0)-lo)/span).toFixed(1);
-  // Alle Figuren auf einem Platz (Kevin-Wunsch): x nach Punkten, je Spieler eine eigene Höhe, damit sich niemand verdeckt.
-  // ROW: Kopf (ragt ~25px über den Körper) + Körper (60px), Name steht daneben; so verdeckt bei gleichen Punkten niemand den anderen.
-  // Je Manager eine eigene Zeile (Kevin-Wunsch: Manager laufen mit ihrem Tipp als Baby), x nach den Punkten des getippten Spielers.
-  // Oben, wenn ihn keiner getippt hat, der gerade Beste als Spieler-Männchen mit Krone. TOP: Platz für das hochgestemmte Baby.
-  const ROW=74,Y=row=>(/ champ/.test(figs[0]?.cls||'')?150:104)+row*ROW;
+  // Kevin 10.11.: Nur die getippten Spieler laufen (je Spieler ein Männchen mit seinem Kopf), keine Manager mehr.
+  // Am Namensschild die Profilbilder seiner Tipper (gold = vorne nach der Wertung, grün = man selbst). Je Spieler eine eigene Zeile.
+  const ROW=74,Y=row=>104+row*ROW;
+  const fans=g=>!g?'<small>keiner getippt</small>':`<span class="toon-fans">${[...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)).map(r=>`<span class="toon-fan${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}" title="${esc(r.m.name)} · Tipp ${fmt(r.t.points)}${r.t.late?'*':''}">${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):esc(String(r.m.name||'?')[0])}</span>`).join('')}</span>`;
   const runner=(o,row)=>{const info=byId.get(String(o.id)),face=kbImg(info?.img),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team),x=pos(o.pts);
-   return `<div class="toon-runner leader champ${x>50?' flip':''}${crest?' has-crest':''}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
-    <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'wow','★')}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>
-    <div class="toon-tag">${esc(o.name)} <b>${fmt(o.pts)}</b> <small>keiner getippt</small></div></div>`;};
+   return `<div class="toon-runner${o.cls}${x>50?' flip':''}${crest?' has-crest':''}" data-pid="${esc(o.id)}" style="left:${x}%;top:${Y(row)-60}px;z-index:${row+2}">
+    ${o.best?'<div class="toon-crown">👑</div>':''}<div class="toon-body">${toon({},shirt,trim,o.best?'wow':o.pts!==null&&o.pts<0?'sad':'happy','')}${face?toonHead(o.id,o.name):''}${toonPhoto(crest,'toon-crest',o.team)}</div>
+    ${/ run/.test(o.cls)?'<span class="toon-ball">⚽</span>':''}${o.k?'<span class="toon-dizzy">💫</span>':''}
+    <div class="toon-tag">${esc(o.name)} <b>${o.pts===null?'–':fmt(o.pts)}</b>${o.k?' <span class="toon-ko">K.O.</span>':''} ${fans(o.g)}</div></div>`;};
   const figs=[];
   const tipped=new Set(groups.map(g=>String(g.t.playerId)));
-  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({ghost:true,id:p.id,name:p.name,team:p.team,pts:best.points}));
-  // K.O. auf dem Rasen (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
-  // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist.
+  if(best)best.players.filter(p=>!tipped.has(String(p.id))).forEach(p=>figs.push({id:p.id,name:p.name,team:p.team,pts:best.points,best:true,cls:' leader champ'}));
+  // K.O. (Kevin-Wunsch): wer nicht mehr gewinnen kann, also Spiel vorbei und weniger Punkte als der gerade Beste,
+  // oder (bei genannten Vereinen) gar nicht aus diesen Vereinen ist. Liegt halbtransparent auf dem Rasen und rutscht nach unten.
   const ko=g=>!bestIds.has(String(g.t.playerId))&&(offRule(pool,g.t.team,g.t.playerId)||(!!best&&g.state==='done'&&g.pts!==null&&g.pts<best.points));
-  // Kevin-Wunsch: Wer den Sieger-Spieler getippt hat und nach der Wertung vorne liegt, tanzt (hier: stemmt sein Baby hoch).
-  // Wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Ohne erkannte Wertung tanzen alle seine Tipper.
   groups.forEach(g=>{const k=ko(g),neg=g.pts!==null&&g.pts<0,isBest=bestIds.has(String(g.t.playerId));
-   const st=k?' ko':g.state==='live'?' run':g.state==='open'||g.state==='wait'?' idle':neg?' fall':'';
-   [...g.rs].sort((a,b)=>leadIds.has(b.m.id)-leadIds.has(a.m.id)||a.m.name.localeCompare(b.m.name,'de')).forEach(r=>{
-    const champ=isBest&&(!auto||leadIds.has(r.m.id)),mourn=isBest&&auto&&!leadIds.has(r.m.id);
-    figs.push({g,r,k,cls:st+(isBest?' best':'')+(champ?' champ':'')+(mourn?' mourn':'')+(leadIds.has(r.m.id)?' lead':'')+(r.m.id===me?' me':'')});});});
-  // Kevin-Wunsch 31.10.: Wer K.O. ist, rutscht nach unten; oben stehen nur noch die, die gewinnen können (Reihenfolge sonst gleich).
-  figs.sort((a,b)=>!!a.k-!!b.k);
-  const man=(o,row)=>{const g=o.g,r=o.r,x=pos(g.pts),crest=kbImg(byId.get(String(g.t.playerId))?.teamImg);
-   return stick({cls:o.cls+(x>50?' flip':''),x,top:Y(row)-60,z:row+2,team:g.t.team,mname:r.m.name,mid:r.m.id,pid:g.t.playerId,pname:g.t.player,crest,
-    tag:`<b class="stk-mn">${esc(r.m.name)}</b> <span class="stk-pl">${esc(g.t.player)}</span> <b>${g.pts===null?'–':fmt(g.pts)}</b> <small>Tipp ${fmt(r.t.points)}${r.t.late?'*':''}</small>${o.k?' <span class="toon-ko">K.O.</span>':''}`});};
-  const pitch=`<div class="toon-pitch stk-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map((o,row)=>o.ghost?runner(o,row):man(o,row)).join('')}</div>`;
+   const st=k?' ko':g.state==='live'?' run':isBest?' leader champ':g.state==='open'||g.state==='wait'?' idle':neg?' fall':'';
+   figs.push({id:g.t.playerId,name:g.t.player,team:g.t.team,pts:g.pts,g,k,best:isBest,cls:st+(isBest&&!/champ/.test(st)?' leader':'')});});
+  figs.sort((a,b)=>!!a.k-!!b.k||b.best-a.best||(b.pts??-1e9)-(a.pts??-1e9));
+  const pitch=`<div class="toon-pitch" style="height:${Y(figs.length-1)+40}px"><i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>${figs.map(runner).join('')}</div>`;
   // Kevin-Wunsch: in der Liste der beste getippte Spieler (bei genannten Vereinen nur aus diesen), nicht der Beste der Vereine.
   const cand=groups.filter(g=>g.pts!==null&&!offRule(pool,g.t.team,g.t.playerId)),top=cand.length?Math.max(...cand.map(g=>g.pts)):null,tops=cand.filter(g=>g.pts===top);
   const ghostLine=tops.length?`<div class="toon-row ghost"><span class="mvp-rank">👑</span><span class="muted">Gerade bester getippter Spieler:</span> <b>${tops.map(g=>esc(g.t.player)).join(', ')}</b> <small class="muted">${esc([...new Set(tops.map(g=>g.t.team))].join(', '))}</small><span class="toon-pts">${fmt(top)}<small> Pkt.</small></span></div>`:'';
   const rows=groups.map(g=>`<div class="toon-row${bestIds.has(String(g.t.playerId))?' best':''}"><span class="mvp-rank">${g.place??'–'}</span><b>${esc(g.t.player)}</b> <small class="muted">${esc(g.t.team)}</small><span class="toon-pts">${g.pts===null?'–':fmt(g.pts)}<small> Pkt.</small></span>
     <div class="mvp-lane-tips"><small class="muted">Fans:</small> ${g.rs.map(r=>`<span class="mvp-chip${leadIds.has(r.m.id)?' lead':''}${r.m.id===me?' me':''}">${mn(r.m.name,r.m.id)} <b>${fmt(r.t.points)}</b>${r.t.late?'<sup>*</sup>':''}</span>`).join('')}</div></div>`).join('');
   // Während des Spieltags gleich offen und ohne Erklärtext (Kevin-Wunsch, Ausnahme von der Zuklapp-Regel: kbl-keep-open).
-  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Jeder Manager trägt seinen getippten Spieler als Baby im Arm. Je mehr Punkte das Baby hat, desto weiter rechts. 👑 auf dem Baby: der gerade Beste nach der Tippregel. Wer nach der Wertung vorne liegt, stemmt sein Baby hoch und tanzt; wer den richtigen Spieler, aber eine andere Zahl getippt hat, weint. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Wessen Baby gerade spielt, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
+  return `<details class="acc-group toon-race${live?' kbl-keep-open':''}"${live?' open':''} style="margin-top:14px"><summary>Rennen der getippten Spieler</summary><div class="acc-sub">${pitch}<div class="toon-list">${ghostLine}${rows}</div>${live?'':`<p class="muted tiny">Jeder getippte Spieler läuft einmal mit, am Namensschild die Profilbilder seiner Tipper (gold = vorne nach der Wertung). Je mehr Punkte, desto weiter rechts. 👑 = der gerade Beste nach der Tippregel, er jubelt. Wessen Spiel läuft, rennt mit Ball, bei Minuspunkten liegt er auf der Nase. Halbtransparent und am Boden: wer nicht mehr gewinnen kann. Bei den Fans steht die getippte Zahl${groups.some(g=>g.rs.some(r=>r.t.late))?', * = nachgetragen':''}.</p>`}</div></details>`;
  }
  // Zeitraffer (Kevin-Wunsch): der Spieltag als Animation aus den gespeicherten Zwischenständen (d.verlauf, Server kbl-mvp-verlauf.json).
  // Gleiche Männchen wie im Rennen; Krone = Bester nach der Tippregel zu dem Zeitpunkt, oben die Führenden nach der Wertung.
@@ -414,7 +406,7 @@
   // Kevin: Der spätere Regel-MVP (Bester am Ende, keiner getippt) läuft von Anfang an mit; andere Beste ohne Tipper nur, solange sie vorn sind.
   const finIds=new Set((frames[n-1].best?.players||[]).map(p=>p.id));
   const rowsList=[...ghosts.map(p=>({id:p.id,name:p.name,team:p.team,ghost:true,always:finIds.has(p.id)})),
-   ...groups.flatMap(g=>g.rs.map(r=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,m:r.m,t:r.t}))).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de')||a.m.name.localeCompare(b.m.name,'de'))];
+   ...groups.map(g=>({id:String(g.t.playerId),name:g.t.player,team:g.t.team,rs:g.rs})).sort((a,b)=>(final[b.id]?.points??-1e9)-(final[a.id]?.points??-1e9)||a.name.localeCompare(b.name,'de'))];
   const vals=frames.flatMap(f=>[...Object.values(f.players).map(x=>x.points),f.best?.points??0]),lo=Math.min(0,...vals),hi=Math.max(1,...vals);
   const pos=v=>(4+72*((v??0)-lo)/(hi-lo));
   // Kevin: Männchen nach Punkten sortiert. Maßstab je Stand (Bester ganz vorn), sonst stehen am Anfang alle dicht an der Startlinie
@@ -430,11 +422,11 @@
   pitch.style.height=Y(N-1)+40+'px';
   pitch.innerHTML='<i class="tp-start"></i><i class="tp-mid"></i><i class="tp-circle"></i><i class="tp-finish"></i>'+rowsList.map((o,r)=>{
    const info=byId.get(o.id),crest=kbImg(info?.teamImg),[shirt,trim]=clubColor(o.team);
-   if(!o.ghost)return stick({cls:' zr-runner',attr:` data-zr-i="${r}"`,x:4,top:Y(r)-60,z:r+2,team:o.team,mname:o.m.name,mid:o.m.id,pid:o.id,pname:o.name,crest,
-    tag:`<b class="stk-mn">${esc(o.m.name)}</b> <span class="stk-pl">${esc(o.name)}</span> <b data-zr-pts>–</b> <small>Tipp ${esc(fmt(o.t.points))}</small><span class="zr-fix" data-zr-fix></span>`});
-   return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader zr-ghost" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
+   // Kevin 10.11.: nur die getippten Spieler laufen, am Namensschild die Profilbilder ihrer Tipper.
+   const tip=o.ghost?'<small>keiner getippt</small>':`<span class="toon-fans">${o.rs.map(q=>`<span class="toon-fan${q.m.id===d.me?' me':''}" data-mid="${esc(q.m.id)}" title="${esc(q.m.name)} · Tipp ${esc(fmt(q.t.points))}">${window.kblMgrFace?window.kblMgrFace(q.m.name,'',q.m.id):esc(String(q.m.name||'?')[0])}</span>`).join('')}</span>`;
+   return `<div class="toon-runner zr-runner${crest?' has-crest':''} leader${o.ghost?' zr-ghost':''}" data-zr-i="${r}" style="left:4%;top:${Y(r)-60}px;z-index:${r+2}">
     <div class="toon-crown">👑</div><div class="toon-body">${toon({},shirt,trim,'happy','★')}${toonHead(o.id,o.name)}${toonPhoto(crest,'toon-crest',o.team)}</div><span class="toon-ball">⚽</span><span class="toon-dizzy">💫</span>
-    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b> <small>keiner getippt</small><span class="zr-fix" data-zr-fix></span></div></div>`;}).join('');
+    <div class="toon-tag">${esc(o.name)} <b data-zr-pts>–</b><span class="zr-fix" data-zr-fix></span> ${tip}</div></div>`;}).join('');
   const maxFix=Math.max(0,...frames.map(f=>f.fixes.length));
   const flMin=`calc(${maxFix+1}*1.4em + 12px)`;box.querySelector('[data-zr-flash]').style.minHeight=flMin;
   const isBestIn=(f,o)=>(f.best?.players||[]).some(p=>p.id===o.id);
@@ -484,9 +476,8 @@
     const fx=f.fixes.find(z=>z.id===id),fe=el.querySelector('[data-zr-fix]');
     fe.textContent=fx?` ✏️ ${fx.to>fx.from?'+':''}${fmt(fx.to-fx.from)}`:'';el.classList.toggle('zr-fixed',!!fx);
     // Manager: Krone aufs Baby, Führende nach der Wertung stemmen es hoch, mit richtigem Spieler und anderer Zahl wird geweint.
-    if(o.m){const ld=leadIds.has(o.m.id);el.classList.toggle('best',isBest);el.classList.toggle('lead',ld);
-     el.classList.toggle('champ',isBest&&(!f.lead.length||ld));el.classList.toggle('mourn',isBest&&!!f.lead.length&&!ld);
-     el.classList.toggle('fall',!out&&x?.state!=='live'&&pts!==null&&pts<0);}
+    if(!o.ghost){el.classList.toggle('fall',!out&&!isBest&&x?.state!=='live'&&pts!==null&&pts<0);
+     el.querySelectorAll('.toon-fan').forEach(s=>s.classList.toggle('lead',leadIds.has(s.dataset.mid)));}
    });
    // Kevin-Wunsch: Korrekturen in eigenem Kasten über dem Platz (nicht über den Gesichtern), Platz für die meisten Zeilen fest reserviert.
    fl.hidden=!maxFix;fl.classList.toggle('empty',!f.fixes.length);
@@ -621,7 +612,7 @@
    const x0=f.players[r.id],isBest=(f.best?.players||[]).some(p=>p.id===r.id),pts=ptsAt(f,r);
    const ko=!isBest&&((pool.length&&!pool.includes(r.team))||f.off?.has(String(r.id))||(!!f.best&&x0?.state==='done'&&pts!==null&&pts<f.best.points));
    const run=!ko&&x0?.state==='live',[shirt,trim]=clubColor(r.team),flip=(x-PX)/PW>.5;
-   const ld=!!r.m&&f.lead.some(q=>q.m.id===r.m.id),champ=isBest&&(!r.m||!f.lead.length||ld),mourn=!!r.m&&isBest&&!!f.lead.length&&!ld;
+   const ld=!!r.rs&&f.lead.some(q=>r.rs.some(z=>z.m.id===q.m.id)),champ=isBest,mourn=false;
    c.save();c.globalAlpha=r.ghost?alphaGhost:ko?.45:1;c.translate(x,y);c.scale(S,S);
    if(ko){if(r.m)c.translate(0,-50);c.rotate(flip?Math.PI/2:-Math.PI/2);}
    else if(r.m&&!run&&pts!==null&&pts<0){c.translate(0,-40);c.rotate(-1.3);}
@@ -707,7 +698,7 @@
     c.fillStyle=fx?'#c0392b':st.ld?'#8a6d1f':'rgba(0,0,0,.6)';rr(tx,ty,tw,th,10*S);c.fill();
     if(st.ld){c.strokeStyle='#ebc768';c.lineWidth=3*S;c.stroke();}
     c.fillStyle='#fff';c.textAlign='left';c.fillText(label,tx+10*S,ty+29*S);
-    const sub=r.m?`Tipp ${fmt(r.t.points)}`:'keiner getippt';c.font=font(22*S,700);
+    c.font=font(22*S,700);const sub=r.rs?fit('Tipp: '+r.rs.map(q=>`${q.m.name} ${fmt(q.t.points)}`).join(', '),PW*.6):'keiner getippt';
     const sw2=c.measureText(sub).width+16*S,sx=st.flip?tx+tw-sw2:tx;
     c.fillStyle='rgba(0,0,0,.5)';rr(sx,ty+th+6*S,sw2,30*S,15*S);c.fill();c.fillStyle='#e9f0f4';c.fillText(sub,sx+8*S,ty+th+28*S);
     c.restore();
