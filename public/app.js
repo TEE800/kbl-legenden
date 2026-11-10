@@ -1217,7 +1217,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  if(window.KBL_STATIC){btn.closest('details')?.remove();const h=day.closest('.controls')?.nextElementSibling;if(h)h.textContent='Jeder Spieltag wird automatisch gesammelt, sobald Kickbase ihn abgeschlossen hat (meist am Abend nach dem letzten Spiel).';}
  // Eigener Reiter „Punkteübersicht“; vorbelegt mit dem letzten beendeten Spieltag.
  day.innerHTML=Array.from({length:34},(_,i)=>`<option value="${i+1}">Spieltag ${i+1}</option>`).join('');
- let etiData=null,etiSort='high',etiFilter='';
+ let etiPlayers={},etiData=null,etiSort='high',etiFilter='';
  // Auf-/Zugeklappt bleibt beim Neuzeichnen (Suchen, Sortieren, anderer Spieltag) erhalten.
  const ptsOpen={stats:false,all:false};
  let dayTouched=false;day.addEventListener('change',()=>{dayTouched=true;});
@@ -1243,7 +1243,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   ['Meiste Großchancen vorbereitet',['Big Chance Created']],['Meiste Schüsse aufs Tor',['Shot on goal']],
   ['Meiste Tacklings gewonnen',['Tackle won']],['Meiste Dribblings gewonnen',['Contest won']],['Meiste Kopfballduelle gewonnen',['Aerial won']],
   ['Meiste Bälle abgefangen',['Interception (outside the box)','Interception (in the box)','Ball intercepted']],
-  ['Meiste Zweikämpfe verloren',['Challenge lost']],['Meiste Ballverluste',['Possession lost']],['Meiste Fehler vor Gegentor',['Mistake before Goal']],['Am häufigsten im Abseits',['Offside']],
+  ['Meiste Zweikämpfe verloren',['Challenge lost']],['Meiste Ballverluste',['Possession lost']],['Meiste Fehler vor Gegentor',['Mistake before Goal'],{all:true}],['Am häufigsten im Abseits',['Offside']],
   ['Meiste Paraden (Torwart)',['Shot saved (GK)']]];
  // Ältere Stände zählten Gegenbuchungen (z. B. Gelb −10, später +10) mit. Bei festem Betrag ergibt sich die Anzahl aus den Punkten.
  const fixCount=(t,x)=>{if(t.signCount)return x.count;const m=new Set((t.points||[]).map(p=>Math.abs(p.points)));if(m.size!==1||m.has(0)||m.has(null))return x.count;const v=(t.points||[]).filter(p=>p.points).sort((a,b)=>b.count-a.count)[0].points;return Math.max(0,Math.round(x.points/v));};
@@ -1253,15 +1253,17 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
  const extraCats=(titles,labelOf)=>[...new Set(titles.map(normTitle))].filter(t=>t&&!STAT_TITLES.has(t)).map(t=>[labelOf(t)||t,[t]]).sort((a,b)=>a[0].localeCompare(b[0],'de'));
  function statsHtml(){
   const norm=normTitle;
-  const row=([name,titles])=>{
+  const row=([name,titles,opt])=>{
    const per=new Map();
-   for(const t of etiData)if(titles.includes(norm(t.kickbaseTitle)))for(const x of (t.topPlayers||[])){const r=per.get(x.playerId)||{...x,count:0,points:0};r.count+=fixCount(t,x);r.points+=x.points;per.set(x.playerId,r);}
+   // Kategorien mit all:true (Kevin 10.11.: Fehler vor Gegentor) zeigen jeden Spieler, nicht nur die Top 5.
+   const src=t=>opt?.all&&t.allPlayers?t.allPlayers.map(([id,c,p])=>({playerId:id,name:etiPlayers[id]?.[0]||'Unbekannt',team:etiPlayers[id]?.[1]||'',count:c,points:p})):(t.topPlayers||[]);
+   for(const t of etiData)if(titles.includes(norm(t.kickbaseTitle)))for(const x of src(t)){const r=per.get(x.playerId)||{...x,count:0,points:0};r.count+=fixCount(t,x);r.points+=x.points;per.set(x.playerId,r);}
    const top=[...per.values()].sort((a,b)=>b.count-a.count||b.points-a.points);
    if(!top.length)return '';
    const best=top.filter(x=>x.count===top[0].count);
    // Bei vielen Gleichen nur zwei Namen zeigen, der Rest steht aufgeklappt.
    const lead=best.slice(0,2).map(x=>`${safe(x.name)} <span class="muted">(${safe(x.team)})</span>`).join(', ')+(best.length>2?` <span class="muted">+ ${best.length-2} weitere</span>`:'');
-   const more=top.slice(0,5).map((x,n)=>`${n+1}. ${safe(x.name)} (${safe(x.team)}) ${x.count}× · ${safe(sign(x.points))} Pkt.`).join('<br>');
+   const more=(opt?.all?top.filter(x=>x.count>0):top.slice(0,5)).map((x,n)=>`${n+1}. ${safe(x.name)} (${safe(x.team)}) ${x.count}× · ${safe(sign(x.points))} Pkt.`).join('<br>');
    return `<details><summary><span class="eti-name">${safe(name)}</span><span class="eti-count" style="text-align:left;white-space:normal">${lead}</span><span class="eti-pts">${top[0].count}×</span></summary><div class="eti-body"><div>${more}</div></div></details>`;
   };
   const rows=STAT_CATS.map(row).join('');
@@ -1313,7 +1315,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   if(!seasonData){return;}
   const days=seasonData.days;
   if(!days.length){sRoot.innerHTML='<p class="muted">Noch keine Spieltage gespeichert. Oben einen Spieltag wählen und „Einzelereignisse sammeln“.</p>';return;}
-  const rows=seasonRows(),mode=sMode.value,catName=seasonCats[Number(sCat.value)||0][0];
+  const rows=seasonRows(),mode=sMode.value,catName=seasonCats[Number(sCat.value)||0][0],allCat=!!seasonCats[Number(sCat.value)||0][2]?.all,lim=allCat?Math.max(1,rows.filter(r=>r.count>0).length):10;
   const partial=days.filter(d=>!d.full).map(d=>d.day);
   const have=new Set(days.map(d=>d.day)),lastDay=Math.max(...days.map(d=>d.day));
   const missing=Array.from({length:lastDay},(_,i)=>i+1).filter(n=>!have.has(n));
@@ -1324,7 +1326,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   const narrow=(sRoot.clientWidth||1000)<640,fs=narrow?16:12,esc=safe;
   const short=(t,max)=>t.length>max?t.slice(0,max-1)+'…':t;
   if(mode==='stacked'){
-   const bars=rows.slice(0,10).map(r=>({name:r.name,full:`${r.name}${r.team?' ('+r.team+')':''}`,total:r.count,segs:r.days.map((v,k)=>({day:days[k].day,v}))}));
+   const bars=rows.slice(0,lim).map(r=>({name:r.name,full:`${r.name}${r.team?' ('+r.team+')':''}`,total:r.count,segs:r.days.map((v,k)=>({day:days[k].day,v}))}));
    sRoot.classList.remove('muted');
    kblStackChart(sRoot,bars,{aria:`${catName}: Top 10, aufgeteilt nach Spieltagen`,fmt:v=>`${fmt(v)}×`,note:`${esc(catName)}: Top 10 der Saison, ein Balken je Spieler. Jeder Abschnitt ist ein gespeicherter Spieltag.`});
    sRoot.insertAdjacentHTML('beforeend',hint);return;
@@ -1353,7 +1355,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    svg+='</svg>';
   }else{
    // Rangliste: Top 10 als Balken, Spitzenreiter (auch bei Gleichstand) in Gold.
-   const list=rows.slice(0,10),max=list[0].count;
+   const list=rows.slice(0,lim),max=list[0].count;
    const W=narrow?480:1000,rowH=narrow?36:30,topPad=12,H=topPad*2+list.length*rowH,left=narrow?190:300,right=narrow?96:150,pw=W-left-right;
    svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(catName)}: Rangliste der Saison" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${W}" height="${H}" fill="#12212b" rx="10"/>`;
    let place=0;
@@ -1365,7 +1367,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    });
    svg+='</svg>';
   }
-  const how=mode==='daily'?'Anzahl an jedem einzelnen Spieltag (nicht aufsummiert), Top 10 der Saison.':mode==='cumulative'?'Aufaddierte Anzahl nach jedem gespeicherten Spieltag, Top 10 der Saison.':'Top 10 der Saison nach Anzahl, dahinter die Punkte aus dieser Kategorie. Antippen zeigt Verein und Punkte.';
+  const how=mode==='daily'?'Anzahl an jedem einzelnen Spieltag (nicht aufsummiert), Top 10 der Saison.':mode==='cumulative'?'Aufaddierte Anzahl nach jedem gespeicherten Spieltag, Top 10 der Saison.':(allCat?'Alle Spieler':'Top 10 der Saison')+' nach Anzahl, dahinter die Punkte aus dieser Kategorie. Antippen zeigt Verein und Punkte.';
   sRoot.classList.remove('muted');
   sRoot.innerHTML=svg+`<p class="muted tiny" style="margin-top:12px">${how}</p>`+hint;
  }
@@ -1386,7 +1388,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   const warn=[d.failedPlayers?`${d.failedPlayers} Spieler nicht abrufbar`:'',(d.failedTeams&&d.failedTeams.length)?`Vereine nicht lesbar: ${d.failedTeams.join(', ')}`:''].filter(Boolean).join(' · ');
   msg.style.color=warn?'#f1a5aa':'';
   msg.textContent=`Spieltag ${d.day}: ${d.playersScanned} Spieler geprüft, ${d.playersWithEvents} mit Ereignissen, ${d.types.length} verschiedene Ereignisnummern.${warn?' Achtung: '+warn+'.':''}${d.savedAt?` ${fromStore?'Gespeicherter Stand':'Gespeichert'} vom ${when(d.savedAt)}.`:''}${fromStore&&!window.KBL_STATIC?' „Einzelereignisse sammeln“ im Reiter Admin holt den neuesten Stand.':''}`;
-  etiData=d.types;renderEti();
+  etiPlayers=d.players||{};etiData=d.types;renderEti();
  }
  async function loadSaved(){
   const want=day.value;
