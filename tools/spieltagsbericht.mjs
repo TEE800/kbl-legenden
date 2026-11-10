@@ -293,6 +293,36 @@ function titleRepeat(title, earlier) {
 }
 const titleOf = text => (/^#\s+(.+)$/m.exec(text)?.[1] || '').trim();
 
+// 3) Gezielt nachbessern (Kevin 10.11.: „wird die Gegenprüfung automatisch geändert oder muss ich das jetzt suchen?“):
+// Was die Prüfung findet, lässt die BumsKI nur an genau diesen Stellen neu schreiben, der Rest bleibt wortgleich.
+const KORR_SYSTEM = `Du bist Redakteur. Du bekommst Fakten als JSON, einen Spieltagsbericht (Markdown) und eine Liste von Fehlern, die ein Faktenprüfer gefunden hat.
+Korrigiere NUR die Sätze, in denen diese Fehler stehen, so dass sie zu den Fakten passen. Ton (frech, Sticheleien) beibehalten. Alles andere bleibt Zeichen für Zeichen gleich, auch Überschriften, Absätze und Formatierung.
+Verwende nur Zahlen und Fakten aus dem JSON, rechne nichts Neues aus. Gib NUR den vollständigen korrigierten Bericht zurück, ohne Vorwort und ohne Erklärung.`;
+const fehlerListe = p => [...(p.zahlen || []).map(z => `- Zahl ${z.zahl} steht nicht in den Fakten: „${z.stelle}“`), ...(p.ki?.probleme || []).map(x => `- „${x.zitat}“: ${x.grund}`)].join('\n');
+const befunde = p => (p.zahlen?.length || 0) + (p.ki?.probleme?.length || 0);
+async function nachbessern(f, text, pruefung) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  for (let runde = 0; runde < 2 && key && !pruefung.ok && befunde(pruefung); runde++) {
+    let neu = null;
+    for (const model of [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)]) {
+      try {
+        const r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify({ model, max_tokens: 10000, system: KORR_SYSTEM, messages: [{ role: 'user', content: `FAKTEN:\n${JSON.stringify(f)}\n\nFEHLER:\n${fehlerListe(pruefung)}\n\nBERICHT:\n${text}` }] }), signal: AbortSignal.timeout(180000) });
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 404) continue; if (!r.ok || d.stop_reason === 'max_tokens') break;
+        const t = (d.content || []).filter(c => c.type === 'text').map(c => c.text).join('').trim();
+        // Nur annehmen, wenn es noch der ganze Bericht ist (gleiche Schlagzeile, ähnliche Länge).
+        if (titleOf(t) && titleOf(t) === titleOf(text) && t.length > text.length * 0.85 && t.length < text.length * 1.15) neu = t;
+        break;
+      } catch { break; }
+    }
+    if (!neu) break;
+    const p2 = await pruefen(f, neu);
+    if (befunde(p2) >= befunde(pruefung) && !p2.ok) break;
+    text = neu; pruefung = { ...p2, nachgebessert: (pruefung.nachgebessert || 0) + 1 };
+  }
+  return { text, pruefung };
+}
+
 async function askClaude(f, hinweise = '', frueher = []) {
   const key = process.env.ANTHROPIC_API_KEY;
   const models = [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)];
@@ -358,7 +388,21 @@ try {
   const hasDraft = (store.entwuerfe[day]?.vorgaben || 0) >= VORGABEN;
   if (!day) say('Spieltagsbericht: noch kein Spieltag abgeschlossen.');
   else if (store.berichte[day] && neu !== day) say(`Spieltagsbericht ${day} ist freigegeben.`);
-  else if (hasDraft && neu !== day) say(`Spieltagsbericht ${day}: Entwurf liegt vor und wartet auf Freigabe in der App.`);
+  else if (hasDraft && neu !== day) {
+    // Vorhandener Entwurf mit Befunden der Prüfung: einmal gezielt nachbessern, solange Kevin ihn nicht selbst bearbeitet hat.
+    const e = store.entwuerfe[day];
+    if (e.pruefung && !e.pruefung.ok && befunde(e.pruefung) && !e.nachbesserungVersucht && API && CODE && dienstOk && process.env.ANTHROPIC_API_KEY) {
+      e.nachbesserungVersucht = new Date().toISOString();
+      const b = ((await post('/bericht/admin', {})).berichte || []).find(x => Number(x.day) === day);
+      if (!b || b.status === 'frei') say(`Spieltagsbericht ${day}: kein offener Entwurf zum Nachbessern.`);
+      else if (b.editedAt) say(`Spieltagsbericht ${day}: Entwurf wurde schon von Hand bearbeitet, wird nicht automatisch geändert.`);
+      else {
+        const f = facts(day), r = await nachbessern(f, b.text, e.pruefung);
+        if (r.text !== b.text) { await post(`/bericht/${day}/entwurf`, { title: titleOf(r.text) || b.title, text: r.text, model: b.model, vorgaben: b.vorgaben, createdAt: b.createdAt }); e.pruefung = r.pruefung; }
+        say(`Spieltagsbericht ${day}: ${r.text !== b.text ? `nachgebessert, ${befunde(r.pruefung) ? `noch ${befunde(r.pruefung)} Befund(e)` : 'Prüfung ohne Befund'}` : 'Nachbessern brachte nichts, Entwurf unverändert'}. Wartet auf Freigabe in der App.`);
+      }
+    } else say(`Spieltagsbericht ${day}: Entwurf liegt vor und wartet auf Freigabe in der App.`);
+  }
   else if (!ready) say(`Spieltagsbericht ${day}: wartet, bis der Spieltag abgerechnet ist (Ranking ${rk?.il === false ? 'fertig' : 'noch live'}, BumsParade ${S?.settled ? 'abgerechnet' : 'offen'}, MVP-Tipp ${!mt || mt.status === 'finished' ? 'fertig' : 'offen'}).`);
   else if (API && CODE && dienstOk && fs.existsSync(path.join(process.cwd(), 'tools', 'bericht-vorlagen', `${day}.md`))) {
     // Von Kevin im Chat abgesegneter Text (Vorlage) wird als Entwurf übernommen, ohne Claude-Aufruf. Danach Datei löschen.
@@ -382,6 +426,7 @@ try {
       const n = p => p.zahlen.length + (p.ki?.probleme?.length || 0);
       if (n(p2) <= n(pruefung)) ({ text, usage, model } = zweiter), pruefung = p2;
     }
+    ({ text, pruefung } = await nachbessern(f, text, pruefung));
     const title = (/^#\s+(.+)$/m.exec(text)?.[1] || `Spieltag ${day}`).trim();
     const createdAt = new Date().toISOString();
     const r = await post(`/bericht/${day}/entwurf`, { title, text, model, vorgaben: VORGABEN, createdAt });
