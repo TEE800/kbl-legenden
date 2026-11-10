@@ -2012,7 +2012,8 @@ async function tippBest(token,day,kind,top,pool,rows,out,winners){
   cand=[];
   for(const r of inPool){const t=tipOf.get(r.managerId),own=await tippPlayerPoints(token,t.playerId,day);
    if(own===null)return null;// Punkte fehlen: nie raten
-   const ref=TIPP_MVP_KINDS.has(kind)&&top!==null?top:own;cand.push({managerId:r.managerId,own,diff:Math.abs(t.points-ref)});}
+   // Kevin 10.11.: Platz des getippten Spielers zählt, bei gleichem Spieler die Zahl näher an dessen eigenen Punkten (nicht an der MVP-Zahl).
+   cand.push({managerId:r.managerId,own,diff:Math.abs(t.points-own)});}
   if(!cand.length)return null;
   const hi=Math.max(...cand.map(r=>r.own));cand=cand.filter(r=>r.own===hi);
  }
