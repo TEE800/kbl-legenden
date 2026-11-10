@@ -4,6 +4,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 const MODE = process.argv[2] === 'full' ? 'full' : 'live';
 const PORT = 3456, BASE = `http://127.0.0.1:${PORT}`, LEAGUE = '6422780';
@@ -30,6 +31,16 @@ for (const f of fs.readdirSync(path.join(ROOT, 'public'))) {
   fs.writeFileSync(path.join(SITE, f), buf);
 }
 fs.writeFileSync(path.join(SITE, '.nojekyll'), '');
+// Neue Programmstände sofort laden: Skripte und Stile bekommen in index.html ?v=<Inhalts-Hash> (sonst hält der Browser alte Dateien bis zu 10 Min.).
+{
+  const ih = path.join(SITE, 'index.html');
+  const html = fs.readFileSync(ih, 'utf8').replace(/((?:src|href)=")([a-z][a-z0-9_-]*\.(?:js|css))"/g, (m, pre, f) => {
+    const p = path.join(SITE, f);
+    if (!fs.existsSync(p)) return m;
+    return `${pre}${f}?v=${createHash('sha1').update(fs.readFileSync(p)).digest('hex').slice(0, 10)}"`;
+  });
+  fs.writeFileSync(ih, html);
+}
 
 // 2. Server starten
 const server = spawn(process.execPath, ['--import', './tools/kickbase-bremse.mjs', 'server.js'], { env: { ...process.env, PORT: String(PORT), KBL_VORSCHAU: '', KBL_EXPORT: '1', KBL_CHALLENGES_SOFORT: MODE === 'full' ? '1' : '' }, stdio: ['ignore', 'inherit', 'inherit'] });
