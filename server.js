@@ -1083,6 +1083,23 @@ app.get('/api/live-points/:day', async (req, res) => {
 // Bank = beim Einfrieren gespeicherter Gesamtkader (squadIds) ohne die Startelf (playerIds). Summe der Spieltagspunkte der Bankspieler
 // (auch negative). Ohne gespeicherten Kader wird nichts berechnet (nie raten). Waehrend des Spieltags vorlaeufig (Live-Punkte).
 const benchCache=new Map();
+// Heutiger Kader und Transfer-Verlauf je Manager für das Zurückrechnen alter Kader (30 Min. zwischengespeichert, nutzt /api/transfers mit).
+let benchCtxCache=null;
+async function benchRebuildCtx(token, users) {
+  if (benchCtxCache && Date.now() - benchCtxCache.at < 30 * 60e3) return benchCtxCache.map;
+  const raw = transferCache && Date.now() - transferCache.at < 30 * 60e3 && transferCache.raw, map = new Map();
+  if (raw) for (const r of raw) if (!r.error) map.set(String(r.base.id), { list: r.list, squad: r.squad });
+  for (let i = 0; i < users.length; i += 3) await Promise.all(users.slice(i, i + 3).map(async u => {
+    const id = String(u.i), have = map.get(id);
+    if (have?.list && have?.squad) return;
+    try {
+      const [list, squad] = await Promise.all([have?.list || fetchTransferList(token, u.i), kbFetch(`/v4/leagues/6422780/managers/${u.i}/squad`, { token })]);
+      map.set(id, { list, squad });
+    } catch {}
+  }));
+  benchCtxCache = { at: Date.now(), map };
+  return map;
+}
 app.get('/api/bench-points/:day', async (req, res) => {
   const token = getToken(req) || newestToken();
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
@@ -1095,7 +1112,31 @@ app.get('/api/bench-points/:day', async (req, res) => {
     if (c && c.status === st && Date.now() - c.at < (st === 'live' ? 5 : 60) * 60e3) return res.set('Cache-Control', 'no-store').json(c.value);
     const ranking = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
     const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
-    const snaps = readSnapshots(), missing = users.filter(u => !Array.isArray(snaps[`${day}:${u.i}`]?.squadIds)).map(u => u.n);
+    const snaps0 = readSnapshots(), snaps = {}, rebuilt = [], noLineup = [];
+    for (const u of users) { const s = snaps0[`${day}:${u.i}`]; if (Array.isArray(s?.squadIds)) snaps[`${day}:${u.i}`] = s; }
+    // Kevin 10.11. (Bankpunkte der Halbserie): Fehlt der beim Anpfiff gespeicherte Kader (ST 1 bis 6), wird er aus dem heutigen Kader
+    // und dem Transfer-Verlauf zurückgerechnet (Kauf nach dem ersten Anstoß = damals noch nicht da, Verkauf danach = damals noch da).
+    // Nur übernommen, wenn die Startelf aus dem Ranking (lp) vollständig darin steht (an ST 7 bis 9 gegen die gespeicherten Kader
+    // aller 16 Manager geprüft: identisch). Wer gar keine Startelf hatte (ST 1, −1100), bekommt keine Bankpunkte.
+    if (users.some(u => !snaps[`${day}:${u.i}`])) {
+      const kick = Date.parse(md.days.find(d => d.day === day)?.firstKickoffUTC || '');
+      const ctx = Number.isFinite(kick) ? await benchRebuildCtx(token, users).catch(() => null) : null;
+      for (const u of users) {
+        if (snaps[`${day}:${u.i}`]) continue;
+        const lp = (Array.isArray(u.lp) ? u.lp : []).filter(Boolean).map(String);
+        if (!lp.length) { noLineup.push(u); continue; }
+        const r = ctx?.get(String(u.i));
+        if (!r?.list || !Array.isArray(r.squad?.it)) continue;
+        const set = new Set(r.squad.it.map(p => String(p.pi))), names = {};
+        for (const p of r.squad.it) names[String(p.pi)] = p.pn;
+        const tr = r.list.filter(t => (t.tty === 1 || t.tty === 2) && Date.parse(t.dt) > kick).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+        for (const t of tr) { const pi = String(t.pi); names[pi] = names[pi] || t.pn; if (t.tty === 1) set.delete(pi); else set.add(pi); }
+        if (!lp.every(id => set.has(id))) continue;
+        snaps[`${day}:${u.i}`] = { playerIds: lp, squadIds: [...set], playerNames: names, rebuilt: true };
+        rebuilt.push(u.n);
+      }
+    }
+    const missing = users.filter(u => !snaps[`${day}:${u.i}`] && !noLineup.includes(u)).map(u => u.n);
     if (missing.length) {
       const value = { day, status: st, managers: [], message: `Das fehlt: Für Spieltag ${day} ist der Kader beim Anpfiff nicht gespeichert (${missing.length === users.length ? 'alle Manager' : missing.join(', ')}). Darum keine Bankpunkte.` };
       return res.set('Cache-Control', 'no-store').json(value);
@@ -1109,9 +1150,11 @@ app.get('/api/bench-points/:day', async (req, res) => {
     const managers = users.map(u => {
       const bench = benchOf(u).map(id => ({ id, name: all?.players.get(id)?.name || snaps[`${day}:${u.i}`]?.playerNames?.[id] || null, team: all?.players.get(id)?.team || null, ...pts[id] }))
         .sort((a, b) => (b.points ?? -1e9) - (a.points ?? -1e9));
-      return { id: String(u.i), name: u.n, points: bench.reduce((s, p) => s + (p.points || 0), 0), open: bench.filter(p => p.points == null).length, bench };
-    }).sort((a, b) => b.points - a.points);
-    const value = { day, status: st, updatedAt: new Date().toISOString(), managers };
+      return { id: String(u.i), name: u.n, points: bench.reduce((s, p) => s + (p.points || 0), 0), open: bench.filter(p => p.points == null).length, bench,
+        ...(snaps[`${day}:${u.i}`]?.rebuilt ? { rebuilt: true } : {}) };
+    }).filter(m => !noLineup.some(u => String(u.i) === m.id)).sort((a, b) => b.points - a.points);
+    const value = { day, status: st, updatedAt: new Date().toISOString(), managers,
+      ...(rebuilt.length ? { rebuilt } : {}), ...(noLineup.length ? { noLineup: noLineup.map(u => u.n) } : {}) };
     benchCache.set(day, { at: Date.now(), status: st, value });
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Bankpunkte konnten nicht geladen werden.', detail: err.message }); }
