@@ -71,7 +71,15 @@ function getToken(req) {
 }
 setInterval(() => { for (const [sid, s] of sessions) if (!sessionValid(s)) sessions.delete(sid); }, 30 * 60 * 1000).unref();
 
+// Kickbase-Bremse am PC: Nach HTTP 429 (zu viele Anfragen) 10 Min. gar nichts mehr an Kickbase schicken
+// und das nur einmal melden, statt in Dauerschleife weiterzufragen (Kevin 10.11., T800 schonen).
+let kbPauseUntil = 0;
 async function kbFetch(path, { method = 'GET', token, body } = {}) {
+  if (Date.now() < kbPauseUntil) {
+    const err = new Error('Kickbase-Pause nach HTTP 429 (zu viele Anfragen)');
+    err.status = 429; err.paused = true;
+    throw err;
+  }
   // Immer Deutsch/Deutschland mitschicken. Ohne diese Angabe (und mit Logins von GitHub-Servern in den USA)
   // kann Kickbase das Konto auf Englisch bzw. eine andere Region umstellen (Push-Sprache, Ligen-Auswahl).
   const headers = { Accept: 'application/json', 'Accept-Language': 'de-DE,de;q=0.9' };
@@ -89,6 +97,10 @@ async function kbFetch(path, { method = 'GET', token, body } = {}) {
   let data;
   try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
 
+  if (res.status === 429) {
+    if (Date.now() >= kbPauseUntil) console.warn('Kickbase meldet „zu viele Anfragen“ (HTTP 429): 10 Minuten Pause, danach geht es normal weiter.');
+    kbPauseUntil = Date.now() + 10 * 60 * 1000;
+  }
   if (!res.ok) {
     const err = new Error(`Kickbase antwortet mit HTTP ${res.status}`);
     err.status = res.status;
@@ -1225,10 +1237,13 @@ const EVENT_ETI_LABELS = { 4051: 'Elfmeter verschossen', 4171: 'Elfmeter verursa
 // Wird beim Scan geladen (hoechstens alle 12 Std.) und in kbl-event-types.json gespeichert; unbekannte Nummern zeigen dann den Kickbase-Titel.
 const EVENT_TYPES_FILE = path.join(process.cwd(), 'kbl-event-types.json');
 let eventTypesCache = null;
+// Fehlversuch merken: sonst fragte jeder Aufruf (je Spieler) sofort neu nach, bei HTTP 429 in Dauerschleife (Kevin 10.11.).
+let eventTypesFailAt = 0, eventTypesLoading = null;
 async function loadEventTypes(token) {
   if (!eventTypesCache) try { eventTypesCache = JSON.parse(fs.readFileSync(EVENT_TYPES_FILE, 'utf8')); } catch {}
   const age = eventTypesCache?.fetchedAt ? Date.now() - Date.parse(eventTypesCache.fetchedAt) : Infinity;
-  if (age > 12 * 3600 * 1000 && token) {
+  if (eventTypesLoading) { await eventTypesLoading; return eventTypesCache?.types || {}; }
+  if (age > 12 * 3600 * 1000 && token && Date.now() - eventTypesFailAt > 60 * 60 * 1000) eventTypesLoading = (async () => {
     try {
       const data = await kbFetch('/v4/live/eventtypes', { token });
       const types = {};
@@ -1239,14 +1254,18 @@ async function loadEventTypes(token) {
         eventTypesCache = { fetchedAt: new Date().toISOString(), lcud: data.lcud ?? null, types: { ...types, ...(eventTypesCache?.types || {}) }, raw: data };
         const tmp = EVENT_TYPES_FILE + '.tmp'; fs.writeFileSync(tmp, JSON.stringify(eventTypesCache, null, 2)); fs.renameSync(tmp, EVENT_TYPES_FILE);
       }
-    } catch (err) { console.warn('Ereignisarten nicht ladbar:', err.message); }
-  }
+    } catch (err) {
+      eventTypesFailAt = Date.now();
+      if (!err.paused) console.warn('Ereignisarten nicht ladbar (naechster Versuch in 1 Std., bis dahin gespeicherte Liste):', err.message);
+    }
+  })().finally(() => { eventTypesLoading = null; });
+  if (eventTypesLoading) await eventTypesLoading;
   return eventTypesCache?.types || {};
 }
 app.get('/api/event-types', async (req, res) => {
   const token = getToken(req);
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
-  if (req.query.neu) eventTypesCache = { ...(eventTypesCache || {}), fetchedAt: null };
+  if (req.query.neu) { eventTypesCache = { ...(eventTypesCache || {}), fetchedAt: null }; eventTypesFailAt = 0; }
   const types = await loadEventTypes(token);
   res.set('Cache-Control', 'no-store').json({ count: Object.keys(types).length, known: EVENT_ETI_LABELS, types });
 });

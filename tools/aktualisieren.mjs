@@ -11,6 +11,8 @@ const REPO = 'TEE800/kbl-legenden', BRANCH = 'main';
 const ROOT = process.cwd(), STATE = path.join(ROOT, '.kbl-aktualisieren.json');
 const CODE = ['server.js', 'challenges.js', 'event-types-de.js', 'package.json', 'package-lock.json', 'CLAUDE.md', 'README.md', '.gitignore', '.github/workflows/seite.yml', 'kbl-head-landmarks.json'];// Kinnlinien: auf GitHub berechnet, damit die Köpfe auch am PC am Kinn enden
 const isCode = p => CODE.includes(p) || p.startsWith('public/') || p.startsWith('tools/');
+// Nur Beschreibung bzw. GitHub-Ablauf, am PC ohne Wirkung: immer den Stand von GitHub nehmen (Kevin 10.11.).
+const ALWAYS = ['CLAUDE.md', 'README.md', '.github/workflows/seite.yml'];
 // Git-Kennung einer Datei (wie GitHub sie im Verzeichnisbaum angibt).
 const blobSha = buf => crypto.createHash('sha1').update(`blob ${buf.length}\0`).update(buf).digest('hex');
 
@@ -31,7 +33,7 @@ try {
     const local = fs.existsSync(file) ? blobSha(fs.readFileSync(file)) : null;
     if (local === item.sha) { state[item.path] = item.sha; continue; }
     // Lokal geändert seit dem letzten Abgleich: nicht anfassen.
-    if (local && state[item.path] && local !== state[item.path]) { skipped.push(item.path); continue; }
+    if (local && state[item.path] && local !== state[item.path] && !ALWAYS.includes(item.path)) { skipped.push(item.path); continue; }
     const buf = await get(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/${item.path}`);
     if (blobSha(buf) !== item.sha) throw new Error(`${item.path}: Download unvollständig`);
     // Beim ersten Abgleich eine abweichende Datei vorher sichern.
