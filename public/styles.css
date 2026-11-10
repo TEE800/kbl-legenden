@@ -550,6 +550,9 @@ body:has(#dashboard.hidden) #pageTitle{visibility:hidden}
 .tr-record-who{display:flex;align-items:center;gap:8px;min-width:0;margin-top:4px}.tr-record-who>div{display:grid;min-width:0}
 .tr-record-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tr-record-who>.tr-face{width:36px;height:36px}
 .tr-record-mgr{display:flex;align-items:center;gap:4px;min-width:0}.tr-record-mgr .tr-face{width:16px;height:16px}
+.tr-day{margin:0 0 14px}.tr-day-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.tr-day-head select{width:auto}
+.tr-day>p{margin:2px 0 6px}.tr-day .tr-records{margin:0}.tr-day .tr-record-who>div{flex:1}.tr-record b.tr-day-val{font-size:15px;white-space:nowrap;flex-shrink:0;overflow:visible}
+@media (max-width:640px){.tr-day .tr-records{grid-template-columns:1fr}}
 .tr-trades{list-style:none;margin:0;padding:0;display:grid;gap:4px}
 .tr-trade{display:grid;grid-template-columns:minmax(140px,1.3fr) 1fr 1fr 100px;gap:10px;align-items:center;padding:8px 10px;background:var(--surface-0);border:1px solid var(--line);border-radius:8px}
 .tr-trade.held{border-style:dashed}
