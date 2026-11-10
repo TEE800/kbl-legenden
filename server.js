@@ -2918,6 +2918,13 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
     // Spieler, die der Empfaenger erst NACH dem Erhalt gekauft hat, zaehlen nicht fuers Teamlimit (Kevin-Meldung: Laimer kam
     // erst spaeter zu xDanii). Zeitpunkt aus dem Transfer-Verlauf des Empfaengers (tty 1 Kauf); ohne Verlauf bleibt alles wie bisher.
     const tlHist=new Map();
+    // Erhalt = juengster Kauf des Spielers (der Erhalt in der BumsParade liegt nach dem Spieltag); Weiterverkauf bis 72 Std. danach.
+    const resaleOf=(hist,pid)=>{if(!hist)return null;
+      const ev=hist.filter(t=>String(t.pi)===String(pid)).map(t=>({at:Date.parse(t.dt),tty:Number(t.tty)})).filter(e=>Number.isFinite(e.at));
+      const buy=ev.filter(e=>e.tty===1).sort((a,b)=>b.at-a.at)[0];if(!buy)return null;
+      const sale=ev.filter(e=>e.tty===2&&e.at>=buy.at&&e.at<=buy.at+72*3600e3).sort((a,b)=>a.at-b.at)[0];
+      return sale?{got:buy.at,at:sale.at}:null;};
+    const mateSoldBefore=(hist,mate,gotAt,until)=>hist.some(t=>String(t.pi)===String(mate)&&Number(t.tty)===2&&Date.parse(t.dt)>=gotAt-3600e3&&Date.parse(t.dt)<=until);
     const histOf=async rid=>{if(!tlHist.has(rid)){try{tlHist.set(rid,await transfersSince(token,rid,histSince));}catch{tlHist.set(rid,null);}}return tlHist.get(rid);};
     for(const inc of incoming){
       const rname=String(managers.find(m=>String(m.i)===inc.recipientId)?.n||inc.recipientId);
@@ -2931,8 +2938,13 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         if(!ev.length)return false;
         const before=ev.filter(e=>e.at<=gotAt).at(-1);
         return before?before.tty===2:ev[0].tty===1;})();
+      // Gleich weiterverkauft (Kevin-Meldung Nmecha ST 9: Meister kaufte ihn als AH und verkaufte ihn knapp eine Stunde spaeter
+      // weiter): Dann steht nie ein zweiter Spieler des Vereins im Kader, kein Teamlimit. Gilt fuer einen Verkauf bis 72 Std.
+      // nach dem Erhalt, solange der Vereinskollege nicht schon vorher verkauft wurde.
+      const resold=resaleOf(hist,inc.playerId);
       for(const mate of matesOf(inc.recipientId,inc.playerId)){
         if(laterBuy(mate))continue;
+        if(resold&&!mateSoldBefore(hist,mate,resold.got,resold.at))continue;
         const key=`TL:${inc.recipientId}:${mate}`;if(seenTl.has(key))continue;seenTl.add(key);
         const here=inSquad(inc.recipientId,mate);
         todo(key,'TL',inc.recipientId,rname,`verkauft ${playerNames.get(mate)||`Spieler-ID ${mate}`} (${clubName(mate)||'gleicher Verein'}), weil ${pname({playerId:inc.playerId})} über ${inc.rule} kommt (Teamlimit 1)`,
@@ -2953,11 +2965,13 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
         const list = await transfersOf(inc.recipientId); if (!list) continue;
         const got = list.find(t => String(t.pi) === inc.playerId && Number(t.tty) === 1); if (!got) continue;
         const club = String(got.tid), at = Date.parse(got.dt);
+        const resold = resaleOf(list, inc.playerId);
         const rname = String(managers.find(m => String(m.i) === inc.recipientId)?.n || inc.recipientId);
         for (const t of list) {
           const pid = String(t.pi), when = Date.parse(t.dt);
           if (Number(t.tty) !== 2 || String(t.tid) !== club || pid === inc.playerId || ruleIds.has(pid)) continue;
           if (!(when >= at - 3600e3 && when <= at + 72 * 3600e3)) continue;
+          if (resold && when > resold.at) continue; // erst nach dem Weiterverkauf verkauft: kein Teamlimit
           const key = `TL:${inc.recipientId}:${pid}`; if (seenTl.has(key)) continue; seenTl.add(key);
           todo(key, 'TL', inc.recipientId, rname, `verkauft ${t.pn || playerNames.get(pid) || `Spieler-ID ${pid}`} (gleicher Verein), weil ${pname({ playerId: inc.playerId })} über ${inc.rule} kam (Teamlimit 1)`,
             { state: 'done', note: `laut Transfer-Verlauf verkauft${t.othnm ? ' an ' + t.othnm : ' an den Markt'}` });
