@@ -1,6 +1,6 @@
 {
-  "fetchedAt": "2026-11-06T11:30:05.587Z",
-  "lcud": "2026-08-10T14:40:33Z",
+  "fetchedAt": "2026-11-10T08:10:20.094Z",
+  "lcud": "2026-11-09T15:16:58Z",
   "types": {
     "45": "Cross",
     "46": "Forward zone pass",
@@ -625,7 +625,7 @@
     "-17": "Zweite Halbzeit des Spiels beendet"
   },
   "raw": {
-    "lcud": "2026-08-10T14:40:33Z",
+    "lcud": "2026-11-09T15:16:58Z",
     "it": [
       {
         "i": 45,
