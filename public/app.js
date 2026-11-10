@@ -1274,7 +1274,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   const q=etiFilter.trim().toLowerCase();
   const list=etiData.filter(t=>!q||`${t.label||''} ${t.kickbaseTitle||''} ${t.eti} ${t.examples.map(e=>e.name+' '+e.team).join(' ')}`.toLowerCase().includes(q));
   const num=x=>x==null?-Infinity:x;
-  const cmp={count:(a,b)=>b.occurrences-a.occurrences,high:(a,b)=>num(mainPts(b))-num(mainPts(a)),low:(a,b)=>(mainPts(a)??Infinity)-(mainPts(b)??Infinity),eti:(a,b)=>a.eti-b.eti}[etiSort];
+  const cmp={count:(a,b)=>b.occurrences-a.occurrences,high:(a,b)=>num(mainPts(b))-num(mainPts(a)),low:(a,b)=>(mainPts(a)??Infinity)-(mainPts(b)??Infinity),eti:(a,b)=>a.eti-b.eti,abc:(a,b)=>(!a.label-!b.label)||String(a.label||'').localeCompare(String(b.label||''),'de')}[etiSort];
   list.sort((a,b)=>cmp(a,b)||b.occurrences-a.occurrences||a.eti-b.eti);
   const rows=list.map(t=>{
    const known=!!t.label,mp=mainPts(t);
@@ -1282,7 +1282,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
    const ex=t.examples.map(e=>`${safe(e.name)} (${safe(e.team)}${e.minute!=null?', '+safe(e.minute)+'.':''})`).join(' · ');
    return `<details><summary><span class="eti-name${known?'':' unk'}">${known?safe(t.label):'Noch unbekannt'}</span><span class="eti-count">${safe(t.occurrences)}×</span><span class="eti-pts ${mp>0?'pos':mp<0?'neg':''}">${safe(sign(mp))}</span></summary><div class="eti-body"><div><b>Nummer</b> ${safe(t.eti)}${t.kickbaseTitle?` · <b>Kickbase</b> ${safe(t.kickbaseTitle)}`:''}${t.ke&&t.ke.length?' · ke '+safe(t.ke.join(',')):''}</div><div><b>Punkte</b> ${pts||'–'}</div>${t.topPlayers?.length?`<div><b>Am häufigsten</b> ${t.topPlayers.slice(0,5).map(x=>`${safe(x.name)} (${safe(x.team)}) ${x.count}×`).join(' · ')}</div>`:(ex?`<div><b>Beispiele</b> ${ex}</div>`:'')}</div></details>`;
   }).join('');
-  const tools=`<div class="eti-tools"><label>Sortieren <select id="etiSort"><option value="high">Meiste Punkte</option><option value="count">Am häufigsten</option><option value="low">Meiste Minuspunkte</option><option value="eti">Nach Nummer</option></select></label><label>Suchen <input id="etiFilter" type="search" placeholder="z. B. Elfmeter oder Spieler"></label><span class="muted tiny">${list.length} von ${etiData.length}</span></div>`;
+  const tools=`<div class="eti-tools"><label>Sortieren <select id="etiSort"><option value="high">Nach Punkten</option><option value="abc">Alphabetisch</option><option value="count">Am häufigsten</option><option value="low">Meiste Minuspunkte</option><option value="eti">Nach Nummer</option></select></label><label>Suchen <input id="etiFilter" type="search" placeholder="z. B. Elfmeter oder Spieler"></label><span class="muted tiny">${list.length} von ${etiData.length}</span></div>`;
   root.innerHTML=statsHtml()+`<details class="acc-group" data-pts-open="all"${ptsOpen.all?' open':''}><summary>Alle Einzelereignisse <span class="pts-sub">${etiData.length} Arten, sortier- und durchsuchbar</span></summary><div class="acc-sub">${tools}${rows?`<div class="eti-list"><div class="eti-head"><span>EREIGNIS (antippen für Details)</span><span>ANZAHL</span><span>PUNKTE</span></div>${rows}</div>`:'<p class="muted">Nichts gefunden.</p>'}</div></details>`;
   root.querySelectorAll('[data-pts-open]').forEach(d=>d.addEventListener('toggle',()=>{ptsOpen[d.dataset.ptsOpen]=d.open;}));
   const sel=root.querySelector('#etiSort'),inp=root.querySelector('#etiFilter');
