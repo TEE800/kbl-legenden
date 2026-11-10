@@ -22,7 +22,7 @@
    "approvedAt": "2026-11-03T15:14:59.861Z"
   }
  },
- "stand": "Spieltagsbericht 9: Entwurf geschrieben, wartet auf Freigabe (claude-sonnet-5-5, 18862 rein, 7230 raus).",
+ "stand": "Spieltagsbericht 9: Entwurf geschrieben, wartet auf Freigabe (claude-sonnet-5-5, 18862 rein, 6772 raus).",
  "entwuerfe": {
   "7": {
    "vorgaben": 5,
@@ -1033,14 +1033,19 @@
   },
   "9": {
    "vorgaben": 6,
-   "createdAt": "2026-11-10T11:07:07.064Z",
+   "createdAt": "2026-11-10T11:17:53.009Z",
    "pruefung": {
-    "am": "2026-11-10T11:07:07.064Z",
+    "am": "2026-11-10T11:16:31.707Z",
     "zahlen": [],
     "ki": {
-     "probleme": []
+     "probleme": [
+      {
+       "zitat": "und Hansa sitzt ihm im Nacken",
+       "grund": "Hansaaufdie1 liegt auf Platz 1 und damit 22 Punkte vor xDanii (Platz 2). Er sitzt ihm nicht im Nacken, sondern ist vor ihm. Hinter xDanii liegt Cello mit 122 Punkten Rückstand."
+      }
+     ]
     },
-    "ok": true
+    "ok": false
    },
    "zahlen": [
     "9",
