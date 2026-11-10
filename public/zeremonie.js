@@ -233,6 +233,15 @@
    if(a==='copy'&&blob){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);flash(e.target,'✓ kopiert');}catch{flash(e.target,'geht hier nicht, bitte speichern');}}});
  }
 
+ // Gemeinsames Bild-Fenster für alle „Als Bild“-Knöpfe der App (Kevin-Wunsch 10.11.: überall diese Ansicht):
+ // Vorschau, Bild speichern, Bild kopieren, Text kopieren (nur mit Text), Schließen.
+ window.kblImgDialog=async(cv,file,text,label)=>{
+  const box=document.createElement('div');box.className='zer-akte';box.setAttribute('role','dialog');box.setAttribute('aria-label',label||'Bild');
+  box.innerHTML=`<div class="zer-akte-in"><div class="zer-akte-img"><p class="muted">Bild wird gemalt …</p></div><div class="zer-akte-btns"><button type="button" class="gold" data-a="save">⬇ Bild speichern</button><button type="button" class="ghost" data-a="copy">📋 Bild kopieren</button>${text?'<button type="button" class="ghost" data-a="text">📝 Text kopieren</button>':''}<button type="button" class="ghost" data-a="close">Schließen</button></div><p class="muted tiny">In Discord einfügen (Strg+V) oder das gespeicherte Bild hochladen.</p></div>`;
+  document.body.appendChild(box);
+  imgDialog(box,await (typeof cv==='function'?cv():cv),file,text||(()=>''));
+ };
+
  // ---------- Übersicht: alle Bumsungen eines Spieltags auf einem Bild (Kevin-Wunsch 2.11.) ----------
  // Gleiche Daten wie die Anklageschriften (model), also genau die Bumsungen der BumsTabelle.
  const faceUrl=x=>{const s=faceSrc(x);if(!s)return null;try{return (typeof rsFaceSrc==='function'&&rsFaceSrc(s))||s;}catch{return s;}};

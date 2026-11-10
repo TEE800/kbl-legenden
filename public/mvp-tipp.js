@@ -764,8 +764,13 @@
    :`<ol class="mvp-top10">${list.map((p,i)=>{if(!i||list[i-1].points!==p.points)place=i+1;const f=fans.get(p.id)||[];
      return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}${d.tracking?.mvpDetail?.[p.id]?' mvpd-tap':''}"${d.tracking?.mvpDetail?.[p.id]?' data-mvp-detail role="button" tabindex="0" title="Punkte einzeln ansehen"':''}><span class="mvp-top10-pl">${place}.</span><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
     <p class="muted tiny">${pool.length?`Nur Spieler von ${esc(pool.join(', '))}${condsOf(d).length?`, ${esc(condText(condsOf(d)))}`:''}. `:condsOf(d).length?`Alle Bundesliga-Spieler, ${esc(condText(condsOf(d)))}. `:'Alle Bundesliga-Spieler. '}Darunter steht, wer den Spieler getippt hat.${fin?'':` Stand ${esc(clock(t.at))} Uhr, getippte Spieler aktueller.`}${t.reliable===false?' Nicht alle Spieler waren abrufbar.':''}</p>`;
-  return `<details class="acc-group" style="margin-top:14px"><summary>Top 10 laut Tippregel</summary><div class="acc-sub">${body}</div></details>`;
+  // „📷 Als Bild“ (Kevin-Wunsch 10.11.): gleiche Liste als PNG, Daten für top10Canvas merken und Bilder vorladen.
+  top10Shot=list.length?{d,list,fans,bestIds,fin,pool,at:t.at,reliable:t.reliable}:null;
+  if(top10Shot)list.forEach(p=>{shotLoad(headSrc(p.id));(fans.get(p.id)||[]).forEach(r=>shotLoad(shotFace(r.m)));});
+  const btn=list.length?`<div class="mvp-tips-head" style="margin:0 0 8px"><span></span><button type="button" class="ghost" data-mvp-top10-shot title="Top 10 als Bild herunterladen (z. B. für Discord)">📷 Als Bild</button></div>`:'';
+  return `<details class="acc-group" style="margin-top:14px"><summary>Top 10 laut Tippregel</summary><div class="acc-sub">${btn}${body}</div></details>`;
  }
+ let top10Shot=null;
  // Übersicht aller Tipps als Bild (Kevin-Wunsch 06.11., wie „📷 Als Bild“ an der Liga-Tabelle): je Manager getippter Spieler,
  // Tipp, Punkte und Stand, sortiert nach der Wertung. Bilder: Manager online aus site/faces/, am PC über /api/mgr-img
  // (Kickbase-CDN erlaubt kein CORS), Köpfe vom eigenen Server; vorgeladen beim Zeichnen der Ansicht, damit der Klick nicht warten muss.
@@ -822,15 +827,64 @@
   x.fillText(`${fin?'Stand':'Punkte Stand'} ${p2(t.getDate())}.${p2(t.getMonth()+1)}.${t.getFullYear()}, ${p2(t.getHours())}:${p2(t.getMinutes())} Uhr${rows.some(r=>r.t.late)?' · * nachgetragen':''} · BumsKI 🤡`,L,H-P-22);
   return c;
  }
- function shotSave(btn){
-  const flash=t=>{const o=btn.textContent;btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1800);};
-  let c;try{if(!shot)throw 0;c=shotCanvas();}catch{flash('✕ Keine Tipps');return;}
-  // Synchron in eine Datei umwandeln (wie rankingShot), dann herunterladen.
-  const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
-  const url=URL.createObjectURL(new Blob([u],{type:'image/png'})),a=document.createElement('a');
-  a.href=url;a.download=`kbl-mvp-tipps-st${shot.d.day}-${new Date().toISOString().slice(0,10)}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇ Gespeichert');
+ // Top 10 laut Tippregel als Bild (Kevin-Wunsch 10.11.), gleicher Stil wie die Übersicht aller Tipps.
+ function top10Canvas(){
+  const {d,list,fans,bestIds,fin,pool}=top10Shot,W=1080,P=36,L=P+26,R=W-P-26,sans='"Segoe UI",Arial,sans-serif';
+  const c=document.createElement('canvas'),x=c.getContext('2d');
+  const wrap=(t,max)=>{const out=[];let line='';for(const w of String(t||'').split(/\s+/)){const n=line?line+' '+w:w;if(line&&x.measureText(n).width>max){out.push(line);line=w;}else line=n;}if(line)out.push(line);return out;};
+  const ell=(t,max)=>{t=String(t||'');if(x.measureText(t).width<=max)return t;while(t.length>1&&x.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+  x.font=`500 24px ${sans}`;const rule=d.rule?.text?wrap(d.rule.text,R-L).slice(0,4):[];
+  const scope=pool.length?`Nur Spieler von ${pool.join(', ')}${condsOf(d).length?', '+condText(condsOf(d)):''}`:condsOf(d).length?`Alle Bundesliga-Spieler, ${condText(condsOf(d))}`:'Alle Bundesliga-Spieler';
+  x.font=`500 21px ${sans}`;const scopeL=wrap(scope,R-L).slice(0,3);
+  // Zeilenhöhe: mit Tippern zweite Zeile für deren Profilbilder
+  const rh=list.map(p=>(fans.get(p.id)||[]).length?118:82);
+  const HEAD=110+rule.length*32+scopeL.length*28+56,H=P+HEAD+rh.reduce((a,b)=>a+b,0)+70+P;
+  c.width=W;c.height=H;x.fillStyle='#081118';x.fillRect(0,0,W,H);
+  const bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,22):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
+  x.textBaseline='alphabetic';x.textAlign='left';x.font='900 38px Georgia,serif';x.fillStyle='#ebc768';x.fillText('KBL LEGENDEN',L,P+56);
+  const t1=x.measureText('KBL LEGENDEN ').width;x.font=`700 28px ${sans}`;x.fillStyle='#e9f0f4';x.fillText(`· Top 10 Spieltag ${d.day}`,L+t1,P+56);
+  x.textAlign='right';x.font=`700 24px ${sans}`;
+  if(d.status==='live'||d.closing){x.fillStyle='#ed8b85';x.fillText('● LIVE',R,P+54);}else if(fin){x.fillStyle='#9db0bd';x.fillText('Endstand',R,P+54);}
+  let y=P+100;x.textAlign='left';x.font=`500 24px ${sans}`;x.fillStyle='#c9d6de';for(const l of rule){x.fillText(l,L,y);y+=32;}
+  x.font=`500 21px ${sans}`;x.fillStyle='#9db0bd';for(const l of scopeL){x.fillText(l,L,y);y+=28;}
+  y+=22;x.font=`700 19px ${sans}`;x.fillStyle='#9db0bd';x.fillText('PL.',L+6,y);x.fillText('SPIELER',L+70,y);x.textAlign='right';x.fillText('PUNKTE',R-8,y);
+  y+=14;x.fillStyle='#2e3f4a';x.fillRect(L,y,R-L,2);y+=4;
+  const circle=(img,cx,cy,r,ch)=>{x.save();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fillStyle='#14212b';x.fill();x.clip();
+   if(img){const s=Math.min(img.naturalWidth,img.naturalHeight);try{x.drawImage(img,(img.naturalWidth-s)/2,0,s,s,cx-r,cy-r,2*r,2*r);}catch{}}
+   else{x.fillStyle='#9db0bd';x.font=`700 16px ${sans}`;x.textAlign='center';x.fillText((ch||'?')[0].toUpperCase(),cx,cy+6);}
+   x.restore();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.strokeStyle='#465864';x.lineWidth=2;x.stroke();};
+  let place=0;
+  list.forEach((p,i)=>{
+   if(!i||list[i-1].points!==p.points)place=i+1;
+   const top=y,h=rh[i],mid=top+41,gold=bestIds.has(p.id),f=fans.get(p.id)||[];
+   if(i){x.fillStyle='#2e3f4a';x.fillRect(L,top,R-L,1);}
+   if(gold){x.fillStyle='rgba(235,199,104,.08)';x.fillRect(L,top+1,R-L,h-1);x.fillStyle='#ebc768';x.fillRect(L,top+4,5,h-8);}
+   x.textAlign='left';x.font=`${gold?800:600} 28px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';x.fillText(place+'.',L+16,mid+10);
+   const hd=shotImgs.get(headSrc(p.id));if(hd){const s=62/Math.max(hd.naturalWidth,hd.naturalHeight);try{x.drawImage(hd,L+70+(62-hd.naturalWidth*s)/2,mid-31+(62-hd.naturalHeight*s),hd.naturalWidth*s,hd.naturalHeight*s);}catch{}}
+   const px=L+146;x.font=`700 27px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';const pn=ell((gold?'👑 ':'')+p.name,R-150-px);x.fillText(pn,px,mid+2);
+   x.font=`500 19px ${sans}`;x.fillStyle='#9db0bd';x.fillText(ell(p.team,R-150-px),px,mid+28);
+   x.textAlign='right';x.font=`800 30px ${sans}`;x.fillStyle=gold?'#ebc768':'#e9f0f4';x.fillText(fmt(p.points),R-8,mid+10);
+   if(f.length){let fx=px,fy=top+h-24;x.textAlign='left';x.font=`500 18px ${sans}`;
+    for(const r of f){const lab=`${r.m.name} (${fmt(r.t.points)})`,w=34+x.measureText(lab).width+18;if(fx+w>R-8)break;
+     circle(shotImgs.get(shotFace(r.m)),fx+13,fy-6,13,r.m.name);x.font=`500 18px ${sans}`;x.textAlign='left';x.fillStyle='#c9d6de';x.fillText(lab,fx+32,fy);fx+=w;}}
+   y+=h;
+  });
+  const t=new Date(fin?Date.now():top10Shot.at||Date.now()),p2=v=>String(v).padStart(2,'0');
+  x.textAlign='left';x.font=`22px ${sans}`;x.fillStyle='#728592';
+  x.fillText(`${fin?'Stand':'Punkte Stand'} ${p2(t.getDate())}.${p2(t.getMonth()+1)}.${t.getFullYear()}, ${p2(t.getHours())}:${p2(t.getMinutes())} Uhr${top10Shot.reliable===false?' · nicht alle Spieler abrufbar':''} · BumsKI 🤡`,L,H-P-22);
+  return c;
  }
- document.addEventListener('click',e=>{const b=e.target.closest?.('[data-mvp-shot]');if(b){e.preventDefault();shotSave(b);}});
+ function shotSave(btn,top){
+  const flash=t=>{const o=btn.textContent;btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1800);};
+  const st=top?top10Shot:shot;
+  let c;try{if(!st)throw 0;c=top?top10Canvas():shotCanvas();}catch{flash(top?'✕ Keine Top 10':'✕ Keine Tipps');return;}
+  const name=`kbl-${top?'top10':'mvp-tipps'}-st${st.d.day}-${new Date().toISOString().slice(0,10)}.png`;
+  const text=top?()=>{let pl=0;return `**KBL Legenden · Top 10 laut Tippregel · Spieltag ${st.d.day}**${st.d.rule?.text?'\n'+st.d.rule.text:''}\n`+st.list.map((p,i)=>{if(!i||st.list[i-1].points!==p.points)pl=i+1;const f=st.fans.get(p.id)||[];
+    return `${pl}. ${st.bestIds.has(p.id)?'👑 ':''}${p.name} (${p.team}) ${fmt(p.points)} Pkt.${f.length?' · getippt von '+f.map(r=>`${r.m.name} (${fmt(r.t.points)})`).join(', '):''}`;}).join('\n');}
+   :()=>`**KBL Legenden · MVP-Tipp Spieltag ${st.d.day}**${st.d.rule?.text?'\n'+st.d.rule.text:''}\n`+st.rows.map(r=>`${r.rank?r.rank+'.':'–'} ${r.m.name}: ${r.t.player} (${r.t.team}), Tipp ${fmt(r.t.points)}, Punkte ${r.pts===null?'–':fmt(r.pts)}`).join('\n');
+  window.kblImgDialog?.(c,name,text,top?'Top 10 als Bild':'Alle Tipps als Bild');
+ }
+ document.addEventListener('click',e=>{const b=e.target.closest?.('[data-mvp-shot],[data-mvp-top10-shot]');if(b){e.preventDefault();shotSave(b,b.hasAttribute('data-mvp-top10-shot'));}});
  function allTips(d){
   if(!d.reveal)return '';
   const {rows,lead,kind,auto,ready,needMvp,mvp,mvpPts,pool}=standings(d);if(!rows.length)return '';
