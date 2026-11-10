@@ -1243,7 +1243,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
   ['Meiste Großchancen vorbereitet',['Big Chance Created']],['Meiste Schüsse aufs Tor',['Shot on goal']],
   ['Meiste Tacklings gewonnen',['Tackle won']],['Meiste Dribblings gewonnen',['Contest won']],['Meiste Kopfballduelle gewonnen',['Aerial won']],
   ['Meiste Bälle abgefangen',['Interception (outside the box)','Interception (in the box)','Ball intercepted']],
-  ['Meiste Zweikämpfe verloren',['Challenge lost']],['Meiste Ballverluste',['Possession lost']],['Am häufigsten im Abseits',['Offside']],
+  ['Meiste Zweikämpfe verloren',['Challenge lost']],['Meiste Ballverluste',['Possession lost']],['Meiste Fehler vor Gegentor',['Mistake before Goal']],['Am häufigsten im Abseits',['Offside']],
   ['Meiste Paraden (Torwart)',['Shot saved (GK)']]];
  // Ältere Stände zählten Gegenbuchungen (z. B. Gelb −10, später +10) mit. Bei festem Betrag ergibt sich die Anzahl aus den Punkten.
  const fixCount=(t,x)=>{if(t.signCount)return x.count;const m=new Set((t.points||[]).map(p=>Math.abs(p.points)));if(m.size!==1||m.has(0)||m.has(null))return x.count;const v=(t.points||[]).filter(p=>p.points).sort((a,b)=>b.count-a.count)[0].points;return Math.max(0,Math.round(x.points/v));};
