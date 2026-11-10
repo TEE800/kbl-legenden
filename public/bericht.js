@@ -81,7 +81,7 @@
   const pr=admin&&draft?pruefHtml(sel):'';
   box.innerHTML=`${bar}${pr}<h3 class="ber-title">${esc(sel.title||`Spieltag ${sel.day}`)}</h3><div class="ber-body">${md(sel.text)}</div>${foot}${msg?`<p class="muted tiny" role="status">${esc(msg)}</p>`:''}`;
   if(loadErr)box.insertAdjacentHTML('afterbegin',`<p class="error" role="status">⚠️ Entwürfe nicht abrufbar: ${esc(loadErr)}</p>`);
-  fitHeads();
+  fitHeads();copyBars();
   if(!draft)reactMount(sel.day);
  }
  // Emoji-Reaktionen je Absatz (Kevin-Wunsch 28.10.): unter jedem Absatz bzw. jeder Liste, durchgezählt ab 0 (Überschriften zählen nicht).
@@ -96,7 +96,8 @@
   const bars=[];let sec=0;
   for(const el of [...body.children]){
    if(el.classList.contains('ber-h')||el.classList.contains('ber-hr'))continue;
-   const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec++;el.after(d);bars.push(d);
+   const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec++;
+   const t=el.nextElementSibling;if(t?.classList.contains('ber-tools'))t.prepend(d);else el.after(d);bars.push(d);
   }
   return bars;
  }
@@ -125,6 +126,53 @@
   catch{on?mine.add(e):mine.delete(e);c[e]=Math.max(0,(c[e]||0)+(on?1:-1));rx.mine[sec]=[...mine];}
   reactPaint();
  }
+ // Absatz als Bild (Kevin-Wunsch 10.11.): unter jedem Absatz bzw. jeder Liste ein 📋, öffnet das gemeinsame Bild-Fenster
+ // (window.kblImgDialog) mit Schlagzeile, Zwischenüberschrift und genau diesem Absatz, dazu Text für Discord.
+ function copyBars(){
+  const body=$('berichtContent')?.querySelector('.ber-body');if(!body)return;
+  for(const el of [...body.children]){
+   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr'))continue;
+   const t=document.createElement('div');t.className='ber-tools';
+   t.innerHTML='<button type="button" class="ber-cp" data-ber-cp title="Absatz als Bild (für Discord)" aria-label="Absatz als Bild">📋</button>';el.after(t);
+  }
+ }
+ function blockOf(btn){let el=btn.closest('.ber-tools')?.previousElementSibling;let h=null;for(let p=el?.previousElementSibling;p;p=p.previousElementSibling)if(p.classList.contains('ber-h')){h=p;break;}return {el,h};}
+ function paraCanvas(el,h){
+  const W=1080,P=56,L=P+30,M=W-2*P-50,sans='"Segoe UI",Arial,sans-serif',c=document.createElement('canvas'),x=c.getContext('2d');
+  const runs=node=>{const out=[];const walk=(n,b,i)=>{for(const ch of n.childNodes){if(ch.nodeType===3)out.push({t:ch.textContent,b,i});else if(ch.nodeType===1)walk(ch,b||ch.tagName==='B',i||ch.tagName==='I');}};walk(node,false,false);return out;};
+  const font=(r,size,weight)=>`${r.i?'italic ':''}${r.b?800:weight} ${size}px ${r.f||sans}`;
+  const wrap=(rs,size,weight,max)=>{const lines=[[]];
+   for(const r of rs)for(const word of r.t.split(/(\s+)/)){if(!word)continue;x.font=font(r,size,weight);
+    if(/^\s+$/.test(word)){if(lines.at(-1).length)lines.at(-1).push({...r,t:' ',w:x.measureText(' ').width});continue;}
+    const ww=x.measureText(word).width,cur=lines.at(-1).reduce((s,q)=>s+q.w,0);
+    if(cur+ww>max&&lines.at(-1).length){while(lines.at(-1).at(-1)?.t===' ')lines.at(-1).pop();lines.push([]);}
+    lines.at(-1).push({...r,t:word,w:ww});}
+   return lines.filter(l=>l.length);};
+  const title=wrap([{t:sel.title||`Spieltag ${sel.day}`,b:false,f:'Georgia,serif'}],46,900,M);
+  const head=h?wrap(runs(h),34,800,M):[];
+  const items=el.tagName==='P'?[{mark:'',lines:wrap(runs(el),36,400,M)}]:[...el.children].map((li,k)=>({mark:el.tagName==='OL'?`${k+1}.`:'•',lines:wrap(runs(li),36,400,M-44)}));
+  const H=P+60+title.length*58+(head.length?20+head.length*46:0)+24+items.reduce((s,it)=>s+it.lines.length*52+14,0)+70+P;c.width=W;c.height=H;
+  x.fillStyle='#081118';x.fillRect(0,0,W,H);
+  const bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,22):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
+  x.save();x.clip();x.fillStyle='#b48633';x.fillRect(bx,by,10,bh);x.restore();
+  let y=P+44;x.textBaseline='alphabetic';x.textAlign='left';
+  x.font=`600 28px ${sans}`;x.fillStyle='#9db0bd';x.fillText(`📰 SPIELTAGSBERICHT · SPIELTAG ${sel.day}`,L,y);
+  x.font=`900 26px Georgia,serif`;x.fillStyle='#ebc768';x.textAlign='right';x.fillText('KBL LEGENDEN',W-P-20,y);x.textAlign='left';y+=8;
+  const draw=(lines,size,weight,col,colB,lh,ind=0)=>{for(const l of lines){y+=lh;let px=L+ind;for(const w of l){x.font=font(w,size,weight);x.fillStyle=w.b?colB:col;x.fillText(w.t,px,y);px+=w.w;}}};
+  draw(title,46,900,'#ebc768','#ebc768',58);
+  if(head.length){y+=20;draw(head,34,800,'#d9b45a','#d9b45a',46);}
+  y+=24;
+  for(const it of items){if(it.mark){x.font=`800 36px ${sans}`;x.fillStyle='#ebc768';x.fillText(it.mark,L,y+52);}draw(it.lines,36,400,'#cfd9e0','#ffffff',52,it.mark?44:0);y+=14;}
+  x.font=`26px ${sans}`;x.fillStyle='#728592';x.fillText(`Spieltag ${sel.day} · geschrieben von BumsKI 🤡`,L,H-P-6);
+  return c;
+ }
+ const mdOf=node=>{let s='';for(const ch of node.childNodes){if(ch.nodeType===3)s+=ch.textContent;else if(ch.tagName==='B')s+=`**${mdOf(ch)}**`;else if(ch.tagName==='I')s+=`*${mdOf(ch)}*`;else s+=mdOf(ch);}return s.replace(/\s+/g,' ');};
+ function paraShot(btn){
+  const {el,h}=blockOf(btn);if(!el||!sel)return;
+  const body=el.tagName==='P'?mdOf(el).trim():[...el.children].map((li,k)=>`${el.tagName==='OL'?k+1+'.':'-'} ${mdOf(li).trim()}`).join('\n');
+  const txt=`**${sel.title||'Spieltag '+sel.day}** (Spieltagsbericht ST ${sel.day})\n${h?`__${h.textContent.trim()}__\n`:''}${body}`;
+  window.kblImgDialog?.(()=>paraCanvas(el,h),`kbl-bericht-st${sel.day}-absatz.png`,()=>txt,'Absatz als Bild');
+ }
  // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): nur zu lange einzeln so weit verkleinern, dass sie passen (min. 11 px, dann Umbruch).
  // Der Bereich startet eingeklappt (Breite 0), darum beim Aufklappen und bei Größenänderung neu über den ResizeObserver.
  function fitHeads(){
@@ -138,6 +186,7 @@
  }
  if(window.ResizeObserver&&$('berichtContent')){let lastW=-1;new ResizeObserver(es=>{const w=Math.round(es[0].contentRect.width);if(w!==lastW){lastW=w;fitHeads();}}).observe($('berichtContent'));}
  sec.addEventListener('click',async e=>{
+  const cp=e.target.closest('[data-ber-cp]');if(cp){paraShot(cp);return;}
   const ad=e.target.closest('[data-rx-add]');if(ad){const sec=ad.closest('.ber-react').dataset.sec;pickSec=pickSec===sec?null:sec;reactPaint();return;}
   const x=e.target.closest('[data-rx]');if(x){if(x.closest('.ber-rx-pick'))pickSec=null;reactToggle(x);return;}
   const b=e.target.closest('[data-ber]');if(!b||!sel)return;const act=b.dataset.ber;
