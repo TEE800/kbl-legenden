@@ -222,13 +222,15 @@
   });
   // Schlüssel: kleiner ist besser. "Name reicht" und "Korridor": alle Treffer gleichauf.
   const key=r=>kind==='spieler'?[-r.pts,r.diff]:kind==='name'||kind==='korridor'?[0,0]:[r.diff,0];
+  const own=r=>r.pts===null?1e9:Math.abs(r.t.points-r.pts);// Abstand der getippten Zahl zu den Punkten des eigenen Spielers
   const cmp=(a,b)=>{if(a.ok!==b.ok)return a.ok?-1:1;if(a.ok){const A=key(a),B=key(b);if(A[0]!==B[0])return A[0]-B[0];if(A[1]!==B[1])return A[1]-B[1];}
    if(!a.ok&&pool.length){const oa=!pool.includes(a.t.team),ob=!pool.includes(b.t.team);if(oa!==ob)return oa?1:-1;}
-   return (a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||(a.diff??1e9)-(b.diff??1e9)||a.m.name.localeCompare(b.m.name,'de');};
+   return (a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||own(a)-own(b)||a.m.name.localeCompare(b.m.name,'de');};
   rows.sort(cmp);
-  // Plätze (Kevin 10.11.): auch wer nach der Wertung raus ist, bekommt einen Platz dahinter, nach Punkten des getippten Spielers,
-  // dann Abstand zur Zahl (wie „bester MVP-Tipper“); Spieler von nicht genannten Vereinen zuletzt, ohne Punkte kein Platz.
-  const k2=r=>[r.ok,r.ok?String(key(r)):[pool.length&&!pool.includes(r.t.team),r.pts,r.diff].join()].join('|');
+  // Plätze (Kevin 10.11.): auch wer nach der Wertung raus ist, bekommt einen Platz dahinter, nach der echten Platzierung des
+  // getippten Spielers (seine Punkte); mehrere Tipper desselben Spielers: wer mit seiner Zahl näher an dessen Punkten liegt.
+  // Spieler von nicht genannten Vereinen zuletzt, ohne Punkte kein Platz.
+  const k2=r=>[r.ok,r.ok?String(key(r)):[pool.length&&!pool.includes(r.t.team),r.pts,own(r)].join()].join('|');
   let rank=0;rows.forEach((r,i)=>{const p=rows[i-1];r.rank=!r.ok&&r.pts===null?null:p&&p.rank&&k2(p)===k2(r)?p.rank:(rank=i+1);});
   return {rows,lead:rows.filter(r=>r.ok&&r.rank===1),kind,auto,ready,needMvp,mvp,mvpPts,pool};
  }
