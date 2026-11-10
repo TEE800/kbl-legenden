@@ -223,10 +223,14 @@
   // Schlüssel: kleiner ist besser. "Name reicht" und "Korridor": alle Treffer gleichauf.
   const key=r=>kind==='spieler'?[-r.pts,r.diff]:kind==='name'||kind==='korridor'?[0,0]:[r.diff,0];
   const cmp=(a,b)=>{if(a.ok!==b.ok)return a.ok?-1:1;if(a.ok){const A=key(a),B=key(b);if(A[0]!==B[0])return A[0]-B[0];if(A[1]!==B[1])return A[1]-B[1];}
-   return (a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||a.m.name.localeCompare(b.m.name,'de');};
+   if(!a.ok&&pool.length){const oa=!pool.includes(a.t.team),ob=!pool.includes(b.t.team);if(oa!==ob)return oa?1:-1;}
+   return (a.pts===null)-(b.pts===null)||(b.pts??0)-(a.pts??0)||(a.diff??1e9)-(b.diff??1e9)||a.m.name.localeCompare(b.m.name,'de');};
   rows.sort(cmp);
-  let rank=0;rows.forEach((r,i)=>{const p=rows[i-1];r.rank=!r.ok?null:p&&p.ok&&String(key(p))===String(key(r))?p.rank:(rank=i+1);});
-  return {rows,lead:rows.filter(r=>r.rank===1),kind,auto,ready,needMvp,mvp,mvpPts,pool};
+  // Plätze (Kevin 10.11.): auch wer nach der Wertung raus ist, bekommt einen Platz dahinter, nach Punkten des getippten Spielers,
+  // dann Abstand zur Zahl (wie „bester MVP-Tipper“); Spieler von nicht genannten Vereinen zuletzt, ohne Punkte kein Platz.
+  const k2=r=>[r.ok,r.ok?String(key(r)):[pool.length&&!pool.includes(r.t.team),r.pts,r.diff].join()].join('|');
+  let rank=0;rows.forEach((r,i)=>{const p=rows[i-1];r.rank=!r.ok&&r.pts===null?null:p&&p.rank&&k2(p)===k2(r)?p.rank:(rank=i+1);});
+  return {rows,lead:rows.filter(r=>r.ok&&r.rank===1),kind,auto,ready,needMvp,mvp,mvpPts,pool};
  }
  // Abstand: bei MVP-Wertungen zur MVP-Punktzahl, sonst zu den Punkten des getippten Spielers.
  const off=(r,toMvp,pre,post,pool)=>r.diff===null?'':pre+(r.diff?`${fmt(r.diff)} ${toMvp?(pool?'neben den Punkten des Besten':'neben den MVP-Punkten'):'daneben'}`:toMvp?(pool?'genau die Punkte des Besten':'genau die MVP-Punktzahl'):'genau getroffen')+post;
@@ -762,7 +766,7 @@
   let place=0;
   const body=!list.length?`<p class="muted tiny">Das fehlt: ${fin?'Die Spieltagspunkte aller Spieler sind nicht abrufbar.':'Der Zwischenstand aller Spieler wird während der Spiele etwa alle 10 Minuten berechnet und ist noch nicht da.'}</p>`
    :`<ol class="mvp-top10">${list.map((p,i)=>{if(!i||list[i-1].points!==p.points)place=i+1;const f=fans.get(p.id)||[];
-     return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}${d.tracking?.mvpDetail?.[p.id]?' mvpd-tap':''}"${d.tracking?.mvpDetail?.[p.id]?' data-mvp-detail role="button" tabindex="0" title="Punkte einzeln ansehen"':''}><span class="mvp-top10-pl">${place}.</span><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
+     return `<li class="${bestIds.has(p.id)?'best':''}${f.length?' tipped':''}${d.tracking?.mvpDetail?.[p.id]?' mvpd-tap':''}"${d.tracking?.mvpDetail?.[p.id]?' data-mvp-detail role="button" tabindex="0" title="Punkte einzeln ansehen"':''}><span class="mvp-top10-pl">${place}.</span><img class="mvp-top10-hd" src="${esc(headSrc(p.id))}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="mvp-top10-nm">${bestIds.has(p.id)?'👑 ':''}${esc(p.name)} <small>${esc(p.team)}</small>${f.length?`<span class="mvp-top10-fans">${f.map(r=>`<span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'',r.m.id):''}<small>${esc(r.m.name)} (${fmt(r.t.points)})</small></span>`).join('')}</span>`:''}</span><b>${fmt(p.points)}</b></li>`;}).join('')}</ol>
     <p class="muted tiny">${pool.length?`Nur Spieler von ${esc(pool.join(', '))}${condsOf(d).length?`, ${esc(condText(condsOf(d)))}`:''}. `:condsOf(d).length?`Alle Bundesliga-Spieler, ${esc(condText(condsOf(d)))}. `:'Alle Bundesliga-Spieler. '}Darunter steht, wer den Spieler getippt hat.${fin?'':` Stand ${esc(clock(t.at))} Uhr, getippte Spieler aktueller.`}${t.reliable===false?' Nicht alle Spieler waren abrufbar.':''}</p>`;
   // „📷 Als Bild“ (Kevin-Wunsch 10.11.): gleiche Liste als PNG, Daten für top10Canvas merken und Bilder vorladen.
   top10Shot=list.length?{d,list,fans,bestIds,fin,pool,at:t.at,reliable:t.reliable}:null;
@@ -922,7 +926,9 @@
   h+=top10(d,rows,pool,bestIds,fin);
   // Zahlenstrahl „Wer liegt mit der Zahl am nächsten?“ entfernt (Kevin-Wunsch).
   // Rangliste je Manager (eingeklappt, Liga-Vorgabe).
-  h+=`<details class="acc-group" style="margin-top:14px"><summary>Rangliste aller Manager</summary><div class="acc-sub"><div class="tablewrap"><table class="mvp-table"><tr><th>Pl.</th><th>Manager</th><th>Spieler</th><th class="num">Tipp</th><th class="num">Punkte</th><th>Stand</th></tr>${rows.map(r=>`<tr${r.m.id===d.me?' class="mvp-me"':''}><td>${r.rank??'–'}</td><td>${mn(r.m.name,r.m.id)}${r.t.late?'<sup>*</sup>':''}</td><td>${esc(r.t.player)} <small class="muted">${esc(r.t.team)}</small></td><td class="num">${fmt(r.t.points)}</td><td class="num">${r.pts===null?'–':fmt(r.pts)}</td><td><small class="muted">${r.why?esc(r.why):off(r,needMvp,'','',pool.length||condsOf(d).length)||esc(STATE[r.state]||'')}</small></td></tr>`).join('')}</table></div></div></details>`;
+  // Wie das Bild „📷 Als Bild“ (Kevin-Wunsch 10.11.): Platz, Profilbild, Manager, Spielerkopf mit Verein und Stand, Tipp und Punkte; Vorne nach der Wertung gold.
+  h+=`<details class="acc-group" style="margin-top:14px"><summary>Rangliste aller Manager</summary><div class="acc-sub"><ol class="mvp-rl">${rows.map(r=>{const st=r.why||off(r,needMvp,'','',pool.length||condsOf(d).length)||STATE[r.state]||'';
+   return `<li class="${leadIds.has(r.m.id)?'gold':''}${r.m.id===d.me?' mvp-me':''}"><span class="mvp-rl-pl">${r.rank?r.rank+'.':'–'}</span>${window.kblMgrFace?window.kblMgrFace(r.m.name,'mvp-rl-av',r.m.id):''}<div class="mvp-rl-main"><div class="mvp-rl-mgr">${window.kblMgrLink?window.kblMgrLink(r.m.name,esc(r.m.name)):esc(r.m.name)}${r.t.late?'<sup>*</sup>':''}</div><div class="mvp-rl-player"><img class="mvp-rl-hd" src="${esc(headSrc(r.t.playerId))}" alt="" loading="lazy" onerror="this.style.display='none'"><span><b>${esc(r.t.player)}</b> <small>${esc(r.t.team)}</small>${st?`<small class="mvp-rl-st${r.ok===false&&r.why?' bad':''}">${esc(st)}</small>`:''}</span></div></div><div class="mvp-rl-num"><small>Tipp ${fmt(r.t.points)}</small><b>${r.pts===null?'–':fmt(r.pts)}</b></div></li>`;}).join('')}</ol>${rows.some(r=>r.t.late)?'<p class="muted tiny">* nachgetragen</p>':''}</div></details>`;
   const none=d.managers.filter(m=>!m.tipped);
   if(none.length)h+=`<p class="muted tiny">Ohne Tipp: ${none.map(m=>esc(m.name)).join(', ')}</p>`;
   return h;
