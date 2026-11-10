@@ -19,7 +19,7 @@ on:
         default: 'false'
   push:                      # nach Programm-Aenderungen gleich neu bauen, voll (sonst bleiben beendete Spieltage bis 6:07 auf altem Stand)
     branches: [main]
-    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/spieltagsbericht.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs', 'kbl-challenge-cache.json']
+    paths: ['public/**', 'server.js', 'challenges.js', 'event-types-de.js', 'tools/export-static.mjs', 'tools/spieltagsbericht.mjs', 'tools/kickbase-bremse.mjs', 'tools/kinn-linien.mjs', 'tools/png.mjs']
 permissions:
   contents: write
   pages: write
