@@ -1879,6 +1879,51 @@ function recordVerlauf(day,tracking,result,finished){
  list.push(frame);
  try{const tmp=VERLAUF_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all));fs.renameSync(tmp,VERLAUF_FILE);}catch{}
 }
+// Zeitraffer nachgebaut aus den Kickbase-Ereignissen (Kevin 10.11.: an ST 9 gab es nur zwei Stände, weil GitHub gesperrt war; seit 10.11. gibt es
+// ohnehin keine Läufe mehr während der Spiele). Nach Spieltagsende einmal je Spieler playercenter (keine Abrufe während der Spiele):
+// jedes Ereignis zählt zur Uhrzeit Anstoß (pc.md) + Minute (ab der 46. plus 17 Min. Halbzeit), zurückgenommene (gleiche eti und Minute, Summe 0) nicht.
+// Was die Ereignisse nicht erklären (z. B. Einsatzzeit-Punkte ohne Minute), kommt beim Abpfiff (Anstoß + 112 Min.) dazu, damit der Endstand stimmt.
+// Stände im 10-Minuten-Raster. Nur wenn alle getippten Spieler einen Anstoß haben (nie raten); gespeichert in kbl-mvp-verlauf.json unter "rek".
+const REK_VERSION=1,REK_STEP=10*60e3,REK_END=112*60e3;
+async function rekVerlauf(token,day,tracking,result){
+ const tipped=Object.entries(tracking?.players||{}).filter(([,x])=>Number.isFinite(x?.points)).map(([id,x])=>[String(id),x.points]);
+ if(!tipped.length)return null;
+ const top=(tracking.top10?.players||[]).filter(x=>Number.isFinite(x.points)).map(x=>({id:String(x.id),name:x.name,team:x.team,points:x.points}));
+ const fin=new Map([...top.map(x=>[x.id,x.points]),...tipped]);
+ const sig=JSON.stringify([REK_VERSION,[...fin].sort((a,b)=>a[0].localeCompare(b[0])),!!result?.mvp]);
+ const all=readVerlauf(),old=all.rek?.[day];
+ if(old&&old.sig===sig)return old.frames;
+ const tl=new Map();
+ for(const [id,final] of fin){
+  let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
+  const kick=Date.parse(pc?.md||'');
+  if(!Number.isFinite(kick)){if(tipped.some(([t])=>t===id))return null;continue;}
+  const g=new Map();
+  for(const e of Array.isArray(pc.events)?pc.events:[]){const k=e.eti+'|'+e.mt,x=g.get(k)||{mt:e.mt,n:0,p:0};x.n++;x.p+=Number(e.p)||0;g.set(k,x);}
+  const ev=[];let sum=0;
+  for(const x of g.values()){if(x.n>1&&x.p===0)continue;const m=parseInt(String(x.mt??''),10);if(!Number.isFinite(m)||!x.p)continue;
+   ev.push([kick+(m+(m>45?17:0))*60e3,x.p]);sum+=x.p;}
+  if(final-sum)ev.push([kick+REK_END,final-sum]);
+  tl.set(id,{kick,end:kick+REK_END,ev});
+ }
+ const times=new Set();
+ for(const x of tl.values()){times.add(x.kick);times.add(x.end);for(const [t] of x.ev)times.add(Math.min(x.end,Math.ceil(t/REK_STEP)*REK_STEP));}
+ const isTip=new Set(tipped.map(([id])=>id)),frames=[];let last='';
+ for(const T of [...times].sort((a,b)=>a-b)){
+  const pts=id=>{const x=tl.get(id);return x.ev.reduce((s,[t,p])=>s+(Math.min(x.end,Math.ceil(t/REK_STEP)*REK_STEP)<=T?p:0),0);};
+  const p={},t={};
+  for(const [id,x] of tl){if(isTip.has(id))p[id]=[T<x.kick?0:pts(id),T<x.kick?'o':T<x.end?'l':'d'];else if(T>=x.kick)t[id]=[pts(id)];}
+  let mvp=null;
+  if(result?.mvp){const c=top.filter(x=>tl.has(x.id)&&T>=tl.get(x.id).kick).map(x=>({...x,now:pts(x.id)}));
+   const b=Math.max(...c.map(x=>x.now));if(c.length)mvp={points:b,players:c.filter(x=>x.now===b).map(({id,name,team})=>({id,name,team}))};}
+  const s=JSON.stringify([p,t,mvp]);if(s===last)continue;last=s;
+  frames.push({at:new Date(T).toISOString(),p,...(Object.keys(t).length?{t}:{}),...(mvp?{mvp}:{})});
+ }
+ if(frames.length<3)return null;
+ (all.rek||(all.rek={}))[day]={sig,at:new Date().toISOString(),frames};
+ try{const tmp=VERLAUF_FILE+'.tmp';fs.writeFileSync(tmp,JSON.stringify(all));fs.renameSync(tmp,VERLAUF_FILE);}catch{}
+ return frames;
+}
 // Vorschlag nach Spieltagsende. Gleichstand: alle gewinnen. Fehlt etwas, wird nichts geraten.
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
@@ -2086,9 +2131,13 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   if(tracking){const mv=(st.status==='finished'?result?.mvp:tracking.mvp)?.players||[],t1=tracking.top10?.players||[];
    const ids=mv.length?mv.map(p=>String(p.id)):t1.filter(p=>p.points===t1[0]?.points).map(p=>String(p.id));
    if(ids.length)try{tracking.mvpDetail=await mvpDetail(token,day,ids,st.status==='finished');}catch{}}
-  const verlauf=reveal?readVerlauf()[day]||[]:[];
+  let verlauf=reveal?readVerlauf()[day]||[]:[],verlaufRek=false;
+  // Zu wenige echte Stände (ST 9: zwei, seit 10.11. keine Läufe während der Spiele): Verlauf aus den Ereignisminuten nachbauen,
+  // danach die echten Stände nach dem letzten nachgebauten (Endstand 🏁, spätere Korrekturen ✏️).
+  if(tracking&&st.status==='finished'&&verlauf.filter(f=>!f.fin).length<10)try{const r=await rekVerlauf(token,day,tracking,result);
+   if(r){const end=Date.parse(r[r.length-1].at);verlauf=r.concat(verlauf.filter(f=>Date.parse(f.at)>end&&Object.values(f.p||{}).every(x=>x[1]==='d')));verlaufRek=true;}}catch{}
   res.set('Cache-Control','no-store').json({day,...st,reveal,rule,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,korridor:TIPP_KORRIDOR,managers:list,
-   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking,verlauf});
+   me:managers.some(m=>m.id===me)?me:null,admin:!TIPP_EXPORT&&isAdmin(req),result,tracking,verlauf,...(verlaufRek?{verlaufRek:true}:{})});
  }catch(e){res.status(502).json({error:e.message});}
 });
 app.put('/api/mvp-tipps/:day',async(req,res)=>{
