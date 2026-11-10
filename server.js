@@ -3372,6 +3372,33 @@ async function challengeUpload(){
  }catch(e){challengeUploadState.error=e.message;}
 }
 setInterval(challengeUpload,15*60e3).unref();setTimeout(challengeUpload,90e3).unref();
+// Kevin 10.11.: Beim Start der PC-App genau EIN GitHub-Lauf, damit Challenges und Arena gleich online stehen (sonst keine Laeufe vom PC).
+// Ausgeloest durch kbl-pc-start.json (nur diese Datei startet in seite.yml einen Lauf): nach dem ersten Challenge-Hochladen dieses Starts,
+// spaetestens 30 Min. nach dem Start, wenn bis dahin nur die Arena hochgeladen wurde. Laeuft gerade ein Spiel, laesst GitHub den Lauf aus.
+const pcStartState={done:false,at:null,error:null};
+async function pcStartLauf(grund){
+ const gh=process.env.KBL_GITHUB_TOKEN;if(ON_GITHUB||!gh||pcStartState.done)return;
+ pcStartState.done=true;
+ const url='https://api.github.com/repos/TEE800/kbl-legenden/contents/kbl-pc-start.json';
+ const h={Authorization:`Bearer ${gh}`,Accept:'application/vnd.github+json','User-Agent':'kbl-legenden-app'};
+ try{
+  const cur=await fetch(url+'?ref=main',{headers:h,signal:AbortSignal.timeout(15000)});
+  const sha=cur.ok?(await cur.json()).sha:undefined;
+  const at=new Date().toISOString();
+  const r=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
+   body:JSON.stringify({message:'PC-App gestartet',branch:'main',content:Buffer.from(JSON.stringify({at,grund})+'\n').toString('base64'),...(sha?{sha}:{})})});
+  if(!r.ok)throw new Error(`GitHub HTTP ${r.status}`);
+  pcStartState.at=at;console.log('Online-Seite wird jetzt einmal aktualisiert (dauert ca. 5 bis 10 Minuten).');
+ }catch(e){pcStartState.error=e.message;console.warn('Online-Lauf nicht angestossen:',e.message);}
+}
+// In der ersten halben Stunde nach dem Start alle 2 Min. schauen, ob neue Challenge-Daten fertig sind (nur lokale Datei, GitHub erst bei Neuem).
+const pcStartT0=Date.now();
+const pcStartTick=setInterval(async()=>{
+ if(pcStartState.done||Date.now()-pcStartT0>31*60e3)return clearInterval(pcStartTick);
+ const vorher=challengeUploadState.lastOk;await challengeUpload();
+ if(challengeUploadState.lastOk&&challengeUploadState.lastOk!==vorher)return pcStartLauf('Challenges');
+ if(Date.now()-pcStartT0>=30*60e3&&(arenaUploadState.lastOk||challengeUploadState.lastOk))pcStartLauf('Arena');
+},2*60e3);pcStartTick.unref();
 // Transferhistorie (Kevin-Wunsch, Reiter "Transfers"): Käufe und Verkäufe je Manager mit Preisen, Gewinn/Verlust je Spieler
 // (Verkaufspreis minus Kaufpreis) und Summen. Quelle: /managers/{id}/transfer (it[]: pi, pn, tid, tty 1 Kauf / 2 Verkauf,
 // othnm Gegenüber, ohne = Markt, trp Preis, dt) und der heutige Kader (prc Kaufpreis laut Kickbase, mv Marktwert, mvgl = mv - prc).
@@ -3807,7 +3834,7 @@ app.get('/api/transfer-pech', async (req, res) => {
 });
 
 app.get('/api/arena-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...arenaUploadState}));
-app.get('/api/challenge-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...challengeUploadState}));
+app.get('/api/challenge-upload-status',(req,res)=>res.set('Cache-Control','no-store').json({token:!!process.env.KBL_GITHUB_TOKEN&&!ON_GITHUB,...challengeUploadState,pcStart:pcStartState}));
 app.get('/api/arena',async(req,res)=>{
  try{
   const md=await loadMatchdays().catch(()=>null);
