@@ -15,7 +15,7 @@
  const date=s=>s?new Date(s).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}):'';
  const img=p=>!p?'':/^https?:\/\//.test(p)?p:'https://kickbase.b-cdn.net/'+String(p).replace(/^\//,'');
  const face=(src,name)=>src?`<img class="tr-face" src="${esc(img(src))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'tr-face tr-noimg',textContent:${esc(JSON.stringify((name||'?').trim()[0]||'?'))}}))">`:`<span class="tr-face tr-noimg">${esc((name||'?').trim()[0]||'?')}</span>`;
- let data=null,pech=null,loading=false,sortBy='realized',season=null;
+ let data=null,pech=null,loading=false,sortBy='realized',season=null,trDay=null;
  // Halbserien vom Server (Hinrunde bis Spieltag 17, Rückrunde danach; Feld seasons); ältere Exporte ohne seasons gelten als ein laufender Zeitraum.
  const seasons=()=>data?.seasons||(data?.managers?[{key:'',current:true,managers:data.managers}]:[]);
  // Liga-Zählung (Kevin): jede Halbserie heißt „Saison“, Saison 0 = Rückrunde 2024/25, dann je Halbserie eins weiter.
@@ -49,6 +49,24 @@
   };
   return `<div class="tr-tiles tr-records">${card('Größter Gewinn der Saison',Math.max,'tr-pos')}${card('Größter Verlust der Saison',Math.min,'tr-neg')}</div>`;
  }
+ // Größte Gewinne und Verluste des Spieltags (Kevin-Wunsch 10.11.): verkaufte Spieler mit Kaufpreis, deren Verkauf zwischen dem
+ // ersten Anstoß von Spieltag N und dem ersten Anstoß von N+1 liegt (Anstoßzeiten vom Server, kickoffs). Nur laufende Halbserie.
+ function dayWins(){
+  const ko=(data?.kickoffs||[]).map(k=>({day:k.day,at:Date.parse(k.at)})).filter(k=>Number.isFinite(k.at)).sort((a,b)=>a.at-b.at);
+  if(!cur()?.current||!ko.length)return '';
+  const now=Date.now(),wins=ko.filter(k=>k.at<=now).map(k=>({day:k.day,from:k.at,to:ko.find(x=>x.at>k.at)?.at??Infinity}));
+  if(!wins.length)return '';
+  const all=cur().managers.filter(m=>!m.error).flatMap(m=>m.trades.filter(t=>t.status==='sold'&&t.diff!=null).map(t=>({...t,mgr:m})));
+  const of=w=>all.filter(t=>{const x=Date.parse(t.sell?.at);return x>=w.from&&x<w.to;});
+  const w=wins.find(x=>x.day===trDay)||[...wins].reverse().find(x=>of(x).length)||wins[wins.length-1];
+  const ts=of(w);
+  const top=(list,desc)=>{const s=[...list].sort((a,b)=>desc?b.diff-a.diff:a.diff-b.diff);return s.filter((t,i)=>i<3||t.diff===s[2].diff);};
+  const tile=(label,list,c)=>`<div class="tr-tile tr-record"><span>${label}</span>${list.length?list.map(t=>`<div class="tr-record-who">${face(t.img,t.name)}<div><strong>${esc(t.name)}</strong><small class="tr-record-mgr">${face(t.mgr.img,t.mgr.name)}${esc(t.mgr.name)}</small><small>${money(t.buy?.price)} → ${money(t.sell?.price)} · ${esc(date(t.sell.at))}</small></div><b class="tr-day-val ${c}">${money(t.diff,true)}</b></div>`).join(''):'<b class="muted">–</b><small>noch keiner</small>'}</div>`;
+  const sel=`<select id="trDay" aria-label="Spieltag">${[...wins].reverse().map(x=>`<option value="${x.day}"${x===w?' selected':''}>Spieltag ${x.day}</option>`).join('')}</select>`;
+  return `<div class="tr-day"><div class="tr-day-head"><b>Gewinne und Verluste des Spieltags</b>${sel}</div>
+   <p class="muted tiny">Verkäufe vom Anpfiff Spieltag ${w.day} bis ${w.to>now?'heute':'zum Anpfiff Spieltag '+(w.day+1)} · ${ts.length} ${ts.length===1?'Verkauf':'Verkäufe'} mit Kaufpreis</p>
+   <div class="tr-tiles tr-records">${tile('Größte Gewinne',top(ts.filter(t=>t.diff>0),true),'tr-pos')}${tile('Größte Verluste',top(ts.filter(t=>t.diff<0),false),'tr-neg')}</div></div>`;
+ }
  // Pechradar (Kevin-Wunsch): verkauft und gleich am nächsten Spieltag gepunktet. Daten von /api/transfer-pech,
  // nur die laufende Halbserie (Leistungsdaten der laufenden Bundesliga-Saison). Startet eingeklappt (feste Regel).
  function pechRadar(){
@@ -65,10 +83,25 @@
   const row=(x,i)=>`<li class="tr-pech-row"><span class="tr-place">${i+1}.</span>${face(x.img,x.name)}<div class="tr-pech-txt"><b>${esc(x.name)}</b>
    <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.diff!=null?` · <span class="${cls(x.diff)}">${money(x.diff,true)}</span>`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
    ${x.buyerStarted?`<small class="tr-pech-buyer">🍀 ${esc(x.buyer)} hatte ihn gleich in der Startelf</small>`:''}</div><b class="tr-pech-pts">${x.points}</b></li>`;
+  // Rückblick (Kevin-Wunsch 10.11.): der neueste abgeschlossene Spieltag mit allen Verkäufen davor, die dort gepunktet haben
+  // (ohne Mindestgrenze, Top 10), dazu wer dort die meisten Punkte verkauft hat. Eigener Klappbereich, startet zu.
+  const lastDay=Math.max(0,...(pech.items||[]).map(x=>x.day)),last=(pech.items||[]).filter(x=>x.day===lastDay&&x.points>0);
+  let review='';
+  if(last.length){
+   const lm=new Map();for(const x of last){const m=lm.get(x.seller.id)||{...x.seller,n:0,pts:0};m.n++;m.pts+=x.points;lm.set(x.seller.id,m);}
+   const lmg=[...lm.values()].sort((a,b)=>b.pts-a.pts||b.n-a.n),lk=lmg.filter(m=>m.pts===lmg[0].pts),lt=last.filter(x=>x.points===last[0].points);
+   const ltiles=`<div class="tr-tiles tr-records">
+    <div class="tr-tile tr-record"><span>Größtes Pech</span><b class="tr-neg">${lt[0].points} Punkte</b>${lt.map(x=>`<div class="tr-record-who">${face(x.img,x.name)}<div><strong>${esc(x.name)}</strong><small class="tr-record-mgr">${face(x.seller.img,x.seller.name)}${esc(x.seller.name)}</small></div></div>`).join('')}</div>
+    <div class="tr-tile tr-record"><span>Meiste Punkte verkauft</span><b class="tr-neg">${lk[0].pts} Punkte</b>${lk.map(m=>`<div class="tr-record-who">${face(m.img,m.name)}<div><strong>${esc(m.name)}</strong><small>${m.n} Spieler</small></div></div>`).join('')}</div></div>`;
+   const top=last.slice(0,10);
+   review=`<details class="acc-group tr-pech tr-pech-review"><summary><span class="tr-mname">⏪ Rückblick Spieltag ${lastDay}</span><span class="tr-pill tr-neg">${esc(lt[0].name)} ${lt[0].points}</span></summary><div class="acc-sub">
+    <p class="muted tiny">Alle Verkäufe vor Spieltag ${lastDay}, deren Spieler dort trotzdem gepunktet haben${last.length>10?` (die besten 10 von ${last.length})`:''}.</p>
+    ${ltiles}<ol class="tr-pech-list">${top.map(row).join('')}</ol></div></details>`;
+  }
   const notes=[pech.missing?`${pech.missing} Verkäufe ohne Punkte in den Leistungsdaten`:'',pech.failedPlayers?`Leistungsdaten von ${pech.failedPlayers} Spielern`:'',pech.failedManagers?.length?`Transfers von ${pech.failedManagers.join(', ')}`:''].filter(Boolean);
   return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Pechradar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
    <p class="muted tiny">Verkauft und gleich am nächsten Spieltag mindestens ${pech.min} Punkte geholt. Die BumsKI zählt nur abgeschlossene Spieltage; wer den Spieler vor dem Anpfiff zurückgekauft hat, ist raus.</p>
-   ${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
+   ${review}${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
    ${notes.length?`<p class="error tiny">Das fehlt: ${esc(notes.join('; '))}.</p>`:''}</div></details>`;
  }
  const side=(s,verb)=>s?`<span class="tr-price">${money(s.price)}</span><small>${s.at?esc(date(s.at))+' · ':''}${verb} ${esc(s.other||'Markt')}</small>`:'';
@@ -108,7 +141,7 @@
   $('#transfersMeta').textContent='Stand '+new Date(data.updatedAt).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   const all=seasons(),c=cur();if(!c){root.textContent='Noch keine Transfers.';return;}
   const pick=all.length>1?`<div class="controls" style="margin-bottom:12px"><label class="acc-label">Halbserie <select id="trSeason">${all.map(x=>`<option value="${esc(x.key)}"${x===c?' selected':''}>${esc(/^\d/.test(x.key)?'Saison '+x.key:x.key)}${esc(ligaSaison(x.key))}${x.current?' · läuft':''}</option>`).join('')}</select></label></div>`:'';
-  root.innerHTML=`${pick}${records(c.managers)}<div id="trPech">${pechRadar()}</div><details class="acc-group tr-pech"><summary><span class="tr-mname">Gewinn/Verlust im Vergleich</span></summary><div class="acc-sub">${league(c.managers)}</div></details><details class="acc-group tr-pech"><summary><span class="tr-mname">Transfers je Manager</span><span class="tr-pill">${c.managers.length}</span></summary><div class="acc-sub"><div class="tr-managers">${c.managers.map(manager).join('')}</div></div></details>`;
+  root.innerHTML=`${pick}${records(c.managers)}${dayWins()}<div id="trPech">${pechRadar()}</div><details class="acc-group tr-pech"><summary><span class="tr-mname">Gewinn/Verlust im Vergleich</span></summary><div class="acc-sub">${league(c.managers)}</div></details><details class="acc-group tr-pech"><summary><span class="tr-mname">Transfers je Manager</span><span class="tr-pill">${c.managers.length}</span></summary><div class="acc-sub"><div class="tr-managers">${c.managers.map(manager).join('')}</div></div></details>`;
  }
  async function load(){
   if(loading)return;loading=true;
@@ -122,7 +155,7 @@
   if(s){sortBy=s.dataset.trSort;const old=$('.tr-league');if(old&&data)old.outerHTML=league(cur().managers);return;}
   if(e.target.closest?.('[data-kbl-nav="transfers"]'))load();
  });
- document.addEventListener('change',e=>{if(e.target.id==='trSeason'){season=e.target.value;render();}});
+ document.addEventListener('change',e=>{if(e.target.id==='trSeason'){season=e.target.value;render();}if(e.target.id==='trDay'){trDay=+e.target.value;const o=$('.tr-day');if(o)o.outerHTML=dayWins();}});
  window.addEventListener('hashchange',()=>{if(location.hash==='#transfers')load();});
  if(location.hash==='#transfers')load();
 })();
