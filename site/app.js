@@ -693,6 +693,7 @@ setInterval(()=>{
 // Liga-Analyse: nur abgeschlossene Spieltage, keine zusätzlichen API-Abfragen.
 function renderLeagueAnalysis(){
  const el=document.querySelector('#analysisContent');if(!el)return;
+ const wasOpen=!!el.querySelector('#benchSeason')?.open;
  const days=historyData.filter(h=>h.status==='finished').sort((a,b)=>a.day-b.day);
  if(!days.length){el.innerHTML='<p class="muted">Noch keine abgeschlossenen Spieltage vorhanden.</p>';return;}
  const names=[...new Set(days.flatMap(h=>h.list.map(m=>m.name)))].filter(isEligibleManager);
@@ -731,7 +732,9 @@ function renderLeagueAnalysis(){
   (()=>{const rm=window.kblRankMoves;if(!rm)return '';return card('GRÖSSTE AUFHOLJAGD',rm.climbers.length?rm.climbers.map(r=>nm(r.name)).join(', '):'–',rm.climbers.length?rm.moves(rm.climbers,r=>`von Platz ${r.lowest} auf Platz ${r.now} (+${r.climb})`):'Noch niemand hat sich nach vorne gekämpft')+
    card('TIEFSTER FALL',rm.fallers.length?rm.fallers.map(r=>nm(r.name)).join(', '):'–',rm.fallers.length?rm.moves(rm.fallers,r=>`von Platz ${r.highest} auf Platz ${r.now} (−${r.fall})`):'Noch niemand ist abgerutscht');})()}${
   bigWin?card('DEUTLICHSTER SIEG',short([...new Set(bigWin.who.map(x=>x.winner))]),`+${fmt(bigWin.v)} vor ${bigWin.who.length===1?mgrLink(bigWin.who[0].second,esc(bigWin.who[0].second))+' · ST '+bigWin.who[0].day:'dem Zweiten · '+stDays(bigWin.who)}`):''}${
-  tight?card('KNAPPSTER SIEG',short([...new Set(tight.who.map(x=>x.winner))]),`+${fmt(tight.v)} vor ${tight.who.length===1?mgrLink(tight.who[0].second,esc(tight.who[0].second))+' · ST '+tight.who[0].day:'dem Zweiten · '+stDays(tight.who)}`):''}</div>`;
+  tight?card('KNAPPSTER SIEG',short([...new Set(tight.who.map(x=>x.winner))]),`+${fmt(tight.v)} vor ${tight.who.length===1?mgrLink(tight.who[0].second,esc(tight.who[0].second))+' · ST '+tight.who[0].day:'dem Zweiten · '+stDays(tight.who)}`):''}${
+  benchSeasonCard(days,card,short)}</div>${benchSeasonHtml(days)}`;
+ if(wasOpen){const d=el.querySelector('#benchSeason');if(d){d.open=true;benchSeasonChart();}}
  const pill=document.querySelector('#stats .sectionhead .pill');if(pill)pill.textContent=`${days.length} abgeschlossene Spieltage · ${rows.length} Manager`;
 }
 
@@ -1659,7 +1662,58 @@ async function benchLoad(day,force=false){
  benchBusy.add(day);
  try{benchData[day]=await api(`/api/bench-points/${day}`);}catch(e){benchData[day]={error:e.message};}
  benchBusy.delete(day);try{renderCenter();}catch{}
+ if(!benchBusy.size)try{renderLeagueAnalysis();}catch{}
 }
+// Bankpunkte der Halbserie (Kevin-Wunsch 10.11.): Summe der Bankpunkte je Manager über alle abgeschlossenen Spieltage,
+// aus denselben Daten wie der Vollpfosten des Spieltags (/api/bench-points/:day; ST 1 bis 6 aus Kader und Transfer-Verlauf
+// zurückgerechnet, rebuilt). Aktualisiert sich nach jedem Spieltag von selbst. Gleichstand = alle.
+function benchSeason(days){
+ const fin=days.map(h=>h.day),wait=fin.filter(d=>!benchData[d]);
+ for(const d of wait)benchLoad(d);
+ const used=fin.filter(d=>(benchData[d]?.managers||[]).length);
+ const per=new Map(),get=n=>{if(!per.has(n))per.set(n,{name:n,total:0,games:0,titles:0,segs:new Map(),best:null,open:0});return per.get(n);};
+ let rebuilt=[],noLineup=[],open=[];
+ for(const d of used){
+  const bd=benchData[d],ms=bd.managers.filter(m=>isEligibleManager(m.name)&&m.points!=null);
+  if(bd.rebuilt?.length)rebuilt.push(d);
+  for(const n of bd.noLineup||[])if(isEligibleManager(n))noLineup.push(`${n} (ST ${d})`);
+  const top=ms.length?Math.max(...ms.map(m=>m.points)):null;
+  for(const m of ms){const r=get(m.name);r.total+=m.points;r.games++;r.segs.set(d,m.points);if(m.points===top&&top>0)r.titles++;
+   if(m.open){r.open+=m.open;open.push(`${m.name} ST ${d}`);}
+   for(const p of m.bench||[])if(p.points>0&&(!r.best||p.points>r.best.points))r.best={...p,day:d};}
+ }
+ const rows=[...per.values()].sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
+ return {fin,wait,used,rows,rebuilt,noLineup,open};
+}
+function benchSeasonCard(days,card,short){
+ const b=benchSeason(days);
+ if(!b.rows.length)return b.wait.length?card('🪑 MEISTE BANKPUNKTE','…','Bankpunkte werden geladen'):'';
+ const top=b.rows[0].total,who=b.rows.filter(r=>r.total===top);
+ return card('🪑 MEISTE BANKPUNKTE',short(who.map(r=>r.name)),`${fmt(top)} Punkte auf der Bank gelassen in ${b.used.length} Spieltagen`);
+}
+function benchSeasonHtml(days){
+ const b=benchSeason(days);if(!b.rows.length)return '';
+ const esc=escapeHtml,ranks=[];b.rows.forEach((r,i)=>ranks.push(i&&r.total===b.rows[i-1].total?ranks[i-1]:i+1));
+ const rowHtml=b.rows.map((r,i)=>`<tr><td>${ranks[i]}.</td><td>${mgrLink(r.name)}${r.best?`<div class="muted tiny">Bester: ${esc(r.best.name||'Spieler '+r.best.id)} ${fmt(r.best.points)} (ST ${r.best.day})</div>`:''}</td><td class="right"><b>${fmt(r.total)}</b></td><td class="right">${fmt(Math.round(r.total/r.games))}</td><td class="right">${r.titles||'–'}</td></tr>`).join('');
+ const notes=[];
+ if(b.rebuilt.length)notes.push(`Für ST ${b.rebuilt.join(', ')} war der Kader beim Anpfiff nicht gespeichert; die BumsKI rechnet ihn aus dem heutigen Kader und dem Transfer-Verlauf zurück (nur wenn die ganze Startelf darin steht).`);
+ if(b.noLineup.length)notes.push(`Ohne Startelf, darum ohne Bankpunkte: ${b.noLineup.map(esc).join(', ')}.`);
+ if(b.open.length)notes.push(`Spieler ohne Punkte bei Kickbase zählen mit 0 (${b.open.map(esc).join(', ')}).`);
+ const miss=b.fin.filter(d=>benchData[d]&&!b.used.includes(d));
+ if(miss.length)notes.push(`Ohne Bankpunkte: ST ${miss.join(', ')}${benchData[miss[0]]?.message?` (${esc(benchData[miss[0]].message)})`:''}.`);
+ if(b.wait.length)notes.push(`Wird noch geladen: ST ${b.wait.join(', ')}.`);
+ return `<details class="acc-group" id="benchSeason" style="margin-top:16px"><summary>🪑 Bankpunkte der Halbserie</summary><div class="acc-sub"><p class="muted">Wer hat am meisten Punkte auf der Bank gelassen?</p>
+  <div class="tablewrap"><table><thead><tr><th>PL.</th><th>MANAGER</th><th class="right">BANK</th><th class="right" title="Bankpunkte pro Spieltag">Ø</th><th class="right" title="Wie oft Vollpfosten des Spieltags">🤡</th></tr></thead><tbody>${rowHtml}</tbody></table></div>
+  <div id="benchSeasonChart" style="margin-top:14px"></div>
+  <p class="muted tiny">Bank = Kader beim Anpfiff ohne Startelf, Summe der Spieltagspunkte (auch negative). 🤡 = Vollpfosten des Spieltags. ${notes.join(' ')}</p></div></details>`;
+}
+function benchSeasonChart(){
+ const root=$('#benchSeasonChart');if(!root)return;
+ const days=historyData.filter(h=>h.status==='finished'),b=benchSeason(days);
+ const bars=b.rows.map(r=>({name:r.name,total:r.total,segs:b.used.map(d=>({day:d,v:r.segs.has(d)?r.segs.get(d):null}))}));
+ if(bars.length)kblStackChart(root,bars,{aria:'Bankpunkte je Manager, aufgeteilt nach Spieltagen',note:'Ein Balken je Manager, sortiert nach Bankpunkten. Jeder Abschnitt ist ein Spieltag.'});
+}
+document.addEventListener('toggle',e=>{if(e.target?.id==='benchSeason'&&e.target.open)benchSeasonChart();},true);
 function benchTop(day){
  const d=benchData[day];if(!d)return {wait:true};
  if(d.error)return {msg:`Das fehlt: Bankpunkte nicht abrufbar (${d.error}).`};

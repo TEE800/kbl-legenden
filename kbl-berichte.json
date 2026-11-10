@@ -22,7 +22,7 @@
    "approvedAt": "2026-11-03T15:14:59.861Z"
   }
  },
- "stand": "Spieltagsbericht 9: nachgebessert, Prüfung ohne Befund. Wartet auf Freigabe in der App.",
+ "stand": "Spieltagsbericht 9: Nachbessern brachte nichts, Entwurf unverändert. Wartet auf Freigabe in der App.",
  "entwuerfe": {
   "7": {
    "vorgaben": 5,
@@ -1568,7 +1568,7 @@
     "-10.7",
     "10.7"
    ],
-   "nachbesserungVersucht": "2026-11-10T11:40:22.209Z"
+   "nachbesserungVersucht": "2026-11-10T11:48:57.697Z"
   }
  }
 }
