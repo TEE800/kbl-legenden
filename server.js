@@ -3388,8 +3388,8 @@ async function pcStartLauf(grund){
   const r=await fetch(url,{method:'PUT',headers:{...h,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
    body:JSON.stringify({message:'PC-App gestartet',branch:'main',content:Buffer.from(JSON.stringify({at,grund})+'\n').toString('base64'),...(sha?{sha}:{})})});
   if(!r.ok)throw new Error(`GitHub HTTP ${r.status}`);
-  pcStartState.at=at;console.log('Online-Seite wird jetzt einmal aktualisiert (dauert ca. 5 bis 10 Minuten).');
- }catch(e){pcStartState.error=e.message;console.warn('Online-Lauf nicht angestossen:',e.message);}
+  pcStartState.at=at;console.log('FERTIG: Daten sind bei GitHub. Die Online-Seite ist in ca. 5 bis 10 Minuten aktuell. Du kannst dieses Fenster jetzt schliessen.');
+ }catch(e){pcStartState.error=e.message;pcStartState.done=false;console.warn('Online-Lauf nicht angestossen (neuer Versuch in 2 Min.):',e.message);}
 }
 // In der ersten halben Stunde nach dem Start alle 2 Min. schauen, ob neue Challenge-Daten fertig sind (nur lokale Datei, GitHub erst bei Neuem).
 const pcStartT0=Date.now();
