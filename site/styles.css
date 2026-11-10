@@ -1305,3 +1305,23 @@ div.mw-who{display:grid;gap:2px;cursor:default}
  .mw-cols{grid-template-columns:1fr;gap:4px}
  .mw-kader li{grid-template-columns:20px minmax(0,1fr) 56px auto;gap:6px;padding:7px}.mw-spark{width:56px}
 }
+/* Regeln auf einen Blick (Kevin-Wunsch 10.11.) */
+.rg-glance{margin:4px 0 18px}
+.rg-basics{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.rg-basics span{font-size:12px;color:var(--text-2);background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:5px 10px}
+.rg-basics b{color:var(--gold)}
+.rg-h{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+.rg-h-more{margin-top:22px}
+.rg-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media(max-width:1100px){.rg-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rg-card{display:flex;gap:10px;align-items:flex-start;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--text);font:inherit;font-weight:400;cursor:pointer}
+.rg-card:hover{border-color:var(--line-strong);background:#1b2a35}
+.rg-card>.bums-rule{min-width:42px;text-align:center;margin-top:1px;cursor:pointer}
+.rg-txt{display:grid;gap:3px;min-width:0}
+.rg-txt b{font-size:14px}
+.rg-if{font-size:13px;color:var(--text-2)}
+.rg-then{font-size:13px;color:var(--gold)}
+.rg-then::before{content:"→ ";color:var(--muted)}
+.rg-order{margin:14px 0 0;font-size:13px;color:var(--text-2);line-height:2}
+.rg-order .bums-rule{cursor:default}
+@media(max-width:600px){.rg-grid{grid-template-columns:1fr;gap:6px}.rg-card{padding:9px 10px}.rg-basics span{font-size:11px}}
