@@ -65,10 +65,25 @@
   const row=(x,i)=>`<li class="tr-pech-row"><span class="tr-place">${i+1}.</span>${face(x.img,x.name)}<div class="tr-pech-txt"><b>${esc(x.name)}</b>
    <small>${face(x.seller.img,x.seller.name)}${esc(x.seller.name)} → ${esc(x.buyer||'Markt')}${x.diff!=null?` · <span class="${cls(x.diff)}">${money(x.diff,true)}</span>`:''}</small><small>verkauft ${esc(date(x.soldAt))}, ${esc(before(x.hoursBefore))} vor Spieltag ${x.day}</small>
    ${x.buyerStarted?`<small class="tr-pech-buyer">🍀 ${esc(x.buyer)} hatte ihn gleich in der Startelf</small>`:''}</div><b class="tr-pech-pts">${x.points}</b></li>`;
+  // Rückblick (Kevin-Wunsch 10.11.): der neueste abgeschlossene Spieltag mit allen Verkäufen davor, die dort gepunktet haben
+  // (ohne Mindestgrenze, Top 10), dazu wer dort die meisten Punkte verkauft hat. Eigener Klappbereich, startet zu.
+  const lastDay=Math.max(0,...(pech.items||[]).map(x=>x.day)),last=(pech.items||[]).filter(x=>x.day===lastDay&&x.points>0);
+  let review='';
+  if(last.length){
+   const lm=new Map();for(const x of last){const m=lm.get(x.seller.id)||{...x.seller,n:0,pts:0};m.n++;m.pts+=x.points;lm.set(x.seller.id,m);}
+   const lmg=[...lm.values()].sort((a,b)=>b.pts-a.pts||b.n-a.n),lk=lmg.filter(m=>m.pts===lmg[0].pts),lt=last.filter(x=>x.points===last[0].points);
+   const ltiles=`<div class="tr-tiles tr-records">
+    <div class="tr-tile tr-record"><span>Größtes Pech</span><b class="tr-neg">${lt[0].points} Punkte</b>${lt.map(x=>`<div class="tr-record-who">${face(x.img,x.name)}<div><strong>${esc(x.name)}</strong><small class="tr-record-mgr">${face(x.seller.img,x.seller.name)}${esc(x.seller.name)}</small></div></div>`).join('')}</div>
+    <div class="tr-tile tr-record"><span>Meiste Punkte verkauft</span><b class="tr-neg">${lk[0].pts} Punkte</b>${lk.map(m=>`<div class="tr-record-who">${face(m.img,m.name)}<div><strong>${esc(m.name)}</strong><small>${m.n} Spieler</small></div></div>`).join('')}</div></div>`;
+   const top=last.slice(0,10);
+   review=`<details class="acc-group tr-pech tr-pech-review"><summary><span class="tr-mname">⏪ Rückblick Spieltag ${lastDay}</span><span class="tr-pill tr-neg">${esc(lt[0].name)} ${lt[0].points}</span></summary><div class="acc-sub">
+    <p class="muted tiny">Alle Verkäufe vor Spieltag ${lastDay}, deren Spieler dort trotzdem gepunktet haben${last.length>10?` (die besten 10 von ${last.length})`:''}.</p>
+    ${ltiles}<ol class="tr-pech-list">${top.map(row).join('')}</ol></div></details>`;
+  }
   const notes=[pech.missing?`${pech.missing} Verkäufe ohne Punkte in den Leistungsdaten`:'',pech.failedPlayers?`Leistungsdaten von ${pech.failedPlayers} Spielern`:'',pech.failedManagers?.length?`Transfers von ${pech.failedManagers.join(', ')}`:''].filter(Boolean);
   return `<details class="acc-group tr-pech"><summary><span class="tr-mname">🎯 Pechradar</span><span class="tr-pill ${hits.length?'tr-neg':''}">${hits.length} Pech-${hits.length===1?'Moment':'Momente'}</span></summary><div class="acc-sub">
    <p class="muted tiny">Verkauft und gleich am nächsten Spieltag mindestens ${pech.min} Punkte geholt. Die BumsKI zählt nur abgeschlossene Spieltage; wer den Spieler vor dem Anpfiff zurückgekauft hat, ist raus.</p>
-   ${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
+   ${review}${tiles}${hits.length?`<ol class="tr-pech-list">${hits.map(row).join('')}</ol>`:'<p class="muted tiny">Bisher hat niemand zu früh verkauft.</p>'}
    ${notes.length?`<p class="error tiny">Das fehlt: ${esc(notes.join('; '))}.</p>`:''}</div></details>`;
  }
  const side=(s,verb)=>s?`<span class="tr-price">${money(s.price)}</span><small>${s.at?esc(date(s.at))+' · ':''}${verb} ${esc(s.other||'Markt')}</small>`:'';
