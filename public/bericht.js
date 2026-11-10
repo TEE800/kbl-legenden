@@ -95,7 +95,7 @@
   const body=$('berichtContent')?.querySelector('.ber-body');if(!body)return [];
   const bars=[];let sec=0;
   for(const el of [...body.children]){
-   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr'))continue;
+   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr')||el.classList.contains('ber-tools')||el.classList.contains('ber-react'))continue;
    const d=document.createElement('div');d.className='ber-react';d.dataset.sec=sec++;
    const t=el.nextElementSibling;if(t?.classList.contains('ber-tools'))t.prepend(d);else el.after(d);bars.push(d);
   }
@@ -131,7 +131,7 @@
  function copyBars(){
   const body=$('berichtContent')?.querySelector('.ber-body');if(!body)return;
   for(const el of [...body.children]){
-   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr'))continue;
+   if(el.classList.contains('ber-h')||el.classList.contains('ber-hr')||el.classList.contains('ber-tools')||el.classList.contains('ber-react'))continue;
    const t=document.createElement('div');t.className='ber-tools';
    t.innerHTML='<button type="button" class="ber-cp" data-ber-cp title="Absatz als Bild (für Discord)" aria-label="Absatz als Bild">📋</button>';el.after(t);
   }
