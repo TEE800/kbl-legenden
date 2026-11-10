@@ -1,5 +1,5 @@
 // Ansicht "Arena" (Kevin-Wunsch): zweite Liga "Legenden Arena" im Head-to-Head-Modus. Je Spieltag Duelle zwischen zwei Managern,
-// als Boxkampf mit Pixel-Boxern (Kevin-Wunsch 1.11.). Daten von /api/arena und /api/arena/:day.
+// als Boxkampf mit Strichmännchen-Boxern (Kevin-Wunsch 1.11.). Daten von /api/arena und /api/arena/:day.
 (()=>{
  const $=s=>document.querySelector(s);
  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -38,7 +38,7 @@
   return `<ol class="arena-players">${m.players.map(p=>`<li class="${p.playing?'live':''}${p.why?' arena-out':''}${p.total!=null&&p.total<0?' neg':''}">${K?`<span class="arena-phead"><img src="${esc(K.headSrc(p.id))}" alt="" loading="lazy" onerror="this.remove()"></span>`:''}<span class="arena-pname">${esc(p.name)}${p.captain?' <b class="arena-cap" title="Kapitän: Punkte doppelt">C</b>':''}<small class="muted">${esc(p.team||'')}</small></span><span class="arena-ppts">${p.why==='ban'?'<small class="arena-ban">🟥 gesperrt</small>':p.why==='out'?`<small class="muted">${p.whyLive?'nicht im Spiel':'nicht eingesetzt'}</small>`:p.state==='open'?'<small class="muted">noch nicht</small>':p.playing?'⚽ ':''}${p.state==='open'?'':fmt(p.total)}${p.captain&&p.points!=null?`<small class="muted"> (2×${fmt(p.points)})</small>`:''}</span></li>`).join('')}</ol>`;
  }
  // Boxkampf (Kevin-Wunsch 1.11., ersetzt das Duell-Rennen): oben ein großer Ring mit einem Duell (zuerst das eigene, Antippen
- // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Pixel-Figuren wie im MVP-Rennen, Kopf = verpixeltes Profilbild.
+ // einer Karte wechselt), darunter alle Duelle als kleine Karten. Boxer = Strichmännchen, Kopf = Profilbild.
  // Lebensbalken: Führender voll, der andere = eigene Punkte / Punkte des Führenden. Ende: Sieger jubelt, Verlierer liegt K.O.
  let pick=null,rest=null; // rest: Seite (a/b), deren verbliebene Spieler unter dem Ring aufgeklappt sind (Kevin-Wunsch 1.11.)
  const meId=()=>{try{const v=String(JSON.parse(localStorage.getItem('kbl-push')||'null')?.managerId||'')||localStorage.getItem('kblMvpManager')||'';return /^\d{1,15}$/.test(v)?v:'';}catch{return '';}};
@@ -71,33 +71,17 @@
  // Manager-Bilder: das Kickbase-CDN erlaubt kein CORS (Canvas), darum online aus site/faces/ (Export), am PC über /api/mgr-img.
  const faceSrc=img=>{const k=/^(?:https?:\/\/kickbase\.b-cdn\.net\/)?\/?(user\/([\w.-]{1,80}))$/.exec(String(img||''));
   return !k?'':window.KBL_STATIC?'faces/'+k[2].replace(/\.(jpe|jpeg)$/i,'.jpg'):'/api/mgr-img?p='+encodeURIComponent(k[1]);};
- const imgs=new Map();
- const loadImg=src=>{if(!src)return Promise.resolve(null);if(!imgs.has(src))imgs.set(src,new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;setTimeout(()=>r(null),8000);}));return imgs.get(src);};
- // Pixel-Boxer 26×36: rote bzw. blaue Ecke. pose: guard | punch | hurt | cheer | ko
- async function boxDraw(cv){
-  const o=JSON.parse(cv.dataset.box),W=26,H=36,red=o.c==='a';cv.width=W;cv.height=H;
-  const x=cv.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=false;x.clearRect(0,0,W,H);
-  const P=(a,b,w,h,c)=>{x.fillStyle=c;x.fillRect(a,b,w,h);};
-  const SK='#e9b48a',SK2='#c98f66',G=red?'#d6332a':'#2f6fe0',SH=red?'#b71c1c':'#1e4fb8';
-  const img=o.cpu?null:await loadImg(faceSrc(o.img));
-  if(o.p==='ko'){x.save();x.translate(W/2,H/2);x.rotate(-Math.PI/2);x.translate(-W/2,-H/2);}
-  P(8,27,4,7,SK);P(14,27,4,7,SK);P(7,33,6,3,'#111');P(13,33,6,3,'#111');
-  P(7,22,12,6,SH);P(7,22,12,1,'#fff');P(12,24,2,4,'#0004');
-  P(8,14,10,8,SK);P(14,14,4,8,SK2);
-  if(img){const t=document.createElement('canvas');t.width=12;t.height=12;const tx=t.getContext('2d');tx.imageSmoothingQuality='high';
-   const q=Math.min(img.width,img.height);tx.drawImage(img,(img.width-q)/2,(img.height-q)/2,q,q,0,0,12,12);x.drawImage(t,7,1);}
-  else if(o.cpu){P(7,1,12,12,'#9aa7b0');P(9,5,3,3,'#e33');P(14,5,3,3,'#e33');P(10,10,6,1,'#333');P(12,-1,2,2,'#9aa7b0');}
-  else{P(7,1,12,12,SK);P(7,1,12,3,'#3b2a1a');P(10,6,2,2,'#222');P(14,6,2,2,'#222');P(11,10,4,1,'#a55');}
-  if(o.p==='punch'){P(17,15,6,3,SK);P(21,13,5,6,G);P(21,13,5,1,'#fff6');P(4,15,4,3,SK);P(2,14,5,5,G);}
-  else if(o.p==='cheer'){P(4,4,3,10,SK);P(19,4,3,10,SK);P(3,0,5,5,G);P(18,0,5,5,G);}
-  else if(o.p==='hurt'||o.p==='ko'){P(5,16,3,5,SK);P(18,16,3,5,SK);P(4,20,5,5,G);P(17,20,5,5,G);}
-  else{P(5,15,3,5,SK);P(18,15,3,5,SK);P(4,11,5,5,G);P(17,11,5,5,G);P(4,11,5,1,'#fff6');P(17,11,5,1,'#fff6');}
-  if(o.p==='ko')x.restore();
-  try{const dd=x.getImageData(0,0,W,H),p=dd.data,n=new Uint8ClampedArray(p),A=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&p[(b*W+a)*4+3]>0;
-   for(let b=0;b<H;b++)for(let a=0;a<W;a++){const i=(b*W+a)*4;if(p[i+3])continue;if(A(a-1,b)||A(a+1,b)||A(a,b-1)||A(a,b+1)){n[i]=n[i+1]=n[i+2]=10;n[i+3]=255;}}
-   dd.data.set(n);x.putImageData(dd,0,0);}catch{}
- }
- const boxer=(m,c,p,flip)=>`<canvas class="box-c" data-box="${esc(JSON.stringify({img:m.img||'',cpu:!!m.cpu,c,p}))}" width="26" height="36"></canvas>`;
+ // Strichmännchen-Boxer (Kevin 10.11.: die Liga mag den Pixel-Stil nicht): Körper als SVG, Kopf = klares rundes Profilbild.
+ // pose: guard | punch | hurt | cheer | ko. Rote bzw. blaue Ecke = Handschuhe, Hose und Rahmen ums Bild.
+ const ARMS={guard:'M30 42 L20 52 L22 37 M30 42 L40 52 L38 37',punch:'M30 42 L58 42 M30 42 L20 52 L22 37',cheer:'M30 42 L14 34 L7 18 M30 42 L46 34 L53 18',hurt:'M30 42 L21 55 L25 64 M30 42 L39 55 L35 64'};
+ const GLOVES={guard:[[22,37],[38,37]],punch:[[58,42],[22,37]],cheer:[[7,18],[53,18]],hurt:[[25,64],[35,64]]};
+ const boxer=(m,c,p)=>{const red=c==='a',G=red?'#d6332a':'#2f6fe0',SH=red?'#b71c1c':'#1e4fb8',q=p==='ko'?'hurt':p,src=m.cpu?'':faceSrc(m.img),cdn=T()?.kbImg?.(m.img)||'';
+  const ini=esc(String(m.name||'?').trim()[0]||'?').toUpperCase();
+  const head=`<span class="box-hd box-hd-txt">${m.cpu?'🤖':ini}</span>`+(src||cdn?`<img class="box-hd" src="${esc(src||cdn)}" data-cdn="${esc(src&&cdn?cdn:'')}" alt="${esc(m.name||'')}" referrerpolicy="no-referrer" onerror="if(this.dataset.cdn&&!this.dataset.f){this.dataset.f=1;this.src=this.dataset.cdn}else this.remove()">`:'');
+  return `<div class="box-c" style="--g:${G}"><svg class="box-sv" viewBox="0 0 60 100" aria-hidden="true"><g fill="none" stroke="#f4f4f4" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+   <path d="M30 34 L30 66"/><path d="M30 66 L21 96 M30 66 L39 96"/><path d="${ARMS[q]||ARMS.guard}"/></g>
+   <path d="M23 62 H37 L38 74 H22 Z" fill="${SH}" stroke="#000" stroke-width="1.2"/>
+   ${(GLOVES[q]||GLOVES.guard).map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5.5" fill="${G}" stroke="#000" stroke-width="1.2"/>`).join('')}</svg>${head}</div>`;};
  const bar=(v,cls='')=>`<div class="box-hb${v<.85?' low':''} ${cls}"><i style="width:${(v*100).toFixed(1)}%"></i></div>`;
  function boxRing(d){
   if(!d.duels.length)return '';
@@ -121,7 +105,6 @@
    ${fig(a,'a',pa)}${fig(b,'b',pb)}${ko?'<span class="box-stamp">K.O.</span>':draw?'<span class="box-stamp draw">UNENTSCHIEDEN</span>':''}</div>${restBox}`;
   const cards=`<div class="box-list">${d.duels.map(y=>{const on=y===x,w=m=>y.winner&&y.winner!=='draw'?(y.winner===m.id?' win':' lose'):'';
    return `<button type="button" class="box-mini${on?' on':''}" data-arena-pick="${esc(duelKey(y))}"><span class="l"><span class="${w(y.a)}">${esc(y.a.name)}</span><span class="${w(y.b)}">${esc(y.b.name)}</span></span><span class="box-bars">${bar(hp(y.a,y.b),'flip')}${bar(hp(y.b,y.a))}</span><span class="l"><b>${fmt(y.a.points)}</b>${ended(d)&&y.winner&&y.winner!=='draw'?'<small>K.O.</small>':''}<b>${fmt(y.b.points)}</b></span></button>`;}).join('')}</div>`;
-  setTimeout(()=>document.querySelectorAll('canvas.box-c:not([data-done])').forEach(cv=>{cv.dataset.done='1';boxDraw(cv);}),0);
   return ring+cards;
  }
  function table(d){

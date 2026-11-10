@@ -22,7 +22,7 @@
    "approvedAt": "2026-11-03T15:14:59.861Z"
   }
  },
- "stand": "Spieltagsbericht 9: Entwurf geschrieben, wartet auf Freigabe (claude-sonnet-5-5, 18809 rein, 9298 raus).",
+ "stand": "Spieltagsbericht 9: Entwurf geschrieben, wartet auf Freigabe (claude-sonnet-5-5, 18482 rein, 7927 raus).",
  "entwuerfe": {
   "7": {
    "vorgaben": 5,
@@ -1033,9 +1033,9 @@
   },
   "9": {
    "vorgaben": 5,
-   "createdAt": "2026-11-10T10:16:18.309Z",
+   "createdAt": "2026-11-10T10:31:23.092Z",
    "pruefung": {
-    "am": "2026-11-10T10:16:18.309Z",
+    "am": "2026-11-10T10:31:23.092Z",
     "zahlen": [],
     "ki": {
      "probleme": []
