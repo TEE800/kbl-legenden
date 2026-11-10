@@ -201,10 +201,9 @@ function rankingShot(btn){
  const flash=t=>{const o='📷 Als Bild';btn.textContent=t;setTimeout(()=>{btn.textContent=o;},1800);};
  let c;try{c=rankingCanvas();}catch{flash('✕ Keine Tabelle');return;}
  const meta=($('#rankingMeta')?.textContent||'').match(/\d+/),name=`kbl-tabelle${meta?'-st'+meta[0]:''}-${new Date().toISOString().slice(0,10)}.png`;
- // Synchron in eine Datei umwandeln (wie pvTileCopy), dann herunterladen.
- const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
- const blob=new Blob([u],{type:'image/png'}),url=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇ Gespeichert');
+ const cl=td=>(td?.textContent||'').trim().replace(/\s+/g,' ');
+ const rows=[...document.querySelectorAll('#ranking tr')].filter(tr=>tr.cells.length>=8).map(tr=>`${cl(tr.cells[0])}. ${tr.cells[2].querySelector('.mgr-av')?.dataset.mgr||cl(tr.cells[2])} · ${cl(tr.cells[7])} Pkt.`);
+ window.kblImgDialog?.(c,name,()=>`**KBL Legenden · Liga-Tabelle${meta?' · Spieltag '+meta[0]:''}**\n`+rows.join('\n'),'Liga-Tabelle als Bild');
 }
 $('#rankingShot')?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();rankingShot(e.currentTarget);});
 function storageKey(){return 'kbl-penalties-'+String(currentLeague?.id||'none')}
@@ -2361,13 +2360,8 @@ async function pvTileCopy(btn){
  const tile=btn.closest('.pv-tile');if(!tile)return;
  const flash=t=>{btn.textContent=t;btn.classList.add('done');setTimeout(()=>{btn.textContent='📋';btn.classList.remove('done');},1800);};
  let c,day;try{({c,day}=pvTileCanvas(tile));}catch{flash('✕');return;}
- // Synchron in eine Datei umwandeln, damit Teilen/Kopieren noch als Klick des Nutzers gilt (Safari).
- const bin=atob(c.toDataURL('image/png').split(',')[1]),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
- const blob=new Blob([u],{type:'image/png'}),name=`kbl-frage-st${day}.png`;
- const touch=matchMedia('(pointer:coarse)').matches;let file=null;try{file=new File([blob],name,{type:'image/png'});}catch{}
- if(touch&&file&&navigator.canShare?.({files:[file]})){try{await navigator.share({files:[file]});return;}catch(e){if(e?.name==='AbortError')return;}}
- if(navigator.clipboard?.write&&window.ClipboardItem){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);flash('✓');return;}catch{}}
- const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);flash('⬇');
+ const txt=[tile.querySelector(':scope>p')?.textContent,tile.querySelector(':scope>span')?.textContent].filter(Boolean).map(t=>t.trim().replace(/\s+/g,' ')).join('\n');
+ window.kblImgDialog?.(c,`kbl-frage-st${day}.png`,txt?()=>txt:null,'Frage als Bild');
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-pv-copy]');if(b){e.preventDefault();e.stopPropagation();pvTileCopy(b);}},true);
 function renderPreview(){
