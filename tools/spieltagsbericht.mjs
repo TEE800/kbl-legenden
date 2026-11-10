@@ -18,7 +18,7 @@ const MODEL = process.env.KBL_BERICHT_MODEL || 'claude-sonnet-5-5';
 // Falls ein Modellname nicht (mehr) existiert (Fehler 404), nacheinander diese versuchen.
 const MODEL_FALLBACK = ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-5'];
 // Bei Änderungen an SYSTEM oder den Fakten hochzählen: der Bericht des neuesten Spieltags wird dann einmal neu geschrieben.
-const VORGABEN = 5;
+const VORGABEN = 6;
 const RULE_NAMES = { BD: 'Besoffener Davies', DD: 'Dämonische Drehtür', MM: 'Magic Miyoshi', AH: 'Angeschossener Höler', RK: 'Räudiger Kohr', BN: 'Blinder Niklas', UM: 'Upamaguire', EZ: 'Einzelfallentscheidung', TL: 'Teamlimit', FV: 'Frühverkauf', HuHo: 'Der hungrige Hoeneß' };
 
 const read = f => { try { return JSON.parse(fs.readFileSync(path.join(DATA, f), 'utf8')); } catch { return null; } };
@@ -236,7 +236,11 @@ Harte Regeln für Zahlen:
 Inhalt: Analysiere statt aufzuzählen. Suche die echten Geschichten in den Zahlen: Formkurven (schnittLetzte3 gegen schnittDie3Davor, platzVerlauf), Serien unter/über dem Ligaschnitt, Abhängigkeit von einem Spieler (topSpieler.anteilProzent, spieltagPlatzOhneIhn), selbst verschuldete Strafen (leerePositionen), knappe Abstände in der Tabelle, Führungswechsel, Konstanz (streuung), Transferbilanz, MVP-Tipp (knappsteFehlschuesse, Regelerfinder), Bumsungen des Spieltags (wer gab was an wen, Ketten über Teamlimit) und die BumsTabelle der Halbserie. Verknüpfe die Themen (z. B. wer den MVP abgeben musste und an wen er ging). Der Admin T800 wird auch nicht geschont.
 Liga-Vokabular: Bumsung = von einer Sonderregel betroffen, BumsParade = Abrechnung, BumsTabelle = Zählung der Halbserie. Regelnamen stehen im JSON.
 
-Form: Deutsch. Erste Zeile: „# “ plus eine knackige Schlagzeile (ohne Spieltagsnummer). Dann 6 bis 9 Abschnitte, jeder mit „## “ und einem Emoji. Fließtext mit **fett** für Namen und Schlüsselzahlen, Listen nur wenn sinnvoll. Etwa 600 bis 900 Wörter. Kein Fazit über dich selbst, keine Erklärung, dass du eine KI bist, keine Rückfragen.`;
+Schlagzeile (Kevin 10.11.: „Baumann sprengt die Bank“ verstand keiner, und „sprengt die Bank“ stand schon am Spieltag davor):
+- Sie sagt in klaren Worten, was passiert ist, so dass jeder in der Liga sie ohne Erklärung versteht (z. B. „Baumann holt mit 1405 den Saisonrekord“). Frech ja, aber keine Redewendungen, Bilder oder Wortspiele, die man erst deuten muss („sprengt die Bank“, „schlachtet aus“ usw.). Zahlen nur aus dem JSON.
+- Sie darf keine Formulierung aus früheren Schlagzeilen wiederholen (stehen in der Anfrage). Jeder Spieltag bekommt eigene Worte.
+
+Form: Deutsch. Erste Zeile: „# “ plus die Schlagzeile (ohne Spieltagsnummer). Dann 6 bis 9 Abschnitte, jeder mit „## “ und einem Emoji. Fließtext mit **fett** für Namen und Schlüsselzahlen, Listen nur wenn sinnvoll. Etwa 600 bis 900 Wörter. Kein Fazit über dich selbst, keine Erklärung, dass du eine KI bist, keine Rückfragen.`;
 
 // ---- Prüfung (Kevin 28.10.: „ich habe keine Lust, alle Zahlen nachzuprüfen“) ----
 // 1) Zahlenprüfung, fest programmiert: Jede Zahl im Text muss irgendwo in den Fakten stehen (auch als Betrag, gerundet).
@@ -276,12 +280,25 @@ async function pruefen(f, text) {
   return { am: new Date().toISOString(), zahlen, ki, ok: !zahlen.length && !!ki && !ki.fehler && !ki.probleme.length };
 }
 
-async function askClaude(f, hinweise = '') {
+// Schlagzeilen sollen sich nicht wiederholen (Kevin 10.11.): gleiche Wortfolge aus drei Wörtern wie eine frühere Schlagzeile = neu schreiben.
+const STOP = new Set(['der', 'die', 'das', 'und', 'ein', 'eine', 'in', 'im', 'an', 'am', 'auf', 'mit', 'von', 'zu', 'zum', 'zur', 'für', 'ist']);
+const titleWords = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+function titleRepeat(title, earlier) {
+  const w = titleWords(title);
+  for (const e of earlier) {
+    const ew = titleWords(e), grams = new Set(ew.slice(0, -2).map((_, i) => ew.slice(i, i + 3).join(' ')));
+    for (let i = 0; i + 3 <= w.length; i++) { const g = w.slice(i, i + 3); if (g.filter(x => !STOP.has(x)).length >= 2 && grams.has(g.join(' '))) return g.join(' '); }
+  }
+  return null;
+}
+const titleOf = text => (/^#\s+(.+)$/m.exec(text)?.[1] || '').trim();
+
+async function askClaude(f, hinweise = '', frueher = []) {
   const key = process.env.ANTHROPIC_API_KEY;
   const models = [MODEL, ...MODEL_FALLBACK.filter(m => m !== MODEL)];
   let last;
   for (const model of models) {
-    const body = { model, max_tokens: 10000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}${hinweise ? `\n\nEin früherer Entwurf hatte diese Fehler, vermeide sie unbedingt:\n${hinweise}` : ''}` }] };
+    const body = { model, max_tokens: 10000, system: SYSTEM, messages: [{ role: 'user', content: `Schreibe den Spieltagsbericht für Spieltag ${f.spieltag}. Hier alle geprüften Fakten als JSON:\n\n${JSON.stringify(f)}${frueher.length ? `\n\nFrühere Schlagzeilen (keine Formulierung daraus wiederholen):\n${frueher.map(t => `- ${t}`).join('\n')}` : ''}${hinweise ? `\n\nEin früherer Entwurf hatte diese Fehler, vermeide sie unbedingt:\n${hinweise}` : ''}` }] };
     for (let attempt = 1; attempt <= 3; attempt++) {
       let r, d;
       try { r = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(180000) }); d = await r.json().catch(() => ({})); }
@@ -291,6 +308,8 @@ async function askClaude(f, hinweise = '') {
         const leak = /\b(schnitt(Letzte3|Die3Davor)|platzVerlauf|spieltagPlatz\w*|ueberLigaschnitt\w*|unterLigaschnitt\w*|spieltagPunkteOhneIhn|anteilProzent|topSpieler|flopSpieler)\b/.exec(text);
         if (d.stop_reason === 'max_tokens') { last = Error('Antwort abgeschnitten'); continue; }
         if (leak) { last = Error(`Feldname im Text: ${leak[0]}`); continue; }
+        const rep = titleRepeat(titleOf(text), frueher);
+        if (rep) { last = Error(`Schlagzeile wiederholt „${rep}“`); continue; }
         if (text.length >= 400) return { text, usage: d.usage || null, model: d.model || model };
         last = Error('Antwort zu kurz'); continue;
       }
@@ -354,12 +373,12 @@ try {
   else if (API && CODE && !dienstOk) say(`Spieltagsbericht ${day}: Tippdienst kennt /bericht noch nicht (worker.js bei Cloudflare aktualisieren) oder ist nicht erreichbar. Kein Claude-Aufruf.`);
   else if (!API || !CODE) say(`Spieltagsbericht ${day}: ${!API ? 'Tippdienst (KBL_TIPP_DIENST)' : 'Geheimnis KBL_ADMIN_CODE'} fehlt, der Entwurf hätte keinen privaten Platz. Wird übersprungen.`);
   else {
-    const f = facts(day);
-    let { text, usage, model } = await askClaude(f);
+    const f = facts(day), frueher = Object.entries(store.berichte).filter(([d]) => Number(d) !== day).map(([, b]) => b.title).filter(Boolean);
+    let { text, usage, model } = await askClaude(f, '', frueher);
     let pruefung = await pruefen(f, text);
     if (!pruefung.ok && (pruefung.zahlen.length || pruefung.ki?.probleme?.length)) {
       const h = [...pruefung.zahlen.map(z => `- Zahl ${z.zahl} steht nicht in den Fakten: „${z.stelle}“`), ...(pruefung.ki?.probleme || []).map(p => `- „${p.zitat}“: ${p.grund}`)].join('\n');
-      const zweiter = await askClaude(f, h); const p2 = await pruefen(f, zweiter.text);
+      const zweiter = await askClaude(f, h, frueher); const p2 = await pruefen(f, zweiter.text);
       const n = p => p.zahlen.length + (p.ki?.probleme?.length || 0);
       if (n(p2) <= n(pruefung)) ({ text, usage, model } = zweiter), pruefung = p2;
     }
