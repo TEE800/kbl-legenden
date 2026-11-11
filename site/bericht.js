@@ -137,7 +137,7 @@
   }
  }
  function blockOf(btn){let el=btn.closest('.ber-tools')?.previousElementSibling;let h=null;for(let p=el?.previousElementSibling;p;p=p.previousElementSibling)if(p.classList.contains('ber-h')){h=p;break;}return {el,h};}
- function paraCanvas(el,h){
+ function paraCanvas(el,h,first){
   const W=1080,P=56,L=P+30,M=W-2*P-50,sans='"Segoe UI",Arial,sans-serif',c=document.createElement('canvas'),x=c.getContext('2d');
   const runs=node=>{const out=[];const walk=(n,b,i)=>{for(const ch of n.childNodes){if(ch.nodeType===3)out.push({t:ch.textContent,b,i});else if(ch.nodeType===1)walk(ch,b||ch.tagName==='B',i||ch.tagName==='I');}};walk(node,false,false);return out;};
   const font=(r,size,weight)=>`${r.i?'italic ':''}${r.b?800:weight} ${size}px ${r.f||sans}`;
@@ -148,10 +148,10 @@
     if(cur+ww>max&&lines.at(-1).length){while(lines.at(-1).at(-1)?.t===' ')lines.at(-1).pop();lines.push([]);}
     lines.at(-1).push({...r,t:word,w:ww});}
    return lines.filter(l=>l.length);};
-  const title=wrap([{t:sel.title||`Spieltag ${sel.day}`,b:false,f:'Georgia,serif'}],46,900,M);
+  const title=first?wrap([{t:sel.title||`Spieltag ${sel.day}`,b:false,f:'Georgia,serif'}],46,900,M):[];
   const head=h?wrap(runs(h),34,800,M):[];
   const items=el.tagName==='P'?[{mark:'',lines:wrap(runs(el),36,400,M)}]:[...el.children].map((li,k)=>({mark:el.tagName==='OL'?`${k+1}.`:'•',lines:wrap(runs(li),36,400,M-44)}));
-  const H=P+60+title.length*58+(head.length?20+head.length*46:0)+24+items.reduce((s,it)=>s+it.lines.length*52+14,0)+70+P;c.width=W;c.height=H;
+  const H=P+60+title.length*58+(head.length?(title.length?20:4)+head.length*46:0)+24+items.reduce((s,it)=>s+it.lines.length*52+14,0)+70+P;c.width=W;c.height=H;
   x.fillStyle='#081118';x.fillRect(0,0,W,H);
   const bx=P/2,by=P/2,bw=W-P,bh=H-P;x.beginPath();x.roundRect?x.roundRect(bx,by,bw,bh,22):x.rect(bx,by,bw,bh);x.fillStyle='#17242e';x.fill();x.strokeStyle='#2e3f4a';x.lineWidth=2;x.stroke();
   x.save();x.clip();x.fillStyle='#b48633';x.fillRect(bx,by,10,bh);x.restore();
@@ -160,7 +160,7 @@
   x.font=`900 26px Georgia,serif`;x.fillStyle='#ebc768';x.textAlign='right';x.fillText('KBL LEGENDEN',W-P-20,y);x.textAlign='left';y+=8;
   const draw=(lines,size,weight,col,colB,lh,ind=0)=>{for(const l of lines){y+=lh;let px=L+ind;for(const w of l){x.font=font(w,size,weight);x.fillStyle=w.b?colB:col;x.fillText(w.t,px,y);px+=w.w;}}};
   draw(title,46,900,'#ebc768','#ebc768',58);
-  if(head.length){y+=20;draw(head,34,800,'#d9b45a','#d9b45a',46);}
+  if(head.length){y+=title.length?20:4;draw(head,34,800,'#d9b45a','#d9b45a',46);}
   y+=24;
   for(const it of items){if(it.mark){x.font=`800 36px ${sans}`;x.fillStyle='#ebc768';x.fillText(it.mark,L,y+52);}draw(it.lines,36,400,'#cfd9e0','#ffffff',52,it.mark?44:0);y+=14;}
   x.font=`26px ${sans}`;x.fillStyle='#728592';x.fillText(`Spieltag ${sel.day} · geschrieben von BumsKI 🤡`,L,H-P-6);
@@ -170,8 +170,10 @@
  function paraShot(btn){
   const {el,h}=blockOf(btn);if(!el||!sel)return;
   const body=el.tagName==='P'?mdOf(el).trim():[...el.children].map((li,k)=>`${el.tagName==='OL'?k+1+'.':'-'} ${mdOf(li).trim()}`).join('\n');
-  const txt=`**${sel.title||'Spieltag '+sel.day}** (Spieltagsbericht ST ${sel.day})\n${h?`__${h.textContent.trim()}__\n`:''}${body}`;
-  window.kblImgDialog?.(()=>paraCanvas(el,h),`kbl-bericht-st${sel.day}-absatz.png`,()=>txt,'Absatz als Bild');
+  // Große Schlagzeile nur beim ersten Absatz (Kevin-Wunsch 11.11.), sonst nur Zwischenüberschrift und Absatz.
+  const first=[...el.parentElement.children].find(x=>!['ber-h','ber-hr','ber-tools','ber-react'].some(c=>x.classList.contains(c)))===el;
+  const txt=`${first?`**${sel.title||'Spieltag '+sel.day}** (Spieltagsbericht ST ${sel.day})\n`:''}${h?`__${h.textContent.trim()}__\n`:''}${body}`;
+  window.kblImgDialog?.(()=>paraCanvas(el,h,first),`kbl-bericht-st${sel.day}-absatz.png`,()=>txt,'Absatz als Bild');
  }
  // Zwischenüberschriften immer einzeilig (Kevin-Wunsch): nur zu lange einzeln so weit verkleinern, dass sie passen (min. 11 px, dann Umbruch).
  // Der Bereich startet eingeklappt (Breite 0), darum beim Aufklappen und bei Größenänderung neu über den ResizeObserver.
