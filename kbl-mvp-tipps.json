@@ -659,5 +659,16 @@
         "M'gladbach"
       ]
     }
+  },
+  "10": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Tippe den MVP der Spieler, die NICHT auf Länderspielreise waren!",
+      "by": {
+        "id": "1165589",
+        "name": "Stammler9"
+      }
+    }
   }
 }
