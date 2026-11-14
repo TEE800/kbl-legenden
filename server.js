@@ -1668,13 +1668,20 @@ function poolMvp(m,pool){
 // Bedingungen an den Spieler aus dem Regeltext (Kevin, ST 8: "Der beste Feldspieler ohne direkte Torbeteiligung (ohne Tor,
 // Eigentor erzwungen, Vorlage, absichtliche Vorlage, abgefälschte Vorlage, Tor eingeleitet und Eigentor)"). Gleiche Erkennung in public/mvp-tipp.js.
 // field = kein Torwart, noGoal = keine direkte Torbeteiligung am Spieltag.
-function ruleConds(text){
+// noNational (Kevin 14.11., ST 10 "Tippe den MVP der Spieler, die NICHT auf Länderspielreise waren"): Kickbase kennt keine
+// Nationalmannschaften, darum steht die Liste der Länderspielreisenden je Spieltag in kbl-tippregel-ausschluss.json
+// (von Claude aus Vereinsmeldungen gesammelt, nur mit Quelle). Ohne Liste wird die Bedingung nicht erkannt (nie raten).
+const AUSSCHLUSS_FILE=path.join(process.cwd(),'kbl-tippregel-ausschluss.json');
+function readAusschluss(){try{return JSON.parse(fs.readFileSync(AUSSCHLUSS_FILE,'utf8'));}catch{return {};}}
+const NATIONAL_RE=/laenderspiel|nationalspieler|nationalmannschaft|nationalteam/;
+function ruleConds(text,day){
  const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
  if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
  if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
+ if(day&&NATIONAL_RE.test(t)&&readAusschluss()[day]?.players?.length)c.push('noNational');
  return c;
 }
-const tippConds=rule=>ruleConds(rule?.text);
+const tippConds=(rule,day)=>ruleConds(rule?.text,day);
 // Direkte Torbeteiligung nach den festen (englischen) Kickbase-Titeln: Tor, Eigentor, Eigentor erzwungen, Torvorlage
 // (auch absichtlich und abgefälscht) und Tor eingeleitet ("Secondary Assist"/"Goal Set up"). Nicht: Gegentor, Torschussvorlage, Abpraller-Vorlage.
 const GOAL_INVOLVED=/^(goal(?! conceded| kick)|own goal|assist\b|intentional assist|deflected assist|secondary assist)/i;
@@ -1683,6 +1690,8 @@ function condChecker(token,day,conds){
  if(!conds.length)return null;
  const memo=new Map();
  return id=>{id=String(id);if(!memo.has(id))memo.set(id,(async()=>{
+  if(conds.includes('noNational')&&(readAusschluss()[day]?.players||[]).some(p=>String(p.id)===id))return {ok:false,why:'auf Länderspielreise'};
+  if(!conds.some(c=>c==='field'||c==='noGoal'))return {ok:true};
   let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
   const types=await loadEventTypes(token),ev=Array.isArray(pc?.events)?pc.events:[];
   // Pro (eti, Minute) mit Summe 0 bei mehreren Eintraegen = zurueckgenommen (VAR).
@@ -1938,6 +1947,8 @@ async function rekVerlauf(token,day,tracking,result){
  if(old&&old.sig===sig)return old.frames;
  const tl=new Map();
  for(const [id,final] of fin){
+  if(conds.includes('noNational')&&(readAusschluss()[day]?.players||[]).some(p=>String(p.id)===id))return {ok:false,why:'auf Länderspielreise'};
+  if(!conds.some(c=>c==='field'||c==='noGoal'))return {ok:true};
   let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
   const kick=Date.parse(pc?.md||'');
   if(!Number.isFinite(kick)){if(tipped.some(([t])=>t===id))return null;continue;}
@@ -1971,7 +1982,7 @@ async function rekVerlauf(token,day,tracking,result){
 async function tippResult(token,day,rule,rows){
  if(!rule)return {status:'missing',message:'Das fehlt: Für diesen Spieltag wurde keine Tippregel eingetragen.',rows:[],winners:[]};
  if(!rows.length)return {status:'empty',message:'An diesem Spieltag hat niemand getippt.',rows:[],winners:[]};
- const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule,day),conds=tippConds(rule),chk=condChecker(token,day,conds);
+ const m=await loadMatchdayMvp(token,day),kind=tippKind(rule),pool=await tippPool(token,rule,day),conds=tippConds(rule,day),chk=condChecker(token,day,conds);
  const cb=chk?await condTop(m.all,pool,chk,1):null,mvp={...m,players:cb?cb.list:poolMvp(m,pool),reliable:m.reliable&&!cb?.unsure};
  // Ohne eingestellte Wertung: nur den MVP zeigen, Gewinner bestimmt die Liga selbst.
  if(!kind||kind==='keine')return {status:'manual',message:kind?'Den Gewinner bestimmt ihr nach eurer Tippregel selbst.':'Für diese Tippregel ist keine Wertung eingestellt. Den Gewinner bestimmt ihr selbst.',rows:[],winners:[],
@@ -2154,7 +2165,7 @@ app.get('/api/mvp-tipps',async(req,res)=>{
   // Tabelle vor dem Anpfiff je Spieltag, damit Browser und Tippdienst "obere/untere Tabellenhälfte" auch vor dem Anstoß kennen.
   if(token&&next)await tableBefore(token,next).catch(()=>null);
   const tables=Object.fromEntries(Object.entries(readTables()).map(([k,v])=>[k,v.teams]));
-  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{}),tables});
+  res.set('Cache-Control','no-store').json({next,days,rules:TIPP_RULES,wertungen:TIPP_WERTUNG,...(managers?{managers}:{}),...(teams?{teams}:{}),tables,ausschluss:readAusschluss()});
  }catch(e){res.status(503).json({error:'Spielplan nicht abrufbar: '+e.message});}
 });
 app.get('/api/mvp-tipps/:day',async(req,res)=>{
@@ -2169,7 +2180,7 @@ app.get('/api/mvp-tipps/:day',async(req,res)=>{
   if(st.status==='finished'){const rows=managers.filter(m=>tips[m.id]).map(m=>({managerId:m.id,...tips[m.id]}));
    try{result=await tippResult(token,day,rule,rows);}catch(e){result={status:'missing',message:'Das fehlt: Auswertung nicht möglich ('+e.message+').',rows:[],winners:[]};}}
   let tracking=null;
-  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule,day),tippConds(rule));}catch{}
+  if(reveal&&Object.keys(tips).length)try{tracking=await tippTracking(token,day,tips,st.status==='finished',tippKind(rule),await tippPool(token,rule,day),tippConds(rule,day));}catch{}
   if(tracking)recordVerlauf(day,tracking,result,st.status==='finished');
   // Punkte-Aufschluesselung des gerade Besten (Krone): MVP laut Tippregel, ohne MVP-Wertung der Erste der Top 10.
   if(tracking){const mv=(st.status==='finished'?result?.mvp:tracking.mvp)?.players||[],t1=tracking.top10?.players||[];

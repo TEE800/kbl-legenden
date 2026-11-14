@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 
 const REPO = 'TEE800/kbl-legenden', BRANCH = 'main';
 const ROOT = process.cwd(), STATE = path.join(ROOT, '.kbl-aktualisieren.json');
-const CODE = ['server.js', 'challenges.js', 'event-types-de.js', 'package.json', 'package-lock.json', 'CLAUDE.md', 'README.md', '.gitignore', '.github/workflows/seite.yml', 'kbl-head-landmarks.json'];// Kinnlinien: auf GitHub berechnet, damit die Köpfe auch am PC am Kinn enden
+const CODE = ['server.js', 'challenges.js', 'event-types-de.js', 'package.json', 'package-lock.json', 'CLAUDE.md', 'README.md', '.gitignore', '.github/workflows/seite.yml', 'kbl-head-landmarks.json', 'kbl-tippregel-ausschluss.json'];// Kinnlinien: auf GitHub berechnet, damit die Köpfe auch am PC am Kinn enden
 const isCode = p => CODE.includes(p) || p.startsWith('public/') || p.startsWith('tools/');
 // Nur Beschreibung bzw. GitHub-Ablauf, am PC ohne Wirkung: immer den Stand von GitHub nehmen (Kevin 10.11.).
 const ALWAYS = ['CLAUDE.md', 'README.md', '.github/workflows/seite.yml'];
