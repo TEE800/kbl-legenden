@@ -1072,6 +1072,21 @@
   return `<small class="mvp-wertung">🔍 So versteht die BumsKI die Regel: <b>${esc(kindTitle(d,kind))}</b>${w?' (von Hand gewählt)':''}</small><br>`+
    (u.length?`<small class="mvp-wertung mvp-unclear">⚠️ Diesen Teil wertet die BumsKI nicht aus: <b>${esc(u.join(', '))}</b>. Gewinner und Führende dann bitte selbst prüfen.</small>`:`<small class="mvp-wertung">✓ Die BumsKI versteht die ganze Regel.</small>`);
  }
+ // Prüfergebnis beim Speichern (Kevin-Wunsch 14.11.): Stufe und kurze Zeilen, geht im Admin-Reiter als Kasten und per Push an den Admin.
+ // ok = versteht alles, teil = Teile werden nicht ausgewertet, nein = Wertung nicht erkannt, keine = bewusst ohne Wertung.
+ function ruleVerdict(text,w,day){
+  const d={day,rule:{id:'eigene',text,wertung:w||undefined},wertungen:ruleData?.wertungen,managers:[]},kind=kindOf(d);
+  if(!kind)return {level:'nein',lines:['Aus dem Text ist nicht erkennbar, wie gewertet wird. Ohne Wertung gibt es keine Führenden und keinen Gewinner-Vorschlag.','Bitte im Admin-Reiter bei „So wird gewertet“ auswählen oder die Regel anders formulieren.']};
+  if(kind==='keine')return {level:'keine',lines:['Führende und Gewinner bestimmt ihr selbst.']};
+  const lines=[`Wertung: ${kindTitle(d,kind)}${w?' (von Hand gewählt)':''}`],u=ruleUnclear(d);
+  const n=String(text).toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue');
+  if(/(unter|ober)\w* *(tabellen)?haelfte/.test(n)&&!ruleTableTeams(text,overview?.tables?.[day]).length)
+   lines.push('Die Bundesliga-Tabelle vor dem Anpfiff fehlt noch. Ohne sie zählt kein Verein, bitte vor dem Anpfiff nochmal speichern.');
+  if(u.length)lines.push(`Nicht ausgewertet: ${u.join(', ')}. Gewinner und Führende dann bitte selbst prüfen.`);
+  return {level:lines.length>1?'teil':'ok',lines};
+ }
+ const VERDICT_HEAD={ok:'✅ Die BumsKI versteht die Regel und wertet sie automatisch aus.',teil:'⚠️ Die BumsKI versteht die Regel nur teilweise.',nein:'❌ Die BumsKI versteht die Wertung nicht.',keine:'ℹ️ Keine automatische Wertung.'};
+ const verdictHtml=(v,pushed)=>`<div class="mvp-verdict mvp-verdict-${v.level}"><b>${VERDICT_HEAD[v.level]}</b>${v.lines.map(l=>`<br><small>${esc(l)}</small>`).join('')}${pushed==null?'':`<br><small class="muted">${pushed>0?'📲 Ergebnis als Push-Nachricht an dein Handy geschickt.':'📲 Keine Push-Nachricht: Auf deinem Handy oben über 🔔 mit deinem Manager anmelden, dann kommt das Ergebnis künftig auch als Nachricht.'}</small>`}</div>`;
  const ruleCheck=()=>{const b=$('#mvpRuleCheck');if(b)b.innerHTML=ruleCheckHtml();};
  document.addEventListener('input',e=>{if(e.target.id==='mvpRuleText')ruleCheck();});
  document.addEventListener('change',e=>{if(e.target.id==='mvpRuleWertung')ruleCheck();});
@@ -1133,7 +1148,9 @@
   if(e.target.id==='mvpRuleSave'){
    const m=$('#mvpRuleMsg');m.textContent='Speichere …';
    if(!ruleData)return;const day=ruleData.day;
-   try{await get(tippUrl(`/api/mvp-tipps/${day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text:$('#mvpRuleText').value,byId:$('#mvpRuleBy').value,wertung:$('#mvpRuleWertung').value,adminCode:adminCode()})});await afterRuleChange(day);$('#mvpRuleMsg').textContent=`Tippregel für Spieltag ${day} gespeichert.`;}
+   const text=$('#mvpRuleText').value.trim(),w=$('#mvpRuleWertung').value,check=text?ruleVerdict(text,w,day):null;
+   try{const r=await get(tippUrl(`/api/mvp-tipps/${day}/rule`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleId:'eigene',text,byId:$('#mvpRuleBy').value,wertung:w,adminCode:adminCode(),...(check?{check}:{})})});await afterRuleChange(day);
+    $('#mvpRuleMsg').innerHTML=`Tippregel für Spieltag ${day} gespeichert.`+(check?verdictHtml(check,API?(r?.pushed??null):null):'');}
    catch(err){m.textContent='Fehler: '+err.message;}
   }
   if(e.target.id==='mvpWertungSave'){

@@ -189,6 +189,22 @@ async function sendPush(env, keys, sub, msg) {
   if (r.status === 404 || r.status === 410) { await subDrop(env, sub.key); return 'gone'; }
   return r.ok ? 'ok' : `HTTP ${r.status}`;
 }
+// Pruefergebnis der Tippregel aus dem Browser (level ok|teil|nein|keine, kurze Zeilen), nur Text, gekuerzt.
+const RULE_LEVEL = { ok: ['✅', 'Die BumsKI versteht sie und wertet sie aus'], teil: ['⚠️', 'Die BumsKI versteht sie nur teilweise'], nein: ['❌', 'Die BumsKI versteht die Wertung nicht'], keine: ['ℹ️', 'Keine automatische Wertung'] };
+function ruleCheckMsg(c) {
+  const lv = c && RULE_LEVEL[c.level];
+  if (!lv) return null;
+  const lines = (Array.isArray(c.lines) ? c.lines : []).slice(0, 6).map(l => String(l || '').replace(/\s+/g, ' ').trim().slice(0, 200)).filter(Boolean);
+  return { icon: lv[0], head: lv[1], lines };
+}
+// Push an die Geraete des Admins (Manager KBL_ADMIN_ID, Standard T800), unabhaengig von den gewaehlten Anlaessen.
+async function pushAdmin(env, msg) {
+  const admin = String(env.KBL_ADMIN_ID || '699062'), keys = await vapid(env);
+  const to = (await listSubs(env)).filter(s => String(s.m) === admin && s.k === keys.publicKey);
+  let ok = 0;
+  for (const s of to) if (await sendPush(env, keys, s, msg).catch(() => 'err') === 'ok') ok++;
+  return ok;
+}
 async function subKey(endpoint) { return 'sub:' + hex(await crypto.subtle.digest('SHA-256', enc.encode(endpoint))).slice(0, 40); }
 async function kvSubs(env) {
   const out = []; let cursor;
@@ -706,8 +722,17 @@ async function handle(req, env, cors) {
     const wertung = body.wertung ? String(body.wertung) : '';
     if (wertung && !(info.wertungen || []).some(w => w.id === wertung)) return json({ error: 'Unbekannte Wertung.' }, 400, cors);
     const rule = { ...(base ? { id: base.id, title: base.title, text: base.text } : { id: 'eigene', title: 'Eigene Regel', text }), ...(by ? { by: { id: String(by.id), name: by.name } } : {}), ...(wertung ? { wertung } : {}) };
+    const prev = await env.TIPPS.get(`rule:${day}`, 'json');
     await env.TIPPS.put(`rule:${day}`, JSON.stringify(rule));
-    return json({ ok: true, rule }, 200, cors);
+    // Kevin-Wunsch 14.11.: Sobald eine neue Tippregel steht, meldet die BumsKI dem Admin per Push, ob sie die Regel versteht.
+    // Die Pruefung rechnet der Browser (gleiche Erkennung wie in mvp-tipp.js) und schickt sie mit; nur bei geaendertem Text/Wertung.
+    let pushed = null;// null = nicht versucht (Regel unveraendert)
+    const chk = ruleCheckMsg(body.check);
+    if (chk && (!prev || prev.text !== rule.text || (prev.wertung || '') !== (rule.wertung || ''))) {
+      pushed = 0;
+      try { pushed = await pushAdmin(env, { title: `${chk.icon} Tippregel Spieltag ${day}: ${chk.head}`, body: `„${rule.text}“${chk.lines.length ? '\n' + chk.lines.join('\n') : ''}`, url: './#admin', tag: `regel${day}`, ttl: 2 * 86400 }); } catch {}
+    }
+    return json({ ok: true, rule, pushed }, 200, cors);
   }
   if (parts[2] === 'mine' && req.method === 'POST') {
     const id = String(body.managerId || '');
