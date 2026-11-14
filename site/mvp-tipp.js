@@ -95,7 +95,7 @@
  function ruleBox(d){
   if(!d.rule)return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div><p>Die Tippregel für diesen Spieltag steht noch nicht fest. Getippt werden kann trotzdem schon.</p>${bestLine(d)}</div>`;
   // Die Liga schreibt die Regel selbst (keine Vorlagen); ältere Einträge mit Vorlagen-Titel zeigen ihn weiter an.
-  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':''}${unclearLine(d)}${awayBox(d)}</div>`;
+  return `<div class="mvp-rule"><div class="eyebrow">TIPPREGEL SPIELTAG ${d.day}</div>${d.rule.id!=='eigene'?`<strong>${esc(d.rule.title)}</strong>`:''}<p class="mvp-rule-text">${esc(d.rule.text)}</p>${d.rule.by?`<small class="muted">Regel bestimmt von <b>${mn(d.rule.by.name,d.rule.by.id)}</b>${bestIds(d).includes(d.rule.by.id)?` (bester MVP-Tipper an Spieltag ${d.prevBest.day})`:''}</small>`:bestLine(d)}${!kindOf(d)?'<small class="muted mvp-wertung">Wertung: aus dem Regeltext nicht erkannt, bitte im Admin-Bereich wählen</small>':''}${unclearLine(d)}</div>`;
  }
  function deadline(d){
   if(d.open)return `<p class="mvp-deadline">Tipps bis <b>${esc(when(d.deadline))}</b>${d.firstMatch?` (${esc(d.firstMatch)})`:''} · <span data-mvp-left="${esc(d.deadline)}">${left(d.deadline)}</span></p>`;
@@ -190,13 +190,6 @@
  const awayOf=day=>overview?.ausschluss?.[day]?.players||[];
  const condsOf=d=>d?.tracking?.conds||d?.result?.conds||ruleConds(d?.rule?.text,d?.day);
  const condText=c=>[c.includes('field')?'nur Feldspieler':'',c.includes('noGoal')?'ohne direkte Torbeteiligung':'',c.includes('noNational')?'ohne Länderspielreisende':''].filter(Boolean).join(', ');
- // Liste der Länderspielreisenden unter der Tippregel (eingeklappt, je Verein), damit jeder vor dem Tippen sieht, wer nicht zählt.
- function awayBox(d){
-  if(!condsOf(d).includes('noNational'))return '';
-  const a=overview.ausschluss[d.day],by=new Map();
-  for(const p of a.players){if(!by.has(p.team))by.set(p.team,[]);by.get(p.team).push(p);}
-  return `<details class="acc-group mvp-away"><summary>🌍 Auf Länderspielreise · ${a.players.length} Spieler zählen nicht</summary><div class="acc-sub">${a.note?`<p class="muted tiny">${esc(a.note)}</p>`:''}${[...by].sort((x,y)=>x[0].localeCompare(y[0],'de')).map(([team,ps])=>`<p style="margin:6px 0"><b>${esc(team)}</b>: ${ps.map(p=>`${esc(p.name)}${p.nation?` <small class="muted">(${esc(p.nation)})</small>`:''}`).join(', ')}</p>`).join('')}</div></details>`;
- }
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
  let ruleOut=new Set();
  const offRule=(pool,team,id)=>(pool.length&&!pool.includes(team))||ruleOut.has(String(id));
@@ -1125,8 +1118,6 @@
   if(!p){msg.textContent=pick.error;return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
   const pool=poolOf(data);
-  const away=condsOf(data).includes('noNational')&&awayOf(data.day).find(x=>String(x.id)===String(p.id));
-  if(away&&!confirm(`${p.name} war auf Länderspielreise und zählt laut Tippregel nicht. Trotzdem tippen?`))return;
   if(pool.length&&!pool.includes(p.team)&&!confirm(`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}. Trotzdem tippen?`))return;
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
