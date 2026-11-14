@@ -664,7 +664,7 @@
     "rule": {
       "id": "eigene",
       "title": "Eigene Regel",
-      "text": "Tippe den MVP der Spieler, die NICHT auf Länderspielreise waren!",
+      "text": "Tippe den MVP der Spieler, die NICHT auf Länderspielreise waren! (inklusive U-Mannschaften)",
       "by": {
         "id": "1165589",
         "name": "Stammler9"
