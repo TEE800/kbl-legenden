@@ -990,12 +990,13 @@ app.get('/api/history-probe', async (req, res) => {
 });
 
 // HuHo-Testabfrage (nur lesend, Kevin 02.11.): Wo zeigt Kickbase einen Admin-Punktabzug? Rohdaten fuer T800 und Adam.
+// Seit 17.11. auch Transfers/Dashboard/Leistung des Dienstkontos T1000: mit dessen Kontostand (`me` b) die Kontostand-Formel pruefen (Kevin).
 app.get('/api/huho-probe', async (req, res) => {
   const token = getToken(req);
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
   const L = '/v4/leagues/6422780', out = { at: new Date().toISOString() };
   for (const p of [`${L}/activitiesFeed?max=60`, `${L}/managers/699062/performance`, `${L}/managers/699062/dashboard`, `${L}/managers/1386995/performance`,
-    `${L}/managers/1386995/dashboard`, `${L}/me`, `${L}/overview`, `${L}/ranking?dayNumber=2`, `${L}/ranking?dayNumber=5`]) {
+    `${L}/managers/1386995/dashboard`, `${L}/me`, `${L}/managers/3783040/transfer`, `${L}/managers/3783040/dashboard`, `${L}/managers/3783040/performance`, `${L}/overview`, `${L}/ranking?dayNumber=2`, `${L}/ranking?dayNumber=5`]) {
     try { out[p] = JSON.stringify(await kbFetch(p, { token })).slice(0, 12000); }
     catch (e) { out[p] = { error: e.message, status: e.status || null }; }
   }
