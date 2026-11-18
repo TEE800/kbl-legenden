@@ -115,6 +115,45 @@
    <p class="muted tiny">Kaderwert = Summe der heutigen Marktwerte im Kader, ohne Kontostand. Änderung (1/7/30 Tage) = Kaderwert heute minus Kaderwert vor 1/7/30 Tagen, jeweils mit dem Kader, der an dem Tag im Kader stand (Käufe und Verkäufe zählen mit). Fehlt ein Tag, steht –.</p>`;
  }
 
+ // „📋 Alle Spieler“ (Kevin-Wunsch 18.11.): Tabelle aller Bundesliga-Spieler mit Marktwert, sortier- und filterbar,
+ // Platz = Rang nach Marktwert unter allen Spielern. Aktualisiert sich mit den Marktwerten (einmal je 22-Uhr-Anpassung).
+ // „⬇ Als Tabelle“ lädt die gefilterte Liste als CSV (Semikolon, für Excel).
+ let aSort='mv',aPer='d1',aOwn='all',aPos='',aTeam='',aQ='';
+ const aRank=()=>{const m=new Map();[...data.players].sort((a,b)=>b.mv-a.mv||a.n.localeCompare(b.n,'de')).forEach((p,i)=>m.set(p.id,i+1));return m;};
+ function allList(){
+  const q=norm(aQ.trim());
+  return data.players.filter(p=>(aOwn==='all'||(aOwn==='liga'?p.owner:aOwn==='frei'?!p.owner:p.owner===aOwn))&&(!aPos||String(p.pos)===aPos)&&(!aTeam||p.t===aTeam)&&(!q||norm(p.n).includes(q)||norm(p.t).includes(q)))
+   .sort((a,b)=>aSort==='chg'?(b[aPer]??-Infinity)-(a[aPer]??-Infinity)||b.mv-a.mv:aSort==='name'?a.n.localeCompare(b.n,'de'):aSort==='team'?String(a.t||'').localeCompare(String(b.t||''),'de')||b.mv-a.mv:b.mv-a.mv||a.n.localeCompare(b.n,'de'));
+ }
+ function allRows(){
+  const list=allList(),rk=aRank(),sum=list.reduce((s,p)=>s+(p.mv||0),0);
+  return `<p class="muted tiny">${list.length} von ${data.players.length} Spielern · zusammen ${money(sum)}</p>${list.length?`<ol class="mw-list">${list.map(p=>`<li><button type="button" class="mw-row" data-mw-player="${esc(p.id)}"><span class="tr-place">${rk.get(p.id)}.</span>${face(p.img,p.n)}<span class="mw-name"><b>${esc(p.n)}</b><small>${sub(p)}</small></span><span class="mw-val"><b>${money(p.mv)}</b><small class="${cls(p[aPer])}">${money(p[aPer],true)} · ${esc(PER[aPer][0])}</small></span></button></li>`).join('')}</ol>`:'<p class="muted tiny">Kein Spieler passt zu diesem Filter.</p>'}`;
+ }
+ function allHtml(){
+  const teams=[...new Set(data.players.map(p=>p.t).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'de'));
+  const ms=data.managers.filter(m=>!m.error).sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  return `<div class="mw-allf"><input type="search" id="mwAllQ" placeholder="Spieler oder Verein suchen …" autocomplete="off" aria-label="Spieler oder Verein suchen" value="${esc(aQ)}">
+   <select id="mwAllTeam" aria-label="Verein"><option value="">Alle Vereine</option>${teams.map(t=>`<option${t===aTeam?' selected':''}>${esc(t)}</option>`).join('')}</select>
+   <select id="mwAllOwn" aria-label="Besitzer"><option value="all">Alle Besitzer</option><option value="liga"${aOwn==='liga'?' selected':''}>Nur Legenden-Kader</option><option value="frei"${aOwn==='frei'?' selected':''}>Nur freie Spieler</option>${ms.map(m=>`<option value="${esc(m.id)}"${aOwn===m.id?' selected':''}>bei ${esc(m.name)}</option>`).join('')}</select></div>
+   ${chips('apos',[['','Alle'],['1','TW'],['2','ABW'],['3','MF'],['4','ST']],aPos)}
+   ${chips('asort',[['mv','Nach Marktwert'],['chg','Nach Änderung'],['name','Nach Name'],['team','Nach Verein']],aSort)}
+   ${chips('aper',Object.entries(PER).map(([k,v])=>[k,'± '+v[0]]),aPer)}
+   <div class="mw-allbar"><button type="button" class="ghost tiny" data-mw-csv="1">⬇ Als Tabelle herunterladen</button></div>
+   <div id="mwAllList">${allRows()}</div>
+   <p class="muted tiny">Platz = Rang nach Marktwert unter allen Spielern. Antippen zeigt den Verlauf des Spielers. Die Marktwerte kommen einmal am Tag nach der Kickbase-Anpassung um 22 Uhr neu.</p>`;
+ }
+ const allRedraw=()=>{const b=$('#mwAllList');if(b)b.innerHTML=allRows();};
+ const allFull=()=>{const b=$('#mwAll');if(b)b.innerHTML=allHtml();};
+ function allCsv(){
+  const rk=aRank(),POSN={1:'Torwart',2:'Abwehr',3:'Mittelfeld',4:'Sturm'};
+  const c=v=>{const s=String(v??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const rows=[['Platz','Spieler','Verein','Position','Marktwert','± 1 Tag','± 7 Tage','± 30 Tage','Jahreshoch','Jahrestief','Besitzer']];
+  for(const p of allList())rows.push([rk.get(p.id),p.n,p.t,POSN[p.pos]||'',p.mv,p.d1,p.d7,p.d30,p.hmv,p.lmv,ownerOf(p)?.name||'frei']);
+  const blob=new Blob(['﻿'+rows.map(r=>r.map(c).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`marktwerte-${data.date||'stand'}.csv`});
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+ }
+
  // „📊 Kaderwerte im Vergleich“ (Kevin-Wunsch 5.11.): Liniendiagramm aller Manager wie die Punkteentwicklung der Übersicht.
  // Werte aus dem Kaderwert-Verlauf (hist, Kader wie er an dem Tag war). Graue Linien = übrige Manager, antippen/anhaken hebt hervor.
  const VCOL=['#f1c75c','#59b8e8','#ed8b85','#7fd3a6','#bb9af7','#e8a665','#75d5d1','#ed94c6','#a6c76a','#d0b8ff','#ffb4a0','#86b2ff','#c1db77','#d1a77b','#e0d9a0','#9ebdc8'];
@@ -178,6 +217,7 @@
   if(!data.players.length){root.innerHTML='<p class="error">Das fehlt: Die BumsKI hat noch keine Marktwerte von Kickbase bekommen.</p>';return;}
   root.innerHTML=`<div id="mwTiles">${tiles()}</div>
    <details class="acc-group tr-pech" data-mw-sec="movers"><summary><span class="tr-mname">📈 Gewinner & Verlierer</span><span class="tr-pill">${data.players.length} Spieler</span></summary><div class="acc-sub" id="mwMovers">${movers()}</div></details>
+   <details class="acc-group tr-pech" data-mw-sec="all"><summary><span class="tr-mname">📋 Alle Spieler</span><span class="tr-pill">${data.players.length} Spieler</span></summary><div class="acc-sub" id="mwAll"></div></details>
    <details class="acc-group tr-pech" id="mwVerlauf" data-mw-sec="verlauf"><summary><span class="tr-mname">🔍 Spieler-Verlauf</span></summary><div class="acc-sub">${verlaufBox()}</div></details>
    <details class="acc-group tr-pech" data-mw-sec="kader"><summary><span class="tr-mname">💰 Kaderwerte</span><span class="tr-pill">${data.managers.length} Manager</span></summary><div class="acc-sub" id="mwKader">${kader()}</div></details>
    <details class="acc-group tr-pech" data-mw-sec="vgl"><summary><span class="tr-mname">📊 Kaderwerte im Vergleich</span><span class="tr-pill">Diagramm</span></summary><div class="acc-sub" id="mwVgl"></div></details>
@@ -207,6 +247,8 @@
   finally{loading=false;}
  }
  document.addEventListener('click',e=>{
+  const ac=e.target.closest?.('[data-mw-apos],[data-mw-asort],[data-mw-aper],[data-mw-csv]');
+  if(ac&&data){const d=ac.dataset;if(d.mwCsv){allCsv();return;}if(d.mwApos!=null)aPos=d.mwApos;if(d.mwAsort)aSort=d.mwAsort;if(d.mwAper)aPer=d.mwAper;allFull();return;}
   const t=e.target.closest?.('[data-mw-vmode],[data-mw-vrange],[data-mw-vpick],[data-mw-vline],[data-mw-tperiod],[data-mw-kperiod],[data-mw-ksort],[data-mw-period],[data-mw-scope],[data-mw-range],[data-mw-player]');
   if(t&&!e.target.closest('a')){
    if(t.dataset.mwVmode){vMode=t.dataset.mwVmode;vglRedraw();return;}
@@ -225,14 +267,15 @@
   if(!e.target.closest?.('.mw-search')){const s=$('#mwSuggest');if(s)s.hidden=true;}
   if(e.target.closest?.('[data-kbl-nav="marktwerte"]'))load();
  });
- document.addEventListener('change',e=>{const id=e.target.dataset?.mwVchk;if(id==null)return;if(e.target.checked)vSel.add(id);else vSel.delete(id);vglRedraw();});
+ document.addEventListener('change',e=>{if(data&&(e.target.id==='mwAllTeam'||e.target.id==='mwAllOwn')){if(e.target.id==='mwAllTeam')aTeam=e.target.value;else aOwn=e.target.value;allRedraw();return;}const id=e.target.dataset?.mwVchk;if(id==null)return;if(e.target.checked)vSel.add(id);else vSel.delete(id);vglRedraw();});
  window.addEventListener('resize',()=>{clearTimeout(window.__mwVgl);window.__mwVgl=setTimeout(()=>{if($('[data-mw-sec=vgl]')?.open)vglRedraw();},200);});
  document.addEventListener('toggle',e=>{
   const s=e.target.dataset?.mwSec;if(!s||!e.target.open)return;
-  if(s==='verlauf')loadVerlauf();if(s==='kader')loadTv();if(s==='vgl')vglRedraw();
+  if(s==='verlauf')loadVerlauf();if(s==='kader')loadTv();if(s==='vgl')vglRedraw();if(s==='all')allFull();
  },true);
  document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset?.mwMgr){e.preventDefault();e.target.click();}});
  document.addEventListener('input',e=>{
+  if(e.target.id==='mwAllQ'&&data){aQ=e.target.value;allRedraw();return;}
   if(e.target.id!=='mwSearch'||!data)return;
   const q=norm(e.target.value.trim()),box=$('#mwSuggest');
   if(q.length<2){box.hidden=true;return;}
