@@ -242,6 +242,8 @@ try {
   // Challenges: im Voll-Lauf laedt der Server sie gleich beim Start nach (Konto aus KBL_CHALLENGE_*, siehe server.js); darauf warten.
   for (let i = 0; MODE === 'full' && i < 120; i++) { const c = await call('/api/challenges'); if (c.status !== 200 || !c.body.running) break; await sleep(5000); }
   await save('/api/challenges');
+  // Marktwerte als einfache Tabelle fuer Excel (site/marktwerte.html und .csv, Kevin-Wunsch 18.11.).
+  try { const { marktwerteTabelle } = await import('./marktwerte-tabelle.mjs'); console.log('Marktwert-Tabelle:', marktwerteTabelle(SITE)); } catch (e) { console.log('Marktwert-Tabelle fehlgeschlagen:', e.message); }
   fs.writeFileSync(path.join(DATA, '_meta.json'), JSON.stringify({ exportedAt: new Date().toISOString(), mode: MODE, liveDay: live || null }));
   console.log(`Fertig (${MODE}): ${saved.length} gespeichert, ${failed.length} mit Fehler.`);
   if (failed.length) console.log('Fehler:\n  ' + failed.join('\n  '));

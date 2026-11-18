@@ -140,7 +140,7 @@
    ${chips('aper',Object.entries(PER).map(([k,v])=>[k,'± '+v[0]]),aPer)}
    <div class="mw-allbar"><button type="button" class="ghost tiny" data-mw-csv="1">⬇ Als Tabelle herunterladen</button></div>
    <div id="mwAllList">${allRows()}</div>
-   <p class="muted tiny">Platz = Rang nach Marktwert unter allen Spielern. Antippen zeigt den Verlauf des Spielers. Die Marktwerte kommen einmal am Tag nach der Kickbase-Anpassung um 22 Uhr neu.</p>`;
+   <p class="muted tiny">Platz = Rang nach Marktwert unter allen Spielern. Antippen zeigt den Verlauf des Spielers. Die Marktwerte kommen einmal am Tag nach der Kickbase-Anpassung um 22 Uhr neu. Für Excel („Daten › Aus dem Web“): <a href="https://tee800.github.io/kbl-legenden/marktwerte.html" target="_blank" rel="noopener">tee800.github.io/kbl-legenden/marktwerte.html</a></p>`;
  }
  const allRedraw=()=>{const b=$('#mwAllList');if(b)b.innerHTML=allRows();};
  const allFull=()=>{const b=$('#mwAll');if(b)b.innerHTML=allHtml();};
