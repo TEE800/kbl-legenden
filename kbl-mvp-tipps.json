@@ -669,6 +669,191 @@
         "id": "1165589",
         "name": "Stammler9"
       }
+    },
+    "tips": {
+      "699062": {
+        "name": "T800",
+        "playerId": "1704",
+        "player": "Anton",
+        "team": "Dortmund",
+        "points": 233,
+        "updatedAt": "2026-11-20T19:26:09.113Z"
+      },
+      "841764": {
+        "name": "Hasan",
+        "playerId": "2687",
+        "player": "Nkunku",
+        "team": "Leipzig",
+        "points": 280,
+        "updatedAt": "2026-11-20T08:32:55.725Z"
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "playerId": "2746",
+        "player": "Schick",
+        "team": "Leverkusen",
+        "points": 212,
+        "updatedAt": "2026-11-19T07:19:37.825Z"
+      },
+      "1386995": {
+        "name": "Adam",
+        "playerId": "7158",
+        "player": "Undav",
+        "team": "Stuttgart",
+        "points": 245,
+        "updatedAt": "2026-11-20T12:59:20.181Z"
+      },
+      "1403991": {
+        "name": "Cello",
+        "playerId": "2172",
+        "player": "Führich",
+        "team": "Stuttgart",
+        "points": 236,
+        "updatedAt": "2026-11-20T05:05:24.078Z"
+      },
+      "1631136": {
+        "name": "Fabio",
+        "playerId": "2746",
+        "player": "Schick",
+        "team": "Leverkusen",
+        "points": 289,
+        "updatedAt": "2026-11-20T18:15:41.961Z"
+      },
+      "1631954": {
+        "name": "YW7",
+        "playerId": "4199",
+        "player": "García",
+        "team": "Leverkusen",
+        "points": 311,
+        "updatedAt": "2026-11-20T00:13:16.841Z"
+      },
+      "1646647": {
+        "name": "Baumann",
+        "playerId": "7158",
+        "player": "Undav",
+        "team": "Stuttgart",
+        "points": 288,
+        "updatedAt": "2026-11-20T17:32:41.097Z"
+      },
+      "1927404": {
+        "name": "LQ_R3lax0",
+        "playerId": "2687",
+        "player": "Nkunku",
+        "team": "Leipzig",
+        "points": 269,
+        "updatedAt": "2026-11-20T16:27:06.990Z"
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "playerId": "9995",
+        "player": "Mokwa",
+        "team": "Elversberg",
+        "points": 287,
+        "updatedAt": "2026-11-20T13:40:17.043Z"
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "playerId": "2687",
+        "player": "Nkunku",
+        "team": "Leipzig",
+        "points": 258,
+        "updatedAt": "2026-11-20T09:27:21.055Z"
+      },
+      "2710049": {
+        "name": "diminator",
+        "playerId": "7158",
+        "player": "Undav",
+        "team": "Stuttgart",
+        "points": 235,
+        "updatedAt": "2026-11-20T09:17:11.021Z"
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "playerId": "2746",
+        "player": "Schick",
+        "team": "Leverkusen",
+        "points": 210,
+        "updatedAt": "2026-11-20T18:37:04.461Z"
+      }
+    },
+    "liveMvp": {
+      "at": "2026-11-20T22:27:30.878Z",
+      "points": 86,
+      "players": [
+        {
+          "id": "2358",
+          "name": "Krauß",
+          "team": "Köln"
+        }
+      ],
+      "top10": [
+        {
+          "id": "2358",
+          "name": "Krauß",
+          "team": "Köln",
+          "points": 86
+        },
+        {
+          "id": "2247",
+          "name": "Sosa",
+          "team": "Köln",
+          "points": 82
+        },
+        {
+          "id": "10024",
+          "name": "Schmied",
+          "team": "Köln",
+          "points": 67
+        },
+        {
+          "id": "11570",
+          "name": "Sebulonsen",
+          "team": "Köln",
+          "points": 62
+        },
+        {
+          "id": "2201",
+          "name": "Maina",
+          "team": "Köln",
+          "points": 49
+        },
+        {
+          "id": "15502",
+          "name": "Binder",
+          "team": "Bayern",
+          "points": 39
+        },
+        {
+          "id": "1580",
+          "name": "Schwäbe",
+          "team": "Köln",
+          "points": 28
+        },
+        {
+          "id": "2804",
+          "name": "Musiala",
+          "team": "Bayern",
+          "points": 16
+        },
+        {
+          "id": "11958",
+          "name": "Castro-Montes",
+          "team": "Köln",
+          "points": 16
+        },
+        {
+          "id": "2765",
+          "name": "Thielmann",
+          "team": "Köln",
+          "points": 3
+        }
+      ],
+      "checked": 475,
+      "failed": 0,
+      "reliable": true,
+      "conds": [
+        "noNational"
+      ]
     }
   }
 }
