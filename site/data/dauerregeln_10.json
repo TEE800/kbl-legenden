@@ -1,1 +1,1 @@
-{"day":10,"rules":[{"code":"FV","name":"Frühverkauf","ab":1,"active":true}],"started":true,"start":{"at":"2026-11-23T18:00:00.000Z","by":"regel","begun":false},"accReady":false,"violations":[],"failures":[],"final":false,"updatedAt":"2026-11-20T22:27:26.417Z"}
+{"day":10,"rules":[{"code":"FV","name":"Frühverkauf","ab":1,"active":true}],"started":true,"start":{"at":"2026-11-23T18:00:00.000Z","by":"regel","begun":false},"accReady":false,"violations":[],"failures":[],"final":false,"updatedAt":"2026-11-21T05:02:54.471Z"}
