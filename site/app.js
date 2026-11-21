@@ -1471,6 +1471,7 @@ function accDaysRender(){
  block.hidden=!days.length;
  const pe=$('#accEmpty'),ae=$('#archivEmpty');
  if(pe)pe.innerHTML=!arch&&fin.length&&!days.length?`<p class="muted">${$('#accLive')?.childElementCount?'':'Gerade ist keine BumsParade offen. '}Spieltag ${fin.at(-1)} ist abgerechnet und steht im BumsArchiv.</p><p><a href="#archiv" class="ghost center-link">Zum BumsArchiv →</a></p>`:'';
+ window.kblChancenParade?.(!arch&&!days.length&&fin.length?fin.at(-1):null);
  if(ae)ae.innerHTML=arch&&fin.length&&!days.length?'<p class="muted">Noch kein Spieltag abgerechnet. Der laufende steht in der BumsParade.</p>':'';
  if(!days.length)return;
  const target=days.includes(cur)?cur:days[0];

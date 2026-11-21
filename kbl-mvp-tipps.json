@@ -777,75 +777,75 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-21T15:31:43.977Z",
-      "points": 146,
+      "at": "2026-11-21T16:58:19.698Z",
+      "points": 258,
       "players": [
         {
-          "id": "524",
-          "name": "Baumann",
-          "team": "Hoffenheim"
+          "id": "4199",
+          "name": "García",
+          "team": "Leverkusen"
         }
       ],
       "top10": [
         {
-          "id": "524",
-          "name": "Baumann",
-          "team": "Hoffenheim",
-          "points": 146
-        },
-        {
           "id": "4199",
           "name": "García",
           "team": "Leverkusen",
-          "points": 129
+          "points": 258
         },
         {
-          "id": "2863",
-          "name": "Knauff",
-          "team": "Frankfurt",
-          "points": 127
+          "id": "7269",
+          "name": "Tella",
+          "team": "Leverkusen",
+          "points": 247
         },
         {
           "id": "3019",
           "name": "Atubolu",
           "team": "Frankfurt",
-          "points": 105
+          "points": 236
         },
         {
-          "id": "2977",
-          "name": "Noll",
-          "team": "Paderborn",
-          "points": 103
+          "id": "2522",
+          "name": "Raum",
+          "team": "Leipzig",
+          "points": 231
         },
         {
-          "id": "2358",
-          "name": "Krauß",
-          "team": "Köln",
-          "points": 86
-        },
-        {
-          "id": "2255",
-          "name": "Burkardt",
+          "id": "2863",
+          "name": "Knauff",
           "team": "Frankfurt",
-          "points": 86
+          "points": 202
         },
         {
-          "id": "2247",
-          "name": "Sosa",
-          "team": "Köln",
-          "points": 82
+          "id": "11886",
+          "name": "Rômulo",
+          "team": "Leipzig",
+          "points": 189
         },
         {
-          "id": "2279",
-          "name": "Rönnow",
-          "team": "Union Berlin",
-          "points": 79
+          "id": "524",
+          "name": "Baumann",
+          "team": "Hoffenheim",
+          "points": 182
         },
         {
-          "id": "16369",
-          "name": "Onyedika",
+          "id": "2144",
+          "name": "Koch",
           "team": "Frankfurt",
-          "points": 77
+          "points": 176
+        },
+        {
+          "id": "2746",
+          "name": "Schick",
+          "team": "Leverkusen",
+          "points": 174
+        },
+        {
+          "id": "2897",
+          "name": "Reitz",
+          "team": "Leipzig",
+          "points": 167
         }
       ],
       "checked": 475,
