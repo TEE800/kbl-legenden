@@ -780,14 +780,14 @@ async function loadMatchdayMvp(token, day, { live = false } = {}) {
   for (let i = 0; i < ids.length; i += 5) {
     await Promise.all(ids.slice(i, i + 5).map(async id => {
       try {
-        let pt;
+        let pt, rec;
         if (live) pt = (await dayPlayerPoints(token, id, day)).points;
         else {
           const data = await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token });
-          const rec = findDayRecord(data, day);
+          rec = findDayRecord(data, day);
           pt = rec && rec.p !== undefined && rec.p !== null && rec.p !== '' && Number.isFinite(Number(rec.p)) ? Number(rec.p) : null;
         }
-        if (pt !== null) scored.push({ id, name: all.players.get(id).name, team: all.players.get(id).team, points: pt });
+        if (pt !== null) scored.push({ id, name: all.players.get(id).name, team: all.players.get(id).team, points: pt, ...(live ? {} : { k: Array.isArray(rec?.k) ? rec.k : [] }) });
       } catch { failed++; }
     }));
   }
@@ -1101,6 +1101,35 @@ async function benchRebuildCtx(token, users) {
   benchCtxCache = { at: Date.now(), map };
   return map;
 }
+// Kader aller Manager beim ersten Anpfiff eines Spieltags: gespeichert (squadIds) oder aus heutigem Kader und Transfer-Verlauf
+// zurückgerechnet (siehe Bankpunkte). needLineup false: auch Manager ohne Startelf (ST 1, −1100) bekommen ihren Kader.
+async function daySquadSnaps(token, day, users, md, { needLineup = true } = {}) {
+  const snaps0 = readSnapshots(), snaps = {}, rebuilt = [], noLineup = [];
+  for (const u of users) { const s = snaps0[`${day}:${u.i}`]; if (Array.isArray(s?.squadIds)) snaps[`${day}:${u.i}`] = s; }
+  // Kevin 10.11. (Bankpunkte der Halbserie): Fehlt der beim Anpfiff gespeicherte Kader (ST 1 bis 6), wird er aus dem heutigen Kader
+  // und dem Transfer-Verlauf zurückgerechnet (Kauf nach dem ersten Anstoß = damals noch nicht da, Verkauf danach = damals noch da).
+  // Nur übernommen, wenn die Startelf aus dem Ranking (lp) vollständig darin steht (an ST 7 bis 9 gegen die gespeicherten Kader
+  // aller 16 Manager geprüft: identisch). Wer gar keine Startelf hatte (ST 1, −1100), bekommt keine Bankpunkte.
+  if (users.some(u => !snaps[`${day}:${u.i}`])) {
+    const kick = Date.parse(md.days.find(d => d.day === day)?.firstKickoffUTC || '');
+    const ctx = Number.isFinite(kick) ? await benchRebuildCtx(token, users).catch(() => null) : null;
+    for (const u of users) {
+      if (snaps[`${day}:${u.i}`]) continue;
+      const lp = (Array.isArray(u.lp) ? u.lp : []).filter(Boolean).map(String);
+      if (!lp.length) { noLineup.push(u); if (needLineup) continue; }
+      const r = ctx?.get(String(u.i));
+      if (!r?.list || !Array.isArray(r.squad?.it)) continue;
+      const set = new Set(r.squad.it.map(p => String(p.pi))), names = {};
+      for (const p of r.squad.it) names[String(p.pi)] = p.pn;
+      const tr = r.list.filter(t => (t.tty === 1 || t.tty === 2) && Date.parse(t.dt) > kick).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
+      for (const t of tr) { const pi = String(t.pi); names[pi] = names[pi] || t.pn; if (t.tty === 1) set.delete(pi); else set.add(pi); }
+      if (!lp.every(id => set.has(id))) continue;
+      snaps[`${day}:${u.i}`] = { playerIds: lp, squadIds: [...set], playerNames: names, rebuilt: true };
+      rebuilt.push(u.n);
+    }
+  }
+  return { snaps, rebuilt, noLineup };
+}
 app.get('/api/bench-points/:day', async (req, res) => {
   const token = getToken(req) || newestToken();
   if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
@@ -1113,30 +1142,7 @@ app.get('/api/bench-points/:day', async (req, res) => {
     if (c && c.status === st && Date.now() - c.at < (st === 'live' ? 5 : 60) * 60e3) return res.set('Cache-Control', 'no-store').json(c.value);
     const ranking = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
     const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
-    const snaps0 = readSnapshots(), snaps = {}, rebuilt = [], noLineup = [];
-    for (const u of users) { const s = snaps0[`${day}:${u.i}`]; if (Array.isArray(s?.squadIds)) snaps[`${day}:${u.i}`] = s; }
-    // Kevin 10.11. (Bankpunkte der Halbserie): Fehlt der beim Anpfiff gespeicherte Kader (ST 1 bis 6), wird er aus dem heutigen Kader
-    // und dem Transfer-Verlauf zurückgerechnet (Kauf nach dem ersten Anstoß = damals noch nicht da, Verkauf danach = damals noch da).
-    // Nur übernommen, wenn die Startelf aus dem Ranking (lp) vollständig darin steht (an ST 7 bis 9 gegen die gespeicherten Kader
-    // aller 16 Manager geprüft: identisch). Wer gar keine Startelf hatte (ST 1, −1100), bekommt keine Bankpunkte.
-    if (users.some(u => !snaps[`${day}:${u.i}`])) {
-      const kick = Date.parse(md.days.find(d => d.day === day)?.firstKickoffUTC || '');
-      const ctx = Number.isFinite(kick) ? await benchRebuildCtx(token, users).catch(() => null) : null;
-      for (const u of users) {
-        if (snaps[`${day}:${u.i}`]) continue;
-        const lp = (Array.isArray(u.lp) ? u.lp : []).filter(Boolean).map(String);
-        if (!lp.length) { noLineup.push(u); continue; }
-        const r = ctx?.get(String(u.i));
-        if (!r?.list || !Array.isArray(r.squad?.it)) continue;
-        const set = new Set(r.squad.it.map(p => String(p.pi))), names = {};
-        for (const p of r.squad.it) names[String(p.pi)] = p.pn;
-        const tr = r.list.filter(t => (t.tty === 1 || t.tty === 2) && Date.parse(t.dt) > kick).sort((a, b) => Date.parse(b.dt) - Date.parse(a.dt));
-        for (const t of tr) { const pi = String(t.pi); names[pi] = names[pi] || t.pn; if (t.tty === 1) set.delete(pi); else set.add(pi); }
-        if (!lp.every(id => set.has(id))) continue;
-        snaps[`${day}:${u.i}`] = { playerIds: lp, squadIds: [...set], playerNames: names, rebuilt: true };
-        rebuilt.push(u.n);
-      }
-    }
+    const { snaps, rebuilt, noLineup } = await daySquadSnaps(token, day, users, md);
     const missing = users.filter(u => !snaps[`${day}:${u.i}`] && !noLineup.includes(u)).map(u => u.n);
     if (missing.length) {
       const value = { day, status: st, managers: [], message: `Das fehlt: Für Spieltag ${day} ist der Kader beim Anpfiff nicht gespeichert (${missing.length === users.length ? 'alle Manager' : missing.join(', ')}). Darum keine Bankpunkte.` };
@@ -1159,6 +1165,69 @@ app.get('/api/bench-points/:day', async (req, res) => {
     benchCache.set(day, { at: Date.now(), status: st, value });
     res.set('Cache-Control', 'no-store').json(value);
   } catch (err) { res.status(err.status || 502).json({ error: 'Bankpunkte konnten nicht geladen werden.', detail: err.message }); }
+});
+
+// Verpasste Chancen (Kevin-Wunsch 21.11.): Spieler, die eine Regel ausgelöst hätten (BD, AH, RK, BN, UM), aber nicht aufgestellt waren:
+// bei keinem Manager (frei) oder nur auf der Bank. Gleiche Erkennung wie die BumsParade (isSchnapszahl, MVP aus loadMatchdayMvp,
+// detectAutoEvents für RK/BN/UM). Kandidaten für RK/BN/UM: Karten/Eigentor aus den Leistungsdaten (k) aller Spieler und
+// Elfmeter/Eigentor/Karten aus den gesammelten Einzelereignissen (kbl-points-overview.json, allPlayers). Nur beendete Spieltage.
+// Kader beim Anpfiff wie bei den Bankpunkten (daySquadSnaps); fehlt einer, wird nichts berechnet (nie raten).
+// HuHo, DD und MM gehören zu Managern bzw. zur Startelf und haben keine verpassten Chancen.
+const chancenCache = new Map(), CHANCE_ETI = new Set([4048, 4051, 4054, 4171, 4168, 4183, 4192]); // Elfmeter verschossen/verursacht, Eigentor, Rot, Gelb-Rot
+app.get('/api/verpasste-chancen/:day', async (req, res) => {
+  const token = getToken(req) || newestToken();
+  if (!token) return res.status(401).json({ error: 'Nicht angemeldet.' });
+  const day = validDay(req.params.day);
+  if (!day) return res.status(400).json({ error: 'Ungültiger Spieltag.' });
+  try {
+    const md = await loadMatchdays(), st = md.days.find(d => d.day === day)?.status;
+    if (st !== 'finished') return res.json({ day, status: st || 'unknown', items: [], message: 'Der Spieltag ist noch nicht beendet.' });
+    const c = chancenCache.get(day);
+    if (c && Date.now() - c.at < 60 * 60e3 && req.query.neu !== '1') return res.set('Cache-Control', 'no-store').json(c.value);
+    const ranking = await kbFetch(`/v4/leagues/6422780/ranking?dayNumber=${day}`, { token });
+    const users = (ranking.us || []).filter(u => validManager(u.i) && String(u.n || '').toLowerCase() !== 't1000');
+    const { snaps } = await daySquadSnaps(token, day, users, md, { needLineup: false });
+    const missing = users.filter(u => !snaps[`${day}:${u.i}`]).map(u => u.n);
+    if (missing.length) return res.set('Cache-Control', 'no-store').json({ day, status: st, items: [],
+      message: `Das fehlt: Für Spieltag ${day} ist der Kader beim Anpfiff nicht bekannt (${missing.length === users.length ? 'alle Manager' : missing.join(', ')}). Darum keine verpassten Chancen.` });
+    const lineup = new Set(), owner = new Map(), names = {};
+    for (const u of users) {
+      const s = snaps[`${day}:${u.i}`];
+      for (const id of [...(Array.isArray(u.lp) ? u.lp : []), ...(s.playerIds || [])]) if (id) lineup.add(String(id));
+      for (const id of s.squadIds) owner.set(String(id), { managerId: String(u.i), manager: u.n });
+      Object.assign(names, s.playerNames || {});
+    }
+    const [m, all] = await Promise.all([loadMatchdayMvp(token, day), loadAllPlayers(token).catch(() => null)]);
+    const pts = new Map(m.all.map(p => [String(p.id), p.points]));
+    const base = id => { id = String(id); const o = owner.get(id), p = all?.players.get(id);
+      return { playerId: id, playerName: p?.name || names[id] || null, team: p?.team || null, points: pts.has(id) ? pts.get(id) : null,
+        place: o ? 'bank' : 'frei', managerId: o?.managerId || null, manager: o?.manager || null }; };
+    const items = [], notes = [];
+    for (const p of m.all) if (!lineup.has(String(p.id)) && isSchnapszahl(p.points)) items.push({ ...base(p.id), rule: 'BD', reason: 'Schnapszahl' });
+    for (const p of m.players) if (!lineup.has(String(p.id))) items.push({ ...base(p.id), rule: 'AH', reason: 'MVP des Spieltags' });
+    if (!m.reliable) notes.push('Nicht alle Spieler konnten gelesen werden, die Liste kann unvollständig sein.');
+    const cand = new Set(m.all.filter(p => !lineup.has(String(p.id)) && (p.k || []).some(k => [2, 4, 5, 6].includes(Number(k)))).map(p => String(p.id)));
+    const po = loadPointsOverview()[day];
+    if (po) { for (const t of po.types || []) if (CHANCE_ETI.has(Number(t.eti))) for (const r of t.allPlayers || []) if (!lineup.has(String(r[0]))) cand.add(String(r[0])); }
+    else notes.push('Das fehlt: Die Einzelereignisse des Spieltags sind noch nicht gesammelt, darum fehlen verschossene und verursachte Elfmeter noch.');
+    const perfs = new Map(), failed = [];
+    const ids = [...cand];
+    for (let i = 0; i < ids.length; i += 5) await Promise.all(ids.slice(i, i + 5).map(async id => {
+      try { perfs.set(id, await kbFetch(`/v4/competitions/1/players/${id}/performance`, { token })); } catch { failed.push(id); }
+    }));
+    const ev = await detectAutoEvents({ token, day,
+      lineupPlayers: ids.filter(id => perfs.has(id)).map(id => { const b = base(id); return { managerId: b.managerId, manager: b.manager || '', playerId: id, playerName: b.playerName, perf: perfs.get(id) }; }),
+      ownerOf: id => { const o = owner.get(String(id)); return o ? { ...o, source: 'kader' } : null; } });
+    for (const a of ev.actions) items.push({ ...base(a.playerId), rule: a.rule, reason: a.reason, ...(a.rule === 'UM' ? { recipient: a.recipient, recipientId: a.recipientId } : {}) });
+    for (const u of ev.unclear) items.push({ ...base(u.playerId), rule: u.rule, reason: u.reason, unsure: true });
+    if (failed.length + ev.failures.length) notes.push(`${failed.length + ev.failures.length} Spieler konnten nicht gelesen werden, die Liste kann unvollständig sein.`);
+    const order = { AH: 0, RK: 1, BN: 2, UM: 3, BD: 4 };
+    items.sort((a, b) => (a.place === b.place ? 0 : a.place === 'bank' ? -1 : 1) || order[a.rule] - order[b.rule] || (b.points ?? -1e9) - (a.points ?? -1e9));
+    const value = { day, status: st, updatedAt: new Date().toISOString(), items, notes,
+      final: ranking.il === false && !!po && m.reliable && !failed.length && !ev.failures.length };
+    chancenCache.set(day, { at: Date.now(), value });
+    res.set('Cache-Control', 'no-store').json(value);
+  } catch (err) { res.status(err.status || 502).json({ error: 'Verpasste Chancen konnten nicht geladen werden.', detail: err.message }); }
 });
 
 // Testabfrage (nur lesend): Welche Kickbase-Quelle liefert waehrend des Spieltags Live-Punkte?
