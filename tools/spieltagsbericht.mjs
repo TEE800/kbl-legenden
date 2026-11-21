@@ -434,6 +434,17 @@ try {
     say(r.skipped ? `Spieltagsbericht ${day}: schon freigegeben, neuer Entwurf verworfen.` : `Spieltagsbericht ${day}: Entwurf geschrieben, wartet auf Freigabe (${model}${usage ? `, ${usage.input_tokens} rein, ${usage.output_tokens} raus` : ''}).`);
   }
 } catch (e) { say(`Spieltagsbericht fehlgeschlagen: ${e.message}`); }
+// Schlüssel-Prüfung (Kevin 21.11., Schlüssel läuft ab): kostenloser Abruf der Modellliste, ohne Token-Verbrauch.
+// Ergebnis in kbl-berichte.json unter „schluessel“ (Tag statt Uhrzeit, damit die Datei nicht bei jedem Lauf wechselt).
+if (process.env.ANTHROPIC_API_KEY) {
+  let ok = false, fehler = '';
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/models?limit=1', { headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' }, signal: AbortSignal.timeout(20000) });
+    ok = r.ok; if (!ok) fehler = `${r.status} ${(await r.json().catch(() => ({})))?.error?.type || ''}`.trim();
+  } catch (e) { fehler = e.message; }
+  store.schluessel = { ok, geprueft: new Date().toISOString().slice(0, 10), ...(fehler ? { fehler } : {}) };
+  console.log(`API-Schlüssel: ${ok ? 'gültig' : `ungültig (${fehler})`}`);
+} else store.schluessel = { ok: false, geprueft: new Date().toISOString().slice(0, 10), fehler: 'kein ANTHROPIC_API_KEY hinterlegt' };
 // Letzter Stand in der Datei (wird mit committet), damit man ohne Zugriff auf die Actions-Protokolle sieht, was los ist.
 store.stand = stand || store.stand;
 const next = JSON.stringify(store, null, 1);
