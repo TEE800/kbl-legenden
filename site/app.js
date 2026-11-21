@@ -1422,7 +1422,7 @@ $('#snapshotCaptureAll')?.addEventListener('click',async()=>{
 const centerAccounting={day:null,state:'idle',data:null,error:null,checks:{},probe:false};
 async function centerLoadAccounting(day,force=false){
  if(!force&&centerAccounting.day===day&&centerAccounting.state!=='idle')return;
- Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();window.kblDauerLoad?.(day);
+ Object.assign(centerAccounting,{day,state:'loading',data:null,error:null,probe:false});{const p=$('#accountingDay');if(p)p.value=String(day);}renderAccTodo();window.kblDauerLoad?.(day);window.kblChancenLoad?.(day);
  try{
   const [data,checks]=await Promise.all([api(`/api/rule-accounting/${day}`),api(`/api/todo-checks/${day}`).catch(()=>({checks:{}}))]);
   if(centerAccounting.day!==day)return;

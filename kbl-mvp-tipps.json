@@ -777,20 +777,56 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-21T08:21:52.038Z",
-      "points": 86,
+      "at": "2026-11-21T15:31:43.977Z",
+      "points": 146,
       "players": [
         {
-          "id": "2358",
-          "name": "Krauß",
-          "team": "Köln"
+          "id": "524",
+          "name": "Baumann",
+          "team": "Hoffenheim"
         }
       ],
       "top10": [
         {
+          "id": "524",
+          "name": "Baumann",
+          "team": "Hoffenheim",
+          "points": 146
+        },
+        {
+          "id": "4199",
+          "name": "García",
+          "team": "Leverkusen",
+          "points": 129
+        },
+        {
+          "id": "2863",
+          "name": "Knauff",
+          "team": "Frankfurt",
+          "points": 127
+        },
+        {
+          "id": "3019",
+          "name": "Atubolu",
+          "team": "Frankfurt",
+          "points": 105
+        },
+        {
+          "id": "2977",
+          "name": "Noll",
+          "team": "Paderborn",
+          "points": 103
+        },
+        {
           "id": "2358",
           "name": "Krauß",
           "team": "Köln",
+          "points": 86
+        },
+        {
+          "id": "2255",
+          "name": "Burkardt",
+          "team": "Frankfurt",
           "points": 86
         },
         {
@@ -800,52 +836,16 @@
           "points": 82
         },
         {
-          "id": "10024",
-          "name": "Schmied",
-          "team": "Köln",
-          "points": 67
+          "id": "2279",
+          "name": "Rönnow",
+          "team": "Union Berlin",
+          "points": 79
         },
         {
-          "id": "11570",
-          "name": "Sebulonsen",
-          "team": "Köln",
-          "points": 62
-        },
-        {
-          "id": "2201",
-          "name": "Maina",
-          "team": "Köln",
-          "points": 49
-        },
-        {
-          "id": "15502",
-          "name": "Binder",
-          "team": "Bayern",
-          "points": 39
-        },
-        {
-          "id": "1580",
-          "name": "Schwäbe",
-          "team": "Köln",
-          "points": 28
-        },
-        {
-          "id": "2804",
-          "name": "Musiala",
-          "team": "Bayern",
-          "points": 16
-        },
-        {
-          "id": "11958",
-          "name": "Castro-Montes",
-          "team": "Köln",
-          "points": 16
-        },
-        {
-          "id": "2765",
-          "name": "Thielmann",
-          "team": "Köln",
-          "points": 3
+          "id": "16369",
+          "name": "Onyedika",
+          "team": "Frankfurt",
+          "points": 77
         }
       ],
       "checked": 475,
