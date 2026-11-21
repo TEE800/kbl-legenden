@@ -134,6 +134,11 @@ try {
     // Laufender Spieltag: hoechstens alle 15 Min. (16 Transfer-Verlaeufe je Abruf, Kickbase schonen).
     const dauerAlt = () => { try { return Date.now() - fs.statSync(path.join(DATA, key(du))).mtimeMs > 15 * 60e3; } catch { return true; } };
     if (!dauerFinal && (MODE === 'full' || !have(du) || (accFresh && (d !== live || dauerAlt())))) await save(du);
+    // Verpasste Chancen (BumsParade): nur beendete Spieltage; fertig (final), sobald Kickbase abgeschlossen hat und die Einzelereignisse
+    // gesammelt sind. Danach nie wieder (spart Abrufe, auch im Voll-Lauf).
+    const vc = `/api/verpasste-chancen/${d}`;
+    const vcFinal = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(vc)), 'utf8')).final === true; } catch { return false; } })();
+    if (d !== live && !vcFinal) await save(vc);
   }
   // Punkteuebersicht (Einzelereignisse): jeden Spieltag einmal automatisch sammeln, sobald Kickbase ihn abgeschlossen hat
   // (Ranking il false, keine offenen Korrekturen). Ca. 550 Abrufe, darum hoechstens ein Spieltag je Lauf;

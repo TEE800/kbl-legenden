@@ -1309,3 +1309,12 @@ div.mw-who{display:grid;gap:2px;cursor:default}
 .toon-fan{display:inline-block;margin-left:-3px}.toon-fan:first-child{margin-left:0}
 .toon-fan .mgr-av{width:15px;height:15px;font-size:8px;border:1px solid #0008;vertical-align:middle}
 .toon-fan.lead .mgr-av{box-shadow:0 0 0 1.5px var(--gold)}.toon-fan.me .mgr-av{box-shadow:0 0 0 1.5px #7fd3a6}
+
+/* Verpasste Chancen in der BumsParade (chancen.js) */
+.ch-sub{margin:12px 0 6px;font-size:13px;color:var(--gold,#e3b94f)}
+.ch-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.ch-item{border:1px solid #594c35;border-radius:8px;padding:8px 10px}
+.ch-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ch-pts{font-weight:700}
+.ch-who{display:block;font-size:12px;margin-top:4px}
+.ch-item .muted.tiny{margin-top:3px}
