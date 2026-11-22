@@ -777,27 +777,27 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-21T17:24:18.725Z",
-      "points": 258,
+      "at": "2026-11-22T12:34:57.334Z",
+      "points": 250,
       "players": [
         {
-          "id": "4199",
-          "name": "García",
+          "id": "7269",
+          "name": "Tella",
           "team": "Leverkusen"
         }
       ],
       "top10": [
         {
-          "id": "4199",
-          "name": "García",
-          "team": "Leverkusen",
-          "points": 258
-        },
-        {
           "id": "7269",
           "name": "Tella",
           "team": "Leverkusen",
-          "points": 247
+          "points": 250
+        },
+        {
+          "id": "4199",
+          "name": "García",
+          "team": "Leverkusen",
+          "points": 241
         },
         {
           "id": "3019",
@@ -809,19 +809,13 @@
           "id": "2522",
           "name": "Raum",
           "team": "Leipzig",
-          "points": 231
+          "points": 232
         },
         {
           "id": "2863",
           "name": "Knauff",
           "team": "Frankfurt",
-          "points": 202
-        },
-        {
-          "id": "11886",
-          "name": "Rômulo",
-          "team": "Leipzig",
-          "points": 189
+          "points": 203
         },
         {
           "id": "524",
@@ -830,10 +824,16 @@
           "points": 182
         },
         {
+          "id": "11886",
+          "name": "Rômulo",
+          "team": "Leipzig",
+          "points": 181
+        },
+        {
           "id": "2144",
           "name": "Koch",
           "team": "Frankfurt",
-          "points": 176
+          "points": 179
         },
         {
           "id": "2746",
