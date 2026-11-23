@@ -1474,6 +1474,7 @@ function accDaysRender(){
  // Verpasste Chancen in der BumsParade ohne offenen Spieltag: der aktuelle Spieltag, sobald seine Spiele vorbei sind (auch wenn Kickbase ihn
  // noch nicht abgeschlossen hat, Kevin 23.11.), während Spiele laufen keiner, sonst der letzte beendete.
  let lv=null;try{lv=kblLiveDay();}catch{}
+ if(!accLive&&!accLiveBusy&&document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))setTimeout(accLiveLoad,0);
  window.kblChancenParade?.(!arch&&!days.length?(lv?(lv.closing?Number(lv.day):null):fin.at(-1)??null):null);
  if(ae)ae.innerHTML=arch&&fin.length&&!days.length?'<p class="muted">Noch kein Spieltag abgerechnet. Der laufende steht in der BumsParade.</p>':'';
  if(!days.length)return;
@@ -2437,8 +2438,10 @@ let accLive=null,accLiveOpen=false,accLiveBusy=false,accRadarOpen=true,accRadarP
 async function accLiveLoad(){
  const el=$('#accLive');if(!el||accLiveBusy)return;
  let st=pvStatus;if(!st?.days){try{st=await api('/api/matchday-status');}catch{st=null;}}
- const ld=kblLiveDay(st),day=ld?.day;
+ const ld=kblLiveDay(st);let day=ld?.day;
  window.kblDauerLive?.(day||null,ld?.closing);
+ // Kevin 23.11.: Das Bums-Radar bleibt nach dem Abschluss durch Kickbase stehen, bis die BumsParade abgerechnet ist.
+ if(!day){const p=accParadeDay();if(p!=null&&p===Number(st?.lastFinishedDay))day=p;}
  if(!day){accLive=null;el.innerHTML='';return;}
  accLiveBusy=true;if(!accLive||accLive.day!==day){accLive={day,state:'loading'};accLiveRender();}
  try{accLive={day,state:'done',data:await api(`/api/rule-live/${day}`)};}
@@ -2476,6 +2479,7 @@ function accLiveRender(){
    (sorted.length?`<ul class="center-groups">${sorted.map(([mid,g])=>{const p=place.get(mid);return `<li class="center-group"><div class="center-grouphead"><span>${p?`<span class="center-place">${p.i}.</span>`:''}<b>${mgrLink(g.name,mgrName(g.name,'',mid))}</b>${p?` <span class="muted tiny" style="white-space:nowrap">${fmt(p.pts)} Pkt.</span>`:''}</span><span class="center-hits">${g.list.length} mögliche Bumsung${g.list.length===1?'':'en'}</span></div><ul class="center-todo">${g.list.map(it=>`<li class="center-info"><span class="center-check"></span><span class="center-rule" title="${safe(RULE[it.rule]||it.rule)}">${safe(it.rule)}</span><span class="center-text"><span>${safe(it.text)}</span>${it.unclear?'<span class="center-status"><span class="center-state warn">? bitte prüfen</span></span>':''}</span></li>`).join('')}</ul></li>`;}).join('')}</ul>`:'<p>Nach dem aktuellen Stand gäbe es keine Strafen. 🎉</p>')+mvp+
    '<p class="muted tiny">Schnapszahlen (BD) werden erst nach dem jeweiligen Spielende geprüft, danach alle 30 Minuten (wegen Korrekturen). Teamlimit und Empfänger zeigt erst die echte BumsParade nach Spielende. Aktualisiert sich alle 5 Minuten, solange die BumsParade offen ist.</p><div class="dr-slot" data-dauer="live"></div>';
  }else body=`<p class="muted">${safe(d?.message||'')}</p>`;
+ if(d?.final){el.innerHTML=a.state==='done'&&d.live?accRadarHtml(d):'';return;}
  el.innerHTML=(a.state==='done'&&d?.live?accRadarHtml(d):'')+`<details class="center-box acc-todo-box acc-live-box"${accLiveOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>Spieltag ${a.day} <span class="live-badge">● LIVE</span> · ${safe(sum)}</strong><span class="pill">vorläufig</span></summary>${body}</details>`;
  // Spielerbilder und Vereine für die Drehtür-Kandidaten (wie im MVP-Tipp), einmal laden und neu zeichnen.
  if(a.state==='done'&&d?.live&&!accRadarPlayers){accRadarPlayers=new Map();api('/api/mvp-tipps/players').then(r=>{accRadarPlayers=new Map((r.players||[]).map(p=>[String(p.id),p]));accLiveRender();}).catch(()=>{});}
@@ -2510,8 +2514,8 @@ function accRadarHtml(d){
  const duel=give.length&&get.length?`<div class="bradar-duel"><div class="bradar-side give">${mgrFace(give[0].manager,'mgr-av-lg',give[0].managerId)}<b>${give.map(g=>mgrLink(g.manager,safe(g.manager))).join(' & ')}</b><span class="muted tiny">Platz 1 · gibt einen ab</span></div>${door}<div class="bradar-side get">${mgrFace(get[0].manager,'mgr-av-lg',get[0].managerId)}<b>${get.map(g=>mgrLink(g.manager,safe(g.manager))).join(' & ')}</b><span class="muted tiny">Letzter · sucht sich einen aus</span></div></div>`:'';
  const cards=victims.map(v=>`<li class="bradar-card${v.list.length>=2?' hot':''}"><div class="bradar-head">${mgrFace(v.name,'mgr-av-lg',v.id)}<div><b>${mgrLink(v.name,safe(v.name))}</b><span class="bradar-verdict">${verdict(v.list.length)}</span></div><span class="bradar-count">${v.list.length}×</span></div><ul class="bradar-shots">${v.list.map(shot).join('')}</ul></li>`).join('');
  const safeOnes=st.filter(m=>!by.has(String(m.managerId)));
- const clean=safeOnes.length?`<div class="bradar-clean"><p><b>Noch ungebumst</b> <span class="muted tiny">· zittern bis zum Abpfiff</span></p><div class="bradar-faces">${safeOnes.map(m=>`${mgrLink(m.manager,`<span title="${safe(m.manager)}">${mgrFace(m.manager,'',m.managerId)}<small>${safe(m.manager)}</small></span>`)}`).join('')}</div></div>`:'';
- return `<details class="center-box acc-todo-box bradar kbl-keep-open"${accRadarOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>🎯 Bums-Radar · ${safe(sum)}</strong><span class="pill">wenn jetzt Abpfiff wäre</span></summary>${duel}${victims.length?`<ul class="bradar-grid">${cards}</ul>`:'<p>Gerade würde keiner gebumst. Langweilig. 😴</p>'}${clean}<p class="muted tiny">Nur ein Zwischenstand aus der LIVE-Liste darüber. Er zählt nicht für die BumsTabelle, und bis zum Abpfiff kann noch alles kippen.</p></details>`;
+ const clean=safeOnes.length?`<div class="bradar-clean"><p><b>Noch ungebumst</b> <span class="muted tiny">${d.final?'':'· zittern bis zum Abpfiff'}</span></p><div class="bradar-faces">${safeOnes.map(m=>`${mgrLink(m.manager,`<span title="${safe(m.manager)}">${mgrFace(m.manager,'',m.managerId)}<small>${safe(m.manager)}</small></span>`)}`).join('')}</div></div>`:'';
+ return `<details class="center-box acc-todo-box bradar kbl-keep-open"${accRadarOpen?' open':''} style="margin:0 0 14px"><summary class="center-boxhead"><strong>🎯 Bums-Radar · ${safe(sum)}</strong><span class="pill">${d.final?`Endstand Spieltag ${safe(d.day)}`:'wenn jetzt Abpfiff wäre'}</span></summary>${duel}${victims.length?`<ul class="bradar-grid">${cards}</ul>`:'<p>Gerade würde keiner gebumst. Langweilig. 😴</p>'}${clean}<p class="muted tiny">${d.final?'Bildübersicht nach den endgültigen Punkten. Maßgeblich sind die Aufgaben der BumsParade darunter; das Radar verschwindet, sobald sie abgerechnet ist.':'Nur ein Zwischenstand aus der LIVE-Liste darüber. Er zählt nicht für die BumsTabelle, und bis zum Abpfiff kann noch alles kippen.'}</p></details>`;
 }
 setInterval(()=>{if(!document.hidden&&accLive&&document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();},5*60e3);
 onConnected.push(()=>{if(document.querySelector('.kbl-view.kbl-current[data-view="accounting"]'))accLiveLoad();});
