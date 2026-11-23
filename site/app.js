@@ -1471,7 +1471,10 @@ function accDaysRender(){
  block.hidden=!days.length;
  const pe=$('#accEmpty'),ae=$('#archivEmpty');
  if(pe)pe.innerHTML=!arch&&fin.length&&!days.length?`<p class="muted">${$('#accLive')?.childElementCount?'':'Gerade ist keine BumsParade offen. '}Spieltag ${fin.at(-1)} ist abgerechnet und steht im BumsArchiv.</p><p><a href="#archiv" class="ghost center-link">Zum BumsArchiv →</a></p>`:'';
- window.kblChancenParade?.(!arch&&!days.length&&fin.length?fin.at(-1):null);
+ // Verpasste Chancen in der BumsParade ohne offenen Spieltag: der aktuelle Spieltag, sobald seine Spiele vorbei sind (auch wenn Kickbase ihn
+ // noch nicht abgeschlossen hat, Kevin 23.11.), während Spiele laufen keiner, sonst der letzte beendete.
+ let lv=null;try{lv=kblLiveDay();}catch{}
+ window.kblChancenParade?.(!arch&&!days.length?(lv?(lv.closing?Number(lv.day):null):fin.at(-1)??null):null);
  if(ae)ae.innerHTML=arch&&fin.length&&!days.length?'<p class="muted">Noch kein Spieltag abgerechnet. Der laufende steht in der BumsParade.</p>':'';
  if(!days.length)return;
  const target=days.includes(cur)?cur:days[0];
@@ -2092,7 +2095,7 @@ function kblLiveDay(st=pvStatus){
  const f=days.find(d=>d.day===Number(st?.lastFinishedDay));
  return f&&historyData.some(h=>h.day===f.day&&h.status==='live')?{...f,closing:true}:null;
 }
-async function pvLoadStatus(){try{pvStatus=await api('/api/matchday-status');}catch{pvStatus=pvStatus||{error:true};}renderPreview();}
+async function pvLoadStatus(){try{pvStatus=await api('/api/matchday-status');}catch{pvStatus=pvStatus||{error:true};}renderPreview();try{accDaysRender();}catch{}}
 onConnected.push(pvLoadStatus);setInterval(()=>{if(currentLeague&&!document.hidden)pvLoadStatus();},900000);
 function pvKickoff(d){
  if(d?.firstKickoffUTC)return {t:Date.parse(d.firstKickoffUTC),match:d.firstMatch||''};
