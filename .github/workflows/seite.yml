@@ -6,11 +6,11 @@ on:
     - cron: '40 21 * * 5'
     - cron: '40 16,19 * * 6'
     - cron: '40 16,18,20 * * 0'
-    # Kevin 23.11.: Montagabend beginnt um 19 Uhr die BumsParade, dann stehen die endgueltigen Punkte fest (manchmal ein paar Min. spaeter).
-    # Laeufe Mo 19:05, 19:20, 19:40 und 20:10 Uhr (Winterzeit; Sommerzeit eine Stunde spaeter). Sie rufen nur ab, solange der
+    # Kevin 23.11.: Montagabend beginnt um 19 Uhr die BumsParade (Vorbereitung ab 18 Uhr), die endgueltigen Punkte stehen meist um 19 Uhr fest.
+    # Laeufe Mo 18:00 bis 20:00 Uhr alle 20 Min. (Winterzeit; Sommerzeit eine Stunde spaeter). Sie rufen nur ab, solange der
     # Spieltag online noch nicht endgueltig ist (tools/endstand-offen.mjs), danach werden sie sofort ausgelassen.
-    - cron: '5,20,40 18 * * 1'
-    - cron: '10 19 * * 1'
+    - cron: '1,21,41 17,18 * * 1'
+    - cron: '1 19 * * 1'
     - cron: '7 4 * * *'      # einmal taeglich (5:07 Uhr Winterzeit, 6:07 Uhr Sommerzeit) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
     inputs:
@@ -59,7 +59,7 @@ jobs:
             echo "pcstart=true" >> "$GITHUB_OUTPUT"
           fi
           # Montagslaeufe (Kevin 23.11.) nur, solange die endgueltigen Punkte online noch fehlen.
-          if [ "$EVENT" = "schedule" ] && { [ "$SCHED" = "5,20,40 18 * * 1" ] || [ "$SCHED" = "10 19 * * 1" ]; }; then
+          if [ "$EVENT" = "schedule" ] && { [ "$SCHED" = "1,21,41 17,18 * * 1" ] || [ "$SCHED" = "1 19 * * 1" ]; }; then
             node tools/endstand-offen.mjs
             if grep -q '^offen=false' "$GITHUB_OUTPUT"; then echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           fi

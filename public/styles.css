@@ -1319,3 +1319,7 @@ div.mw-who{display:grid;gap:2px;cursor:default}
 .ch-who{display:block;font-size:12px;margin-top:4px}
 .ch-item .muted.tiny{margin-top:3px}
 .ch-tools{display:flex;justify-content:flex-end;margin:0 0 6px}
+
+/* Kevin 23.11.: Datenstand oben (static-mode.js) */
+.kbl-stand{font-size:12px;opacity:.75;text-align:right;margin:0 0 8px}
+@media (max-width:700px){.kbl-stand{text-align:center}}
