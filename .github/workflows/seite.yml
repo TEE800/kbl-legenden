@@ -6,7 +6,12 @@ on:
     - cron: '40 21 * * 5'
     - cron: '40 16,19 * * 6'
     - cron: '40 16,18,20 * * 0'
-    - cron: '7 4 * * *'      # einmal taeglich (6:07 Uhr) alles neu: Korrekturen, Transfers, Tabelle
+    # Kevin 23.11.: Montagabend beginnt um 19 Uhr die BumsParade, dann stehen die endgueltigen Punkte fest (manchmal ein paar Min. spaeter).
+    # Laeufe Mo 19:05, 19:20, 19:40 und 20:10 Uhr (Winterzeit; Sommerzeit eine Stunde spaeter). Sie rufen nur ab, solange der
+    # Spieltag online noch nicht endgueltig ist (tools/endstand-offen.mjs), danach werden sie sofort ausgelassen.
+    - cron: '5,20,40 18 * * 1'
+    - cron: '10 19 * * 1'
+    - cron: '7 4 * * *'      # einmal taeglich (5:07 Uhr Winterzeit, 6:07 Uhr Sommerzeit) alles neu: Korrekturen, Transfers, Tabelle
   workflow_dispatch:
     inputs:
       bericht_neu:
@@ -42,6 +47,7 @@ jobs:
         env:
           EVENT: ${{ github.event_name }}
           MSG: ${{ github.event.head_commit.message }}
+          SCHED: ${{ github.event.schedule }}
         run: |
           echo "start=$(date +%s)" >> "$GITHUB_OUTPUT"
           # Kevin 10.11.: Start der PC-App stoesst genau einen kurzen Lauf an (kbl-pc-start.json). Laeuft gerade ein Spiel,
@@ -51,6 +57,11 @@ jobs:
               echo "Gerade laeuft ein Spiel: Lauf ausgelassen."; echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0
             fi
             echo "pcstart=true" >> "$GITHUB_OUTPUT"
+          fi
+          # Montagslaeufe (Kevin 23.11.) nur, solange die endgueltigen Punkte online noch fehlen.
+          if [ "$EVENT" = "schedule" ] && { [ "$SCHED" = "5,20,40 18 * * 1" ] || [ "$SCHED" = "10 19 * * 1" ]; }; then
+            node tools/endstand-offen.mjs
+            if grep -q '^offen=false' "$GITHUB_OUTPUT"; then echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           fi
           echo "aktiv=true" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
