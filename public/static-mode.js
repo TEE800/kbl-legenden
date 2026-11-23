@@ -55,7 +55,19 @@
    const t=new Date(m.exportedAt);
    top.textContent='🕒 Zuletzt aktualisiert: '+t.toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'})+' Uhr';
    top.title='Neue Daten kommen nach Spielende und montags ab 18 Uhr alle 20 Min., bis der Spieltag endgültig ist.';
-   v.parentNode.insertBefore(top,v);};
+   v.parentNode.insertBefore(top,v);
+   // Kevin 23.11.: dazu, ob die Punkte des letzten Spieltags endgueltig sind (Kickbase-Abschluss, keine offenen Korrekturen).
+   const rd=f=>orig('data/'+f,{cache:'no-store'}).then(r=>r.ok?r.json():null).catch(()=>null);
+   rd('matchday-status.json').then(async st=>{
+    const n=Number(st?.lastFinishedDay);if(!n||(st.days||[]).some(d=>d.status==='live'))return;
+    const [rk,ac]=await Promise.all([rd(`ranking_6422780_dayNumber_${n}.json`),rd(`rule-accounting_${n}.json`)]);
+    if(!rk)return;
+    const fin=rk.il===false&&!ac?.pendingCorrections;
+    const s=document.createElement('span');s.className=fin?'kbl-stand-ok':'kbl-stand-wait';
+    s.textContent=fin?`✅ Punkte Spieltag ${n} endgültig`:`⏳ Punkte Spieltag ${n} noch vorläufig`;
+    s.title=fin?'Kickbase hat den Spieltag abgeschlossen, es gibt keine offenen Korrekturen mehr.':'Kickbase hat den Spieltag noch nicht abgeschlossen (meist Montag ab 19 Uhr). Neue Daten kommen montags ab 18 Uhr alle 20 Min.';
+    top.append(s);
+   });};
   put();
  }).catch(()=>{});
 })();

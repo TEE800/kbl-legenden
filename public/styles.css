@@ -1323,3 +1323,7 @@ div.mw-who{display:grid;gap:2px;cursor:default}
 /* Kevin 23.11.: Datenstand oben (static-mode.js) */
 .kbl-stand{font-size:12px;opacity:.75;text-align:right;margin:0 0 8px}
 @media (max-width:700px){.kbl-stand{text-align:center}}
+.kbl-stand-ok{color:#4ade80;font-weight:600}
+.kbl-stand-wait{color:#fbbf24;font-weight:600}
+.kbl-stand-ok::before,.kbl-stand-wait::before{content:" · ";color:var(--muted,#999);font-weight:400}
+@media (max-width:700px){.kbl-stand-ok,.kbl-stand-wait{display:block}.kbl-stand-ok::before,.kbl-stand-wait::before{content:none}}
