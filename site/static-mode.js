@@ -49,5 +49,13 @@
   el.style.cssText='text-align:center;font-size:12px;opacity:.7;padding:10px 0 80px';
   el.textContent='Datenstand: '+new Date(m.exportedAt).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'})+' · aktualisiert sich automatisch';
   document.body.append(el);
+  // Kevin 23.11.: gut sichtbar oben ueber jedem Reiter, wann die Daten zuletzt aktualisiert wurden (Vorbereitung der BumsParade).
+  const put=()=>{const v=document.querySelector('.kbl-view');if(!v)return setTimeout(put,300);
+   const top=document.createElement('div');top.className='kbl-stand';
+   const t=new Date(m.exportedAt);
+   top.textContent='🕒 Zuletzt aktualisiert: '+t.toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'})+' Uhr';
+   top.title='Neue Daten kommen nach Spielende und montags ab 18 Uhr alle 20 Min., bis der Spieltag endgültig ist.';
+   v.parentNode.insertBefore(top,v);};
+  put();
  }).catch(()=>{});
 })();
