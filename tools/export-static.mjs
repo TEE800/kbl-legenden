@@ -158,6 +158,9 @@ try {
   // aktualisieren (Kevin-Wunsch). Der Server prueft il selbst und liefert sonst "beendet".
   const closing = !live && status?.lastFinishedDay;
   if (closing && rankingLive(`/api/ranking/${LEAGUE}?dayNumber=${closing}`)) { await save(`/api/live-points/${closing}`); await save(`/api/rule-live/${closing}`); }
+  // Kevin 23.11.: Das Bums-Radar bleibt bis zum Ende der BumsParade stehen. Nach dem Abschluss durch Kickbase einmal mit den
+  // endgueltigen Punkten neu holen (final), danach nicht mehr.
+  else if (closing) { const rl = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, key(`/api/rule-live/${closing}`)), 'utf8')); } catch { return null; } })(); if (rl?.live && !rl.final) await save(`/api/rule-live/${closing}`); }
   // MVP-Tipp: Regeln und aufgedeckte Tipps (nur angepfiffene Spieltage) vom Online-Tippdienst in kbl-mvp-tipps.json uebernehmen,
   // damit die App sie anzeigt und nach dem Spieltag auswertet. Verdeckte Tipps kommen hier nie an.
   if (TIPP_DIENST) {

@@ -2570,8 +2570,9 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   if(c&&Date.now()-c.at<5*60e3)return res.set('Cache-Control','no-store').json(c.value);
   const memo=new Map(),get=p=>{if(!memo.has(p))memo.set(p,kbFetch(p,{token}).catch(e=>{memo.delete(p);throw e;}));return memo.get(p);};
   const ranking=await get(`/v4/leagues/6422780/ranking?dayNumber=${day}`);
-  if(st!=='live'&&ranking.il!==true)return ended();
-  const closing=st!=='live';
+  // Kevin 23.11.: Nach dem Abschluss durch Kickbase (il false) rechnet der Server den letzten Spieltag weiter (final), damit das
+  // Bums-Radar bis zum Ende der BumsParade stehen bleibt. Ob sie abgerechnet ist, entscheidet der Browser.
+  const closing=st!=='live',final=closing&&ranking.il!==true;
   // Nicht auf performance umstellen, sobald das Ranking mdp hat (an ST 7 versucht, Kevin: falsche BD). Bis Kickbase den
   // Spieltag abschliesst, bleibt playercenter die Quelle; die Abweichungen zeigt die echte BumsParade als Warnung.
   const settled=false;
@@ -2670,7 +2671,7 @@ app.get('/api/rule-live/:day',async(req,res)=>{
   const order={EZ:0,DD:1,AH:2,RK:3,BN:4,UM:5,BD:6,MM:7,HuHo:8};
   items.sort((a,b)=>(order[a.rule]??9)-(order[b.rule]??9));
   const open=ids.filter(id=>pts[id]?.state==='open').length,running=ids.filter(id=>pts[id]?.state==='live').length;
-  const value={day,status:'live',live:true,...(closing?{closing:true}:{}),...(settled?{settled:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
+  const value={day,status:'live',live:true,...(closing?{closing:true}:{}),...(final?{final:true}:{}),...(settled?{settled:true}:{}),updatedAt:new Date().toISOString(),expected:users.length,managers:roster.length,players:ids.length,open,running,
    standings:roster.map(m=>({managerId:m.managerId,manager:m.name,dayPoints:m.dayPoints})).sort((a,b)=>b.dayPoints-a.dayPoints),
    items,mvp:mvp&&{players:mvp.players,points:mvp.points,at:mvp.at,reliable:mvp.reliable},notes,...(huho?{huho}:{}),
    // Punkte aller Spieler mit beendetem Spiel: Push-Entwarnung, wenn eine gemeldete Schnapszahl korrigiert wird (worker.js).
