@@ -12,6 +12,9 @@ on:
     - cron: '1,21,41 17,18 * * 1'
     - cron: '1 19 * * 1'
     - cron: '7 4 * * *'      # einmal taeglich (5:07 Uhr Winterzeit, 6:07 Uhr Sommerzeit) alles neu: Korrekturen, Transfers, Tabelle
+    # Ersatz (24.11.: GitHub hat den 5:07-Lauf ausgelassen und die Montagslaeufe erst um 4:22/5:14 Uhr nachgeliefert):
+    # laeuft nur, wenn heute noch kein Voll-Lauf da ist.
+    - cron: '37 5 * * *'
   workflow_dispatch:
     inputs:
       bericht_neu:
@@ -58,6 +61,14 @@ jobs:
             fi
             echo "pcstart=true" >> "$GITHUB_OUTPUT"
           fi
+          # Fehlt heute (ab 4 Uhr UTC) der taegliche Voll-Lauf, holt ihn jeder geplante Lauf nach (24.11.: GitHub liess den
+          # 5:07-Lauf aus und lieferte stattdessen verspaetete Montagslaeufe, die als "schon endgueltig" ausgelassen wurden).
+          if [ "$EVENT" = "schedule" ]; then
+            if node -e "const m=require('./site/data/_meta.json');const n=new Date();const s=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),3);process.exit(n.getTime()>=s+3600e3&&!(m.mode==='full'&&Date.parse(m.exportedAt)>=s)?0:1)"; then
+              echo "Heute noch kein Voll-Lauf: dieser Lauf holt ihn nach."; echo "voll=true" >> "$GITHUB_OUTPUT"; echo "aktiv=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            if [ "$SCHED" = "37 5 * * *" ]; then echo "Voll-Lauf heute schon gelaufen: Ersatzlauf ausgelassen."; echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          fi
           # Montagslaeufe (Kevin 23.11.) nur, solange die endgueltigen Punkte online noch fehlen.
           if [ "$EVENT" = "schedule" ] && { [ "$SCHED" = "1,21,41 17,18 * * 1" ] || [ "$SCHED" = "1 19 * * 1" ]; }; then
             node tools/endstand-offen.mjs
@@ -86,6 +97,7 @@ jobs:
         if: steps.gate.outputs.aktiv == 'true'
         run: |
           m=${{ ((github.event_name == 'schedule' && github.event.schedule != '7 4 * * *') || github.event.inputs.live == 'true' || steps.gate.outputs.pcstart == 'true') && 'live' || 'full' }}
+          if [ "${{ steps.gate.outputs.voll }}" = "true" ]; then m=full; fi
           code=$(git ls-files -s public server.js challenges.js event-types-de.js tools | sha1sum | cut -c1-40)
           alt=$(node -e "try{console.log(require('./kbl-voll-code.json').code)}catch{console.log('')}")
           if [ "$m" = "live" ] && [ "$alt" != "$code" ]; then m=full; echo "Programm seit dem letzten Voll-Lauf geaendert: dieser Lauf ist voll"; fi
