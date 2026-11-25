@@ -855,5 +855,16 @@
         "noNational"
       ]
     }
+  },
+  "11": {
+    "rule": {
+      "id": "eigene",
+      "title": "Eigene Regel",
+      "text": "Ass alle Ass: Tippe den MVP der Krisen-Klubs Gladbach, Köln, Elversberg, HSV, Schalke, Union Berlin und Mainz. Der Spieler darf in dieser Saison noch kein Tor und keine Vorlage haben und keinen Punkteschnitt von 50 oder mehr.",
+      "by": {
+        "id": "1631954",
+        "name": "YW7"
+      }
+    }
   }
 }
