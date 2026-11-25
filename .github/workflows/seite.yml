@@ -13,8 +13,8 @@ on:
     - cron: '1 19 * * 1'
     - cron: '7 4 * * *'      # einmal taeglich (5:07 Uhr Winterzeit, 6:07 Uhr Sommerzeit) alles neu: Korrekturen, Transfers, Tabelle
     # Ersatz (24.11.: GitHub hat den 5:07-Lauf ausgelassen und die Montagslaeufe erst um 4:22/5:14 Uhr nachgeliefert):
-    # laeuft nur, wenn heute noch kein Voll-Lauf da ist.
-    - cron: '37 5 * * *'
+    # laeuft nur, wenn heute noch kein Voll-Lauf da ist. 25.11.: GitHub liess 4:07 und 5:37 UTC beide aus, darum zwei weitere Versuche.
+    - cron: '37 5,8,11 * * *'
   workflow_dispatch:
     inputs:
       bericht_neu:
@@ -67,7 +67,7 @@ jobs:
             if node -e "const m=require('./site/data/_meta.json');const n=new Date();const s=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),3);process.exit(n.getTime()>=s+3600e3&&!(m.mode==='full'&&Date.parse(m.exportedAt)>=s)?0:1)"; then
               echo "Heute noch kein Voll-Lauf: dieser Lauf holt ihn nach."; echo "voll=true" >> "$GITHUB_OUTPUT"; echo "aktiv=true" >> "$GITHUB_OUTPUT"; exit 0
             fi
-            if [ "$SCHED" = "37 5 * * *" ]; then echo "Voll-Lauf heute schon gelaufen: Ersatzlauf ausgelassen."; echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+            if [ "$SCHED" = "37 5,8,11 * * *" ]; then echo "Voll-Lauf heute schon gelaufen: Ersatzlauf ausgelassen."; echo "aktiv=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           fi
           # Montagslaeufe (Kevin 23.11.) nur, solange die endgueltigen Punkte online noch fehlen.
           if [ "$EVENT" = "schedule" ] && { [ "$SCHED" = "1,21,41 17,18 * * 1" ] || [ "$SCHED" = "1 19 * * 1" ]; }; then
@@ -121,13 +121,7 @@ jobs:
           KBL_BERICHT_MODEL: ${{ vars.KBL_BERICHT_MODEL }}
           KBL_BERICHT_NEU: ${{ github.event.inputs.bericht_neu }}
         run: node tools/spieltagsbericht.mjs
-      - uses: actions/upload-pages-artifact@v3
-        if: steps.gate.outputs.aktiv == 'true'
-        with:
-          path: site
-      - id: deploy
-        if: steps.gate.outputs.aktiv == 'true'
-        uses: actions/deploy-pages@v4
+      # Vor dem Veroeffentlichen sichern (24.11.: deploy-pages scheiterte an einer GitHub-Stoerung, die Daten gingen verloren).
       - name: Gespeicherte Daten sichern
         if: steps.gate.outputs.aktiv == 'true'
         run: |
@@ -139,3 +133,10 @@ jobs:
           # Bei gleichzeitigen Aenderungen gewinnen die eben erzeugten Daten.
           for i in 1 2 3; do git pull --rebase -X theirs && git push && exit 0; sleep 5; done
           exit 1
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.gate.outputs.aktiv == 'true'
+        with:
+          path: site
+      - id: deploy
+        if: steps.gate.outputs.aktiv == 'true'
+        uses: actions/deploy-pages@v4
