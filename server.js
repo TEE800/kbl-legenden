@@ -3233,9 +3233,10 @@ app.get('/api/rule-accounting/:day', ruleAccountingRoute = async (req, res) => {
     if(!probe&&!testMode&&huho?.players?.length){
       let gap=null,before=new Map();
       try{gap=await huhoKbGap(token,ranking);
-        // Kevin zieht den neuesten HuHo-Spieltag zuerst ab (02.11.: ST 8 vor ST 2 und 5). Ein Abzug zählt darum zuerst für die
-        // späteren HuHo-Spieltage, dann für diesen (before = Abzüge der Spieltage nach diesem).
-        for(let d=day+1;d<=34;d++){const v=await huhoDeductions(token,d);for(const [id,x] of (v?.by||[]))before.set(id,(before.get(id)||0)+x);}}catch{gap=null;}
+        // Die Lücke enthält auch alle früheren HuHo-Abzüge (ST 2, 5, 8 …). Darum zählt ein Abzug zuerst für die früheren
+        // HuHo-Spieltage, dann für diesen (before = Abzüge der Spieltage vor diesem). Bis 25.11. andersherum (neuester zuerst):
+        // dann galten an ST 10 sieben Abzüge als erledigt, obwohl Kevin noch keinen gemacht hatte.
+        for(let d=HUHO_AB;d<day;d++){const v=await huhoDeductions(token,d);for(const [id,x] of (v?.by||[]))before.set(id,(before.get(id)||0)+x);}}catch{gap=null;}
       const vs=`Bayern ${huho.score} ${huho.home?'gegen':'bei'} ${huho.opp}`;
       for(const z of huho.players){
         if(!z.points)continue;
