@@ -84,7 +84,10 @@
   if(kind==='drunter')t=t.replace(/(nicht|ohne|kein) *(drueber|darueber|ueber)/g,' ');
   if(kind==='name')t=t.replace(/punkt\w* *(zaehl\w*|ist|sind) *(nicht|egal)|ohne punkt\w*/g,' ');
   if(kind==='korridor')t=t.replace(/(hoechstens|maximal|max\.?) *\d+ *punkte?/g,' ');
-  const hits=RULE_TRIGGERS.filter(([re])=>new RegExp(`(^|[^a-z])(${re})([^a-z]|$)`).test(t)).map(x=>x[1]);
+  // Liste mit trigger (ST 11): was sie abdeckt (covers), wird nicht als unverstanden gemeldet; die trigger-Wörter selbst fallen weg.
+  const le=c.includes('liste')?listeEntry(d):null;
+  if(le)try{t=t.replace(new RegExp(le.trigger,'g'),' ');}catch{}
+  const hits=RULE_TRIGGERS.filter(([re])=>new RegExp(`(^|[^a-z])(${re})([^a-z]|$)`).test(t)).map(x=>x[1]).filter(h=>!le?.covers?.includes(h));
   return [...new Set(hits)];
  }
  function unclearLine(d){
@@ -184,16 +187,20 @@
   if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
   if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
   // Länderspielreisende (Kevin 14.11., ST 10): nur mit Liste in kbl-tippregel-ausschluss.json (overview.ausschluss), gleiche Erkennung in server.js.
-  if(day&&/laenderspiel|nationalspieler|nationalmannschaft|nationalteam/.test(t)&&awayOf(day).length)c.push('noNational');
+  // Allgemeine Ausschlussliste mit trigger (Kevin 25.11., ST 11 „Ass alle Ass“), gleiche Erkennung wie listeOf in server.js.
+  if(listeOf(day,t))c.push('liste');
+  else if(day&&/laenderspiel|nationalspieler|nationalmannschaft|nationalteam/.test(t)&&awayOf(day).length)c.push('noNational');
   return c;
  }
  const awayOf=day=>overview?.ausschluss?.[day]?.players||[];
+ function listeOf(day,t){const e=day&&overview?.ausschluss?.[day];if(!e?.trigger||!e.players?.length)return null;try{return new RegExp(e.trigger).test(t)?e:null;}catch{return null;}}
+ const listeEntry=d=>{const e=overview?.ausschluss?.[d?.day];return e?.trigger?e:null;};
  const condsOf=d=>d?.tracking?.conds||d?.result?.conds||ruleConds(d?.rule?.text,d?.day);
- const condText=c=>[c.includes('field')?'nur Feldspieler':'',c.includes('noGoal')?'ohne direkte Torbeteiligung':'',c.includes('noNational')?'ohne Länderspielreisende':''].filter(Boolean).join(', ');
+ const condText=c=>[c.includes('field')?'nur Feldspieler':'',c.includes('noGoal')?'ohne direkte Torbeteiligung':'',c.includes('noNational')?'ohne Länderspielreisende':'',c.includes('liste')?'mit den Bedingungen der Tippregel':''].filter(Boolean).join(', ');
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
  let ruleOut=new Set();
  const offRule=(pool,team,id)=>(pool.length&&!pool.includes(team))||ruleOut.has(String(id));
- const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?[...new Set([...ruleTeams(d.rule.text,overview.teams),...ruleTableTeams(d.rule.text,overview.tables?.[d.day])])]:[]);
+ const poolOf=d=>d?.tracking?.pool||d?.result?.pool||(d?.rule?.text&&overview?.teams?[...new Set([...ruleTeams(d.rule.text,overview.teams),...ruleTableTeams(d.rule.text,overview.tables?.[d.day]),...(condsOf(d).includes('liste')?listeEntry(d)?.teams||[]:[])])]:[]);
  const kindAuto=d=>!!d.rule&&!d.rule.wertung&&d.rule.id==='eigene';
  // Nennt die Regel Vereine, heißt die Wertung nach dem Besten dieser Vereine statt nach dem MVP der ganzen Liga.
  const POOL_TITLE={volltreffer:p=>`Wer den Punktbesten von ${p} tippt, dann nächste Punktzahl`,name:p=>`Wer den Punktbesten von ${p} tippt`,

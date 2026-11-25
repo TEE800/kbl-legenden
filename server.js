@@ -1727,7 +1727,7 @@ const tippPool=async(token,rule,day)=>{
  if(!rule?.text)return [];
  const named=ruleTeams(rule.text,[...(await loadAllPlayers(token)).players.values()].map(p=>p.team));
  const byTable=/haelfte|hälfte/i.test(rule.text)&&day?ruleTableTeams(rule.text,await tableBefore(token,day)):[];
- return [...new Set([...named,...byTable])];
+ return [...new Set([...named,...byTable,...(listeOf(day,rule.text)?.teams||[])])];
 };
 // MVP innerhalb der genannten Vereine (pool), sonst der ganzen Bundesliga.
 function poolMvp(m,pool){
@@ -1744,11 +1744,17 @@ function poolMvp(m,pool){
 const AUSSCHLUSS_FILE=path.join(process.cwd(),'kbl-tippregel-ausschluss.json');
 function readAusschluss(){try{return JSON.parse(fs.readFileSync(AUSSCHLUSS_FILE,'utf8'));}catch{return {};}}
 const NATIONAL_RE=/laenderspiel|nationalspieler|nationalmannschaft|nationalteam/;
+// liste (Kevin 25.11., ST 11 "Ass alle Ass": Krisen-Klubs, 0 Tore/0 Vorlagen in der Saison, Schnitt unter 50): allgemeine Ausschlussliste.
+// Hat der Eintrag eines Spieltags "trigger" (Regex auf den normalisierten Regeltext), gilt er bei passendem Text: Spieler der Liste sind
+// raus (Grund "why" je Spieler), "teams" legt die erlaubten Vereine fest. Liste von Claude aus belegten Daten berechnet (nie raten).
+const normRule=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
+function listeOf(day,text){const e=day&&readAusschluss()[day];if(!e?.trigger||!e.players?.length)return null;try{return new RegExp(e.trigger).test(normRule(text))?e:null;}catch{return null;}}
 function ruleConds(text,day){
- const t=String(text||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' '),c=[];
+ const t=normRule(text),c=[];
  if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
  if(/(ohne|kein)\w* *(direkte\w* *)?torbeteiligung/.test(t))c.push('noGoal');
- if(day&&NATIONAL_RE.test(t)&&readAusschluss()[day]?.players?.length)c.push('noNational');
+ if(listeOf(day,t))c.push('liste');
+ else if(day&&NATIONAL_RE.test(t)&&readAusschluss()[day]?.players?.length)c.push('noNational');
  return c;
 }
 const tippConds=(rule,day)=>ruleConds(rule?.text,day);
@@ -1761,6 +1767,7 @@ function condChecker(token,day,conds){
  const memo=new Map();
  return id=>{id=String(id);if(!memo.has(id))memo.set(id,(async()=>{
   if(conds.includes('noNational')&&(readAusschluss()[day]?.players||[]).some(p=>String(p.id)===id))return {ok:false,why:'auf Länderspielreise'};
+  if(conds.includes('liste')){const p=(readAusschluss()[day]?.players||[]).find(p=>String(p.id)===id);if(p)return {ok:false,why:p.why||'laut Tippregel ausgeschlossen'};}
   if(!conds.some(c=>c==='field'||c==='noGoal'))return {ok:true};
   let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
   const types=await loadEventTypes(token),ev=Array.isArray(pc?.events)?pc.events:[];
@@ -2017,8 +2024,6 @@ async function rekVerlauf(token,day,tracking,result){
  if(old&&old.sig===sig)return old.frames;
  const tl=new Map();
  for(const [id,final] of fin){
-  if(conds.includes('noNational')&&(readAusschluss()[day]?.players||[]).some(p=>String(p.id)===id))return {ok:false,why:'auf Länderspielreise'};
-  if(!conds.some(c=>c==='field'||c==='noGoal'))return {ok:true};
   let pc=null;try{pc=await kbFetch(`/v4/competitions/1/playercenter/${id}?dayNumber=${day}`,{token});}catch{}
   const kick=Date.parse(pc?.md||'');
   if(!Number.isFinite(kick)){if(tipped.some(([t])=>t===id))return null;continue;}
