@@ -1004,5 +1004,641 @@
     "u": true
    }
   ]
+ },
+ "11": {
+  "grund": "Tippregel Spieltag 11 „Ass alle Ass“: nur Spieler der 7 formschwächsten Vereine, ohne Tor und Vorlage in der Saison und mit Punkteschnitt unter 50 (Stand nach Spieltag 10)",
+  "trigger": "ass alle ass|krisen|formschwaech|punkteschnitt",
+  "teams": [
+   "M'gladbach",
+   "Köln",
+   "Elversberg",
+   "Hamburg",
+   "Schalke",
+   "Union Berlin",
+   "Mainz"
+  ],
+  "label": "Krisen-Klubs, ohne Tor/Vorlage in der Saison, Schnitt unter 50",
+  "covers": [
+   "Tore/Vorlagen",
+   "„ohne“/„nicht“",
+   "Grenzen",
+   "Tabellenplatz"
+  ],
+  "note": "Tore = Kickbase-Ereignis Goal (Feldspieler/Torwart/Einwechsler), Vorlagen = Assist; Schnitt = Saisonpunkte / Spieltage mit Einsatz (Spieltage 1–10). Ausgeschlossen sind nur Spieler dieser 7 Vereine; Spieler anderer Vereine zählen über teams nicht.",
+  "quelle": "Kickbase-Ereignisse der Spieltage 1–10 (kbl-points-overview.json)",
+  "players": [
+   {
+    "id": "7441",
+    "name": "Campbell",
+    "team": "Elversberg",
+    "why": "2 Tore, Schnitt 50,8"
+   },
+   {
+    "id": "9384",
+    "name": "Darvich",
+    "team": "Elversberg",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "6183",
+    "name": "Futkeu",
+    "team": "Elversberg",
+    "why": "1 Tor, 1 Vorlage"
+   },
+   {
+    "id": "3026",
+    "name": "Günther",
+    "team": "Elversberg",
+    "why": "1 Tor, Schnitt 62,3"
+   },
+   {
+    "id": "3350",
+    "name": "Keidel",
+    "team": "Elversberg",
+    "why": "2 Tore, 1 Vorlage, Schnitt 95,7"
+   },
+   {
+    "id": "8252",
+    "name": "Krattenmacher",
+    "team": "Elversberg",
+    "why": "4 Tore, 1 Vorlage, Schnitt 73,0"
+   },
+   {
+    "id": "6160",
+    "name": "Kristof",
+    "team": "Elversberg",
+    "why": "Schnitt 90,1"
+   },
+   {
+    "id": "7514",
+    "name": "Le Joncour",
+    "team": "Elversberg",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "11253",
+    "name": "Mickelson",
+    "team": "Elversberg",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "9995",
+    "name": "Mokwa",
+    "team": "Elversberg",
+    "why": "2 Tore, 1 Vorlage"
+   },
+   {
+    "id": "7463",
+    "name": "Onyeka",
+    "team": "Elversberg",
+    "why": "1 Tor, 1 Vorlage"
+   },
+   {
+    "id": "2928",
+    "name": "Petkov",
+    "team": "Elversberg",
+    "why": "2 Tore, 2 Vorlagen, Schnitt 94,4"
+   },
+   {
+    "id": "6148",
+    "name": "Pinckert",
+    "team": "Elversberg",
+    "why": "1 Vorlage, Schnitt 87,4"
+   },
+   {
+    "id": "7278",
+    "name": "Poreba",
+    "team": "Elversberg",
+    "why": "Schnitt 68,4"
+   },
+   {
+    "id": "3284",
+    "name": "Rohr",
+    "team": "Elversberg",
+    "why": "1 Tor, Schnitt 105,0"
+   },
+   {
+    "id": "8296",
+    "name": "Schmahl",
+    "team": "Elversberg",
+    "why": "1 Tor"
+   },
+   {
+    "id": "2725",
+    "name": "Bornauw",
+    "team": "Hamburg",
+    "why": "Schnitt 76,9"
+   },
+   {
+    "id": "11512",
+    "name": "Capaldo",
+    "team": "Hamburg",
+    "why": "1 Tor, Schnitt 84,4"
+   },
+   {
+    "id": "14256",
+    "name": "El Ouahdi",
+    "team": "Hamburg",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "9605",
+    "name": "Grønbæk",
+    "team": "Hamburg",
+    "why": "1 Tor, 4 Vorlagen, Schnitt 75,9"
+   },
+   {
+    "id": "1863",
+    "name": "Heuer Fernandes",
+    "team": "Hamburg",
+    "why": "Schnitt 97,1"
+   },
+   {
+    "id": "17203",
+    "name": "Moffi",
+    "team": "Hamburg",
+    "why": "2 Tore"
+   },
+   {
+    "id": "14425",
+    "name": "Møller Wolfe",
+    "team": "Hamburg",
+    "why": "Schnitt 53,9"
+   },
+   {
+    "id": "3277",
+    "name": "Muheim",
+    "team": "Hamburg",
+    "why": "3 Tore, 1 Vorlage, Schnitt 122,8"
+   },
+   {
+    "id": "11949",
+    "name": "Nandja",
+    "team": "Hamburg",
+    "why": "1 Tor"
+   },
+   {
+    "id": "11752",
+    "name": "Omari",
+    "team": "Hamburg",
+    "why": "Schnitt 58,4"
+   },
+   {
+    "id": "1865",
+    "name": "Poulsen",
+    "team": "Hamburg",
+    "why": "2 Tore, Schnitt 56,3"
+   },
+   {
+    "id": "8367",
+    "name": "Sambi Lokonga",
+    "team": "Hamburg",
+    "why": "1 Vorlage, Schnitt 54,4"
+   },
+   {
+    "id": "2855",
+    "name": "Ache",
+    "team": "Köln",
+    "why": "1 Tor, Schnitt 62,8"
+   },
+   {
+    "id": "11958",
+    "name": "Castro-Montes",
+    "team": "Köln",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "16945",
+    "name": "Dallinga",
+    "team": "Köln",
+    "why": "2 Tore, Schnitt 86,0"
+   },
+   {
+    "id": "8273",
+    "name": "El Mala",
+    "team": "Köln",
+    "why": "1 Tor, 1 Vorlage, Schnitt 75,0"
+   },
+   {
+    "id": "8274",
+    "name": "El Mala",
+    "team": "Köln",
+    "why": "3 Tore, 1 Vorlage, Schnitt 82,8"
+   },
+   {
+    "id": "7219",
+    "name": "Jóhannesson",
+    "team": "Köln",
+    "why": "1 Tor, Schnitt 56,6"
+   },
+   {
+    "id": "2358",
+    "name": "Krauß",
+    "team": "Köln",
+    "why": "Schnitt 73,2"
+   },
+   {
+    "id": "8001",
+    "name": "Lochoshvili",
+    "team": "Köln",
+    "why": "Schnitt 76,5"
+   },
+   {
+    "id": "2201",
+    "name": "Maina",
+    "team": "Köln",
+    "why": "1 Tor, 2 Vorlagen, Schnitt 63,8"
+   },
+   {
+    "id": "14140",
+    "name": "Mensah",
+    "team": "Köln",
+    "why": "Schnitt 57,5"
+   },
+   {
+    "id": "17282",
+    "name": "Moore",
+    "team": "Köln",
+    "why": "1 Tor, Schnitt 60,0"
+   },
+   {
+    "id": "1580",
+    "name": "Schwäbe",
+    "team": "Köln",
+    "why": "Schnitt 106,3"
+   },
+   {
+    "id": "11570",
+    "name": "Sebulonsen",
+    "team": "Köln",
+    "why": "Schnitt 50,1"
+   },
+   {
+    "id": "12321",
+    "name": "Simpson-Pusey",
+    "team": "Köln",
+    "why": "Schnitt 89,2"
+   },
+   {
+    "id": "2718",
+    "name": "Skhiri",
+    "team": "Köln",
+    "why": "2 Vorlagen, Schnitt 81,0"
+   },
+   {
+    "id": "2247",
+    "name": "Sosa",
+    "team": "Köln",
+    "why": "Schnitt 95,9"
+   },
+   {
+    "id": "577",
+    "name": "Batz",
+    "team": "M'gladbach",
+    "why": "Schnitt 140,3"
+   },
+   {
+    "id": "13442",
+    "name": "Bolin",
+    "team": "M'gladbach",
+    "why": "2 Tore, Schnitt 73,0"
+   },
+   {
+    "id": "3063",
+    "name": "Chiarodia",
+    "team": "M'gladbach",
+    "why": "Schnitt 58,3"
+   },
+   {
+    "id": "6319",
+    "name": "Honorat",
+    "team": "M'gladbach",
+    "why": "2 Vorlagen"
+   },
+   {
+    "id": "9540",
+    "name": "Lidberg",
+    "team": "M'gladbach",
+    "why": "1 Tor"
+   },
+   {
+    "id": "6199",
+    "name": "Machino",
+    "team": "M'gladbach",
+    "why": "1 Tor"
+   },
+   {
+    "id": "11748",
+    "name": "Mohya",
+    "team": "M'gladbach",
+    "why": "2 Tore, 1 Vorlage, Schnitt 57,0"
+   },
+   {
+    "id": "2261",
+    "name": "Neuhaus",
+    "team": "M'gladbach",
+    "why": "1 Tor, 1 Vorlage, Schnitt 73,4"
+   },
+   {
+    "id": "1883",
+    "name": "Nicolas",
+    "team": "M'gladbach",
+    "why": "Schnitt 91,7"
+   },
+   {
+    "id": "2560",
+    "name": "Sander",
+    "team": "M'gladbach",
+    "why": "Schnitt 52,8"
+   },
+   {
+    "id": "2941",
+    "name": "Scally",
+    "team": "M'gladbach",
+    "why": "4 Tore, 1 Vorlage, Schnitt 73,7"
+   },
+   {
+    "id": "4333",
+    "name": "Ullrich",
+    "team": "M'gladbach",
+    "why": "2 Vorlagen, Schnitt 60,6"
+   },
+   {
+    "id": "15202",
+    "name": "Uno",
+    "team": "M'gladbach",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "1639",
+    "name": "Amiri",
+    "team": "Mainz",
+    "why": "1 Vorlage, Schnitt 98,4"
+   },
+   {
+    "id": "2646",
+    "name": "Becker",
+    "team": "Mainz",
+    "why": "2 Tore, 4 Vorlagen, Schnitt 98,3"
+   },
+   {
+    "id": "3470",
+    "name": "Caci",
+    "team": "Mainz",
+    "why": "3 Tore, 3 Vorlagen, Schnitt 114,4"
+   },
+   {
+    "id": "1540",
+    "name": "Da Costa",
+    "team": "Mainz",
+    "why": "1 Tor, 1 Vorlage, Schnitt 66,8"
+   },
+   {
+    "id": "10122",
+    "name": "Gruber",
+    "team": "Mainz",
+    "why": "Schnitt 96,3"
+   },
+   {
+    "id": "6111",
+    "name": "Hollerbach",
+    "team": "Mainz",
+    "why": "2 Tore, 1 Vorlage"
+   },
+   {
+    "id": "60",
+    "name": "Kohr",
+    "team": "Mainz",
+    "why": "Schnitt 96,0"
+   },
+   {
+    "id": "3318",
+    "name": "Königsdörffer",
+    "team": "Mainz",
+    "why": "2 Tore"
+   },
+   {
+    "id": "2476",
+    "name": "Lee",
+    "team": "Mainz",
+    "why": "1 Tor, 1 Vorlage, Schnitt 75,3"
+   },
+   {
+    "id": "2702",
+    "name": "Martel",
+    "team": "Mainz",
+    "why": "1 Tor"
+   },
+   {
+    "id": "2232",
+    "name": "Mwene",
+    "team": "Mainz",
+    "why": "1 Tor, 1 Vorlage, Schnitt 75,2"
+   },
+   {
+    "id": "2006",
+    "name": "Posch",
+    "team": "Mainz",
+    "why": "Schnitt 65,6"
+   },
+   {
+    "id": "11665",
+    "name": "Potulski",
+    "team": "Mainz",
+    "why": "Schnitt 75,2"
+   },
+   {
+    "id": "13438",
+    "name": "Ruoppi",
+    "team": "Mainz",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "8307",
+    "name": "Sano",
+    "team": "Mainz",
+    "why": "4 Vorlagen, Schnitt 95,2"
+   },
+   {
+    "id": "620",
+    "name": "Schwolow",
+    "team": "Mainz",
+    "why": "Schnitt 116,4"
+   },
+   {
+    "id": "2030",
+    "name": "Tietz",
+    "team": "Mainz",
+    "why": "6 Tore, Schnitt 104,1"
+   },
+   {
+    "id": "1590",
+    "name": "Zentner",
+    "team": "Mainz",
+    "why": "Schnitt 106,6"
+   },
+   {
+    "id": "6172",
+    "name": "Adamu",
+    "team": "Schalke",
+    "why": "1 Tor, 1 Vorlage"
+   },
+   {
+    "id": "13448",
+    "name": "Aouchiche",
+    "team": "Schalke",
+    "why": "1 Tor, Schnitt 80,2"
+   },
+   {
+    "id": "2762",
+    "name": "Becker",
+    "team": "Schalke",
+    "why": "Schnitt 69,9"
+   },
+   {
+    "id": "4406",
+    "name": "Dina Ebimbe",
+    "team": "Schalke",
+    "why": "Schnitt 51,7"
+   },
+   {
+    "id": "2967",
+    "name": "El-Faouzi",
+    "team": "Schalke",
+    "why": "Schnitt 57,1"
+   },
+   {
+    "id": "8235",
+    "name": "Gantenbein",
+    "team": "Schalke",
+    "why": "1 Tor, Schnitt 80,5"
+   },
+   {
+    "id": "7242",
+    "name": "Gosens",
+    "team": "Schalke",
+    "why": "1 Tor, Schnitt 58,9"
+   },
+   {
+    "id": "2449",
+    "name": "Hwang",
+    "team": "Schalke",
+    "why": "1 Vorlage"
+   },
+   {
+    "id": "670",
+    "name": "Karaman",
+    "team": "Schalke",
+    "why": "Schnitt 53,5"
+   },
+   {
+    "id": "32",
+    "name": "Karius",
+    "team": "Schalke",
+    "why": "Schnitt 122,3"
+   },
+   {
+    "id": "11255",
+    "name": "Katic",
+    "team": "Schalke",
+    "why": "Schnitt 102,0"
+   },
+   {
+    "id": "4606",
+    "name": "Kuruçay",
+    "team": "Schalke",
+    "why": "Schnitt 86,8"
+   },
+   {
+    "id": "755",
+    "name": "Müller",
+    "team": "Schalke",
+    "why": "Schnitt 72,0"
+   },
+   {
+    "id": "7156",
+    "name": "Wöber",
+    "team": "Schalke",
+    "why": "1 Tor"
+   },
+   {
+    "id": "7684",
+    "name": "Aebischer",
+    "team": "Union Berlin",
+    "why": "1 Tor"
+   },
+   {
+    "id": "8381",
+    "name": "Burcu",
+    "team": "Union Berlin",
+    "why": "1 Tor"
+   },
+   {
+    "id": "1223",
+    "name": "Friedrich",
+    "team": "Union Berlin",
+    "why": "Schnitt 79,3"
+   },
+   {
+    "id": "1553",
+    "name": "Haberer",
+    "team": "Union Berlin",
+    "why": "2 Tore, Schnitt 51,8"
+   },
+   {
+    "id": "4598",
+    "name": "Juranović",
+    "team": "Union Berlin",
+    "why": "2 Vorlagen, Schnitt 100,0"
+   },
+   {
+    "id": "12763",
+    "name": "Latte Lath",
+    "team": "Union Berlin",
+    "why": "1 Tor"
+   },
+   {
+    "id": "7723",
+    "name": "Querfeld",
+    "team": "Union Berlin",
+    "why": "1 Tor, 1 Vorlage, Schnitt 128,5"
+   },
+   {
+    "id": "2279",
+    "name": "Rönnow",
+    "team": "Union Berlin",
+    "why": "Schnitt 115,0"
+   },
+   {
+    "id": "3102",
+    "name": "Rothe",
+    "team": "Union Berlin",
+    "why": "1 Vorlage, Schnitt 67,9"
+   },
+   {
+    "id": "3187",
+    "name": "Schäfer",
+    "team": "Union Berlin",
+    "why": "Schnitt 54,5"
+   },
+   {
+    "id": "2491",
+    "name": "Skarke",
+    "team": "Union Berlin",
+    "why": "2 Tore, 1 Vorlage"
+   },
+   {
+    "id": "2065",
+    "name": "Uduokhai",
+    "team": "Union Berlin",
+    "why": "Schnitt 68,3"
+   },
+   {
+    "id": "14917",
+    "name": "Van den Bosch",
+    "team": "Union Berlin",
+    "why": "Schnitt 50,8"
+   }
+  ]
  }
 }
