@@ -1749,6 +1749,10 @@ const NATIONAL_RE=/laenderspiel|nationalspieler|nationalmannschaft|nationalteam/
 // raus (Grund "why" je Spieler), "teams" legt die erlaubten Vereine fest. Liste von Claude aus belegten Daten berechnet (nie raten).
 const normRule=v=>String(v||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/\s+/g,' ');
 function listeOf(day,text){const e=day&&readAusschluss()[day];if(!e?.trigger||!e.players?.length)return null;try{return new RegExp(e.trigger).test(normRule(text))?e:null;}catch{return null;}}
+// Kevin 27.11. (ST 11): Tipps auf Spieler der Ausschlussliste bzw. ausserhalb ihrer Vereine werden abgelehnt (gleich in mvp-tipp.js und worker.js).
+function listeTipError(day,text,player){const e=listeOf(day,text);if(!e)return '';const p=e.players.find(p=>String(p.id)===String(player.id));
+ if(p)return `${player.name} ist laut Tippregel nicht erlaubt (${p.why||'ausgeschlossen'}). Bitte einen anderen Spieler wählen.`;
+ if(e.teams?.length&&!e.teams.includes(player.team))return `Laut Tippregel zählen nur Spieler von ${e.teams.join(', ')}. ${player.name} spielt für ${player.team}.`;return '';}
 function ruleConds(text,day){
  const t=normRule(text),c=[];
  if(/feldspieler|(kein|ohne)\w* *(torwart|torhueter)/.test(t))c.push('field');
@@ -2289,6 +2293,7 @@ app.put('/api/mvp-tipps/:day',async(req,res)=>{
   const player=(await loadAllPlayers(token)).players.get(playerId);
   if(!player)return res.status(400).json({error:'Spieler nicht gefunden.'});
   const all=readTipps(),rec=all[day]||(all[day]={tips:{}});rec.tips=rec.tips||{};
+  const le=listeTipError(day,rec.rule?.text,{id:playerId,name:player.name,team:player.team});if(le)return res.status(400).json({error:le});
   rec.tips[me.id]={name:me.name,playerId,player:player.name,team:player.team,points,updatedAt:new Date().toISOString()};
   saveTipps(all);
   res.set('Cache-Control','no-store').json({ok:true,codeCreated:created,tip:rec.tips[me.id]});

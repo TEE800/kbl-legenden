@@ -671,6 +671,18 @@ async function handleReaktion(req, env, cors, parts, body, url) {
   return json({ ok: true, ...(await reaktState(env, day, vid, r)) }, 200, cors);
 }
 
+// Kevin 27.11. (ST 11 „Ass alle Ass“): Ausschlussliste mit trigger aus kbl-tippregel-ausschluss.json (kommt ueber mvp-tipps.json).
+// Spieler der Liste oder ausserhalb ihrer Vereine werden beim Tippen abgelehnt (gleiche Pruefung wie listeTipError in server.js).
+function listeTipError(e, rule, player) {
+  if (!e?.trigger || !e.players?.length || !rule?.text) return '';
+  const t = String(rule.text).toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/\s+/g, ' ');
+  try { if (!new RegExp(e.trigger).test(t)) return ''; } catch { return ''; }
+  const p = e.players.find(p => String(p.id) === String(player.id));
+  if (p) return `${player.name} ist laut Tippregel nicht erlaubt (${p.why || 'ausgeschlossen'}). Bitte einen anderen Spieler wählen.`;
+  if (e.teams?.length && !e.teams.includes(player.team)) return `Laut Tippregel zählen nur Spieler von ${e.teams.join(', ')}. ${player.name} spielt für ${player.team}.`;
+  return '';
+}
+
 async function handle(req, env, cors) {
   const url = new URL(req.url), parts = url.pathname.replace(/^\/+|\/+$/g, '').split('/');
   const body = req.method === 'GET' || req.method === 'DELETE' ? {} : await req.json().catch(() => ({}));
@@ -748,6 +760,8 @@ async function handle(req, env, cors) {
     if (!/^\d{1,10}$/.test(playerId) || !Number.isInteger(points) || points < -1000 || points > 2000) return json({ error: 'Bitte einen Spieler aus der Liste und eine ganze Punktzahl angeben.' }, 400, cors);
     const player = ((await siteJson(env, 'mvp-tipps_players.json')).players || []).find(p => String(p.id) === playerId);
     if (!player) return json({ error: 'Spieler nicht gefunden.' }, 400, cors);
+    const le = listeTipError(info.ausschluss?.[day], await env.TIPPS.get(`rule:${day}`, 'json'), player);
+    if (le) return json({ error: le }, 400, cors);
     const c = await checkCode(env, day, String(me.id), body.code, true); if (!c.ok) return json({ error: c.error }, c.status, cors);
     const tip = { name: me.name, playerId, player: player.name, team: player.team, points, updatedAt: new Date().toISOString() };
     await env.TIPPS.put(`tip:${day}:${me.id}`, JSON.stringify(tip)); memo.delete(`tips:${day}`);
