@@ -195,8 +195,11 @@
  const awayOf=day=>overview?.ausschluss?.[day]?.players||[];
  function listeOf(day,t){const e=day&&overview?.ausschluss?.[day];if(!e?.trigger||!e.players?.length)return null;try{return new RegExp(e.trigger).test(t)?e:null;}catch{return null;}}
  const listeEntry=d=>{const e=overview?.ausschluss?.[d?.day];return e?.trigger?e:null;};
- // Kevin 27.11. (ST 11): Spieler der Ausschlussliste (Tor/Vorlage, Schnitt 50+) sind schon vor dem Anpfiff raus und werden beim Tippen abgelehnt.
- const listeWhy=(d,id)=>{if(!condsOf(d).includes('liste'))return '';const p=(listeEntry(d)?.players||[]).find(p=>String(p.id)===String(id));return p?(p.why||'laut Tippregel ausgeschlossen'):'';};
+ // Kevin 27.11. (ST 11): Spieler der Ausschlussliste (Tor/Vorlage, Schnitt 50+) stehen nach dem Anpfiff sofort als raus da (nicht erst nach dem Export).
+ // Beim Tippen wird nichts abgelehnt oder angezeigt (Kevin: der Manager soll selbst nachdenken), erst nach dem Aufdecken.
+ // Gilt auch für Länderspielreisende (ST 10, noNational), Kevin 27.11.
+ const listeIds=d=>{if(!d?.locked)return [];const c=condsOf(d);return c.includes('liste')?listeEntry(d)?.players||[]:c.includes('noNational')?awayOf(d.day).map(p=>({...p,why:'auf Länderspielreise'})):[];};
+ const listeWhy=(d,id)=>{const p=listeIds(d).find(p=>p.id&&String(p.id)===String(id));return p?(p.why||'laut Tippregel ausgeschlossen'):'';};
  const condsOf=d=>d?.tracking?.conds||d?.result?.conds||ruleConds(d?.rule?.text,d?.day);
  const condText=c=>[c.includes('field')?'nur Feldspieler':'',c.includes('noGoal')?'ohne direkte Torbeteiligung':'',c.includes('noNational')?'ohne Länderspielreisende':'',c.includes('liste')?'mit den Bedingungen der Tippregel':''].filter(Boolean).join(', ');
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
@@ -990,7 +993,7 @@
  }
  function render(){
   const root=$('#mvpContent');if(!root||!data)return;
-  const d=data;ruleOut=new Set([...Object.keys(d.tracking?.out||{}),...(condsOf(d).includes('liste')?(listeEntry(d)?.players||[]).map(p=>String(p.id)):[])]);
+  const d=data;ruleOut=new Set([...Object.keys(d.tracking?.out||{}),...listeIds(d).filter(p=>p.id).map(p=>String(p.id))]);
   $('#mvpMeta').textContent=d.open?`Spieltag ${d.day} · Tipps offen`:d.status==='finished'?`Spieltag ${d.day} · beendet`:`Spieltag ${d.day} · ${d.status==='live'?'läuft':'gesperrt'}`;
   root.className='';
   // Beim automatischen Neuladen (alle 2 Min.) bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.

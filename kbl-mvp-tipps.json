@@ -973,8 +973,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-27T20:44:17.367Z",
-      "points": 97,
+      "at": "2026-11-27T20:52:36.350Z",
+      "points": 105,
       "players": [
         {
           "id": "11010",
@@ -987,13 +987,13 @@
           "id": "11010",
           "name": "Diks",
           "team": "M'gladbach",
-          "points": 97
+          "points": 105
         },
         {
           "id": "2862",
           "name": "Castrop",
           "team": "M'gladbach",
-          "points": 17
+          "points": 48
         }
       ],
       "checked": 474,
