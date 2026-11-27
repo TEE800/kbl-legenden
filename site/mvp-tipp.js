@@ -195,6 +195,8 @@
  const awayOf=day=>overview?.ausschluss?.[day]?.players||[];
  function listeOf(day,t){const e=day&&overview?.ausschluss?.[day];if(!e?.trigger||!e.players?.length)return null;try{return new RegExp(e.trigger).test(t)?e:null;}catch{return null;}}
  const listeEntry=d=>{const e=overview?.ausschluss?.[d?.day];return e?.trigger?e:null;};
+ // Kevin 27.11. (ST 11): Spieler der Ausschlussliste (Tor/Vorlage, Schnitt 50+) sind schon vor dem Anpfiff raus und werden beim Tippen abgelehnt.
+ const listeWhy=(d,id)=>{if(!condsOf(d).includes('liste'))return '';const p=(listeEntry(d)?.players||[]).find(p=>String(p.id)===String(id));return p?(p.why||'laut Tippregel ausgeschlossen'):'';};
  const condsOf=d=>d?.tracking?.conds||d?.result?.conds||ruleConds(d?.rule?.text,d?.day);
  const condText=c=>[c.includes('field')?'nur Feldspieler':'',c.includes('noGoal')?'ohne direkte Torbeteiligung':'',c.includes('noNational')?'ohne Länderspielreisende':'',c.includes('liste')?'mit den Bedingungen der Tippregel':''].filter(Boolean).join(', ');
  // Getippte Spieler, die die Bedingungen nicht erfüllen (Server: tracking.out), gesetzt in render().
@@ -229,6 +231,7 @@
    }
    if(ready&&pool.length&&!pool.includes(m.tip.team)){ok=false;why='nicht von den genannten Vereinen';}
    else if(ready&&d.tracking?.out?.[m.tip.playerId]&&(!off||off.has(String(m.tip.playerId)))){ok=false;why=d.tracking.out[m.tip.playerId];}
+   else if(ready&&listeWhy(d,m.tip.playerId)){ok=false;why=listeWhy(d,m.tip.playerId);}
    return {m,t:m.tip,pts,state:x?.state||'wait',diff,hit,ok,why};
   });
   // Schlüssel: kleiner ist besser. "Name reicht" und "Korridor": alle Treffer gleichauf.
@@ -987,7 +990,7 @@
  }
  function render(){
   const root=$('#mvpContent');if(!root||!data)return;
-  const d=data;ruleOut=new Set(Object.keys(d.tracking?.out||{}));
+  const d=data;ruleOut=new Set([...Object.keys(d.tracking?.out||{}),...(condsOf(d).includes('liste')?(listeEntry(d)?.players||[]).map(p=>String(p.id)):[])]);
   $('#mvpMeta').textContent=d.open?`Spieltag ${d.day} · Tipps offen`:d.status==='finished'?`Spieltag ${d.day} · beendet`:`Spieltag ${d.day} · ${d.status==='live'?'läuft':'gesperrt'}`;
   root.className='';
   // Beim automatischen Neuladen (alle 2 Min.) bleiben aufgeklappte Bereiche offen; beim Öffnen des Reiters klappt kblCollapseView alles zu.
@@ -1124,7 +1127,9 @@
   const msg=$('#mvpMsg'),pick=pickPlayer($('#mvpPlayer')),p=pick.p,pts=Number($('#mvpPoints').value);
   if(!p){msg.textContent=pick.error;return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
-  const pool=poolOf(data);
+  const pool=poolOf(data),lw=listeWhy(data,p.id);
+  if(lw){msg.textContent=`${p.name} ist laut Tippregel nicht erlaubt (${lw}). Bitte einen anderen Spieler wählen.`;return;}
+  if(condsOf(data).includes('liste')&&pool.length&&!pool.includes(p.team)){msg.textContent=`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}.`;return;}
   if(pool.length&&!pool.includes(p.team)&&!confirm(`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}. Trotzdem tippen?`))return;
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;

@@ -865,6 +865,152 @@
         "id": "1631954",
         "name": "YW7"
       }
+    },
+    "tips": {
+      "699062": {
+        "name": "T800",
+        "playerId": "10024",
+        "player": "Schmied",
+        "team": "Köln",
+        "points": 122,
+        "updatedAt": "2026-11-27T14:24:15.363Z"
+      },
+      "841764": {
+        "name": "Hasan",
+        "playerId": "14300",
+        "player": "Okon-Engstler",
+        "team": "Köln",
+        "points": 80,
+        "updatedAt": "2026-11-27T17:31:04.430Z"
+      },
+      "1165589": {
+        "name": "Stammler9",
+        "playerId": "2862",
+        "player": "Castrop",
+        "team": "M'gladbach",
+        "points": 146,
+        "updatedAt": "2026-11-27T15:56:03.433Z"
+      },
+      "1403991": {
+        "name": "Cello",
+        "playerId": "2552",
+        "player": "Bülter",
+        "team": "Köln",
+        "points": 108,
+        "updatedAt": "2026-11-27T12:51:16.531Z"
+      },
+      "1631136": {
+        "name": "Fabio",
+        "playerId": "10024",
+        "player": "Schmied",
+        "team": "Köln",
+        "points": 132,
+        "updatedAt": "2026-11-27T18:22:14.134Z"
+      },
+      "1631954": {
+        "name": "YW7",
+        "playerId": "2862",
+        "player": "Castrop",
+        "team": "M'gladbach",
+        "points": 188,
+        "updatedAt": "2026-11-25T10:18:32.541Z"
+      },
+      "1646647": {
+        "name": "Baumann",
+        "playerId": "14300",
+        "player": "Okon-Engstler",
+        "team": "Köln",
+        "points": 122,
+        "updatedAt": "2026-11-27T18:26:16.450Z"
+      },
+      "1906625": {
+        "name": "xDanii",
+        "playerId": "9224",
+        "player": "Zimmerschied",
+        "team": "Elversberg",
+        "points": 123,
+        "updatedAt": "2026-11-27T17:39:35.626Z"
+      },
+      "1929473": {
+        "name": "Mic193",
+        "playerId": "2895",
+        "player": "Nebel",
+        "team": "Mainz",
+        "points": 187,
+        "updatedAt": "2026-11-27T17:06:01.545Z"
+      },
+      "1981519": {
+        "name": "Daniel_Niederlande",
+        "playerId": "13448",
+        "player": "Aouchiche",
+        "team": "Schalke",
+        "points": 250,
+        "updatedAt": "2026-11-27T13:34:51.787Z"
+      },
+      "2038365": {
+        "name": "Fcpkicker",
+        "playerId": "9683",
+        "player": "Ilic",
+        "team": "Union Berlin",
+        "points": 133,
+        "updatedAt": "2026-11-25T20:21:34.699Z"
+      },
+      "2710049": {
+        "name": "diminator",
+        "playerId": "1012",
+        "player": "Džeko",
+        "team": "Schalke",
+        "points": 167,
+        "updatedAt": "2026-11-27T08:31:30.750Z"
+      },
+      "2789934": {
+        "name": "Hansaaufdie1",
+        "playerId": "14300",
+        "player": "Okon-Engstler",
+        "team": "Köln",
+        "points": 171,
+        "updatedAt": "2026-11-27T14:47:18.676Z"
+      }
+    },
+    "liveMvp": {
+      "at": "2026-11-27T20:44:17.367Z",
+      "points": 97,
+      "players": [
+        {
+          "id": "11010",
+          "name": "Diks",
+          "team": "M'gladbach"
+        }
+      ],
+      "top10": [
+        {
+          "id": "11010",
+          "name": "Diks",
+          "team": "M'gladbach",
+          "points": 97
+        },
+        {
+          "id": "2862",
+          "name": "Castrop",
+          "team": "M'gladbach",
+          "points": 17
+        }
+      ],
+      "checked": 474,
+      "failed": 0,
+      "reliable": true,
+      "pool": [
+        "Elversberg",
+        "Köln",
+        "Union Berlin",
+        "Mainz",
+        "M'gladbach",
+        "Schalke",
+        "Hamburg"
+      ],
+      "conds": [
+        "liste"
+      ]
     }
   }
 }
