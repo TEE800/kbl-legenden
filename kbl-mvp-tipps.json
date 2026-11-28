@@ -973,8 +973,8 @@
       }
     },
     "liveMvp": {
-      "at": "2026-11-27T20:52:36.350Z",
-      "points": 105,
+      "at": "2026-11-28T03:31:27.431Z",
+      "points": 134,
       "players": [
         {
           "id": "11010",
@@ -987,13 +987,43 @@
           "id": "11010",
           "name": "Diks",
           "team": "M'gladbach",
-          "points": 105
+          "points": 134
         },
         {
           "id": "2862",
           "name": "Castrop",
           "team": "M'gladbach",
-          "points": 48
+          "points": 77
+        },
+        {
+          "id": "3129",
+          "name": "Itakura",
+          "team": "M'gladbach",
+          "points": 11
+        },
+        {
+          "id": "16564",
+          "name": "Nguefack",
+          "team": "M'gladbach",
+          "points": 8
+        },
+        {
+          "id": "849",
+          "name": "Kleindienst",
+          "team": "M'gladbach",
+          "points": 3
+        },
+        {
+          "id": "4292",
+          "name": "Herold",
+          "team": "M'gladbach",
+          "points": -2
+        },
+        {
+          "id": "12243",
+          "name": "Fleck",
+          "team": "M'gladbach",
+          "points": -4
         }
       ],
       "checked": 474,

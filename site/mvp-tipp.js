@@ -1130,9 +1130,7 @@
   const msg=$('#mvpMsg'),pick=pickPlayer($('#mvpPlayer')),p=pick.p,pts=Number($('#mvpPoints').value);
   if(!p){msg.textContent=pick.error;return;}
   if(!Number.isInteger(pts)){msg.textContent='Bitte eine ganze Punktzahl eintragen.';return;}
-  const pool=poolOf(data),lw=listeWhy(data,p.id);
-  if(lw){msg.textContent=`${p.name} ist laut Tippregel nicht erlaubt (${lw}). Bitte einen anderen Spieler wählen.`;return;}
-  if(condsOf(data).includes('liste')&&pool.length&&!pool.includes(p.team)){msg.textContent=`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}.`;return;}
+  const pool=poolOf(data);
   if(pool.length&&!pool.includes(p.team)&&!confirm(`Laut Tippregel zählen nur Spieler von ${pool.join(', ')}. ${p.name} spielt für ${p.team}. Trotzdem tippen?`))return;
   const btn=e.target.querySelector('button');btn.disabled=true;msg.textContent='Speichere …';
   const who=$('#mvpWho')?.value,code=$('#mvpCode')?.value;
